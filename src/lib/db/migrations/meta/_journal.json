@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1774125865137,
+      "tag": "0000_lonely_nico_minoru",
+      "breakpoints": true
+    }
+  ]
+}

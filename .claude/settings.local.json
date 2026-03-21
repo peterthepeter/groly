@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__stitch__get_screen",
+      "Bash(export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\")",
+      "Bash(npm --version)",
+      "Bash(source ~/.zprofile)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"import\\(''vite-plugin-pwa''\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(node --input-type=module:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+import { offlineDb } from './db';
+import { networkStore } from '$lib/stores/online.svelte';
+
+async function apiFetch(url: string, options?: RequestInit) {
+	const res = await fetch(url, {
+		...options,
+		headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) }
+	});
+	if (!res.ok) throw new Error(`API error: ${res.status}`);
+	return res.json();
+}
+
+async function processPendingMutations() {
+	const pending = await offlineDb.pendingMutations.orderBy('createdAt').toArray();
+	for (const mutation of pending) {
+		try {
+			switch (mutation.type) {
+				case 'create_list':
+					await apiFetch('/api/lists', { method: 'POST', body: JSON.stringify(mutation.payload) });
+					break;
+				case 'update_list':
+					await apiFetch(`/api/lists/${mutation.payload.id}`, { method: 'PUT', body: JSON.stringify(mutation.payload) });
+					break;
+				case 'delete_list':
+					await apiFetch(`/api/lists/${mutation.payload.id}`, { method: 'DELETE' });
+					break;
+				case 'create_item':
+					await apiFetch(`/api/lists/${mutation.payload.listId}/items`, { method: 'POST', body: JSON.stringify(mutation.payload) });
+					break;
+				case 'update_item':
+					await apiFetch(`/api/items/${mutation.payload.id}`, { method: 'PUT', body: JSON.stringify(mutation.payload) });
+					break;
+				case 'delete_item':
+					await apiFetch(`/api/items/${mutation.payload.id}`, { method: 'DELETE' });
+					break;
+			}
+			await offlineDb.pendingMutations.delete(mutation.id!);
+		} catch {
+			break; // Stoppe bei erstem Fehler, versuche es beim nächsten Online-Event erneut
+		}
+	}
+	const remaining = await offlineDb.pendingMutations.count();
+	networkStore.setPending(remaining);
+}
+
+export async function execute<T>(
+	onlineAction: () => Promise<T>,
+	offlineMutation: Parameters<typeof offlineDb.pendingMutations.add>[0],
+	optimisticUpdate: () => void
+): Promise<T | null> {
+	optimisticUpdate();
+
+	if (networkStore.online) {
+		try {
+			return await onlineAction();
+		} catch {
+			// Fallback zu offline queue
+		}
+	}
+
+	await offlineDb.pendingMutations.add(offlineMutation);
+	const count = await offlineDb.pendingMutations.count();
+	networkStore.setPending(count);
+	return null;
+}
+
+export function initSync() {
+	if (typeof window === 'undefined') return;
+	window.addEventListener('online', () => {
+		processPendingMutations();
+	});
+	// Initial prüfen
+	offlineDb.pendingMutations.count().then((c) => networkStore.setPending(c));
+}

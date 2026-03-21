@@ -1,0 +1,22 @@
+services:
+  groly:
+    image: ghcr.io/peterthepeter/groly:latest
+    # Zum lokalen Bauen: build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - groly-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=/app/data/groly.db
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme123}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/auth/me"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  groly-data:

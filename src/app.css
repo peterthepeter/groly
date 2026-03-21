@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Stitch Groly Design System – Light Mode */
+    --color-bg: #f8f9fa;
+    --color-surface: #f8f9fa;
+    --color-surface-low: #f1f4f5;
+    --color-surface-container: #ebeef0;
+    --color-surface-high: #e5e9eb;
+    --color-surface-card: #ffffff;
+    --color-surface-elevated: #ffffff;
+
+    --color-primary: #006c54;
+    --color-primary-container: #59f3c5;
+    --color-primary-dim: #005f49;
+    --color-on-primary: #e5fff2;
+    --color-on-primary-container: #005843;
+
+    --color-secondary: #4d626c;
+    --color-secondary-container: #cfe6f2;
+    --color-on-secondary-container: #40555f;
+
+    --color-tertiary: #2e6771;
+    --color-tertiary-container: #b7effb;
+
+    --color-on-surface: #2d3335;
+    --color-on-surface-variant: #5a6062;
+    --color-outline: #767c7e;
+    --color-outline-variant: rgba(173, 179, 181, 0.15);
+
+    --color-error: #a83836;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-2xl: 24px;
+    --radius-full: 9999px;
+  }
+
+  :root[data-theme="dark"], .dark {
+    /* Dark Mode */
+    --color-bg: #0a0f0e;
+    --color-surface: #0f1614;
+    --color-surface-low: #141c1a;
+    --color-surface-container: #1a2320;
+    --color-surface-high: #1f2a27;
+    --color-surface-card: #1a2320;
+    --color-surface-elevated: #1f2a27;
+
+    --color-primary: #47e4b8;
+    --color-primary-container: #005843;
+    --color-primary-dim: #38c9a1;
+    --color-on-primary: #003529;
+    --color-on-primary-container: #59f3c5;
+
+    --color-secondary: #b3cad4;
+    --color-secondary-container: #344a54;
+    --color-on-secondary-container: #cfe6f2;
+
+    --color-tertiary: #8ed4e0;
+    --color-tertiary-container: #1a4a54;
+
+    --color-on-surface: #dde4e2;
+    --color-on-surface-variant: #8fa5a1;
+    --color-outline: #5a706c;
+    --color-outline-variant: rgba(90, 112, 108, 0.2);
+
+    --color-error: #fa746f;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --color-bg: #0a0f0e;
+      --color-surface: #0f1614;
+      --color-surface-low: #141c1a;
+      --color-surface-container: #1a2320;
+      --color-surface-high: #1f2a27;
+      --color-surface-card: #1a2320;
+      --color-surface-elevated: #1f2a27;
+
+      --color-primary: #47e4b8;
+      --color-primary-container: #005843;
+      --color-primary-dim: #38c9a1;
+      --color-on-primary: #003529;
+      --color-on-primary-container: #59f3c5;
+
+      --color-secondary: #b3cad4;
+      --color-secondary-container: #344a54;
+      --color-on-secondary-container: #cfe6f2;
+
+      --color-tertiary: #8ed4e0;
+      --color-tertiary-container: #1a4a54;
+
+      --color-on-surface: #dde4e2;
+      --color-on-surface-variant: #8fa5a1;
+      --color-outline: #5a706c;
+      --color-outline-variant: rgba(90, 112, 108, 0.2);
+
+      --color-error: #fa746f;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none;
+    background-color: var(--color-bg);
+    color: var(--color-on-surface);
+  }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: color-mix(in srgb, var(--color-surface-container) 85%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim));
+  }
+
+  .surface-card {
+    background-color: var(--color-surface-card);
+    border-radius: var(--radius-xl);
+  }
+
+  .surface-container {
+    background-color: var(--color-surface-container);
+    border-radius: var(--radius-xl);
+  }
+}
