@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { networkStore } from '$lib/stores/online.svelte';
+	import { t, sync_pending } from '$lib/i18n.svelte';
 
 	let { title = 'Meine Listen', subtitle = '', onMenuOpen }: {
 		title?: string;
@@ -8,16 +9,17 @@
 	} = $props();
 </script>
 
-<header class="fixed top-0 left-0 right-0 z-40 px-4 pt-safe-top pt-4 pb-2">
-	<div class="flex items-center justify-between rounded-2xl px-4 py-3 glass"
-	     style="background-color: color-mix(in srgb, var(--color-surface-container) 80%, transparent)">
+<header class="fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
+        style="padding-top: calc(env(safe-area-inset-top) + 1rem)">
+	<div class="flex items-center justify-between rounded-2xl px-4 py-3"
+	     style="background-color: var(--color-surface-low)">
 		<!-- Left: Hamburger + App Name -->
 		<div class="flex items-center gap-3 min-w-0">
 			<button
 				onclick={onMenuOpen}
 				class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60 transition-opacity"
 				style="background-color: var(--color-surface-high)"
-				aria-label="Menü öffnen"
+				aria-label={t.menu_open}
 			>
 				<svg width="16" height="14" viewBox="0 0 16 14" fill="none">
 					<rect width="16" height="2" rx="1" fill="var(--color-on-surface)"/>
@@ -30,12 +32,12 @@
 				{#if !networkStore.online}
 					<div class="flex items-center gap-1 mt-0.5">
 						<span class="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
-						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">Offline</span>
+						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">{t.sync_offline}</span>
 					</div>
 				{:else if networkStore.pendingCount > 0}
 					<div class="flex items-center gap-1 mt-0.5">
 						<span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: var(--color-primary)"></span>
-						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">{networkStore.pendingCount} Sync offen</span>
+						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">{sync_pending(networkStore.pendingCount)}</span>
 					</div>
 				{/if}
 			</div>

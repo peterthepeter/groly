@@ -6,6 +6,7 @@ export const users = sqliteTable('users', {
 	passwordHash: text('password_hash').notNull(),
 	role: text('role', { enum: ['admin', 'user'] }).notNull().default('user'),
 	mustChangePassword: integer('must_change_password', { mode: 'boolean' }).notNull().default(false),
+	settings: text('settings'),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull()
 });
@@ -50,6 +51,7 @@ export const items = sqliteTable('items', {
 	quantityInfo: text('quantity_info'),
 	isChecked: integer('is_checked', { mode: 'boolean' }).notNull().default(false),
 	checkedAt: integer('checked_at'),
+	categoryOverride: text('category_override'),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull()
 });

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { t } from '$lib/i18n.svelte';
 
 	let username = $state('');
 	let password = $state('');
@@ -21,7 +22,7 @@
 			goto('/');
 		} else {
 			const data = await res.json();
-			error = data.error ?? 'Anmeldefehler';
+			error = data.error ?? t.login_error;
 		}
 		loading = false;
 	}
@@ -41,7 +42,7 @@
 			</svg>
 		</div>
 		<h1 class="text-4xl font-bold mb-1" style="color: var(--color-on-surface); font-family: 'Plus Jakarta Sans', sans-serif">Groly</h1>
-		<p style="color: var(--color-on-surface-variant)">Deine Einkaufslisten</p>
+		<p style="color: var(--color-on-surface-variant)">{t.login_subtitle}</p>
 	</div>
 
 	<!-- Login Card -->
@@ -63,12 +64,12 @@
 					</svg>
 					<input
 						type="text"
-						placeholder="Benutzername"
+						placeholder={t.login_username}
 						bind:value={username}
 						autocomplete="username"
 						autocapitalize="none"
 						required
-						class="flex-1 bg-transparent outline-none text-sm"
+						class="flex-1 bg-transparent outline-none text-base"
 						style="color: var(--color-on-surface)"
 					/>
 				</div>
@@ -81,11 +82,11 @@
 					</svg>
 					<input
 						type="password"
-						placeholder="Passwort"
+						placeholder={t.login_password}
 						bind:value={password}
 						autocomplete="current-password"
 						required
-						class="flex-1 bg-transparent outline-none text-sm"
+						class="flex-1 bg-transparent outline-none text-base"
 						style="color: var(--color-on-surface)"
 					/>
 				</div>
@@ -97,7 +98,7 @@
 				class="w-full rounded-full py-4 font-semibold text-sm transition-opacity active:opacity-75 disabled:opacity-50"
 				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 			>
-				{loading ? 'Anmelden...' : 'Anmelden'}
+				{loading ? '...' : t.login_button}
 			</button>
 		</form>
 	</div>

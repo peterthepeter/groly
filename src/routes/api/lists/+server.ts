@@ -13,6 +13,13 @@ export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error) return error;
 
+	const openCounts = db
+		.select({ listId: items.listId, cnt: count(items.id).as('cnt') })
+		.from(items)
+		.where(eq(items.isChecked, false))
+		.groupBy(items.listId)
+		.as('open_counts');
+
 	const userLists = db
 		.select({
 			id: lists.id,
@@ -21,9 +28,10 @@ export const GET: RequestHandler = async (event) => {
 			ownerId: lists.ownerId,
 			createdAt: lists.createdAt,
 			updatedAt: lists.updatedAt,
-			openCount: sql<number>`(SELECT COUNT(*) FROM items WHERE items.list_id = ${lists.id} AND items.is_checked = 0)`
+			openCount: sql<number>`COALESCE(${openCounts.cnt}, 0)`
 		})
 		.from(lists)
+		.leftJoin(openCounts, eq(lists.id, openCounts.listId))
 		.where(eq(lists.ownerId, user!.id))
 		.orderBy(lists.updatedAt)
 		.all();

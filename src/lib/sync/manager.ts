@@ -1,4 +1,5 @@
 import { offlineDb } from './db';
+import type { OfflineList, OfflineItem } from './db';
 import { networkStore } from '$lib/stores/online.svelte';
 
 async function apiFetch(url: string, options?: RequestInit) {
@@ -62,6 +63,45 @@ export async function execute<T>(
 	const count = await offlineDb.pendingMutations.count();
 	networkStore.setPending(count);
 	return null;
+}
+
+// ── Offline-Cache-Hilfsfunktionen ──────────────────────────────────────────
+
+export async function cacheListsData(lists: OfflineList[]) {
+	await offlineDb.lists.bulkPut(lists);
+}
+
+export async function getOfflineLists(): Promise<OfflineList[]> {
+	return offlineDb.lists.toArray();
+}
+
+export async function cacheItemsData(items: OfflineItem[]) {
+	await offlineDb.items.bulkPut(items);
+}
+
+export async function getOfflineItems(listId: string): Promise<OfflineItem[]> {
+	return offlineDb.items.where('listId').equals(listId).toArray();
+}
+
+export async function getOfflineListName(listId: string): Promise<string> {
+	const list = await offlineDb.lists.get(listId);
+	return list?.name ?? '';
+}
+
+export async function updateOfflineItem(id: string, changes: Partial<OfflineItem>) {
+	await offlineDb.items.update(id, changes);
+}
+
+export async function deleteOfflineItem(id: string) {
+	await offlineDb.items.delete(id);
+}
+
+export async function updateOfflineList(id: string, changes: Partial<OfflineList>) {
+	await offlineDb.lists.update(id, changes);
+}
+
+export async function deleteOfflineList(id: string) {
+	await offlineDb.lists.delete(id);
 }
 
 export function initSync() {

@@ -8,6 +8,20 @@
       "when": 1774125865137,
       "tag": "0000_lonely_nico_minoru",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1774125900000,
+      "tag": "0001_user_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774125960000,
+      "tag": "0002_item_category_override",
+      "breakpoints": true
     }
   ]
 }

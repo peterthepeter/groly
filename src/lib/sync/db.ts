@@ -16,6 +16,7 @@ interface OfflineItem {
 	quantityInfo: string | null;
 	isChecked: boolean;
 	checkedAt: number | null;
+	categoryOverride: string | null;
 	updatedAt: number;
 }
 

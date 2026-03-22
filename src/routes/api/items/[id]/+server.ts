@@ -31,6 +31,7 @@ export const PUT: RequestHandler = async (event) => {
 		updates.isChecked = body.isChecked;
 		updates.checkedAt = body.isChecked ? ts : null;
 	}
+	if (body.categoryOverride !== undefined) updates.categoryOverride = body.categoryOverride ?? null;
 
 	db.update(items).set(updates).where(eq(items.id, item.id)).run();
 	db.update(lists).set({ updatedAt: ts }).where(eq(lists.id, item.listId)).run();
