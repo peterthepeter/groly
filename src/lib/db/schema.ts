@@ -7,6 +7,7 @@ export const users = sqliteTable('users', {
 	role: text('role', { enum: ['admin', 'user'] }).notNull().default('user'),
 	mustChangePassword: integer('must_change_password', { mode: 'boolean' }).notNull().default(false),
 	settings: text('settings'),
+	lastLoginAt: integer('last_login_at'),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull()
 });
@@ -24,6 +25,7 @@ export const lists = sqliteTable('lists', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	description: text('description'),
+	iconId: text('icon_id'),
 	ownerId: text('owner_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),

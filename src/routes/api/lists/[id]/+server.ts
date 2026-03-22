@@ -35,10 +35,10 @@ export const PUT: RequestHandler = async (event) => {
 	const list = getOwnedList(event.params.id, user!.id);
 	if (!list) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
-	const { name, description } = await event.request.json();
+	const { name, description, iconId } = await event.request.json();
 	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
 
-	db.update(lists).set({ name: name.trim(), description: description?.trim() ?? null, updatedAt: now() }).where(eq(lists.id, list.id)).run();
+	db.update(lists).set({ name: name.trim(), description: description?.trim() ?? null, iconId: iconId ?? null, updatedAt: now() }).where(eq(lists.id, list.id)).run();
 	return json({ ok: true });
 };
 

@@ -10,6 +10,13 @@
 	} = $props();
 
 	const showCreator = $derived(!!createdByUsername && createdByUsername !== currentUsername);
+	const displayCreator = $derived(
+		createdByUsername
+			? createdByUsername.length > 12
+				? createdByUsername.slice(0, 12) + '…'
+				: createdByUsername
+			: ''
+	);
 
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let longFired = $state(false);
@@ -36,7 +43,7 @@
 		onpointerup={endPress}
 		onpointercancel={endPress}
 		oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
-		class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform"
+		class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
 		style="background-color: var(--color-surface-card)"
 	>
 		<!-- Menge Badge — top right -->
@@ -58,12 +65,12 @@
 		</div>
 
 		<!-- Name + Creator — feste Höhe, Name immer auf gleicher Y-Position -->
-		<div class="absolute bottom-0 left-0 right-0 px-3 pb-1 flex flex-col items-center justify-center" style="height: 2.8rem">
+		<div class="absolute bottom-0 left-0 right-0 px-3 pb-2 flex flex-col items-center justify-end" style="height: 2.8rem">
 			<span class="block text-sm font-bold leading-tight line-clamp-2 text-center w-full"
 			      style="color: var(--color-on-surface)">{item.name}</span>
 			<span class="block text-[10px] leading-tight text-center mt-0.5 truncate w-full"
 			      style="color: var(--color-on-surface-variant); visibility: {showCreator ? 'visible' : 'hidden'}">
-				({createdByUsername ?? ''})
+				({displayCreator})
 			</span>
 		</div>
 	</button>

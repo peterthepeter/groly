@@ -36,6 +36,20 @@
       "when": 1742600060000,
       "tag": "0004_items_created_by",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1742686400000,
+      "tag": "0005_user_last_login",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1742772800000,
+      "tag": "0006_list_icon",
+      "breakpoints": true
     }
   ]
 }

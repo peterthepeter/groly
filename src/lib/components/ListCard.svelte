@@ -1,23 +1,24 @@
 <script lang="ts">
-	// Zufällig konsistente Farbe aus dem Listenname
-	const COLORS = ['#006c54', '#2e6771', '#4d626c', '#5a4080', '#a0522d', '#1a6b3c'];
+	import { getListIcon } from '$lib/listIcons';
+	import { list_items_open } from '$lib/i18n.svelte';
 
+	// Fallback: konsistente Farbe aus dem Listennamen
+	const COLORS = ['#006c54', '#2e6771', '#4d626c', '#5a4080', '#a0522d', '#1a6b3c'];
 	function colorForName(name: string): string {
 		let hash = 0;
 		for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) & 0xffffffff;
 		return COLORS[Math.abs(hash) % COLORS.length];
 	}
 
-	import { list_items_open } from '$lib/i18n.svelte';
-
 	let { list, onClick, onLongPress, onShare = null }: {
-		list: { id: string; name: string; description: string | null; openCount: number };
+		list: { id: string; name: string; description: string | null; openCount: number; iconId?: string | null };
 		onClick: () => void;
 		onLongPress: () => void;
 		onShare?: (() => void) | null;
 	} = $props();
 
-	const color = $derived(colorForName(list.name));
+	const icon = $derived(getListIcon(list.iconId));
+	const color = $derived(icon ? icon.color : colorForName(list.name));
 	const initial = $derived(list.name[0]?.toUpperCase() ?? '?');
 
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -42,13 +43,20 @@
 	onpointerup={endPress}
 	onpointercancel={endPress}
 	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
-	class="w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-colors active:opacity-80 text-left"
+	class="w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-colors active:opacity-80 text-left select-none"
 	style="background-color: var(--color-surface-card)"
 >
-	<!-- Initial Icon -->
+	<!-- Icon -->
 	<div class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center font-bold text-base"
-	     style="background-color: {color}20; color: {color}">
-		{initial}
+	     style="background-color: {color}22; color: {color}">
+		{#if icon}
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+			     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+				{@html icon.svgContent}
+			</svg>
+		{:else}
+			{initial}
+		{/if}
 	</div>
 
 	<!-- Text -->

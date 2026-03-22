@@ -62,6 +62,8 @@ export async function login(
 		.values({ id: sessionId, userId: user.id, expiresAt, createdAt: ts })
 		.run();
 
+	db.update(users).set({ lastLoginAt: ts }).where(eq(users.id, user.id)).run();
+
 	return { sessionId, mustChangePassword: user.mustChangePassword };
 }
 

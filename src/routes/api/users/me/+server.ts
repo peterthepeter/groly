@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { changePassword, verifyPassword } from '$lib/auth';
+import { validatePassword } from '$lib/password';
 import { db } from '$lib/db';
 import { users } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -44,7 +45,8 @@ export const PATCH: RequestHandler = async (event) => {
 	// Password change
 	const { currentPassword, newPassword } = body;
 	if (!currentPassword || !newPassword) return json({ error: 'Fehlende Felder' }, { status: 400 });
-	if (newPassword.length < 8) return json({ error: 'Passwort zu kurz (min. 8 Zeichen)' }, { status: 400 });
+	const pwError = validatePassword(newPassword);
+	if (pwError) return json({ error: pwError }, { status: 400 });
 
 	const fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
 	if (!fullUser || !verifyPassword(currentPassword, fullUser.passwordHash)) {

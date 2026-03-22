@@ -4,12 +4,26 @@ import { adminGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { users } from '$lib/db/schema';
 import { createUser } from '$lib/auth';
+import { sql } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
 	const { error } = adminGuard(event);
 	if (error) return error;
 
-	const allUsers = db.select({ id: users.id, username: users.username, role: users.role, createdAt: users.createdAt }).from(users).all();
+	const allUsers = db.all(sql`
+		SELECT
+			u.id,
+			u.username,
+			u.role,
+			u.created_at AS createdAt,
+			u.last_login_at AS lastLoginAt,
+			CAST(COUNT(DISTINCT l.id) AS INTEGER) AS listCount,
+			CAST(COUNT(i.id) AS INTEGER) AS itemCount
+		FROM users u
+		LEFT JOIN lists l ON l.owner_id = u.id
+		LEFT JOIN items i ON i.list_id = l.id
+		GROUP BY u.id
+	`);
 	return json(allUsers);
 };
 

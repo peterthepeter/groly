@@ -117,6 +117,7 @@
 				placeholder={t.item_name_label}
 				bind:value={name}
 				autofocus
+				onfocus={(e) => { const el = e.target as HTMLInputElement; setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0); }}
 				class="w-full bg-transparent outline-none text-base font-medium"
 				style="color: var(--color-on-surface)"
 			/>

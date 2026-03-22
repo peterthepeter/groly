@@ -5,6 +5,7 @@ import { db } from '$lib/db';
 import { users } from '$lib/db/schema';
 import { eq, asc, count } from 'drizzle-orm';
 import { hashPassword } from '$lib/auth';
+import { validatePassword } from '$lib/password';
 
 function now() { return Math.floor(Date.now() / 1000); }
 
@@ -13,7 +14,8 @@ export const PATCH: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const { password } = await event.request.json();
-	if (!password || password.length < 8) return json({ error: 'Passwort zu kurz' }, { status: 400 });
+	const pwError = validatePassword(password ?? '');
+	if (pwError) return json({ error: pwError }, { status: 400 });
 
 	const user = db.select().from(users).where(eq(users.id, event.params.id)).get();
 	if (!user) return json({ error: 'Nicht gefunden' }, { status: 404 });

@@ -12,7 +12,7 @@
 
 	let { data } = $props();
 
-	type ListItem = { id: string; name: string; description: string | null; ownerId: string; openCount: number; memberCount: number; updatedAt: number; isOwner: boolean; ownerUsername: string | null };
+	type ListItem = { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; openCount: number; memberCount: number; updatedAt: number; isOwner: boolean; ownerUsername: string | null };
 
 	let lists = $state<ListItem[]>([]);
 	let menuOpen = $state(false);
@@ -35,11 +35,11 @@
 		loading = false;
 	}
 
-	async function createList(name: string, description: string) {
+	async function createList(name: string, description: string, iconId: string | null) {
 		const res = await fetch('/api/lists', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name, description })
+			body: JSON.stringify({ name, description, iconId })
 		});
 		if (res.ok) {
 			const newList = await res.json();
@@ -49,7 +49,7 @@
 		addModalOpen = false;
 	}
 
-	async function saveEditList(name: string, description: string) {
+	async function saveEditList(name: string, description: string, iconId: string | null) {
 		if (!editList) return;
 		const id = editList.id;
 		editList = null;
@@ -57,11 +57,11 @@
 			() => fetch(`/api/lists/${id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, description })
+				body: JSON.stringify({ name, description, iconId })
 			}).then(r => { if (!r.ok) throw new Error(); }),
-			{ type: 'update_list', payload: { id, name, description }, createdAt: Date.now() },
+			{ type: 'update_list', payload: { id, name, description, iconId }, createdAt: Date.now() },
 			() => {
-				lists = lists.map(l => l.id === id ? { ...l, name, description: description || null } : l);
+				lists = lists.map(l => l.id === id ? { ...l, name, description: description || null, iconId } : l);
 				void updateOfflineList(id, { name, description: description || null });
 			}
 		);

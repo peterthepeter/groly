@@ -32,6 +32,7 @@ export const GET: RequestHandler = async (event) => {
 			id: lists.id,
 			name: lists.name,
 			description: lists.description,
+			iconId: lists.iconId,
 			ownerId: lists.ownerId,
 			ownerUsername: sql<string>`NULL`,
 			createdAt: lists.createdAt,
@@ -52,6 +53,7 @@ export const GET: RequestHandler = async (event) => {
 			id: lists.id,
 			name: lists.name,
 			description: lists.description,
+			iconId: lists.iconId,
 			ownerId: lists.ownerId,
 			ownerUsername: users.username,
 			createdAt: lists.createdAt,
@@ -79,12 +81,13 @@ export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error) return error;
 
-	const { name, description } = await event.request.json();
+	const { name, description, iconId } = await event.request.json();
 	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
 
 	const id = generateId();
 	const ts = now();
-	db.insert(lists).values({ id, name: name.trim(), description: description?.trim() ?? null, ownerId: user!.id, createdAt: ts, updatedAt: ts }).run();
+	const safeIconId = iconId ?? null;
+	db.insert(lists).values({ id, name: name.trim(), description: description?.trim() ?? null, iconId: safeIconId, ownerId: user!.id, createdAt: ts, updatedAt: ts }).run();
 
-	return json({ id, name, description, ownerId: user!.id, openCount: 0, createdAt: ts, updatedAt: ts, isOwner: true, ownerUsername: null }, { status: 201 });
+	return json({ id, name, description, iconId: safeIconId, ownerId: user!.id, openCount: 0, createdAt: ts, updatedAt: ts, isOwner: true, ownerUsername: null }, { status: 201 });
 };

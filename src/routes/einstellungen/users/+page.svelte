@@ -3,10 +3,23 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t } from '$lib/i18n.svelte';
+	import { validatePassword, PASSWORD_HINT } from '$lib/password';
 
 	let { data } = $props();
 
-	type UserEntry = { id: string; username: string; role: string; createdAt: number };
+	type UserEntry = { id: string; username: string; role: string; createdAt: number; lastLoginAt: number | null; listCount: number; itemCount: number };
+
+	function formatLastLogin(ts: number | null): string {
+		if (!ts) return 'Noch nie eingeloggt';
+		const diff = Math.floor(Date.now() / 1000) - ts;
+		if (diff < 60) return 'gerade eben';
+		if (diff < 3600) return `vor ${Math.floor(diff / 60)} Min.`;
+		if (diff < 86400) return `vor ${Math.floor(diff / 3600)} Std.`;
+		if (diff < 172800) return 'gestern';
+		if (diff < 604800) return `vor ${Math.floor(diff / 86400)} Tagen`;
+		if (diff < 2592000) return `vor ${Math.floor(diff / 604800)} Wo.`;
+		return `vor ${Math.floor(diff / 2592000)} Mon.`;
+	}
 
 	let users = $state<UserEntry[]>([]);
 	let menuOpen = $state(false);
@@ -64,7 +77,8 @@
 	async function savePassword() {
 		if (!editUser) return;
 		editError = '';
-		if (editPassword.length < 8) { editError = t.settings_passwords_no_match; return; }
+		const pwError = validatePassword(editPassword);
+		if (pwError) { editError = pwError; return; }
 		const res = await fetch(`/api/users/${editUser.id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
@@ -127,7 +141,13 @@
 					</div>
 					<div class="flex-1 min-w-0">
 						<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{user.username}</div>
-						<div class="text-xs" style="color: var(--color-on-surface-variant)">{user.role === 'admin' ? t.admin_role_admin : t.admin_role_user}</div>
+						<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">
+							{user.role === 'admin' ? t.admin_role_admin : t.admin_role_user}
+							· {user.listCount} {user.listCount === 1 ? 'Liste' : 'Listen'}, {user.itemCount} Items
+						</div>
+						<div class="text-[10px] truncate" style="color: var(--color-on-surface-variant); opacity: 0.7">
+							{formatLastLogin(user.lastLoginAt)}
+						</div>
 					</div>
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<polyline points="9 18 15 12 9 6"/>
@@ -165,9 +185,12 @@
 						<input type="text" placeholder={t.admin_username_label} bind:value={newUsername} required
 						       class="w-full bg-transparent outline-none text-base" style="color: var(--color-on-surface)" />
 					</div>
-					<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
-						<input type="password" placeholder={t.admin_password_label} bind:value={newPassword} required
-						       class="w-full bg-transparent outline-none text-base" style="color: var(--color-on-surface)" />
+					<div>
+						<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
+							<input type="password" placeholder={t.admin_password_label} bind:value={newPassword} required
+							       class="w-full bg-transparent outline-none text-base" style="color: var(--color-on-surface)" />
+						</div>
+						<p class="text-[11px] mt-1.5 px-1" style="color: var(--color-on-surface-variant)">{PASSWORD_HINT}</p>
 					</div>
 					<div class="rounded-xl px-4 py-3.5 flex items-center gap-3" style="background-color: var(--color-surface-container)">
 						<span class="text-sm" style="color: var(--color-on-surface-variant)">{t.admin_role_label}:</span>
@@ -233,14 +256,17 @@
 		{/if}
 
 		<!-- Password change -->
-		<div class="rounded-xl px-4 py-3.5 mb-3" style="background-color: var(--color-surface-container)">
-			<input
-				type="password"
-				placeholder={t.admin_new_password_label}
-				bind:value={editPassword}
-				class="w-full bg-transparent outline-none text-base"
-				style="color: var(--color-on-surface)"
-			/>
+		<div class="mb-3">
+			<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
+				<input
+					type="password"
+					placeholder={t.admin_new_password_label}
+					bind:value={editPassword}
+					class="w-full bg-transparent outline-none text-base"
+					style="color: var(--color-on-surface)"
+				/>
+			</div>
+			<p class="text-[11px] mt-1.5 px-1" style="color: var(--color-on-surface-variant)">{PASSWORD_HINT}</p>
 		</div>
 
 		<div class="flex gap-3">
@@ -262,7 +288,7 @@
 			</button>
 			<button
 				onclick={savePassword}
-				disabled={editPassword.length < 8}
+				disabled={!!validatePassword(editPassword)}
 				class="flex-1 py-3.5 rounded-full text-sm font-semibold disabled:opacity-40"
 				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 			>

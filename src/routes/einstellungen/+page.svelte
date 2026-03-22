@@ -6,6 +6,7 @@
 	import { t, currentLang, setLang } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { CATEGORY_LABELS } from '$lib/categories';
+	import { validatePassword, PASSWORD_HINT } from '$lib/password';
 
 	let { data } = $props();
 
@@ -52,8 +53,9 @@
 			error = t.settings_passwords_no_match;
 			return;
 		}
-		if (newPassword.length < 8) {
-			error = t.settings_passwords_no_match;
+		const pwError = validatePassword(newPassword);
+		if (pwError) {
+			error = pwError;
 			return;
 		}
 
@@ -120,9 +122,12 @@
 							<input type="password" placeholder={t.settings_current_password} bind:value={currentPassword} required
 							       class="w-full bg-transparent outline-none text-sm" style="color: var(--color-on-surface)" />
 						</div>
-						<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
-							<input type="password" placeholder={t.settings_new_password} bind:value={newPassword} required
-							       class="w-full bg-transparent outline-none text-sm" style="color: var(--color-on-surface)" />
+						<div>
+							<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
+								<input type="password" placeholder={t.settings_new_password} bind:value={newPassword} required
+								       class="w-full bg-transparent outline-none text-sm" style="color: var(--color-on-surface)" />
+							</div>
+							<p class="text-[11px] mt-1.5 px-1" style="color: var(--color-on-surface-variant)">{PASSWORD_HINT}</p>
 						</div>
 						<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
 							<input type="password" placeholder={t.settings_confirm_password} bind:value={confirmPassword} required
