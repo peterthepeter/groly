@@ -19,7 +19,8 @@
 		});
 
 		if (res.ok) {
-			goto('/');
+			const data = await res.json();
+			goto(data.mustChangePassword ? '/einstellungen?mustChange=1' : '/');
 		} else {
 			const data = await res.json();
 			error = data.error ?? t.login_error;

@@ -45,7 +45,7 @@
 			currentPassword = '';
 			newPassword = '';
 			confirmPassword = '';
-			if (mustChange) goto('/');
+			if (mustChange) setTimeout(() => goto('/'), 1500);
 		} else {
 			const data = await res.json();
 			error = data.error ?? t.settings_password_error;

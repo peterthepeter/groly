@@ -45,5 +45,5 @@ export const POST: RequestHandler = async (event) => {
 		secure: process.env.NODE_ENV === 'production'
 	});
 
-	return json({ ok: true });
+	return json({ ok: true, mustChangePassword: result.mustChangePassword });
 };

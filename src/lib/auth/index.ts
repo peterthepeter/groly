@@ -49,7 +49,7 @@ export async function createUser(
 export async function login(
 	username: string,
 	password: string
-): Promise<{ sessionId: string } | null> {
+): Promise<{ sessionId: string; mustChangePassword: boolean } | null> {
 	const user = db.select().from(users).where(eq(users.username, username)).get();
 	if (!user) return null;
 	if (!verifyPassword(password, user.passwordHash)) return null;
@@ -62,7 +62,7 @@ export async function login(
 		.values({ id: sessionId, userId: user.id, expiresAt, createdAt: ts })
 		.run();
 
-	return { sessionId };
+	return { sessionId, mustChangePassword: user.mustChangePassword };
 }
 
 export function getSession(sessionId: string) {
