@@ -1,25 +1,25 @@
 # Groly
 
-Mobile-first PWA Einkaufslisten-App für den Eigenbetrieb. Designed für kleine Teams/Familien (~10 User), läuft als Docker-Container auf einem Heimserver.
+Mobile-first PWA grocery list app for self-hosting. Designed for small teams/families (~10 users), runs as a Docker container on a home server.
 
 ## Features
 
-- **Offline-fähig** – Listen und Items werden lokal gecacht (IndexedDB). Abhaken, bearbeiten und löschen funktioniert auch ohne Internet. Änderungen werden automatisch synchronisiert, sobald die Verbindung wieder besteht.
-- **Kategorie-Sortierung** – Items werden automatisch nach Kategorie erkannt und können in individueller Reihenfolge angezeigt werden (z.B. nach Supermarkt-Layout).
-- **Multi-User** – Admin-Benutzer kann weitere User anlegen und Passwörter zurücksetzen.
-- **PWA** – Installierbar auf iOS und Android, funktioniert wie eine native App.
-- **Light & Dark Mode** – Automatisch per System-Einstellung.
-- **i18n** – Deutsch und Englisch.
+- **Offline support** – Lists and items are cached locally (IndexedDB). Checking off, editing and deleting items works without internet. Changes sync automatically once the connection is restored.
+- **Category sorting** – Items are automatically assigned a category and can be displayed in a custom order (e.g. matching your supermarket layout).
+- **Multi-user** – Admin can create additional users and reset passwords.
+- **PWA** – Installable on iOS and Android, works like a native app.
+- **Light & Dark mode** – Follows system preference automatically.
+- **i18n** – German and English.
 
 ## Tech Stack
 
 - **Framework:** SvelteKit (TypeScript, Svelte 5 Runes)
-- **Datenbank:** SQLite via better-sqlite3 + Drizzle ORM
+- **Database:** SQLite via better-sqlite3 + Drizzle ORM
 - **Auth:** Custom (scrypt + Sessions)
-- **Offline:** Dexie.js (IndexedDB) + Sync-Queue
+- **Offline:** Dexie.js (IndexedDB) + Sync queue
 - **PWA:** vite-plugin-pwa
 - **CSS:** Tailwind CSS v4
-- **Deployment:** Docker (Node.js Adapter)
+- **Deployment:** Docker (Node.js adapter)
 
 ## Docker Deployment
 
@@ -30,23 +30,19 @@ ports:
 volumes:
   - /mnt/user/appdata/groly:/app/data
 environment:
-  - ADMIN_USERNAME=dein-username
-  - ADMIN_PASSWORD=sicheres-passwort
-  - ORIGIN=https://deine-domain.de
+  - ADMIN_USERNAME=your-username
+  - ADMIN_PASSWORD=secure-password
+  - ORIGIN=https://your-domain.com
   - NODE_ENV=production
 ```
 
-Das Volume `/app/data` enthält die SQLite-Datenbank. Beim ersten Start wird automatisch ein Admin-User angelegt.
+The volume `/app/data` contains the SQLite database. An admin user is created automatically on first start.
 
-> **Wichtig:** Die App funktioniert nur korrekt über HTTPS. HTTP-Zugriff (z.B. über lokale IP) unterstützt keine Session-Cookies im Production-Modus und keine Service Worker.
+> **Note:** The app only works correctly over HTTPS. HTTP access (e.g. via local IP) does not support session cookies in production mode and no service worker.
 
-## Entwicklung
+## Development
 
 ```sh
 npm install
 npm run dev
 ```
-
-## Lizenz
-
-Privates Projekt – kein offizieller Support.
