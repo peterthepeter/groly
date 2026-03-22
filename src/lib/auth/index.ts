@@ -89,10 +89,14 @@ export function changePassword(userId: string, newPassword: string) {
 
 export function bootstrapAdmin() {
 	const adminUsername = process.env.ADMIN_USERNAME ?? 'admin';
-	const adminPassword = process.env.ADMIN_PASSWORD ?? 'changeme123';
+	const adminPassword = process.env.ADMIN_PASSWORD;
 
 	const existing = db.select().from(users).get();
 	if (existing) return; // Bereits User vorhanden
+
+	if (!adminPassword) {
+		throw new Error('[groly] ADMIN_PASSWORD environment variable is required on first start');
+	}
 
 	createUser(adminUsername, adminPassword, 'admin', true);
 	console.log(`[groly] Admin-User "${adminUsername}" angelegt.`);
