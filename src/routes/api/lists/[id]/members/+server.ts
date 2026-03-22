@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { lists, listMembers, users } from '$lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -32,7 +32,7 @@ export const POST: RequestHandler = async (event) => {
 	const { username } = await event.request.json();
 	if (!username?.trim()) return json({ error: 'Benutzername erforderlich' }, { status: 400 });
 
-	const target = db.select().from(users).where(eq(users.username, username.trim())).get();
+	const target = db.select().from(users).where(sql`lower(${users.username}) = lower(${username.trim()})`).get();
 	if (!target) return json({ error: 'Benutzer nicht gefunden' }, { status: 404 });
 	if (target.id === user!.id) return json({ error: 'Du kannst die Liste nicht mit dir selbst teilen' }, { status: 400 });
 
