@@ -47,17 +47,17 @@
 	style="background-color: var(--color-surface-card)"
 >
 	<!-- Icon -->
-	<div class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center font-bold text-base"
-	     style="background-color: {color}22; color: {color}">
-		{#if icon}
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-			     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-				{@html icon.svgContent}
-			</svg>
-		{:else}
+	{#if icon}
+		<svg class="flex-shrink-0" width="28" height="28" viewBox="0 0 24 24" fill="none"
+		     stroke={color} stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+			{@html icon.svgContent}
+		</svg>
+	{:else}
+		<span class="flex-shrink-0 w-7 h-7 flex items-center justify-center font-bold text-xl"
+		      style="color: {color}">
 			{initial}
-		{/if}
-	</div>
+		</span>
+	{/if}
 
 	<!-- Text -->
 	<div class="flex-1 min-w-0">

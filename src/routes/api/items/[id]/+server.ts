@@ -4,6 +4,7 @@ import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { lists, items, listMembers } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { emit } from '$lib/server/listEvents';
 
 function now() { return Math.floor(Date.now() / 1000); }
 
@@ -40,6 +41,9 @@ export const PUT: RequestHandler = async (event) => {
 	db.update(items).set(updates).where(eq(items.id, item.id)).run();
 	db.update(lists).set({ updatedAt: ts }).where(eq(lists.id, item.listId)).run();
 
+	const updated = db.select().from(items).where(eq(items.id, item.id)).get()!;
+	emit(item.listId, { type: 'item_updated', item: { id: updated.id, name: updated.name, quantityInfo: updated.quantityInfo, isChecked: updated.isChecked, checkedAt: updated.checkedAt, categoryOverride: updated.categoryOverride, updatedAt: updated.updatedAt }, byUserId: user!.id });
+
 	return json({ ok: true });
 };
 
@@ -51,5 +55,6 @@ export const DELETE: RequestHandler = async (event) => {
 	if (!item) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	db.delete(items).where(eq(items.id, item.id)).run();
+	emit(item.listId, { type: 'item_deleted', id: item.id, byUserId: user!.id });
 	return json({ ok: true });
 };

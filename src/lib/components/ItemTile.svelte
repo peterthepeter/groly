@@ -46,31 +46,28 @@
 		class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
 		style="background-color: var(--color-surface-card)"
 	>
-		<!-- Menge Badge — top right -->
-		{#if item.quantityInfo}
-			<span class="absolute top-2.5 right-2.5 text-xs font-semibold leading-none"
-			      style="color: {category.color}">{item.quantityInfo}</span>
-		{/if}
+		<!-- Creator — top right -->
+		<span class="absolute top-2.5 right-2.5 text-[10px] font-semibold leading-none"
+		      style="color: var(--color-on-surface-variant); visibility: {showCreator ? 'visible' : 'hidden'}">
+			({displayCreator})
+		</span>
 
 		<!-- Icon — obere Hälfte zentriert -->
-		<div class="absolute inset-0 flex items-start justify-center pt-6">
-			<div class="w-[58px] h-[58px] rounded-full flex items-center justify-center"
-			     style="background-color: color-mix(in srgb, {category.color} 22%, transparent)">
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-				     stroke={category.color} stroke-width="1.6"
-				     stroke-linecap="round" stroke-linejoin="round">
-					{@html category.svgContent}
-				</svg>
-			</div>
+		<div class="absolute inset-0 flex items-start justify-center pt-[30px]">
+			<svg width="44" height="44" viewBox="0 0 24 24" fill="none"
+			     stroke={category.color} stroke-width="1.3"
+			     stroke-linecap="round" stroke-linejoin="round">
+				{@html category.svgContent}
+			</svg>
 		</div>
 
-		<!-- Name + Creator — feste Höhe, Name immer auf gleicher Y-Position -->
+		<!-- Name + Menge — feste Höhe, Name immer auf gleicher Y-Position -->
 		<div class="absolute bottom-0 left-0 right-0 px-3 pb-2 flex flex-col items-center justify-end" style="height: 2.8rem">
 			<span class="block text-sm font-bold leading-tight line-clamp-2 text-center w-full"
 			      style="color: var(--color-on-surface)">{item.name}</span>
 			<span class="block text-[10px] leading-tight text-center mt-0.5 truncate w-full"
-			      style="color: var(--color-on-surface-variant); visibility: {showCreator ? 'visible' : 'hidden'}">
-				({displayCreator})
+			      style="color: {category.color}; visibility: {item.quantityInfo ? 'visible' : 'hidden'}">
+				{item.quantityInfo || '\u00a0'}
 			</span>
 		</div>
 	</button>

@@ -5,6 +5,7 @@ import { db } from '$lib/db';
 import { lists, items, listMembers, users } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
+import { emit } from '$lib/server/listEvents';
 
 function now() { return Math.floor(Date.now() / 1000); }
 function generateId() { return randomBytes(12).toString('base64url'); }
@@ -59,10 +60,17 @@ export const POST: RequestHandler = async (event) => {
 
 	const id = generateId();
 	const ts = now();
-	db.insert(items).values({ id, listId: event.params.id, name: name.trim(), quantityInfo: quantityInfo?.trim() ?? null, isChecked: false, createdBy: user!.id, createdAt: ts, updatedAt: ts }).run();
+	const trimmedName = name.trim();
+	const trimmedQty = quantityInfo?.trim() ?? null;
+	db.insert(items).values({ id, listId: event.params.id, name: trimmedName, quantityInfo: trimmedQty, isChecked: false, createdBy: user!.id, createdAt: ts, updatedAt: ts }).run();
 
 	// Liste updatedAt aktualisieren
 	db.update(lists).set({ updatedAt: ts }).where(eq(lists.id, event.params.id)).run();
 
-	return json({ id, listId: event.params.id, name, quantityInfo, isChecked: false, checkedAt: null, createdBy: user!.id, createdByUsername: null, createdAt: ts, updatedAt: ts }, { status: 201 });
+	const creator = db.select({ username: users.username }).from(users).where(eq(users.id, user!.id)).get();
+	const newItem = { id, listId: event.params.id, name: trimmedName, quantityInfo: trimmedQty, isChecked: false, checkedAt: null, categoryOverride: null, createdBy: user!.id, createdByUsername: creator?.username ?? null, createdAt: ts, updatedAt: ts };
+
+	emit(event.params.id, { type: 'item_added', item: newItem, byUserId: user!.id });
+
+	return json(newItem, { status: 201 });
 };

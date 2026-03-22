@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
@@ -128,6 +128,32 @@
 	}
 
 	onMount(loadItems);
+
+	// SSE — Echtzeit-Updates von anderen Usern empfangen
+	$effect(() => {
+		const id = listId;
+		const sse = new EventSource(`/api/lists/${id}/events`);
+
+		sse.onmessage = (e) => {
+			try {
+				const ev = JSON.parse(e.data);
+				if (ev.byUserId === data.user?.id) return; // eigene Änderungen bereits optimistisch angewendet
+
+				if (ev.type === 'item_added') {
+					items = [...items, ev.item];
+					void cacheItemsData(items);
+				} else if (ev.type === 'item_updated') {
+					items = items.map(i => i.id === ev.item.id ? { ...i, ...ev.item } : i);
+					void updateOfflineItem(ev.item.id, ev.item);
+				} else if (ev.type === 'item_deleted') {
+					items = items.filter(i => i.id !== ev.id);
+					void deleteOfflineItem(ev.id);
+				}
+			} catch { /* JSON parse error ignorieren */ }
+		};
+
+		return () => sse.close();
+	});
 </script>
 
 <div class="h-screen flex flex-col overflow-hidden" style="background-color: var(--color-bg)">

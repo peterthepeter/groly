@@ -141,10 +141,10 @@
 						class="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl transition-all active:opacity-70"
 						style="background-color: {selectedIconId === null ? 'color-mix(in srgb, var(--color-primary) 18%, transparent)' : 'transparent'}; outline: 1.5px solid {selectedIconId === null ? 'var(--color-primary)' : 'transparent'}; outline-offset: -1.5px"
 					>
-						<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-base"
-						     style="background-color: var(--color-surface-card); color: var(--color-on-surface-variant)">
+						<span class="w-10 h-10 flex items-center justify-center font-bold text-xl"
+						      style="color: var(--color-on-surface-variant)">
 							{name[0]?.toUpperCase() || '?'}
-						</div>
+						</span>
 						<span class="text-[10px] font-medium leading-none" style="color: var(--color-on-surface-variant)">Standard</span>
 					</button>
 
@@ -155,13 +155,11 @@
 							class="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl transition-all active:opacity-70"
 							style="background-color: {selectedIconId === icon.id ? `color-mix(in srgb, ${icon.color} 18%, transparent)` : 'transparent'}; outline: 1.5px solid {selectedIconId === icon.id ? icon.color : 'transparent'}; outline-offset: -1.5px"
 						>
-							<div class="w-10 h-10 rounded-full flex items-center justify-center"
-							     style="background-color: {icon.color}22; color: {icon.color}">
-								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-								     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-									{@html icon.svgContent}
-								</svg>
-							</div>
+							<svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+							     stroke={icon.color} stroke-width="1.4"
+							     stroke-linecap="round" stroke-linejoin="round">
+								{@html icon.svgContent}
+							</svg>
 							<span class="text-[10px] font-medium leading-none" style="color: {selectedIconId === icon.id ? icon.color : 'var(--color-on-surface-variant)'}">
 								{icon.label}
 							</span>
