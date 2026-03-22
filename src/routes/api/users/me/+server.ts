@@ -50,6 +50,9 @@ export const PATCH: RequestHandler = async (event) => {
 	if (!fullUser || !verifyPassword(currentPassword, fullUser.passwordHash)) {
 		return json({ error: 'Aktuelles Passwort falsch' }, { status: 401 });
 	}
+	if (newPassword === currentPassword) {
+		return json({ error: 'Neues Passwort darf nicht mit dem aktuellen übereinstimmen' }, { status: 400 });
+	}
 
 	changePassword(user!.id, newPassword);
 	return json({ ok: true });

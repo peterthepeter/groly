@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { getCategoryForItem } from '$lib/categories';
 
-	let { item, onTap, onLongPress }: {
+	let { item, onTap, onLongPress, createdByUsername = null, currentUsername = null }: {
 		item: { id: string; name: string; quantityInfo: string | null; categoryOverride?: string | null };
 		onTap: () => void;
 		onLongPress: () => void;
+		createdByUsername?: string | null;
+		currentUsername?: string | null;
 	} = $props();
+
+	const showCreator = $derived(!!createdByUsername && createdByUsername !== currentUsername);
 
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let longFired = $state(false);
@@ -53,10 +57,14 @@
 			</div>
 		</div>
 
-		<!-- Name — unten zentriert -->
-		<div class="absolute bottom-0 left-0 right-0 px-3 pb-3">
-			<span class="block text-sm font-bold leading-tight line-clamp-2 text-center"
+		<!-- Name + Creator — feste Höhe, Name immer auf gleicher Y-Position -->
+		<div class="absolute bottom-0 left-0 right-0 px-3 pb-1 flex flex-col items-center justify-center" style="height: 2.8rem">
+			<span class="block text-sm font-bold leading-tight line-clamp-2 text-center w-full"
 			      style="color: var(--color-on-surface)">{item.name}</span>
+			<span class="block text-[10px] leading-tight text-center mt-0.5 truncate w-full"
+			      style="color: var(--color-on-surface-variant); visibility: {showCreator ? 'visible' : 'hidden'}">
+				({createdByUsername ?? ''})
+			</span>
 		</div>
 	</button>
 </div>

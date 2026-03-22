@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { t } from '$lib/i18n.svelte';
 
-	let { list = null, onSave, onDelete = null, onClose }: {
+	let { list = null, onSave, onDelete = null, onShare = null, onClose }: {
 		list?: { id: string; name: string; description: string | null } | null;
 		onSave: (name: string, description: string) => void;
 		onDelete?: (() => void) | null;
+		onShare?: (() => void) | null;
 		onClose: () => void;
 	} = $props();
 
@@ -40,7 +41,24 @@
 		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 	</div>
 
-	<h2 class="text-lg font-bold mb-5" style="color: var(--color-on-surface)">{list ? t.list_edit_title : t.list_create_title}</h2>
+	<div class="flex items-center justify-between mb-5">
+		<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{list ? t.list_edit_title : t.list_create_title}</h2>
+		{#if list && onShare}
+			<button
+				onclick={onShare}
+				class="p-2 rounded-xl active:opacity-60"
+				style="color: var(--color-primary)"
+				aria-label="Liste teilen"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+					<circle cx="9" cy="7" r="4"/>
+					<line x1="19" y1="8" x2="19" y2="14"/>
+					<line x1="22" y1="11" x2="16" y2="11"/>
+				</svg>
+			</button>
+		{/if}
+	</div>
 
 	<div class="space-y-3 mb-6">
 		<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">

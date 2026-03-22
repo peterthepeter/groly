@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { lists } from '$lib/db/schema';
+import { lists, listMembers } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 function now() { return Math.floor(Date.now() / 1000); }
@@ -11,11 +11,19 @@ function getOwnedList(listId: string, userId: string) {
 	return db.select().from(lists).where(and(eq(lists.id, listId), eq(lists.ownerId, userId))).get();
 }
 
+function getAccessibleList(listId: string, userId: string) {
+	const list = db.select().from(lists).where(eq(lists.id, listId)).get();
+	if (!list) return null;
+	if (list.ownerId === userId) return list;
+	const member = db.select().from(listMembers).where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId))).get();
+	return member ? list : null;
+}
+
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error) return error;
 
-	const list = getOwnedList(event.params.id, user!.id);
+	const list = getAccessibleList(event.params.id, user!.id);
 	if (!list) return json({ error: 'Nicht gefunden' }, { status: 404 });
 	return json(list);
 };

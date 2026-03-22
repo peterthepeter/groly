@@ -16,7 +16,7 @@
 
 	let { data } = $props();
 
-	type Item = { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; updatedAt: number };
+	type Item = { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number };
 
 	let listName = $state('');
 	let items = $state<Item[]>([]);
@@ -166,6 +166,8 @@
 							{item}
 							onTap={() => toggleItem(item)}
 							onLongPress={() => { editItem = item; addModalOpen = true; }}
+							createdByUsername={item.createdByUsername}
+							currentUsername={data.user?.username ?? null}
 						/>
 					{/each}
 				</div>

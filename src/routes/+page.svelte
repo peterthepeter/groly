@@ -7,16 +7,18 @@
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import ListCard from '$lib/components/ListCard.svelte';
 	import AddListModal from '$lib/components/AddListModal.svelte';
+	import ShareListModal from '$lib/components/ShareListModal.svelte';
 	import { t, lists_active } from '$lib/i18n.svelte';
 
 	let { data } = $props();
 
-	type ListItem = { id: string; name: string; description: string | null; ownerId: string; openCount: number; updatedAt: number };
+	type ListItem = { id: string; name: string; description: string | null; ownerId: string; openCount: number; memberCount: number; updatedAt: number; isOwner: boolean; ownerUsername: string | null };
 
 	let lists = $state<ListItem[]>([]);
 	let menuOpen = $state(false);
 	let addModalOpen = $state(false);
 	let editList = $state<ListItem | null>(null);
+	let shareList = $state<ListItem | null>(null);
 	let loading = $state(true);
 
 	const openCount = $derived(lists.length);
@@ -112,7 +114,8 @@
 					<ListCard
 						{list}
 						onClick={() => goto(`/listen/${list.id}`)}
-						onLongPress={() => { editList = list; }}
+						onLongPress={() => { if (list.isOwner) editList = list; }}
+						onShare={list.isOwner && list.memberCount > 0 ? () => { shareList = list; } : null}
 					/>
 				{/each}
 			</div>
@@ -136,6 +139,15 @@
 		list={editList}
 		onSave={saveEditList}
 		onDelete={() => deleteList(editList!.id)}
+		onShare={() => { shareList = editList; editList = null; }}
 		onClose={() => editList = null}
+	/>
+{/if}
+
+{#if shareList}
+	<ShareListModal
+		listId={shareList.id}
+		listName={shareList.name}
+		onClose={() => shareList = null}
 	/>
 {/if}

@@ -10,10 +10,11 @@
 
 	import { list_items_open } from '$lib/i18n.svelte';
 
-	let { list, onClick, onLongPress }: {
+	let { list, onClick, onLongPress, onShare = null }: {
 		list: { id: string; name: string; description: string | null; openCount: number };
 		onClick: () => void;
 		onLongPress: () => void;
+		onShare?: (() => void) | null;
 	} = $props();
 
 	const color = $derived(colorForName(list.name));
@@ -57,6 +58,26 @@
 			{list.description ? `${list.description} · ` : ''}{list_items_open(list.openCount)}
 		</div>
 	</div>
+
+	{#if onShare}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			onclick={(e) => { e.stopPropagation(); onShare!(); }}
+			onpointerdown={(e) => e.stopPropagation()}
+			role="button"
+			tabindex="-1"
+			class="flex-shrink-0 p-1.5 -mr-1 rounded-lg active:opacity-60"
+			aria-label="Liste teilen"
+		>
+			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+				<circle cx="9" cy="7" r="4"/>
+				<line x1="19" y1="8" x2="19" y2="14"/>
+				<line x1="22" y1="11" x2="16" y2="11"/>
+			</svg>
+		</div>
+	{/if}
 
 	<!-- Chevron -->
 	<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
