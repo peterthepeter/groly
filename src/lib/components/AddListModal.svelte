@@ -106,10 +106,10 @@
 			style="background-color: var(--color-surface-container)"
 		>
 			<!-- Aktuelles Icon -->
-			<div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0"
-			     style="background-color: {selectedIcon ? selectedIcon.color + '22' : 'var(--color-surface-high)'}; color: {selectedIcon ? selectedIcon.color : 'var(--color-on-surface-variant)'}">
+			<div class="w-8 h-8 flex items-center justify-center font-bold text-sm flex-shrink-0"
+			     style="color: {selectedIcon ? selectedIcon.color : 'var(--color-on-surface-variant)'}">
 				{#if selectedIcon}
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 					     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
 						{@html selectedIcon.svgContent}
 					</svg>
