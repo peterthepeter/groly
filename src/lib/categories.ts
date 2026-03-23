@@ -142,7 +142,7 @@ export const CATEGORIES: CategoryDef[] = [
 		],
 		category: {
 			color: '#F472B6',
-			svgContent: `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+			svgContent: `<rect x="2" y="7" width="20" height="10" rx="1.5"/><line x1="8" y1="7" x2="8" y2="17"/><line x1="14" y1="7" x2="14" y2="17"/><line x1="2" y1="12" x2="22" y2="12"/>`
 		}
 	},
 	{

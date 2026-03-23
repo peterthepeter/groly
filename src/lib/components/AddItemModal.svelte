@@ -106,14 +106,11 @@
 						style="background-color: {categoryOverride === cat.key ? 'color-mix(in srgb, ' + cat.category.color + ' 15%, transparent)' : 'transparent'};
 						       box-shadow: {categoryOverride === cat.key ? 'inset 0 0 0 2px ' + cat.category.color : 'none'};"
 					>
-						<div class="w-8 h-8 rounded-full flex items-center justify-center"
-						     style="background-color: color-mix(in srgb, {cat.category.color} 22%, transparent)">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-							     stroke={cat.category.color} stroke-width="1.8"
-							     stroke-linecap="round" stroke-linejoin="round">
-								{@html cat.category.svgContent}
-							</svg>
-						</div>
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+						     stroke={cat.category.color} stroke-width="1.6"
+						     stroke-linecap="round" stroke-linejoin="round">
+							{@html cat.category.svgContent}
+						</svg>
 						<span class="text-[10px] leading-tight text-center font-medium"
 						      style="color: {categoryOverride === cat.key ? cat.category.color : 'var(--color-on-surface-variant)'}">
 							{CATEGORY_LABELS[cat.key][lang]}
