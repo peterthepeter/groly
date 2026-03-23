@@ -11,6 +11,7 @@
 
 	let members = $state<Member[]>([]);
 	let newUsername = $state('');
+	let newPermission = $state<'write' | 'read'>('write');
 	let error = $state('');
 	let loading = $state(true);
 	let adding = $state(false);
@@ -45,7 +46,7 @@
 		const res = await fetch(`/api/lists/${listId}/members`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ username })
+			body: JSON.stringify({ username, permission: newPermission })
 		});
 		if (res.ok) {
 			const member = await res.json();
@@ -120,6 +121,12 @@
 							<circle cx="12" cy="7" r="4"/>
 						</svg>
 						<span class="flex-1 text-sm font-medium" style="color: var(--color-on-surface)">{member.username}</span>
+						{#if member.permission === 'read'}
+							<span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+							      style="background-color: color-mix(in srgb, var(--color-on-surface-variant) 12%, transparent); color: var(--color-on-surface-variant)">
+								{lang === 'en' ? 'View' : 'Lesen'}
+							</span>
+						{/if}
 						<button
 							onclick={() => removeMember(member.userId)}
 							class="p-1 rounded-lg"
@@ -149,6 +156,25 @@
 				style="color: var(--color-on-surface)"
 			/>
 		</div>
+		<!-- Read/Write Toggle -->
+		<button
+			onclick={() => newPermission = newPermission === 'write' ? 'read' : 'write'}
+			class="px-3 py-3 rounded-xl flex items-center justify-center transition-colors"
+			style="background-color: var(--color-surface-container); color: {newPermission === 'write' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+			title={newPermission === 'write' ? (lang === 'en' ? 'Write access' : 'Schreibzugriff') : (lang === 'en' ? 'Read only' : 'Nur lesen')}
+		>
+			{#if newPermission === 'write'}
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+					<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+				</svg>
+			{:else}
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+					<circle cx="12" cy="12" r="3"/>
+				</svg>
+			{/if}
+		</button>
 		<button
 			onclick={addMember}
 			disabled={adding || !newUsername.trim()}

@@ -158,3 +158,8 @@
     border-radius: var(--radius-xl);
   }
 }
+
+/* iOS zoom prevention – outside any @layer so it beats Tailwind utilities like text-sm */
+input, textarea, select {
+  font-size: 16px;
+}

@@ -10,12 +10,12 @@ import { emit } from '$lib/server/listEvents';
 function now() { return Math.floor(Date.now() / 1000); }
 function generateId() { return randomBytes(12).toString('base64url'); }
 
-function getListAccess(listId: string, userId: string): { list: typeof lists.$inferSelect; permission: 'owner' | 'write' | null } {
+function getListAccess(listId: string, userId: string): { list: typeof lists.$inferSelect; permission: 'owner' | 'write' | 'read' | null } {
 	const list = db.select().from(lists).where(eq(lists.id, listId)).get();
 	if (!list) return { list: null as any, permission: null };
 	if (list.ownerId === userId) return { list, permission: 'owner' };
 	const member = db.select().from(listMembers).where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId))).get();
-	if (member) return { list, permission: member.permission === 'write' ? 'write' : null };
+	if (member) return { list, permission: member.permission === 'write' ? 'write' : 'read' };
 	return { list: null as any, permission: null };
 }
 
@@ -54,6 +54,7 @@ export const POST: RequestHandler = async (event) => {
 
 	const { list, permission } = getListAccess(event.params.id, user!.id);
 	if (!list || permission === null) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (permission === 'read') return json({ error: 'Keine Schreibberechtigung' }, { status: 403 });
 
 	const { name, quantityInfo } = await event.request.json();
 	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });

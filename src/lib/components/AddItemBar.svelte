@@ -15,6 +15,19 @@
 	let showSuggestions = $state(false);
 	let bottomOffset = $state(0);
 
+	const isNumeric = $derived(/^\d+$/.test(quantityInfo.trim()) || quantityInfo.trim() === '');
+
+	function increment() {
+		const n = quantityInfo.trim() === '' ? 0 : parseInt(quantityInfo.trim());
+		quantityInfo = String(n + 1);
+	}
+
+	function decrement() {
+		const n = parseInt(quantityInfo.trim());
+		if (isNaN(n) || n <= 1) quantityInfo = '';
+		else quantityInfo = String(n - 1);
+	}
+
 	$effect(() => {
 		const vv = window.visualViewport;
 		if (!vv) return;
@@ -106,15 +119,34 @@
 				class="w-full rounded-xl px-4 py-3 text-base font-medium outline-none"
 				style="background-color: var(--color-surface-card); color: var(--color-on-surface)"
 			/>
-			<input
-				type="text"
-				placeholder={t.item_quantity_placeholder}
-				bind:value={quantityInfo}
-				onkeydown={handleKeydown}
-				autocomplete="off"
-				class="w-full rounded-xl px-4 py-3 text-base outline-none"
-				style="background-color: var(--color-surface-card); color: var(--color-on-surface)"
-			/>
+			<div class="flex items-center gap-2 rounded-xl px-4 py-3"
+			     style="background-color: var(--color-surface-card)">
+				<input
+					type="text"
+					placeholder={t.item_quantity_placeholder}
+					bind:value={quantityInfo}
+					onkeydown={handleKeydown}
+					autocomplete="off"
+					class="flex-1 bg-transparent outline-none text-base min-w-0"
+					style="color: var(--color-on-surface)"
+				/>
+				<button
+					onpointerdown={(e) => e.preventDefault()}
+					onclick={decrement}
+					disabled={!isNumeric || quantityInfo.trim() === ''}
+					tabindex="-1"
+					class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+				>−</button>
+				<button
+					onpointerdown={(e) => e.preventDefault()}
+					onclick={increment}
+					disabled={!isNumeric}
+					tabindex="-1"
+					class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+				>+</button>
+			</div>
 		</div>
 
 		<!-- Schließen links, Hinzufügen rechts -->

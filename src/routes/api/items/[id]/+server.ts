@@ -27,6 +27,12 @@ export const PUT: RequestHandler = async (event) => {
 	if (!item) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const body = await event.request.json();
+
+	// Konfliktprüfung: Item wurde server-seitig geändert seit letztem Client-Stand
+	if (body.clientUpdatedAt !== undefined && item.updatedAt > body.clientUpdatedAt) {
+		return json({ error: 'Konflikt', current: item }, { status: 409 });
+	}
+
 	const ts = now();
 	const updates: Record<string, unknown> = { updatedAt: ts };
 

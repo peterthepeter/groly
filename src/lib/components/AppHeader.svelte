@@ -2,10 +2,11 @@
 	import { networkStore } from '$lib/stores/online.svelte';
 	import { t, sync_pending } from '$lib/i18n.svelte';
 
-	let { title = 'Meine Listen', subtitle = '', onMenuOpen }: {
+	let { title = 'Meine Listen', subtitle = '', onMenuOpen, onSearch = null }: {
 		title?: string;
 		subtitle?: string;
 		onMenuOpen: () => void;
+		onSearch?: (() => void) | null;
 	} = $props();
 </script>
 
@@ -43,12 +44,27 @@
 			</div>
 		</div>
 
-		<!-- Right: Page Context -->
-		<div class="text-right flex-shrink-0 ml-2">
-			<div class="text-sm font-semibold truncate max-w-32" style="color: var(--color-on-surface)">{title}</div>
-			{#if subtitle}
-				<div class="text-xs truncate max-w-32" style="color: var(--color-on-surface-variant)">{subtitle}</div>
+		<!-- Right: optional Suche + Page Context -->
+		<div class="flex items-center gap-2 flex-shrink-0 ml-2">
+			{#if onSearch}
+				<button
+					onclick={onSearch}
+					class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
+					aria-label="Suchen"
+				>
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+					     stroke="var(--color-on-surface)" stroke-width="2"
+					     stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+					</svg>
+				</button>
 			{/if}
+			<div class="text-right">
+				<div class="text-sm font-semibold truncate max-w-28" style="color: var(--color-on-surface)">{title}</div>
+				{#if subtitle}
+					<div class="text-xs truncate max-w-28" style="color: var(--color-on-surface-variant)">{subtitle}</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 </header>

@@ -20,6 +20,19 @@
 		categoryOverride ? CATEGORY_LABELS[categoryOverride][lang] : (lang === 'en' ? 'Automatic' : 'Automatisch')
 	);
 
+	const isNumeric = $derived(/^\d+$/.test(quantityInfo.trim()) || quantityInfo.trim() === '');
+
+	function increment() {
+		const n = quantityInfo.trim() === '' ? 0 : parseInt(quantityInfo.trim());
+		quantityInfo = String(n + 1);
+	}
+
+	function decrement() {
+		const n = parseInt(quantityInfo.trim());
+		if (isNaN(n) || n <= 1) quantityInfo = '';
+		else quantityInfo = String(n - 1);
+	}
+
 	function selectCategory(key: string | null) {
 		categoryOverride = key;
 		categoryOpen = false;
@@ -124,13 +137,27 @@
 		</div>
 
 		<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
-			<input
-				type="text"
-				placeholder={t.item_quantity_placeholder}
-				bind:value={quantityInfo}
-				class="w-full bg-transparent outline-none text-base"
-				style="color: var(--color-on-surface)"
-			/>
+			<div class="flex items-center gap-2">
+				<input
+					type="text"
+					placeholder={t.item_quantity_placeholder}
+					bind:value={quantityInfo}
+					class="flex-1 bg-transparent outline-none text-base min-w-0"
+					style="color: var(--color-on-surface)"
+				/>
+				<button
+					onclick={decrement}
+					disabled={!isNumeric || quantityInfo.trim() === ''}
+					class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+				>−</button>
+				<button
+					onclick={increment}
+					disabled={!isNumeric}
+					class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+				>+</button>
+			</div>
 		</div>
 	</div>
 

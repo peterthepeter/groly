@@ -7,7 +7,11 @@ async function apiFetch(url: string, options?: RequestInit) {
 		...options,
 		headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) }
 	});
-	if (!res.ok) throw new Error(`API error: ${res.status}`);
+	if (!res.ok) {
+		const err = new Error(`API error: ${res.status}`) as Error & { status: number };
+		err.status = res.status;
+		throw err;
+	}
 	return res.json();
 }
 
@@ -36,8 +40,14 @@ async function processPendingMutations() {
 					break;
 			}
 			await offlineDb.pendingMutations.delete(mutation.id!);
-		} catch {
-			break; // Stoppe bei erstem Fehler, versuche es beim nächsten Online-Event erneut
+		} catch (e: unknown) {
+			const status = (e as { status?: number })?.status;
+			if (status === 404 || status === 409 || status === 403) {
+				// Permanenter Fehler – Mutation überspringen (Item gelöscht, Konflikt oder keine Berechtigung)
+				await offlineDb.pendingMutations.delete(mutation.id!);
+				continue;
+			}
+			break; // Netzwerkfehler – beim nächsten Online-Event erneut versuchen
 		}
 	}
 	const remaining = await offlineDb.pendingMutations.count();

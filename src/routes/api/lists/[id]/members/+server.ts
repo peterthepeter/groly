@@ -29,14 +29,15 @@ export const POST: RequestHandler = async (event) => {
 	const list = db.select().from(lists).where(and(eq(lists.id, event.params.id), eq(lists.ownerId, user!.id))).get();
 	if (!list) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
-	const { username } = await event.request.json();
+	const { username, permission: reqPermission } = await event.request.json();
 	if (!username?.trim()) return json({ error: 'Benutzername erforderlich' }, { status: 400 });
 
 	const target = db.select().from(users).where(sql`lower(${users.username}) = lower(${username.trim()})`).get();
 	if (!target) return json({ error: 'Benutzer nicht gefunden' }, { status: 404 });
 	if (target.id === user!.id) return json({ error: 'Du kannst die Liste nicht mit dir selbst teilen' }, { status: 400 });
 
-	db.insert(listMembers).values({ listId: event.params.id, userId: target.id, permission: 'write' }).onConflictDoNothing().run();
+	const memberPermission = reqPermission === 'read' ? 'read' : 'write';
+	db.insert(listMembers).values({ listId: event.params.id, userId: target.id, permission: memberPermission }).onConflictDoNothing().run();
 
-	return json({ userId: target.id, username: target.username, permission: 'write' }, { status: 201 });
+	return json({ userId: target.id, username: target.username, permission: memberPermission }, { status: 201 });
 };
