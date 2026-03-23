@@ -116,6 +116,8 @@ export const CATEGORIES: CategoryDef[] = [
 			'anchovis', 'leberkäse', 'fleischwurst', 'weißwurst', 'bockwurst', 'wiener',
 			'hähnchenflügel', 'entenbrust', 'gänsebrust', 'wildschwein', 'rehrücken', 'kaninchen',
 			'lende', 'rumpsteak', 'entrecôte', 'roastbeef', 'tafelspitz', 'gulasch', 'geschnetzeltes',
+			'tofu', 'tempeh', 'seitan', 'quorn', 'sojahack', 'sojaschnetzel', 'vegane wurst',
+			'veganer aufschnitt', 'pflanzliche alternative', 'fleischersatz',
 			// English
 			'meat', 'chicken', 'beef', 'pork', 'sausage', 'sausages', 'fish', 'salmon', 'tuna',
 			'ground beef', 'minced meat', 'mince', 'turkey', 'lamb', 'veal', 'bacon', 'ham',
@@ -124,7 +126,9 @@ export const CATEGORIES: CategoryDef[] = [
 			'lamb chops', 'smoked salmon', 'anchovies', 'sardines', 'duck', 'duck breast',
 			'rabbit', 'pork belly', 'pork chop', 'ribs', 'meatball', 'meatballs', 'hot dog',
 			'pepperoni', 'pastrami', 'prosciutto', 'pancetta', 'lardons', 'roast beef',
-			'sirloin', 'ribeye', 'tenderloin', 'fillet', 'sea bass', 'sea bream', 'scallops'
+			'sirloin', 'ribeye', 'tenderloin', 'fillet', 'sea bass', 'sea bream', 'scallops',
+			'tofu', 'tempeh', 'seitan', 'quorn', 'plant-based meat', 'vegan meat',
+			'veggie burger', 'veggie sausage', 'vegan sausage', 'vegan chicken'
 		],
 		category: {
 			color: '#EF4444',
@@ -263,16 +267,23 @@ export const CATEGORIES: CategoryDef[] = [
 		keywords: [
 			'dose', 'konserve', 'ketchup', 'senf', 'mayonnaise', 'mayo', 'soße', 'sauce',
 			'tomatenmark', 'passata', 'tomaten dose', 'tomaten passiert', 'dosentomaten',
-			'aufstrich', 'hummus', 'pesto', 'ajvar', 'tapenade', 'remoulade',
+			'aufstrich', 'brotaufstrich', 'hummus', 'pesto', 'ajvar', 'tapenade', 'remoulade',
+			'marmelade', 'konfitüre', 'konfituere', 'gelee', 'pflaumenmus', 'apfelmus',
+			'erdbeermarmelade', 'himbeermarmelade', 'kirschmarmelade', 'orangenmarmelade',
+			'erdnussbutter', 'mandelmus', 'mandelbutter', 'cashewmus', 'nussmus',
 			'miracel whip', 'miracle whip', 'hengstenberg', 'gürkchen', 'kapern',
 			'oliven', 'mais dose', 'bohnen dose', 'kidneybohnen', 'kichererbsen',
 			'linsen', 'erbsen dose', 'sardinen dose', 'thunfisch dose',
+			'instantsuppe', 'fertigsuppe', 'suppenpulver', 'tütensuppe', 'dosensuppe',
+			'fertiggericht', 'fertigsauce', 'glasnudeln sauce',
 			// English
 			'can', 'canned', 'tin', 'tinned', 'ketchup', 'mustard', 'mayonnaise',
 			'tomato paste', 'tomato sauce', 'passata', 'tinned tomatoes', 'canned tomatoes',
-			'jam', 'marmalade', 'spread', 'pesto', 'olives', 'capers',
+			'jam', 'jelly', 'marmalade', 'fruit spread', 'spread', 'pesto', 'olives', 'capers',
+			'peanut butter', 'almond butter', 'nut butter', 'hazelnut butter',
 			'canned beans', 'kidney beans', 'chickpeas', 'lentils', 'canned corn',
-			'canned fish', 'canned tuna', 'canned sardines'
+			'canned fish', 'canned tuna', 'canned sardines',
+			'instant soup', 'canned soup', 'soup mix', 'ready meal', 'ready sauce'
 		],
 		category: {
 			color: '#78716C',
@@ -297,13 +308,12 @@ export const CATEGORIES: CategoryDef[] = [
 			'sojasauce', 'worcester', 'worcestersauce', 'tabasco', 'sambal', 'sriracha',
 			'fischsauce', 'austernsoße', 'hoisin', 'teriyaki', 'tahini',
 			'brühe', 'suppenwürfel', 'gemüsebrühe', 'hühnerbrühe', 'rinderbrühe', 'fond',
-			'backpulver', 'natron', 'hefe', 'trockenhefe',
 			// English
 			'oil', 'olive oil', 'sunflower oil', 'rapeseed oil', 'coconut oil', 'sesame oil',
 			'vinegar', 'apple cider vinegar', 'balsamic vinegar', 'white wine vinegar',
 			'salt', 'sea salt', 'himalayan salt', 'pepper', 'peppercorns',
 			'spice', 'spices', 'herb', 'herbs', 'seasoning', 'mixed herbs',
-			'curry powder', 'cinnamon', 'vanilla', 'vanilla sugar', 'vanilla extract',
+			'curry powder', 'cinnamon', 'vanilla', 'vanilla extract',
 			'nutmeg', 'oregano', 'basil dried', 'thyme dried', 'rosemary dried', 'bay leaf',
 			'cumin', 'fennel seeds', 'anise', 'cardamom', 'turmeric', 'ginger powder',
 			'chili powder', 'chili flakes', 'cayenne pepper', 'paprika powder', 'garlic powder',
@@ -311,8 +321,7 @@ export const CATEGORIES: CategoryDef[] = [
 			'honey', 'maple syrup', 'agave syrup', 'agave nectar', 'stevia',
 			'soy sauce', 'worcestershire sauce', 'hot sauce', 'sriracha', 'fish sauce',
 			'oyster sauce', 'hoisin sauce', 'teriyaki sauce', 'tahini',
-			'stock', 'stock cube', 'broth', 'vegetable stock', 'chicken stock', 'beef stock',
-			'baking powder', 'baking soda', 'bicarbonate of soda', 'yeast', 'dried yeast'
+			'stock', 'stock cube', 'broth', 'vegetable stock', 'chicken stock', 'beef stock'
 		],
 		category: {
 			color: '#D97706',
