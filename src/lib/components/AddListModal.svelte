@@ -12,7 +12,7 @@
 
 	let name = $state(list?.name ?? '');
 	let description = $state(list?.description ?? '');
-	let selectedIconId = $state<string | null>(list?.iconId ?? null);
+	let selectedIconId = $state<string | null>(list?.iconId ?? 'supermarkt');
 	let iconPickerOpen = $state(false);
 	let bottomOffset = $state(0);
 
