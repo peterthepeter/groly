@@ -91,16 +91,17 @@ export const userSettings = {
 	}
 };
 
-export async function initUserSettings() {
-	if (!browser) return;
+export async function initUserSettings(): Promise<UserSettings | null> {
+	if (!browser) return null;
 	try {
 		const res = await fetch('/api/users/me');
-		if (!res.ok) return;
+		if (!res.ok) return null;
 		const { settings } = await res.json() as { settings: UserSettings };
 		const merged = merge(settings);
 		_lang = merged.lang;
 		_categorySortEnabled = merged.categorySortEnabled;
 		_categoryOrder = merged.categoryOrder;
 		saveCache(settings);
-	} catch {}
+		return settings;
+	} catch { return null; }
 }

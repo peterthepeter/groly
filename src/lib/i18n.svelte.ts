@@ -18,14 +18,14 @@ export function setLang(lang: AvailableLanguageTag) {
 export async function initLanguage() {
 	if (!browser) return;
 	// Load from server (falls back to localStorage cache if offline)
-	await initUserSettings();
+	const serverSettings = await initUserSettings();
 	const lang = userSettings.lang;
 	setLanguageTag(lang);
 	_lang = lang;
-	// If no server settings yet, try browser language
-	if (!localStorage.getItem('groly_settings')) {
+	// If no explicit language preference was saved, detect from browser
+	if (!serverSettings?.lang) {
 		const browserLang = navigator.language.slice(0, 2);
-		if (browserLang === 'en') setLang('en');
+		setLang(browserLang === 'en' ? 'en' : 'de');
 	}
 }
 

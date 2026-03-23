@@ -3,6 +3,8 @@ export type Category = {
 	svgContent: string;
 };
 
+import { BRAND_CATEGORIES } from '$lib/brands';
+
 type CategoryDef = {
 	key: string;
 	keywords: string[];
@@ -31,7 +33,21 @@ export const CATEGORIES: CategoryDef[] = [
 			'pfirsich', 'nektarine', 'melone', 'wassermelone', 'granatapfel',
 			'mais', 'spargel', 'aubergine', 'fenchel', 'artischocke', 'papaya', 'süßkartoffel',
 			'kopfsalat', 'rote bete', 'pastinake', 'staudensellerie', 'frühlingszwiebel',
-			'zitronengras', 'koriander', 'dill', 'rosmarin', 'salbei', 'pak choi', 'mairübe'
+			'zitronengras', 'koriander', 'dill', 'rosmarin', 'salbei', 'pak choi', 'mairübe',
+			// English
+			'apple', 'apples', 'pear', 'pears', 'banana', 'bananas', 'tomato', 'tomatoes', 'lettuce',
+			'carrot', 'carrots', 'fruit', 'vegetable', 'vegetables', 'onion', 'onions', 'garlic',
+			'lemon', 'lemons', 'cucumber', 'cucumbers', 'bell pepper', 'pepper', 'potato', 'potatoes',
+			'berry', 'berries', 'strawberry', 'strawberries', 'blueberry', 'blueberries',
+			'raspberry', 'raspberries', 'mandarin', 'grapes', 'broccoli', 'spinach', 'celery',
+			'zucchini', 'courgette', 'avocado', 'mushroom', 'mushrooms', 'cauliflower',
+			'red cabbage', 'iceberg', 'arugula', 'rocket', 'radish', 'ginger', 'parsley',
+			'chives', 'basil', 'mint', 'thyme', 'raisins', 'figs', 'plum', 'plums',
+			'cherry', 'cherries', 'peach', 'peaches', 'nectarine', 'melon', 'watermelon',
+			'pomegranate', 'corn', 'asparagus', 'eggplant', 'aubergine', 'fennel', 'artichoke',
+			'papaya', 'sweet potato', 'sweet potatoes', 'spring onion', 'scallion', 'lemongrass',
+			'cilantro', 'coriander', 'dill', 'rosemary', 'sage', 'leek', 'turnip', 'kohlrabi',
+			'bok choy', 'pak choi', 'lime', 'limes', 'grapefruit', 'dates', 'coconut'
 		],
 		category: {
 			color: 'var(--color-primary)',
@@ -48,7 +64,13 @@ export const CATEGORIES: CategoryDef[] = [
 			'dinkel', 'roggen', 'pumpernickel', 'laugenbrezel', 'semmel', 'weckle', 'kaiserbrötchen',
 			'paniermehl', 'speisestärke', 'grieß', 'haferflocken', 'müsli', 'cornflakes', 'granola',
 			'dinkelmehl', 'roggenmehl', 'weizenmehl', 'buchweizenmehl', 'reismehl',
-			'toastbrot', 'sandwichbrot', 'focaccia', 'fladenbrot', 'knödelbrot'
+			'toastbrot', 'sandwichbrot', 'focaccia', 'fladenbrot', 'knödelbrot',
+			// English
+			'bread', 'roll', 'rolls', 'cake', 'flour', 'baking', 'waffle', 'waffles',
+			'cookie', 'cookies', 'cracker', 'crackers', 'yeast', 'baking powder', 'oats', 'oatmeal',
+			'muesli', 'granola', 'breadcrumbs', 'flatbread', 'sourdough', 'rye bread',
+			'whole grain', 'whole wheat', 'buckwheat', 'rice flour', 'cornstarch', 'semolina',
+			'sandwich bread', 'pretzel', 'pretzels', 'crispbread'
 		],
 		category: {
 			color: '#D97706',
@@ -66,7 +88,13 @@ export const CATEGORIES: CategoryDef[] = [
 			'vollmilch', 'laktosefrei', 'obers', 'topfen', 'cheddar', 'manchego', 'pecorino',
 			'gorgonzola', 'roquefort', 'halloumi', 'burrata', 'stracciatella', 'ricottasalata',
 			'naturjoghurt', 'fruchtjoghurt', 'griechischer joghurt', 'sahnejoghurt',
-			'eierlikör', 'eierpfannkuchen'
+			'eierlikör', 'eierpfannkuchen',
+			// English
+			'milk', 'cheese', 'yogurt', 'yoghurt', 'cream', 'egg', 'eggs', 'dairy',
+			'cream cheese', 'sour cream', 'condensed milk', 'buttermilk', 'whipped cream',
+			'cottage cheese', 'gruyere', 'cheddar', 'halloumi', 'burrata', 'greek yogurt',
+			'heavy cream', 'double cream', 'single cream', 'clotted cream', 'skyr',
+			'lactose free', 'lactose-free', 'emmental', 'swiss cheese'
 		],
 		category: {
 			color: '#60A5FA',
@@ -87,7 +115,16 @@ export const CATEGORIES: CategoryDef[] = [
 			'wildlachs', 'räucherlachs', 'dorade', 'wolfsbarsch', 'jakobsmuscheln', 'sardinen',
 			'anchovis', 'leberkäse', 'fleischwurst', 'weißwurst', 'bockwurst', 'wiener',
 			'hähnchenflügel', 'entenbrust', 'gänsebrust', 'wildschwein', 'rehrücken', 'kaninchen',
-			'lende', 'rumpsteak', 'entrecôte', 'roastbeef', 'tafelspitz', 'gulasch', 'geschnetzeltes'
+			'lende', 'rumpsteak', 'entrecôte', 'roastbeef', 'tafelspitz', 'gulasch', 'geschnetzeltes',
+			// English
+			'meat', 'chicken', 'beef', 'pork', 'sausage', 'sausages', 'fish', 'salmon', 'tuna',
+			'ground beef', 'minced meat', 'mince', 'turkey', 'lamb', 'veal', 'bacon', 'ham',
+			'trout', 'herring', 'shrimp', 'prawns', 'mussels', 'squid', 'cod', 'tilapia',
+			'crab', 'poultry', 'chicken breast', 'chicken thigh', 'chicken wings', 'turkey breast',
+			'lamb chops', 'smoked salmon', 'anchovies', 'sardines', 'duck', 'duck breast',
+			'rabbit', 'pork belly', 'pork chop', 'ribs', 'meatball', 'meatballs', 'hot dog',
+			'pepperoni', 'pastrami', 'prosciutto', 'pancetta', 'lardons', 'roast beef',
+			'sirloin', 'ribeye', 'tenderloin', 'fillet', 'sea bass', 'sea bream', 'scallops'
 		],
 		category: {
 			color: '#EF4444',
@@ -104,7 +141,15 @@ export const CATEGORIES: CategoryDef[] = [
 			'champagner', 'schnaps', 'whisky', 'rum', 'vodka', 'gin', 'cocktail', 'sirup',
 			'kombucha', 'almdudler', 'bionade', 'matcha', 'eiskaffee', 'frappuccino',
 			'apfelschorle', 'weinschorle', 'bananenmilch', 'hafermilch', 'mandelmilch', 'sojamilch',
-			'reismilch', 'kokosmilch', 'oatly', 'alpro', 'brause', 'zitronenwasser', 'cold brew'
+			'reismilch', 'kokosmilch', 'oatly', 'alpro', 'brause', 'zitronenwasser', 'cold brew',
+			// English
+			'water', 'juice', 'beer', 'wine', 'coffee', 'tea', 'lemonade', 'drink', 'drinks',
+			'mineral water', 'sparkling water', 'orange juice', 'apple juice', 'smoothie',
+			'energy drink', 'latte', 'cappuccino', 'espresso', 'cocoa', 'hot chocolate',
+			'prosecco', 'champagne', 'whiskey', 'whisky', 'rum', 'vodka', 'gin', 'cocktail',
+			'syrup', 'kombucha', 'matcha', 'iced coffee', 'oat milk', 'almond milk',
+			'soy milk', 'rice milk', 'coconut milk', 'cold brew', 'lemonade', 'squash',
+			'cider', 'hard cider', 'soda', 'tonic water', 'ginger beer', 'iced tea'
 		],
 		category: {
 			color: '#06B6D4',
@@ -119,7 +164,12 @@ export const CATEGORIES: CategoryDef[] = [
 			'schlemmerfilet', 'pommes', 'hash browns', 'fischstäbchen', 'belegtes baguette',
 			'tk-pizza', 'tk-gemüse', 'tk-fisch', 'tiefkühlerbsen', 'tiefkühlspinat',
 			'eintopf tiefkühl', 'frischkost tiefkühl', 'mozzarella sticks', 'chicken nuggets',
-			'fischburger', 'frühlingsrollen', 'samosas', 'dim sum', 'gyoza', 'edamame'
+			'fischburger', 'frühlingsrollen', 'samosas', 'dim sum', 'gyoza', 'edamame',
+			// English
+			'frozen', 'ice cream', 'pizza', 'french fries', 'fries', 'chips frozen',
+			'fish fingers', 'fish sticks', 'chicken nuggets', 'spring rolls', 'edamame',
+			'gyoza', 'hash browns', 'frozen vegetables', 'frozen fish', 'frozen pizza',
+			'frozen peas', 'frozen spinach', 'sorbet', 'gelato', 'popsicle', 'ice lolly'
 		],
 		category: {
 			color: '#93C5FD',
@@ -138,7 +188,16 @@ export const CATEGORIES: CategoryDef[] = [
 			'karamell', 'lollipop', 'lutscher', 'brause', 'haribo', 'trolli', 'nimm 2',
 			'ritter sport', 'milka', 'lindt', 'ferrero', 'raffaello', 'bounty', 'lion',
 			'pistazien', 'macadamia', 'pekannuss', 'paranuss', 'kokosnuss', 'sesamriegel',
-			'energieriegel', 'proteinriegel', 'datteln', 'trockenfrüchte', 'fruchtgummi'
+			'energieriegel', 'proteinriegel', 'datteln', 'trockenfrüchte', 'fruchtgummi',
+			// English
+			'chocolate', 'candy', 'sweet', 'sweets', 'gummy bears', 'gummies', 'snack', 'snacks',
+			'nuts', 'peanuts', 'almonds', 'cashews', 'walnuts', 'pistachios', 'macadamia',
+			'pecan', 'brazil nut', 'hazelnut', 'mixed nuts', 'trail mix',
+			'caramel', 'lollipop', 'licorice', 'liquorice', 'dark chocolate', 'milk chocolate',
+			'tortilla chips', 'nachos', 'popcorn', 'pretzels', 'rice cakes',
+			'granola bar', 'cereal bar', 'protein bar', 'energy bar', 'dried fruit',
+			'fruit gummies', 'jelly beans', 'toffee', 'fudge', 'marshmallow', 'nougat',
+			'peanut butter', 'nutella', 'hazelnut spread'
 		],
 		category: {
 			color: '#F472B6',
@@ -160,28 +219,124 @@ export const CATEGORIES: CategoryDef[] = [
 			'sonnencreme', 'zahnbürste', 'mundwasser', 'zahnstocher', 'rasierschaum',
 			'nassrasierer', 'wattepads', 'haargummi', 'haarspray', 'haargel', 'conditioner',
 			'spülung', 'mundspülung', 'deo roll-on', 'antitranspirant', 'insektenschutz',
-			'mückenspray', 'papiertücher', 'feuchttücher', 'windeln', 'babytücher'
+			'mückenspray', 'papiertücher', 'feuchttücher', 'windeln', 'babytücher',
+			// English
+			'dish soap', 'washing up liquid', 'detergent', 'laundry detergent', 'toilet paper',
+			'toilet roll', 'loo roll', 'soap', 'shampoo', 'toothpaste', 'trash bags', 'bin bags',
+			'garbage bags', 'sponge', 'cleaner', 'fabric softener', 'dishwasher tablets',
+			'dishwasher pods', 'shower gel', 'body wash', 'deodorant', 'razor', 'razors',
+			'condoms', 'tampons', 'pads', 'sanitary pads', 'cotton swabs', 'cotton buds',
+			'plaster', 'bandage', 'tape', 'foil', 'aluminium foil', 'aluminum foil',
+			'cling film', 'plastic wrap', 'baking paper', 'parchment paper', 'kitchen roll',
+			'paper towels', 'tissues', 'wet wipes', 'baby wipes', 'nappies', 'diapers',
+			'broom', 'mop', 'candle', 'candles', 'batteries', 'light bulb', 'light bulbs',
+			'hand soap', 'liquid soap', 'body lotion', 'lotion', 'sunscreen', 'sun cream',
+			'toothbrush', 'mouthwash', 'conditioner', 'hair spray', 'hair gel', 'dry shampoo',
+			'antiperspirant', 'insect repellent', 'bug spray', 'household', 'cleaning'
 		],
 		category: {
 			color: '#A78BFA',
 			svgContent: `<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>`
 		}
+	},
+	{
+		key: 'nudeln',
+		keywords: [
+			'nudeln', 'pasta', 'spaghetti', 'penne', 'rigatoni', 'fusilli', 'farfalle', 'tagliatelle',
+			'lasagne', 'lasagna', 'gnocchi', 'tortellini', 'ravioli', 'linguine', 'fettuccine',
+			'reis', 'jasminreis', 'basmati', 'risottoreis', 'vollkornnudeln', 'dinkelnnudeln',
+			'suppennudeln', 'bandnudeln', 'makkaroni', 'spirelli', 'conchiglie', 'orecchiette',
+			'polenta', 'couscous', 'bulgur', 'quinoa', 'amaranth', 'hirse', 'buchweizen',
+			'reisnudeln', 'glasnudeln', 'udon', 'soba', 'ramen',
+			// English
+			'noodles', 'rice', 'basmati rice', 'jasmine rice', 'risotto rice', 'brown rice',
+			'whole wheat pasta', 'macaroni', 'vermicelli', 'orzo', 'couscous', 'bulgur',
+			'quinoa', 'millet', 'buckwheat', 'rice noodles', 'glass noodles', 'egg noodles'
+		],
+		category: {
+			color: '#F97316',
+			svgContent: `<path d="M3 13h18"/><path d="M3 13a9 9 0 0 0 18 0"/><path d="M9 6.5v3"/><path d="M12 5v4"/><path d="M15 6.5v3"/>`
+		}
+	},
+	{
+		key: 'konserven',
+		keywords: [
+			'dose', 'konserve', 'ketchup', 'senf', 'mayonnaise', 'mayo', 'soße', 'sauce',
+			'tomatenmark', 'passata', 'tomaten dose', 'tomaten passiert', 'dosentomaten',
+			'aufstrich', 'hummus', 'pesto', 'ajvar', 'tapenade', 'remoulade',
+			'miracel whip', 'miracle whip', 'hengstenberg', 'gürkchen', 'kapern',
+			'oliven', 'mais dose', 'bohnen dose', 'kidneybohnen', 'kichererbsen',
+			'linsen', 'erbsen dose', 'sardinen dose', 'thunfisch dose',
+			// English
+			'can', 'canned', 'tin', 'tinned', 'ketchup', 'mustard', 'mayonnaise',
+			'tomato paste', 'tomato sauce', 'passata', 'tinned tomatoes', 'canned tomatoes',
+			'jam', 'marmalade', 'spread', 'pesto', 'olives', 'capers',
+			'canned beans', 'kidney beans', 'chickpeas', 'lentils', 'canned corn',
+			'canned fish', 'canned tuna', 'canned sardines'
+		],
+		category: {
+			color: '#78716C',
+			svgContent: `<ellipse cx="12" cy="7" rx="8" ry="3"/><path d="M4 7v10c0 1.66 3.58 3 8 3s8-1.34 8-3V7"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>`
+		}
+	},
+	{
+		key: 'gewuerze',
+		keywords: [
+			'öl', 'olivenöl', 'sonnenblumenöl', 'rapsöl', 'kokosöl', 'sesamöl', 'leinöl',
+			'essig', 'apfelessig', 'balsamico', 'weinessig', 'weißweinessig', 'rotweinessig',
+			'salz', 'meersalz', 'himalayasalz', 'jodsalz', 'pfeffer', 'pfefferkörner',
+			'gewürz', 'gewürze', 'gewürzmischung', 'kräuter', 'kräutermischung',
+			'curry', 'currypulver', 'paprikapulver', 'zimt', 'vanille', 'vanillezucker',
+			'vanilleschote', 'muskat', 'muskatnuss', 'oregano', 'basilikum getrocknet',
+			'thymian getrocknet', 'rosmarin getrocknet', 'lorbeer', 'lorbeerblatt',
+			'kreuzkümmel', 'kümmel', 'fenchelsamen', 'anis', 'kardamom', 'kurkuma',
+			'ingwerpulver', 'chilipulver', 'chiliflocken', 'cayennepfeffer', 'paprikaschrot',
+			'knoblauchpulver', 'zwiebelpulver', 'petersilie getrocknet', 'schnittlauch getrocknet',
+			'zucker', 'brauner zucker', 'rohrzucker', 'puderzucker', 'traubenzucker',
+			'honig', 'ahornsirup', 'agavendicksaft', 'agavensirup', 'stevia',
+			'sojasauce', 'worcester', 'worcestersauce', 'tabasco', 'sambal', 'sriracha',
+			'fischsauce', 'austernsoße', 'hoisin', 'teriyaki', 'tahini',
+			'brühe', 'suppenwürfel', 'gemüsebrühe', 'hühnerbrühe', 'rinderbrühe', 'fond',
+			'backpulver', 'natron', 'hefe', 'trockenhefe',
+			// English
+			'oil', 'olive oil', 'sunflower oil', 'rapeseed oil', 'coconut oil', 'sesame oil',
+			'vinegar', 'apple cider vinegar', 'balsamic vinegar', 'white wine vinegar',
+			'salt', 'sea salt', 'himalayan salt', 'pepper', 'peppercorns',
+			'spice', 'spices', 'herb', 'herbs', 'seasoning', 'mixed herbs',
+			'curry powder', 'cinnamon', 'vanilla', 'vanilla sugar', 'vanilla extract',
+			'nutmeg', 'oregano', 'basil dried', 'thyme dried', 'rosemary dried', 'bay leaf',
+			'cumin', 'fennel seeds', 'anise', 'cardamom', 'turmeric', 'ginger powder',
+			'chili powder', 'chili flakes', 'cayenne pepper', 'paprika powder', 'garlic powder',
+			'onion powder', 'sugar', 'brown sugar', 'cane sugar', 'icing sugar', 'powdered sugar',
+			'honey', 'maple syrup', 'agave syrup', 'agave nectar', 'stevia',
+			'soy sauce', 'worcestershire sauce', 'hot sauce', 'sriracha', 'fish sauce',
+			'oyster sauce', 'hoisin sauce', 'teriyaki sauce', 'tahini',
+			'stock', 'stock cube', 'broth', 'vegetable stock', 'chicken stock', 'beef stock',
+			'baking powder', 'baking soda', 'bicarbonate of soda', 'yeast', 'dried yeast'
+		],
+		category: {
+			color: '#D97706',
+			svgContent: `<path d="M8 2h8"/><path d="M9 2v2"/><path d="M15 2v2"/><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M6 10h12"/>`
+		}
 	}
 ];
 
 // Default sort order (index 0 = bottom of grid, index last = top of grid)
-export const DEFAULT_CATEGORY_ORDER = ['obst', 'backwaren', 'milch', 'fleisch', 'getraenke', 'tiefkuehl', 'snacks', 'haushalt', 'default'];
+export const DEFAULT_CATEGORY_ORDER = ['obst', 'nudeln', 'backwaren', 'milch', 'fleisch', 'konserven', 'gewuerze', 'getraenke', 'tiefkuehl', 'snacks', 'haushalt', 'default'];
 
 export const CATEGORY_LABELS: Record<string, { de: string; en: string }> = {
-	obst:      { de: 'Obst & Gemüse',  en: 'Fruit & Veg' },
-	backwaren: { de: 'Backwaren',       en: 'Bakery' },
-	milch:     { de: 'Milch & Käse',   en: 'Dairy' },
-	fleisch:   { de: 'Fleisch & Fisch', en: 'Meat & Fish' },
-	getraenke: { de: 'Getränke',        en: 'Drinks' },
-	tiefkuehl: { de: 'Tiefkühlkost',   en: 'Frozen' },
-	snacks:    { de: 'Snacks & Süßes', en: 'Snacks' },
-	haushalt:  { de: 'Haushalt',        en: 'Household' },
-	default:   { de: 'Alles andere',    en: 'Everything else' },
+	obst:      { de: 'Obst & Gemüse',      en: 'Fruit & Veg' },
+	nudeln:    { de: 'Nudeln & Reis',      en: 'Pasta & Rice' },
+	backwaren: { de: 'Backwaren',           en: 'Bakery' },
+	milch:     { de: 'Milch & Käse',       en: 'Dairy' },
+	fleisch:   { de: 'Fleisch & Fisch',    en: 'Meat & Fish' },
+	konserven: { de: 'Konserven & Saucen', en: 'Canned & Sauces' },
+	gewuerze:  { de: 'Gewürze & Zutaten',  en: 'Spices & Pantry' },
+	getraenke: { de: 'Getränke',            en: 'Drinks' },
+	tiefkuehl: { de: 'Tiefkühlkost',       en: 'Frozen' },
+	snacks:    { de: 'Snacks & Süßes',     en: 'Snacks' },
+	haushalt:  { de: 'Haushalt',            en: 'Household' },
+	default:   { de: 'Alles andere',        en: 'Everything else' },
 };
 
 const categoryByKey = new Map(CATEGORIES.map(c => [c.key, c.category]));
@@ -194,9 +349,24 @@ function matchesKeyword(name: string, keyword: string): boolean {
 	return false;
 }
 
+function getBrandKey(name: string): string | null {
+	const lower = name.toLowerCase().trim();
+	// Exact match first
+	if (BRAND_CATEGORIES[lower]) return BRAND_CATEGORIES[lower];
+	// Check if name starts with a known brand
+	for (const brand of Object.keys(BRAND_CATEGORIES)) {
+		if (lower.startsWith(brand + ' ') || lower === brand) {
+			return BRAND_CATEGORIES[brand];
+		}
+	}
+	return null;
+}
+
 export function getCategoryForItem(name: string, override?: string | null): Category {
 	if (override) return categoryByKey.get(override) ?? DEFAULT;
 	const lower = name.toLowerCase();
+	const brandKey = getBrandKey(lower);
+	if (brandKey) return categoryByKey.get(brandKey) ?? DEFAULT;
 	for (const { keywords, category } of CATEGORIES) {
 		if (keywords.some(k => matchesKeyword(lower, k))) {
 			return category;
@@ -208,6 +378,8 @@ export function getCategoryForItem(name: string, override?: string | null): Cate
 export function getCategoryKey(name: string, override?: string | null): string {
 	if (override && CATEGORIES.some(c => c.key === override)) return override;
 	const lower = name.toLowerCase();
+	const brandKey = getBrandKey(lower);
+	if (brandKey) return brandKey;
 	for (const { key, keywords } of CATEGORIES) {
 		if (keywords.some(k => matchesKeyword(lower, k))) {
 			return key;

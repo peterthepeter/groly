@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
-	import { LIST_ICONS, getListIcon } from '$lib/listIcons';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import { LIST_ICONS, getListIcon, getListIconLabel } from '$lib/listIcons';
 
 	let { list = null, onSave, onDelete = null, onShare = null, onClose }: {
 		list?: { id: string; name: string; description: string | null; iconId?: string | null } | null;
@@ -119,7 +119,7 @@
 			</div>
 
 			<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
-				{selectedIcon ? selectedIcon.label : 'Standard'}
+				{selectedIcon ? getListIconLabel(selectedIcon, currentLang()) : 'Standard'}
 			</span>
 
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
@@ -161,7 +161,7 @@
 								{@html icon.svgContent}
 							</svg>
 							<span class="text-[10px] font-medium leading-none" style="color: {selectedIconId === icon.id ? icon.color : 'var(--color-on-surface-variant)'}">
-								{icon.label}
+								{getListIconLabel(icon, currentLang())}
 							</span>
 						</button>
 					{/each}
