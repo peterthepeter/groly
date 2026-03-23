@@ -77,10 +77,10 @@
 </script>
 
 <!-- Backdrop -->
-<div class="fixed inset-0" style="z-index: 39; background-color: rgba(0,0,0,0.5)"></div>
+<div class="fixed inset-0" style="z-index: 50; background-color: rgba(0,0,0,0.5)"></div>
 
 <!-- Bottom sheet -->
-<div class="fixed left-0 right-0 z-40 max-w-[430px] mx-auto" style="bottom: {bottomOffset}px">
+<div class="fixed left-0 right-0 z-[60] max-w-[430px] mx-auto" style="bottom: {bottomOffset}px">
 	<div class="rounded-t-3xl px-4 pb-6 pt-3 shadow-2xl"
 	     style="background-color: var(--color-surface-low)">
 

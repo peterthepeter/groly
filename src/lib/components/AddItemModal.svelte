@@ -43,7 +43,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="fixed inset-0 z-50" style="background-color: rgba(0,0,0,0.6)" onclick={onClose}></div>
 
-<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-8 pt-4"
+<div class="fixed bottom-0 left-0 right-0 z-[60] max-w-[430px] mx-auto rounded-t-3xl px-6 pb-8 pt-4"
      style="background-color: var(--color-surface-low)">
 	<div class="flex justify-center mb-4">
 		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
