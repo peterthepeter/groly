@@ -17,7 +17,13 @@ export const PUT: RequestHandler = async (event) => {
 		.get();
 	if (!share) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
-	const { action } = await event.request.json();
+	let body: { action?: string };
+	try {
+		body = await event.request.json();
+	} catch {
+		return json({ error: 'Ungültige Anfrage' }, { status: 400 });
+	}
+	const { action } = body;
 
 	if (action === 'decline') {
 		db.delete(recipeShares).where(eq(recipeShares.id, event.params.id)).run();

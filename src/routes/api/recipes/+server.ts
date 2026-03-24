@@ -37,60 +37,65 @@ export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error) return error;
 
-	const count = db.select().from(recipes).where(eq(recipes.userId, user!.id)).all().length;
-	if (count >= RECIPE_LIMIT) {
-		return json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht` }, { status: 400 });
-	}
-
-	const body = await event.request.json();
-	const { title, description, imageUrl, sourceUrl, servings, prepTime, cookTime, ingredients, steps } = body;
-
-	if (!title?.trim()) return json({ error: 'Titel erforderlich' }, { status: 400 });
-
-	const now = Date.now();
-	const recipeId = randomUUID();
-
-	db.insert(recipes).values({
-		id: recipeId,
-		userId: user!.id,
-		title: title.trim(),
-		description: description?.trim() || null,
-		imageUrl: imageUrl?.trim() || null,
-		sourceUrl: sourceUrl?.trim() || null,
-		servings: servings ?? 4,
-		prepTime: prepTime ?? null,
-		cookTime: cookTime ?? null,
-		createdAt: now,
-		updatedAt: now
-	}).run();
-
-	if (Array.isArray(ingredients)) {
-		for (let i = 0; i < ingredients.length; i++) {
-			const ing = ingredients[i];
-			if (!ing.name?.trim()) continue;
-			db.insert(recipeIngredients).values({
-				id: randomUUID(),
-				recipeId,
-				amount: ing.amount?.trim() || null,
-				unit: ing.unit?.trim() || null,
-				name: ing.name.trim(),
-				sortOrder: i
-			}).run();
+	try {
+		const count = db.select().from(recipes).where(eq(recipes.userId, user!.id)).all().length;
+		if (count >= RECIPE_LIMIT) {
+			return json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht` }, { status: 400 });
 		}
-	}
 
-	if (Array.isArray(steps)) {
-		for (let i = 0; i < steps.length; i++) {
-			const step = steps[i];
-			if (!step.text?.trim()) continue;
-			db.insert(recipeSteps).values({
-				id: randomUUID(),
-				recipeId,
-				stepNumber: i + 1,
-				text: step.text.trim()
-			}).run();
+		const body = await event.request.json();
+		const { title, description, imageUrl, sourceUrl, servings, prepTime, cookTime, ingredients, steps } = body;
+
+		if (!title?.trim()) return json({ error: 'Titel erforderlich' }, { status: 400 });
+
+		const now = Date.now();
+		const recipeId = randomUUID();
+
+		db.insert(recipes).values({
+			id: recipeId,
+			userId: user!.id,
+			title: title.trim(),
+			description: description?.trim() || null,
+			imageUrl: imageUrl?.trim() || null,
+			sourceUrl: sourceUrl?.trim() || null,
+			servings: servings ?? 4,
+			prepTime: prepTime ?? null,
+			cookTime: cookTime ?? null,
+			createdAt: now,
+			updatedAt: now
+		}).run();
+
+		if (Array.isArray(ingredients)) {
+			for (let i = 0; i < ingredients.length; i++) {
+				const ing = ingredients[i];
+				if (!ing.name?.trim()) continue;
+				db.insert(recipeIngredients).values({
+					id: randomUUID(),
+					recipeId,
+					amount: ing.amount?.trim() || null,
+					unit: ing.unit?.trim() || null,
+					name: ing.name.trim(),
+					sortOrder: i
+				}).run();
+			}
 		}
-	}
 
-	return json({ id: recipeId }, { status: 201 });
+		if (Array.isArray(steps)) {
+			for (let i = 0; i < steps.length; i++) {
+				const step = steps[i];
+				if (!step.text?.trim()) continue;
+				db.insert(recipeSteps).values({
+					id: randomUUID(),
+					recipeId,
+					stepNumber: i + 1,
+					text: step.text.trim()
+				}).run();
+			}
+		}
+
+		return json({ id: recipeId }, { status: 201 });
+	} catch (e) {
+		console.error('POST /api/recipes error:', e);
+		return json({ error: 'Fehler beim Speichern' }, { status: 500 });
+	}
 };
