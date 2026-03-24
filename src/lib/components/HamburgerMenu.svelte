@@ -77,6 +77,20 @@
 			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_lists}</span>
 		</button>
 
+		<button
+			onclick={() => navigate('/rezepte')}
+			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+			style="background-color: {$page.url.pathname.startsWith('/rezepte') ? 'var(--color-surface-container)' : 'transparent'}"
+		>
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/>
+				<line x1="12" y1="2" x2="12" y2="5"/>
+				<line x1="9" y1="17" x2="15" y2="17"/>
+				<line x1="9" y1="20" x2="15" y2="20"/>
+			</svg>
+			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_recipes}</span>
+		</button>
+
 		{#if user?.role === 'admin'}
 			<button
 				onclick={() => navigate('/einstellungen/users')}
