@@ -11,6 +11,13 @@ services:
       - DATABASE_URL=/app/data/groly.db
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme123}
+      - ORIGIN=${ORIGIN:-}
+      # Web Push (VAPID) - Keys generieren mit:
+      # node -e "const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(k)"
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:admin@groly.local}
+      - PUBLIC_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/auth/me"]

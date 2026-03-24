@@ -24,6 +24,7 @@
 	let langOpen = $state(false);
 	let categorySortOpen = $state(false);
 	let sharedListsOpen = $state(false);
+	let showPushPrompt = $state(false);
 
 	// Push Notifications
 	let pushSupported = $state(false);
@@ -151,6 +152,16 @@
 
 	$effect(() => { loadSharedLists(); });
 
+	async function acceptPushPrompt() {
+		await subscribePush();
+		goto('/');
+	}
+
+	function dismissPushPrompt() {
+		showPushPrompt = false;
+		goto('/');
+	}
+
 	async function changePassword(e: SubmitEvent) {
 		e.preventDefault();
 		error = '';
@@ -178,7 +189,13 @@
 			currentPassword = '';
 			newPassword = '';
 			confirmPassword = '';
-			if (mustChange) setTimeout(() => goto('/'), 1500);
+			if (mustChange) {
+			if (pushSupported && !pushSubscribed) {
+				showPushPrompt = true;
+			} else {
+				setTimeout(() => goto('/'), 1500);
+			}
+		}
 		} else {
 			const data = await res.json();
 			error = data.error ?? t.settings_password_error;
@@ -471,5 +488,52 @@
 		{/if}
 	</div>
 </div>
+
+{#if showPushPrompt}
+	<!-- Backdrop -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={dismissPushPrompt}></div>
+
+	<!-- Sheet -->
+	<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-8 pt-4"
+	     style="background-color: var(--color-surface-low)">
+		<div class="flex justify-center mb-5">
+			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
+		</div>
+
+		<div class="flex flex-col items-center text-center mb-6">
+			<div class="mb-4 p-3 rounded-2xl" style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent)">
+				<svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+				     stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+					<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+				</svg>
+			</div>
+			<h2 class="text-lg font-bold mb-2" style="color: var(--color-on-surface)">Push-Benachrichtigungen</h2>
+			<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">
+				Bleib auf dem Laufenden wenn Mitglieder Artikel hinzufügen.
+			</p>
+		</div>
+
+		<div class="flex gap-3">
+			<button
+				onclick={dismissPushPrompt}
+				class="flex-1 py-3.5 rounded-full text-sm font-semibold"
+				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+			>
+				Später
+			</button>
+			<button
+				onclick={acceptPushPrompt}
+				disabled={pushLoading}
+				class="flex-1 py-3.5 rounded-full text-sm font-semibold disabled:opacity-50"
+				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+			>
+				{pushLoading ? '...' : 'Aktivieren'}
+			</button>
+		</div>
+	</div>
+{/if}
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />
