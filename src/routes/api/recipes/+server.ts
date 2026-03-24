@@ -96,6 +96,6 @@ export const POST: RequestHandler = async (event) => {
 		return json({ id: recipeId }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/recipes error:', e);
-		return json({ error: 'Fehler beim Speichern' }, { status: 500 });
+		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

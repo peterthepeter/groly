@@ -63,8 +63,8 @@
 				error = data.error ?? 'Fehler beim Speichern';
 				saving = false;
 			}
-		} catch {
-			error = 'Fehler beim Speichern';
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Netzwerkfehler beim Speichern';
 			saving = false;
 		}
 	}
