@@ -117,5 +117,10 @@
   "recipe_unit_placeholder": "Unit",
   "recipe_ingredient_placeholder": "Ingredient *",
   "recipe_username_placeholder": "Username",
-  "recipe_share_error_self": "You can't share a recipe with yourself"
+  "recipe_share_error_self": "You can't share a recipe with yourself",
+  "recipes_title": "Recipes",
+  "recipes_empty": "No recipes yet",
+  "recipes_empty_hint": "Tap + to add a recipe",
+  "recipes_search_placeholder": "Search recipes…",
+  "recipes_no_results": "No results for"
 }
