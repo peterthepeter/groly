@@ -464,18 +464,23 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'füllhorn': 'obst',
 
 	// ── Supermarkt-Eigenmarken: Rewe ─────────────────────────────────────────
+	'rewe': 'obst',
 	'ja!': 'obst',
+	'ja': 'obst',
 	'rewe bio': 'obst',
 	'rewe beste wahl': 'obst',
 	'rewe feine welt': 'konserven',
 
 	// ── Supermarkt-Eigenmarken: Edeka ────────────────────────────────────────
+	'edeka': 'obst',
 	'gut & günstig': 'obst',
 	'gut und günstig': 'obst',
+	'gut-günstig': 'obst',
 	'edeka bio': 'obst',
 	'edeka selection': 'konserven',
 
 	// ── Supermarkt-Eigenmarken: Lidl ─────────────────────────────────────────
+	'lidl': 'obst',
 	'milbona': 'milch',
 	'freshona': 'obst',
 	'crownfield': 'backwaren',
@@ -485,8 +490,10 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'linessa': 'milch',
 	'picard': 'tiefkuehl',
 	'bio organic': 'obst',
+	'chef select': 'konserven',
 
 	// ── Supermarkt-Eigenmarken: Aldi ─────────────────────────────────────────
+	'aldi': 'obst',
 	'milsani': 'milch',
 	'harvest basket': 'backwaren',
 	'simply nature': 'obst',
@@ -495,8 +502,13 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'grandessa': 'konserven',
 	'goldähren': 'backwaren',
 	'dessert': 'snacks',
+	'jeden tag': 'obst',
+	'gut bio': 'obst',
+	'gut-bio': 'obst',
+	'gutes land': 'obst',
 
 	// ── Supermarkt-Eigenmarken: Kaufland ─────────────────────────────────────
+	'kaufland': 'obst',
 	'k-classic': 'obst',
 	'k-bio': 'obst',
 	'k-favourites': 'snacks',
@@ -504,8 +516,70 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 
 	// ── Supermarkt-Eigenmarken: Penny / Netto ────────────────────────────────
 	'penny': 'obst',
+	'netto': 'obst',
+	'aro': 'obst',
 	'naturgut': 'obst',
 	'san fabio': 'nudeln',
+	'tegut': 'obst',
+
+	// ── Supermarkt-Eigenmarken: Migros (CH) ──────────────────────────────────
+	'migros': 'obst',
+	'm-classic': 'obst',
+	'm classic': 'obst',
+	'migros bio': 'obst',
+	'm-budget': 'obst',
+	'm budget': 'obst',
+	'sélection': 'konserven',
+	'selection': 'konserven',
+
+	// ── Supermarkt-Eigenmarken: Coop (CH) ────────────────────────────────────
+	'coop': 'obst',
+	'naturaplan': 'obst',
+	'coop naturaplan': 'obst',
+	'prix garantie': 'obst',
+	'qualité & prix': 'obst',
+
+	// ── Supermarkt-Eigenmarken: Spar / Billa / Denner (AT/CH) ────────────────
+	'spar': 'obst',
+	'spar natur pur': 'obst',
+	'billa': 'obst',
+	'clever': 'obst',
+	'denner': 'obst',
+
+	// ── Supermarkt-Eigenmarken: Penny (DE/AT) ────────────────────────────────
+	'le-gusto': 'obst',
+	'le gusto': 'obst',
+	'biobio': 'obst',
+
+	// ── Supermarkt-Eigenmarken: Coop / Migros weitere Labels (CH) ────────────
+	"anna's best": 'konserven',
+	'karma': 'obst',
+
+	// ── Spezialmarken DACH ────────────────────────────────────────────────────
+	'nestlé': 'backwaren',
+	'nestle': 'backwaren',
+	'hipp': 'obst',
+	'koro': 'backwaren',
+	'bell': 'fleisch',
+	'betty bossi': 'backwaren',
+	'wilhelm brandenburg': 'fleisch',
+	'wilhelm-brandenburg': 'fleisch',
+	'bonduelle': 'konserven',       // Dosengemüse
+	'garden gourmet': 'fleisch',    // Nestlé Veggie/Fleischersatz
+	'beyond meat': 'fleisch',       // Pflanzenbasierte Fleischalternative
+	'valess': 'fleisch',            // Unilever Fischalternative
+	'voelkel': 'getraenke',         // Bio-Säfte & Getränke
+	'sinalco': 'getraenke',         // Klassische DE Limonade
+	'almigurt': 'milch',            // Ehrmann Joghurt-Marke
+	'bärenmarke': 'milch',          // Evaporated milk / Kondensmilch
+	'barenmarke': 'milch',
+	'lurpak': 'milch',              // Dänische Butter
+	'babybel': 'milch',             // Mini-Käse-Runde
+	'mini babybel': 'milch',
+	'valio': 'milch',               // Finnische Molkereimarke
+	'vitalis': 'backwaren',         // Dr. Oetker Müsli-Marke
+	'oroweat': 'backwaren',         // Vollkornbrot
+	'lieken': 'backwaren',          // Große DE Brotmarke
 
 	// ── Gewürze & Zutaten ────────────────────────────────────────────────────
 	'fuchs': 'gewuerze',
