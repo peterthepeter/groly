@@ -74,8 +74,8 @@
 			if (suggestRes.ok) suggestions = await suggestRes.json();
 			void cacheItemsData(items);
 		} catch {
-			listName = await getOfflineListName(listId);
-			items = await getOfflineItems(listId);
+			listName = await getOfflineListName(listId ?? '');
+			items = (await getOfflineItems(listId ?? '')).map(item => ({ ...item, createdByUsername: null }));
 		}
 		loading = false;
 	}

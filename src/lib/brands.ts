@@ -118,12 +118,9 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'la vache qui rit': 'milch',
 	'laughing cow': 'milch',
 	'muh': 'milch',
-	'paulaner': 'milch',
 	'tegernseer': 'milch',
 	'söbbeke': 'milch',
 	'andechser': 'milch',
-	'demeter': 'milch',
-	'alnatura': 'milch',
 	'bio-molkerei': 'milch',
 
 	// ── Backwaren & Frühstück ────────────────────────────────────────────────
@@ -280,7 +277,6 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'capri sun': 'getraenke',
 	'rivella': 'getraenke',
 	'ramseier': 'getraenke',
-	'feldschlösschen': 'getraenke',
 
 	// ── Tiefkühl ─────────────────────────────────────────────────────────────
 	'iglo tiefkühl': 'tiefkuehl',
@@ -381,7 +377,6 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'leifheit': 'haushalt',
 	'erdal': 'haushalt',
 	'kiwi': 'haushalt',
-	'frosch': 'haushalt',
 	'dr. beckmann': 'haushalt',
 	'dr beckmann': 'haushalt',
 	'vanish': 'haushalt',

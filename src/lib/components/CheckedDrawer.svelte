@@ -5,7 +5,7 @@
 	let { checkedItems, totalChecked, onUncheck }: {
 		checkedItems: Array<{ id: string; name: string; quantityInfo: string | null; categoryOverride?: string | null }>;
 		totalChecked: number;
-		onUncheck: (item: { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; updatedAt: number }) => void;
+		onUncheck: (item: { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number }) => void;
 	} = $props();
 
 	let expanded = $state(false);
@@ -37,7 +37,7 @@
 			{#each checkedItems as item (item.id)}
 				{@const category = getCategoryForItem(item.name, item.categoryOverride)}
 				<button
-					onclick={() => onUncheck({ ...item, listId: '', isChecked: true, checkedAt: null, updatedAt: 0 })}
+					onclick={() => onUncheck({ ...item, listId: '', isChecked: true, checkedAt: null, categoryOverride: item.categoryOverride ?? null, createdByUsername: null, updatedAt: 0 })}
 					class="w-full aspect-square rounded-3xl relative overflow-hidden opacity-40 active:opacity-25 transition-opacity"
 					style="background-color: var(--color-surface-card)"
 				>
