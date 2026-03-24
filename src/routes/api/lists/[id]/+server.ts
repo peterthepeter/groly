@@ -15,7 +15,7 @@ function getAccessibleList(listId: string, userId: string): { list: typeof lists
 	const list = db.select().from(lists).where(eq(lists.id, listId)).get();
 	if (!list) return { list: null, permission: null };
 	if (list.ownerId === userId) return { list, permission: 'owner' };
-	const member = db.select().from(listMembers).where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId))).get();
+	const member = db.select().from(listMembers).where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId), eq(listMembers.status, 'accepted'))).get();
 	if (!member) return { list: null, permission: null };
 	return { list, permission: member.permission === 'write' ? 'write' : 'read' };
 }

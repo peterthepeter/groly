@@ -2,12 +2,13 @@
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { LIST_ICONS, getListIcon, getListIconLabel } from '$lib/listIcons';
 
-	let { list = null, onSave, onDelete = null, onShare = null, onClose }: {
+	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0 }: {
 		list?: { id: string; name: string; description: string | null; iconId?: string | null } | null;
 		onSave: (name: string, description: string, iconId: string | null) => void;
 		onDelete?: (() => void) | null;
 		onShare?: (() => void) | null;
 		onClose: () => void;
+		memberCount?: number;
 	} = $props();
 
 	let name = $state(list?.name ?? '');
@@ -15,6 +16,31 @@
 	let selectedIconId = $state<string | null>(list?.iconId ?? 'supermarkt');
 	let iconPickerOpen = $state(false);
 	let bottomOffset = $state(0);
+	let notificationsEnabled = $state(true);
+	let notifLoading = $state(false);
+
+	// Notification-Präferenz laden wenn Liste besteht und geteilt ist
+	$effect(() => {
+		if (list?.id && memberCount > 0) {
+			fetch(`/api/lists/${list.id}/notifications`)
+				.then(r => r.json())
+				.then(d => { notificationsEnabled = d.enabled ?? true; })
+				.catch(() => {});
+		}
+	});
+
+	async function toggleNotifications() {
+		if (!list?.id || notifLoading) return;
+		notifLoading = true;
+		const next = !notificationsEnabled;
+		await fetch(`/api/lists/${list.id}/notifications`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ enabled: next })
+		}).catch(() => {});
+		notificationsEnabled = next;
+		notifLoading = false;
+	}
 
 	const selectedIcon = $derived(getListIcon(selectedIconId));
 
@@ -71,52 +97,53 @@
 		{/if}
 	</div>
 
-	<div class="space-y-3 mb-4">
-		<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
-			<!-- svelte-ignore a11y_autofocus -->
-			<input
-				type="text"
-				placeholder={t.list_name_label}
-				bind:value={name}
-				autofocus
-				onfocus={(e) => { const el = e.target as HTMLInputElement; setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0); }}
-				class="w-full bg-transparent outline-none text-base font-medium"
-				style="color: var(--color-on-surface)"
-			/>
-		</div>
+	<div class="space-y-3 mb-3">
+		<!-- Notification Toggle (nur bei geteilten Listen) -->
+		{#if list && memberCount > 0}
+			<button
+				type="button"
+				onclick={toggleNotifications}
+				disabled={notifLoading}
+				class="w-full flex items-center gap-3 px-4 rounded-xl active:opacity-70 transition-opacity"
+				style="background-color: var(--color-surface-container); height: 52px"
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+				     stroke={notificationsEnabled ? 'var(--color-primary)' : 'var(--color-outline)'}
+				     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					{#if notificationsEnabled}
+						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+						<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+					{:else}
+						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+						<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+						<line x1="1" y1="1" x2="23" y2="23"/>
+					{/if}
+				</svg>
+				<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">Benachrichtigungen</span>
+				<span class="text-xs font-medium" style="color: {notificationsEnabled ? 'var(--color-primary)' : 'var(--color-outline)'}">
+					{notificationsEnabled ? 'An' : 'Aus'}
+				</span>
+			</button>
+		{/if}
 
-		<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
-			<input
-				type="text"
-				placeholder={t.list_description_placeholder}
-				bind:value={description}
-				class="w-full bg-transparent outline-none text-base"
-				style="color: var(--color-on-surface)"
-			/>
-		</div>
-	</div>
-
-	<!-- Icon Trigger + Popup -->
-	<div class="relative mb-5">
-		<!-- Trigger -->
+		<!-- Icon Trigger -->
+		<div class="relative">
 		<button
 			type="button"
 			onclick={() => iconPickerOpen = !iconPickerOpen}
-			class="w-full flex items-center gap-3 px-4 py-3 rounded-xl active:opacity-70 transition-opacity"
-			style="background-color: var(--color-surface-container)"
+			class="w-full flex items-center gap-3 px-4 rounded-xl active:opacity-70 transition-opacity"
+			style="background-color: var(--color-surface-container); height: 52px"
 		>
 			<!-- Aktuelles Icon -->
-			<div class="w-8 h-8 flex items-center justify-center font-bold text-sm flex-shrink-0"
-			     style="color: {selectedIcon ? selectedIcon.color : 'var(--color-on-surface-variant)'}">
-				{#if selectedIcon}
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-					     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-						{@html selectedIcon.svgContent}
-					</svg>
-				{:else}
-					{name[0]?.toUpperCase() || '?'}
-				{/if}
-			</div>
+			{#if selectedIcon}
+				<svg class="flex-shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none"
+				     stroke={selectedIcon.color} stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+					{@html selectedIcon.svgContent}
+				</svg>
+			{:else}
+				<span class="flex-shrink-0 w-5 h-5 flex items-center justify-center font-bold text-sm"
+				      style="color: var(--color-on-surface-variant)">{name[0]?.toUpperCase() || '?'}</span>
+			{/if}
 
 			<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
 				{selectedIcon ? getListIconLabel(selectedIcon, currentLang()) : 'Standard'}
@@ -134,7 +161,6 @@
 			<div class="absolute bottom-full left-0 right-0 mb-2 rounded-2xl p-3 z-10"
 			     style="background-color: var(--color-surface-high); box-shadow: 0 -4px 24px rgba(0,0,0,0.4)">
 				<div class="grid grid-cols-3 gap-2">
-					<!-- Standard -->
 					<button
 						type="button"
 						onclick={() => selectIcon(null)}
@@ -168,6 +194,30 @@
 				</div>
 			</div>
 		{/if}
+		</div>
+
+		<div class="rounded-xl px-4 flex items-center" style="background-color: var(--color-surface-container); height: 52px">
+			<input
+				type="text"
+				placeholder={t.list_description_placeholder}
+				bind:value={description}
+				class="w-full bg-transparent outline-none text-base"
+				style="color: var(--color-on-surface); font-size: 16px"
+			/>
+		</div>
+
+		<div class="rounded-xl px-4 flex items-center" style="background-color: var(--color-surface-container); height: 52px">
+			<!-- svelte-ignore a11y_autofocus -->
+			<input
+				type="text"
+				placeholder={t.list_name_label}
+				bind:value={name}
+				autofocus
+				onfocus={(e) => { const el = e.target as HTMLInputElement; setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0); }}
+				class="w-full bg-transparent outline-none text-base font-medium"
+				style="color: var(--color-on-surface); font-size: 16px"
+			/>
+		</div>
 	</div>
 
 	<div class="flex gap-3">

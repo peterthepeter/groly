@@ -1,0 +1,8 @@
+CREATE TABLE push_subscriptions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  auth TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);

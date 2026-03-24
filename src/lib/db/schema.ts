@@ -33,7 +33,6 @@ export const lists = sqliteTable('lists', {
 	updatedAt: integer('updated_at').notNull()
 });
 
-// Vorbereitet für Listen-Sharing (Phase 2)
 export const listMembers = sqliteTable('list_members', {
 	listId: text('list_id')
 		.notNull()
@@ -41,7 +40,30 @@ export const listMembers = sqliteTable('list_members', {
 	userId: text('user_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
-	permission: text('permission', { enum: ['read', 'write'] }).notNull().default('read')
+	permission: text('permission', { enum: ['read', 'write'] }).notNull().default('read'),
+	status: text('status', { enum: ['pending', 'accepted'] }).notNull().default('accepted'),
+	notificationsEnabled: integer('notifications_enabled', { mode: 'boolean' }).notNull().default(true)
+});
+
+export const listNotificationPrefs = sqliteTable('list_notification_prefs', {
+	listId: text('list_id')
+		.notNull()
+		.references(() => lists.id, { onDelete: 'cascade' }),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true)
+});
+
+export const pushSubscriptions = sqliteTable('push_subscriptions', {
+	id: text('id').primaryKey(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	endpoint: text('endpoint').notNull().unique(),
+	auth: text('auth').notNull(),
+	p256dh: text('p256dh').notNull(),
+	createdAt: integer('created_at').notNull()
 });
 
 export const items = sqliteTable('items', {
@@ -62,3 +84,6 @@ export const items = sqliteTable('items', {
 export type User = typeof users.$inferSelect;
 export type List = typeof lists.$inferSelect;
 export type Item = typeof items.$inferSelect;
+export type ListMember = typeof listMembers.$inferSelect;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type ListNotificationPref = typeof listNotificationPrefs.$inferSelect;

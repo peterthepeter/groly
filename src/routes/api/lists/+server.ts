@@ -47,7 +47,7 @@ export const GET: RequestHandler = async (event) => {
 		.where(eq(lists.ownerId, user!.id))
 		.all();
 
-	// Geteilte Listen (wo User Member ist)
+	// Geteilte Listen (wo User Member ist, akzeptiert)
 	const sharedLists = db
 		.select({
 			id: lists.id,
@@ -60,7 +60,8 @@ export const GET: RequestHandler = async (event) => {
 			updatedAt: lists.updatedAt,
 			openCount: sql<number>`COALESCE(${openCounts.cnt}, 0)`,
 			memberCount: sql<number>`0`,
-			isOwner: sql<number>`0`
+			isOwner: sql<number>`0`,
+			memberStatus: listMembers.status
 		})
 		.from(listMembers)
 		.innerJoin(lists, eq(listMembers.listId, lists.id))
@@ -69,12 +70,15 @@ export const GET: RequestHandler = async (event) => {
 		.where(eq(listMembers.userId, user!.id))
 		.all();
 
+	const acceptedShared = sharedLists.filter(l => l.memberStatus === 'accepted').map(l => ({ ...l, isOwner: false, pending: false }));
+	const pendingInvitations = sharedLists.filter(l => l.memberStatus === 'pending').map(l => ({ ...l, isOwner: false, pending: true }));
+
 	const allLists = [
-		...ownedLists.map(l => ({ ...l, isOwner: true, ownerUsername: null })),
-		...sharedLists.map(l => ({ ...l, isOwner: false }))
+		...ownedLists.map(l => ({ ...l, isOwner: true, ownerUsername: null, pending: false })),
+		...acceptedShared
 	].sort((a, b) => a.updatedAt - b.updatedAt);
 
-	return json(allLists);
+	return json({ lists: allLists, pendingInvitations });
 };
 
 export const POST: RequestHandler = async (event) => {

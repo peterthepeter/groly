@@ -7,7 +7,7 @@
 		onClose: () => void;
 	} = $props();
 
-	type Member = { userId: string; username: string; permission: string };
+	type Member = { userId: string; username: string; permission: string; status: string };
 
 	let members = $state<Member[]>([]);
 	let newUsername = $state('');
@@ -121,7 +121,12 @@
 							<circle cx="12" cy="7" r="4"/>
 						</svg>
 						<span class="flex-1 text-sm font-medium" style="color: var(--color-on-surface)">{member.username}</span>
-						{#if member.permission === 'read'}
+						{#if member.status === 'pending'}
+							<span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+							      style="background-color: color-mix(in srgb, #f59e0b 15%, transparent); color: #f59e0b">
+								{lang === 'en' ? 'Pending' : 'Ausstehend'}
+							</span>
+						{:else if member.permission === 'read'}
 							<span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
 							      style="background-color: color-mix(in srgb, var(--color-on-surface-variant) 12%, transparent); color: var(--color-on-surface-variant)">
 								{lang === 'en' ? 'View' : 'Lesen'}

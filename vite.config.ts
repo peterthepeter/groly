@@ -8,7 +8,9 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit(),
 		VitePWA({
-			strategies: 'generateSW',
+			strategies: 'injectManifest',
+			srcDir: 'src',
+			filename: 'service-worker.ts',
 			registerType: 'autoUpdate',
 			manifest: {
 				name: 'Groly',
@@ -26,18 +28,8 @@ export default defineConfig({
 					{ src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
 				]
 			},
-			workbox: {
-				globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-				runtimeCaching: [
-					{
-						urlPattern: /^\/api\//,
-						handler: 'NetworkFirst',
-						options: {
-							cacheName: 'api-cache',
-							expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 }
-						}
-					}
-				]
+			injectManifest: {
+				injectionPoint: undefined
 			}
 		})
 	]

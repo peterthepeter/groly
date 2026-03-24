@@ -2,11 +2,14 @@
 	import { networkStore } from '$lib/stores/online.svelte';
 	import { t, sync_pending } from '$lib/i18n.svelte';
 
-	let { title = 'Meine Listen', subtitle = '', onMenuOpen, onSearch = null }: {
+	import type { Snippet } from 'svelte';
+
+	let { title = 'Meine Listen', subtitle = '', onMenuOpen, onSearch = null, actions = null }: {
 		title?: string;
 		subtitle?: string;
 		onMenuOpen: () => void;
 		onSearch?: (() => void) | null;
+		actions?: Snippet | null;
 	} = $props();
 </script>
 
@@ -46,6 +49,9 @@
 
 		<!-- Right: optional Suche + Page Context -->
 		<div class="flex items-center gap-2 flex-shrink-0 ml-2">
+			{#if actions}
+				{@render actions()}
+			{/if}
 			{#if onSearch}
 				<button
 					onclick={onSearch}

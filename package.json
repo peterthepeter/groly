@@ -19,6 +19,7 @@
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/better-sqlite3": "^7.6.13",
+		"@types/web-push": "^3.6.4",
 		"drizzle-kit": "^0.31.10",
 		"svelte": "^5.51.0",
 		"svelte-check": "^4.4.2",
@@ -31,6 +32,11 @@
 	"dependencies": {
 		"better-sqlite3": "^12.8.0",
 		"dexie": "^4.3.0",
-		"drizzle-orm": "^0.45.1"
+		"drizzle-orm": "^0.45.1",
+		"web-push": "^3.6.7",
+		"workbox-expiration": "^7.4.0",
+		"workbox-precaching": "^7.4.0",
+		"workbox-routing": "^7.4.0",
+		"workbox-strategies": "^7.4.0"
 	}
 }

@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { PUBLIC_VAPID_PUBLIC_KEY } from '$env/static/public';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang, setLang } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { CATEGORY_LABELS } from '$lib/categories';
 	import { validatePassword, PASSWORD_HINT } from '$lib/password';
+
+	const PUBLIC_VAPID_KEY = PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
 	let { data } = $props();
 
@@ -20,6 +23,109 @@
 	let passwordOpen = $state(false);
 	let langOpen = $state(false);
 	let categorySortOpen = $state(false);
+	let sharedListsOpen = $state(false);
+
+	// Push Notifications
+	let pushSupported = $state(false);
+	let pushPermission = $state<NotificationPermission>('default');
+	let pushSubscribed = $state(false);
+	let pushLoading = $state(false);
+	let pushError = $state('');
+
+	async function initPushState() {
+		if (typeof window === 'undefined') return;
+		pushSupported = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+		if (!pushSupported) return;
+		pushPermission = Notification.permission;
+		if (pushPermission === 'granted') {
+			try {
+				const sw = await swReady();
+				const sub = await sw.pushManager.getSubscription();
+				pushSubscribed = !!sub;
+			} catch { /* ignore on init */ }
+		}
+	}
+
+	async function swReady(): Promise<ServiceWorkerRegistration> {
+		// Explicitly register SW if not already registered
+		let reg = await navigator.serviceWorker.getRegistration('/');
+		if (!reg) {
+			reg = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+		}
+		// Wait for active SW (with timeout)
+		return new Promise<ServiceWorkerRegistration>((resolve, reject) => {
+			const timeout = setTimeout(() => reject(new Error('Service Worker konnte nicht aktiviert werden.')), 10000);
+			function check() {
+				const r = reg!;
+				const active = r.active ?? r.installing ?? r.waiting;
+				if (r.active) { clearTimeout(timeout); resolve(r); return; }
+				if (active) {
+					active.addEventListener('statechange', function handler() {
+						if (r.active) { clearTimeout(timeout); active.removeEventListener('statechange', handler); resolve(r); }
+					});
+				} else {
+					setTimeout(check, 200);
+				}
+			}
+			check();
+		});
+	}
+
+	async function subscribePush() {
+		pushLoading = true;
+		pushError = '';
+		try {
+			const sw = await swReady();
+			const perm = await Notification.requestPermission();
+			pushPermission = perm;
+			if (perm !== 'granted') { pushLoading = false; return; }
+
+			const sub = await sw.pushManager.subscribe({
+				userVisibleOnly: true,
+				applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+			});
+			const json = sub.toJSON();
+			await fetch('/api/push/subscribe', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys })
+			});
+			pushSubscribed = true;
+		} catch (e) {
+			pushError = e instanceof Error ? e.message : String(e);
+		}
+		pushLoading = false;
+	}
+
+	async function unsubscribePush() {
+		pushLoading = true;
+		pushError = '';
+		try {
+			const sw = await swReady();
+			const sub = await sw.pushManager.getSubscription();
+			if (sub) {
+				await fetch('/api/push/subscribe', {
+					method: 'DELETE',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ endpoint: sub.endpoint })
+				});
+				await sub.unsubscribe();
+			}
+			pushSubscribed = false;
+		} catch (e) {
+			pushError = e instanceof Error ? e.message : String(e);
+		}
+		pushLoading = false;
+	}
+
+	function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+		const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+		const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+		const rawData = atob(base64);
+		return Uint8Array.from([...rawData].map(c => c.charCodeAt(0))).buffer;
+	}
+
+	$effect(() => { initPushState(); });
 
 	const mustChange = $derived($page.url.searchParams.get('mustChange') === '1');
 	$effect(() => { if (mustChange) passwordOpen = true; });
@@ -31,7 +137,8 @@
 		try {
 			const res = await fetch('/api/lists');
 			if (!res.ok) return;
-			const all = await res.json();
+			const json = await res.json();
+			const all = json?.lists ?? json;
 			sharedLists = all.filter((l: { isOwner: boolean }) => !l.isOwner);
 		} catch { /* ignore */ }
 	}
@@ -182,35 +289,49 @@
 			{/if}
 		</div>
 
-		<!-- Geteilte Listen -->
-		<div class="rounded-2xl p-5 mb-3" style="background-color: var(--color-surface-card)">
-			<h2 class="text-base font-bold mb-4" style="color: var(--color-on-surface)">
-				{currentLang() === 'en' ? 'Shared with me' : 'Geteilte Listen'}
-			</h2>
-			{#if sharedLists.length === 0}
-				<p class="text-sm" style="color: var(--color-on-surface-variant)">
-					{currentLang() === 'en' ? 'No lists shared with you.' : 'Keine Listen mit dir geteilt.'}
-				</p>
-			{:else}
-				<div class="space-y-2">
-					{#each sharedLists as sl (sl.id)}
-						<div class="flex items-center gap-3 rounded-xl px-3 py-2.5"
-						     style="background-color: var(--color-surface-container)">
-							<div class="flex-1 min-w-0">
-								<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{sl.name}</div>
-								{#if sl.ownerUsername}
-									<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{sl.ownerUsername}</div>
-								{/if}
-							</div>
-							<button
-								onclick={() => leaveList(sl.id)}
-								class="text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
-								style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)"
-							>
-								{currentLang() === 'en' ? 'Leave' : 'Verlassen'}
-							</button>
+		<!-- Geteilte Listen (zugeklappt) -->
+		<div class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
+			<button
+				onclick={() => sharedListsOpen = !sharedListsOpen}
+				class="w-full flex items-center justify-between px-5 py-5"
+			>
+				<span class="text-base font-bold" style="color: var(--color-on-surface)">
+					{currentLang() === 'en' ? 'Shared with me' : 'Geteilte Listen'}
+				</span>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
+				     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+				     style="transform: rotate({sharedListsOpen ? 90 : 0}deg); transition: transform 0.2s">
+					<polyline points="9 18 15 12 9 6"/>
+				</svg>
+			</button>
+			{#if sharedListsOpen}
+				<div class="px-5 pb-5">
+					{#if sharedLists.length === 0}
+						<p class="text-sm" style="color: var(--color-on-surface-variant)">
+							{currentLang() === 'en' ? 'No lists shared with you.' : 'Keine Listen mit dir geteilt.'}
+						</p>
+					{:else}
+						<div class="space-y-2">
+							{#each sharedLists as sl (sl.id)}
+								<div class="flex items-center gap-3 rounded-xl px-3 py-2.5"
+								     style="background-color: var(--color-surface-container)">
+									<div class="flex-1 min-w-0">
+										<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{sl.name}</div>
+										{#if sl.ownerUsername}
+											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{sl.ownerUsername}</div>
+										{/if}
+									</div>
+									<button
+										onclick={() => leaveList(sl.id)}
+										class="text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
+										style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)"
+									>
+										{currentLang() === 'en' ? 'Leave' : 'Verlassen'}
+									</button>
+								</div>
+							{/each}
 						</div>
-					{/each}
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -235,8 +356,10 @@
 						class="relative w-12 h-6 rounded-full overflow-hidden transition-colors flex-shrink-0"
 						style="background-color: {userSettings.categorySortEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 					>
-						<span class="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
-						      style="background-color: white; transform: translateX({userSettings.categorySortEnabled ? '1.625rem' : '0.125rem'})"></span>
+						{#if userSettings.categorySortEnabled}
+							<span class="absolute top-0.5 h-5 w-5 rounded-full"
+							      style="background-color: white; transform: translateX(1.625rem)"></span>
+						{/if}
 					</div>
 					<!-- Chevron -->
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -294,6 +417,41 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- Push Notifications -->
+		{#if pushSupported}
+			<div class="rounded-2xl mb-3" style="background-color: var(--color-surface-card)">
+				<div class="flex items-center justify-between px-5 py-5">
+					<span class="text-base font-bold" style="color: var(--color-on-surface)">
+						{currentLang() === 'en' ? 'Push Notifications' : 'Push-Benachrichtigungen'}
+					</span>
+					<div class="flex items-center gap-3">
+						{#if pushPermission === 'denied'}
+							<span class="text-xs" style="color: var(--color-error)">
+								{currentLang() === 'en' ? 'Blocked' : 'Blockiert'}
+							</span>
+						{:else}
+							<button
+								onclick={pushSubscribed ? unsubscribePush : subscribePush}
+								disabled={pushLoading}
+								aria-label={pushSubscribed ? 'Push-Benachrichtigungen deaktivieren' : 'Push-Benachrichtigungen aktivieren'}
+								class="relative w-12 h-6 rounded-full overflow-hidden transition-colors flex-shrink-0 disabled:opacity-50"
+								style="background-color: {pushSubscribed ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+							>
+								{#if pushSubscribed}
+									<span class="absolute top-0.5 h-5 w-5 rounded-full"
+									      style="background-color: white; transform: translateX(1.625rem)"></span>
+								{/if}
+							</button>
+						{/if}
+						<div class="w-4 flex-shrink-0"></div>
+					</div>
+				</div>
+				{#if pushError}
+					<div class="px-5 pb-4 text-xs" style="color: var(--color-error)">{pushError}</div>
+				{/if}
+			</div>
+		{/if}
 
 		{#if data.user?.role === 'admin'}
 			<a href="/einstellungen/users"

@@ -10,7 +10,7 @@ function hasAccess(listId: string, userId: string): boolean {
 	if (!list) return false;
 	if (list.ownerId === userId) return true;
 	const member = db.select().from(listMembers)
-		.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId))).get();
+		.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId), eq(listMembers.status, 'accepted'))).get();
 	return !!member;
 }
 
