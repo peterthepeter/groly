@@ -8,9 +8,9 @@ let initialized = false;
 
 function init() {
 	if (initialized) return;
-	initialized = true;
 	runMigrations();
 	bootstrapAdmin();
+	initialized = true;
 }
 
 const SECURITY_HEADERS: Record<string, string> = {
