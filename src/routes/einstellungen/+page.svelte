@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { PUBLIC_VAPID_PUBLIC_KEY } from '$env/static/public';
+	import { env as publicEnv } from '$env/dynamic/public';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang, setLang } from '$lib/i18n.svelte';
@@ -9,7 +9,7 @@
 	import { CATEGORY_LABELS } from '$lib/categories';
 	import { validatePassword, PASSWORD_HINT } from '$lib/password';
 
-	const PUBLIC_VAPID_KEY = PUBLIC_VAPID_PUBLIC_KEY ?? '';
+	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
 	let { data } = $props();
 
