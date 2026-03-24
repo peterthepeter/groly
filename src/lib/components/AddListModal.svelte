@@ -4,7 +4,7 @@
 
 	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0 }: {
 		list?: { id: string; name: string; description: string | null; iconId?: string | null } | null;
-		onSave: (name: string, description: string, iconId: string | null) => void;
+		onSave: (name: string, description: string, iconId: string | null, shareAfterCreate?: boolean) => void;
 		onDelete?: (() => void) | null;
 		onShare?: (() => void) | null;
 		onClose: () => void;
@@ -18,6 +18,7 @@
 	let bottomOffset = $state(0);
 	let notificationsEnabled = $state(true);
 	let notifLoading = $state(false);
+	let shareAfterCreate = $state(false);
 
 	// Notification-Präferenz laden wenn Liste besteht und geteilt ist
 	$effect(() => {
@@ -98,6 +99,32 @@
 	</div>
 
 	<div class="space-y-3 mb-3">
+		<!-- Teilen nach Erstellen Toggle (nur beim Erstellen) -->
+		{#if !list}
+			<button
+				type="button"
+				onclick={() => shareAfterCreate = !shareAfterCreate}
+				class="w-full flex items-center gap-3 px-4 rounded-xl active:opacity-70 transition-opacity"
+				style="background-color: var(--color-surface-container); height: 52px"
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+				     stroke={shareAfterCreate ? 'var(--color-primary)' : 'var(--color-outline)'}
+				     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+					<polyline points="16 6 12 2 8 6"/>
+					<line x1="12" y1="2" x2="12" y2="15"/>
+				</svg>
+				<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
+					{currentLang() === 'en' ? 'Share after creating' : 'Nach Erstellen teilen'}
+				</span>
+				<div class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
+				     style="background-color: {shareAfterCreate ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
+					<div class="absolute top-0.5 w-5 h-5 rounded-full transition-transform shadow-sm"
+					     style="background-color: white; left: {shareAfterCreate ? '1.25rem' : '0.125rem'}"></div>
+				</div>
+			</button>
+		{/if}
+
 		<!-- Notification Toggle (nur bei geteilten Listen) -->
 		{#if list && memberCount > 0}
 			<button
@@ -238,7 +265,7 @@
 			{t.list_cancel}
 		</button>
 		<button
-			onclick={() => name.trim() && onSave(name.trim(), description.trim(), selectedIconId)}
+			onclick={() => name.trim() && onSave(name.trim(), description.trim(), selectedIconId, shareAfterCreate)}
 			disabled={!name.trim()}
 			class="flex-1 py-3.5 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
 			style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"

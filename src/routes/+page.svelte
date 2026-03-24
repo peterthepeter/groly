@@ -101,7 +101,7 @@
 		loading = false;
 	}
 
-	async function createList(name: string, description: string, iconId: string | null) {
+	async function createList(name: string, description: string, iconId: string | null, shareAfterCreate?: boolean) {
 		const res = await fetch('/api/lists', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -109,8 +109,12 @@
 		});
 		if (res.ok) {
 			const newList = await res.json();
-			lists = [...lists, { ...newList, openCount: 0 }];
+			const listWithCount = { ...newList, openCount: 0 };
+			lists = [...lists, listWithCount];
 			void cacheListsData(lists);
+			if (shareAfterCreate) {
+				shareList = listWithCount;
+			}
 		}
 		addModalOpen = false;
 	}

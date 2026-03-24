@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import InfoModal from '$lib/components/InfoModal.svelte';
 
 	let { open = $bindable(false), user }: {
 		open: boolean;
 		user: { username: string; role: string } | null;
 	} = $props();
+
+	let infoOpen = $state(false);
 
 	function close() { open = false; }
 
@@ -103,6 +106,18 @@
 		</button>
 
 		<button
+			onclick={() => { close(); infoOpen = true; }}
+			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+		>
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="12" cy="12" r="10"/>
+				<line x1="12" y1="8" x2="12" y2="12"/>
+				<line x1="12" y1="16" x2="12.01" y2="16"/>
+			</svg>
+			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Info' : 'Infos'}</span>
+		</button>
+
+		<button
 			onclick={logout}
 			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
 		>
@@ -118,3 +133,7 @@
 	<!-- Safe area padding -->
 	<div class="h-safe-bottom h-6"></div>
 </div>
+
+{#if infoOpen}
+	<InfoModal onClose={() => infoOpen = false} />
+{/if}
