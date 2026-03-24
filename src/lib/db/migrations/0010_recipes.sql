@@ -11,7 +11,7 @@ CREATE TABLE recipes (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
-
+-->statement-breakpoint
 CREATE TABLE recipe_ingredients (
   id TEXT PRIMARY KEY NOT NULL,
   recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
@@ -20,14 +20,14 @@ CREATE TABLE recipe_ingredients (
   name TEXT NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0
 );
-
+-->statement-breakpoint
 CREATE TABLE recipe_steps (
   id TEXT PRIMARY KEY NOT NULL,
   recipe_id TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
   step_number INTEGER NOT NULL,
   text TEXT NOT NULL
 );
-
+-->statement-breakpoint
 CREATE TABLE recipe_shares (
   id TEXT PRIMARY KEY NOT NULL,
   sender_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
