@@ -26,7 +26,12 @@ export default defineConfig({
 					{ src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
 					{ src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
 					{ src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
-				]
+				],
+				share_target: {
+					action: '/rezepte/import',
+					method: 'GET',
+					params: { url: 'url' }
+				}
 			},
 			injectManifest: {
 				injectionPoint: undefined

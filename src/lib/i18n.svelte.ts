@@ -111,6 +111,61 @@ class TranslationProxy {
 	get must_change_password() { void _lang; return m.must_change_password(); }
 	get confirm_delete_list() { void _lang; return m.confirm_delete_list(); }
 	get confirm_delete_item() { void _lang; return m.confirm_delete_item(); }
+	// recipes
+	get nav_recipes() { void _lang; return m.nav_recipes(); }
+	get recipes_title() { void _lang; return m.recipes_title(); }
+	get recipes_empty() { void _lang; return m.recipes_empty(); }
+	get recipes_empty_hint() { void _lang; return m.recipes_empty_hint(); }
+	get recipes_search_placeholder() { void _lang; return m.recipes_search_placeholder(); }
+	get recipes_no_results() { void _lang; return m.recipes_no_results(); }
+	get recipe_add() { void _lang; return m.recipe_add(); }
+	get recipe_import_url() { void _lang; return m.recipe_import_url(); }
+	get recipe_import_url_hint() { void _lang; return m.recipe_import_url_hint(); }
+	get recipe_create_manual() { void _lang; return m.recipe_create_manual(); }
+	get recipe_create_manual_hint() { void _lang; return m.recipe_create_manual_hint(); }
+	get recipe_import_title() { void _lang; return m.recipe_import_title(); }
+	get recipe_import_subtitle() { void _lang; return m.recipe_import_subtitle(); }
+	get recipe_import_button() { void _lang; return m.recipe_import_button(); }
+	get recipe_import_loading() { void _lang; return m.recipe_import_loading(); }
+	get recipe_import_paste() { void _lang; return m.recipe_import_paste(); }
+	get recipe_import_supported() { void _lang; return m.recipe_import_supported(); }
+	get recipe_save() { void _lang; return m.recipe_save(); }
+	get recipe_save_changes() { void _lang; return m.recipe_save_changes(); }
+	get recipe_saving() { void _lang; return m.recipe_saving(); }
+	get recipe_new_title() { void _lang; return m.recipe_new_title(); }
+	get recipe_edit_title() { void _lang; return m.recipe_edit_title(); }
+	get recipe_name_placeholder() { void _lang; return m.recipe_name_placeholder(); }
+	get recipe_description_placeholder() { void _lang; return m.recipe_description_placeholder(); }
+	get recipe_ingredients() { void _lang; return m.recipe_ingredients(); }
+	get recipe_instructions() { void _lang; return m.recipe_instructions(); }
+	get recipe_add_ingredient() { void _lang; return m.recipe_add_ingredient(); }
+	get recipe_add_step() { void _lang; return m.recipe_add_step(); }
+	get recipe_delete() { void _lang; return m.recipe_delete(); }
+	get recipe_confirm_delete() { void _lang; return m.recipe_confirm_delete(); }
+	get recipe_original_link() { void _lang; return m.recipe_original_link(); }
+	get recipe_prep_time() { void _lang; return m.recipe_prep_time(); }
+	get recipe_cook_time() { void _lang; return m.recipe_cook_time(); }
+	get recipe_add_to_list() { void _lang; return m.recipe_add_to_list(); }
+	get recipe_share_title() { void _lang; return m.recipe_share_title(); }
+	get recipe_share_sent() { void _lang; return m.recipe_share_sent(); }
+	get recipe_share_send() { void _lang; return m.recipe_share_send(); }
+	get recipe_to_list_title() { void _lang; return m.recipe_to_list_title(); }
+	get recipe_new_list() { void _lang; return m.recipe_new_list(); }
+	get recipe_list_search() { void _lang; return m.recipe_list_search(); }
+	get recipe_shares_from() { void _lang; return m.recipe_shares_from(); }
+	get recipe_accept() { void _lang; return m.recipe_accept(); }
+	get recipe_decline() { void _lang; return m.recipe_decline(); }
+	get recipe_no_ingredients() { void _lang; return m.recipe_no_ingredients(); }
+	get recipe_no_steps() { void _lang; return m.recipe_no_steps(); }
+	get recipe_minutes() { void _lang; return m.recipe_minutes(); }
+	get recipe_prep_min_placeholder() { void _lang; return m.recipe_prep_min_placeholder(); }
+	get recipe_cook_min_placeholder() { void _lang; return m.recipe_cook_min_placeholder(); }
+	get recipe_step_placeholder() { void _lang; return m.recipe_step_placeholder(); }
+	get recipe_amount_placeholder() { void _lang; return m.recipe_amount_placeholder(); }
+	get recipe_unit_placeholder() { void _lang; return m.recipe_unit_placeholder(); }
+	get recipe_ingredient_placeholder() { void _lang; return m.recipe_ingredient_placeholder(); }
+	get recipe_username_placeholder() { void _lang; return m.recipe_username_placeholder(); }
+	get recipe_share_error_self() { void _lang; return m.recipe_share_error_self(); }
 }
 
 export const t = new TranslationProxy();

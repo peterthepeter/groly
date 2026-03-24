@@ -81,9 +81,52 @@ export const items = sqliteTable('items', {
 	updatedAt: integer('updated_at').notNull()
 });
 
+export const recipes = sqliteTable('recipes', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	title: text('title').notNull(),
+	description: text('description'),
+	imageUrl: text('image_url'),
+	sourceUrl: text('source_url'),
+	servings: integer('servings').notNull().default(4),
+	prepTime: integer('prep_time'),
+	cookTime: integer('cook_time'),
+	createdAt: integer('created_at').notNull(),
+	updatedAt: integer('updated_at').notNull()
+});
+
+export const recipeIngredients = sqliteTable('recipe_ingredients', {
+	id: text('id').primaryKey(),
+	recipeId: text('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+	amount: text('amount'),
+	unit: text('unit'),
+	name: text('name').notNull(),
+	sortOrder: integer('sort_order').notNull().default(0)
+});
+
+export const recipeSteps = sqliteTable('recipe_steps', {
+	id: text('id').primaryKey(),
+	recipeId: text('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+	stepNumber: integer('step_number').notNull(),
+	text: text('text').notNull()
+});
+
+export const recipeShares = sqliteTable('recipe_shares', {
+	id: text('id').primaryKey(),
+	senderId: text('sender_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	receiverId: text('receiver_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	recipeId: text('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+	status: text('status', { enum: ['pending', 'accepted', 'declined'] }).notNull().default('pending'),
+	createdAt: integer('created_at').notNull()
+});
+
 export type User = typeof users.$inferSelect;
 export type List = typeof lists.$inferSelect;
 export type Item = typeof items.$inferSelect;
 export type ListMember = typeof listMembers.$inferSelect;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type ListNotificationPref = typeof listNotificationPrefs.$inferSelect;
+export type Recipe = typeof recipes.$inferSelect;
+export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
+export type RecipeStep = typeof recipeSteps.$inferSelect;
+export type RecipeShare = typeof recipeShares.$inferSelect;

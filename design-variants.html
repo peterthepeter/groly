@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Groly – Icon-Design Varianten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Plus+Jakarta+Sans:wght@600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #121212;
+    color: #e8e8e8;
+    font-family: 'Manrope', sans-serif;
+    padding: 32px 20px 64px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+    color: #e8e8e8;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #9a9a9a;
+    margin-bottom: 40px;
+  }
+
+  .variant-section {
+    margin-bottom: 48px;
+  }
+
+  .variant-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #e8e8e8;
+    margin-bottom: 4px;
+  }
+
+  .variant-desc {
+    font-size: 12px;
+    color: #9a9a9a;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .badge-current {
+    display: inline-block;
+    background: #262626;
+    border: 1px solid #444;
+    color: #9a9a9a;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 999px;
+    margin-left: 8px;
+    vertical-align: middle;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .cards-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    max-width: 420px;
+  }
+
+  /* Base card */
+  .card {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 20px;
+    background: #262626;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card:active { transform: scale(0.95); }
+
+  .card-qty {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .card-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 0 8px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 2.5rem;
+  }
+
+  .card-name {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    color: #e8e8e8;
+  }
+
+  .card-creator {
+    display: block;
+    font-size: 9px;
+    line-height: 1.2;
+    text-align: center;
+    color: #9a9a9a;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+
+  /* ── Variant 0: Aktuell ── */
+  .v0 .icon-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 18px;
+  }
+  .v0 .icon-circle {
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Variant 1: Kein Hintergrund ── */
+  .v1 .icon-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 24px;
+  }
+
+  /* ── Variant 2: Volle Karte ── */
+  .v2 .icon-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 22px;
+  }
+  /* card bg color set inline via JS */
+
+  /* ── Variant 3: Radialer Gradient ── */
+  .v3 .icon-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 22px;
+  }
+  .v3 .icon-glow {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    /* set via inline style */
+  }
+
+  /* ── Variant 4: Größeres Icon ── */
+  .v4 .icon-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 22px;
+  }
+
+  /* ── Variant 5: Drop-Shadow Glow ── */
+  .v5 .icon-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 22px;
+  }
+
+  /* ── Variant 6: Pill Badge ── */
+  .v6 .icon-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 22px;
+  }
+  .v6 .color-pill {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+  }
+
+  /* divider */
+  .divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 48px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Groly – Icon-Design Varianten</h1>
+<p class="subtitle">Alle Karten enthalten: Mengenangabe (oben rechts), Item-Name (unten), Creator-Hinweis (bei manchen sichtbar)</p>
+
+<!-- Items data -->
+<script>
+const items = [
+  { name: 'Äpfel',       qty: '1 kg',  creator: null,    color: '#00C49A',
+    svg: `<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>` },
+  { name: 'Milch',       qty: null,    creator: 'Anna',  color: '#60A5FA',
+    svg: `<path d="M8 2h8l2 5v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l2-5z"/><line x1="6" y1="10" x2="18" y2="10"/>` },
+  { name: 'Hackfleisch', qty: '1 Packung', creator: null, color: '#EF4444',
+    svg: `<g transform="translate(12,12) scale(1.32) translate(-12,-12)"><path d="M5 10c.5-4 3.5-6.5 7-6.5S19 6 19.5 10c.5 4-2.5 10-7.5 10S4.5 14 5 10z"/><path d="M10 10.5c1-2 4-2.5 5-1"/><path d="M9.5 13.5c1.5-.5 4 0 5 1"/></g>` },
+  { name: 'Brot',        qty: null,    creator: 'Chris', color: '#F59E0B',
+    svg: `<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>` },
+];
+
+function makeBadge(item) {
+  return item.qty ? `<span class="card-qty" style="color:${item.color}">${item.qty}</span>` : '';
+}
+function makeBottom(item) {
+  const creator = item.creator ? `<span class="card-creator">(${item.creator})</span>` : `<span class="card-creator" style="visibility:hidden">x</span>`;
+  return `<div class="card-bottom"><span class="card-name">${item.name}</span>${creator}</div>`;
+}
+
+// ── V0: Aktuell ──
+function v0(item) {
+  const bg = hexToRgba(item.color, 0.22);
+  return `<div class="card v0">
+    ${makeBadge(item)}
+    <div class="icon-wrap">
+      <div class="icon-circle" style="background:${bg}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${item.color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${item.svg}</svg>
+      </div>
+    </div>
+    ${makeBottom(item)}
+  </div>`;
+}
+
+// ── V1: Kein Hintergrund ──
+function v1(item) {
+  return `<div class="card v1">
+    ${makeBadge(item)}
+    <div class="icon-wrap">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="${item.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${item.svg}</svg>
+    </div>
+    ${makeBottom(item)}
+  </div>`;
+}
+
+// ── V2: Volle Karte eingefärbt ──
+function v2(item) {
+  const bg = hexToRgba(item.color, 0.12);
+  return `<div class="card v2" style="background:${bg}; background-color: color-mix(in srgb, ${item.color} 12%, #262626)">
+    ${makeBadge(item)}
+    <div class="icon-wrap">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${item.color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${item.svg}</svg>
+    </div>
+    ${makeBottom(item)}
+  </div>`;
+}
+
+// ── V3: Radialer Gradient ──
+function v3(item) {
+  const gradBg = `radial-gradient(ellipse 56px 56px at 50% 38%, ${hexToRgba(item.color, 0.28)} 0%, transparent 100%)`;
+  return `<div class="card v3">
+    ${makeBadge(item)}
+    <div class="v3-grad" style="position:absolute;inset:0;background:${gradBg}"></div>
+    <div class="icon-wrap">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${item.color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${item.svg}</svg>
+    </div>
+    ${makeBottom(item)}
+  </div>`;
+}
+
+// ── V4: Größeres Icon ──
+function v4(item) {
+  return `<div class="card v4">
+    ${makeBadge(item)}
+    <div class="icon-wrap">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="${item.color}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">${item.svg}</svg>
+    </div>
+    ${makeBottom(item)}
+  </div>`;
+}
+
+// ── V5: Drop-Shadow Glow ──
+function v5(item) {
+  const [r,g,b] = hexToRgb(item.color);
+  const shadow = `drop-shadow(0 0 7px rgba(${r},${g},${b},0.75))`;
+  return `<div class="card v5">
+    ${makeBadge(item)}
+    <div class="icon-wrap">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${item.color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="filter:${shadow}">${item.svg}</svg>
+    </div>
+    ${makeBottom(item)}
+  </div>`;
+}
+
+// ── V6: Pill Badge ──
+function v6(item) {
+  return `<div class="card v6">
+    <div class="color-pill" style="background:${item.color}"></div>
+    ${makeBadge(item)}
+    <div class="icon-wrap">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${item.color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${item.svg}</svg>
+    </div>
+    ${makeBottom(item)}
+  </div>`;
+}
+
+// Helpers
+function hexToRgba(hex, alpha) {
+  const [r,g,b] = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+const variants = [
+  { id: 'v0', fn: v0, title: '0 – Aktuell',         desc: '58 px Kreis mit 22 % Kategorie-Farbe als Hintergrund – der Ist-Zustand.' },
+  { id: 'v1', fn: v1, title: '1 – Kein Hintergrund', desc: 'Icon nackt ohne Container. Sehr minimalistisch, maximale Ruhe.' },
+  { id: 'v2', fn: v2, title: '2 – Volle Karte',      desc: 'Die gesamte Karte bekommt die Kategorie-Farbe bei 12 % Opacity, kein separater Icon-Bereich.' },
+  { id: 'v3', fn: v3, title: '3 – Radialer Gradient', desc: 'Weicher Farbschein von der Icon-Mitte nach außen – kein harter Rand.' },
+  { id: 'v4', fn: v4, title: '4 – Größeres Icon',    desc: 'Icon auf 42 px vergrößert, Strichstärke auf 1.1 reduziert. Kein Kreis, mehr Illustrationsgefühl.' },
+  { id: 'v5', fn: v5, title: '5 – Drop-Shadow Glow', desc: 'filter: drop-shadow in Kategoriefarbe – Farbe leuchtet, aber keine Fläche dahinter.' },
+  { id: 'v6', fn: v6, title: '6 – Pill-Balken',      desc: 'Schmaler Farbbalken am oberen Kartenrand als Kategorie-Marker, Icon ohne Hintergrund.' },
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+  variants.forEach(({ id, fn, title, desc }, i) => {
+    const section = document.createElement('div');
+    section.className = 'variant-section';
+
+    const isFirst = i === 0;
+    section.innerHTML = `
+      <div class="variant-title">${title}${isFirst ? '<span class="badge-current">Aktuell</span>' : ''}</div>
+      <div class="variant-desc">${desc}</div>
+      <div class="cards-row ${id}">${items.map(fn).join('')}</div>
+    `;
+    document.getElementById('variants-container').appendChild(section);
+
+    if (i < variants.length - 1) {
+      const hr = document.createElement('hr');
+      hr.className = 'divider';
+      document.getElementById('variants-container').appendChild(hr);
+    }
+  });
+});
+</script>
+
+<div id="variants-container"></div>
+
+</body>
+</html>
