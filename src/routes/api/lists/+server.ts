@@ -47,31 +47,56 @@ export const GET: RequestHandler = async (event) => {
 		.where(eq(lists.ownerId, user!.id))
 		.all();
 
-	// Geteilte Listen (wo User Member ist, akzeptiert)
-	const sharedLists = db
-		.select({
-			id: lists.id,
-			name: lists.name,
-			description: lists.description,
-			iconId: lists.iconId,
-			ownerId: lists.ownerId,
-			ownerUsername: users.username,
-			createdAt: lists.createdAt,
-			updatedAt: lists.updatedAt,
-			openCount: sql<number>`COALESCE(${openCounts.cnt}, 0)`,
-			memberCount: sql<number>`0`,
-			isOwner: sql<number>`0`,
-			memberStatus: listMembers.status
-		})
-		.from(listMembers)
-		.innerJoin(lists, eq(listMembers.listId, lists.id))
-		.innerJoin(users, eq(lists.ownerId, users.id))
-		.leftJoin(openCounts, eq(lists.id, openCounts.listId))
-		.where(eq(listMembers.userId, user!.id))
-		.all();
+	// Geteilte Listen (wo User Member ist)
+	let acceptedShared: typeof ownedLists = [];
+	let pendingInvitations: { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; ownerUsername: string | null; openCount: number; updatedAt: number }[] = [];
+	try {
+		const sharedLists = db
+			.select({
+				id: lists.id,
+				name: lists.name,
+				description: lists.description,
+				iconId: lists.iconId,
+				ownerId: lists.ownerId,
+				ownerUsername: users.username,
+				createdAt: lists.createdAt,
+				updatedAt: lists.updatedAt,
+				openCount: sql<number>`COALESCE(${openCounts.cnt}, 0)`,
+				memberCount: sql<number>`0`,
+				isOwner: sql<number>`0`,
+				memberStatus: listMembers.status
+			})
+			.from(listMembers)
+			.innerJoin(lists, eq(listMembers.listId, lists.id))
+			.innerJoin(users, eq(lists.ownerId, users.id))
+			.leftJoin(openCounts, eq(lists.id, openCounts.listId))
+			.where(eq(listMembers.userId, user!.id))
+			.all();
 
-	const acceptedShared = sharedLists.filter(l => l.memberStatus === 'accepted').map(l => ({ ...l, isOwner: false, pending: false }));
-	const pendingInvitations = sharedLists.filter(l => l.memberStatus === 'pending').map(l => ({ ...l, isOwner: false, pending: true }));
+		acceptedShared = sharedLists.filter(l => l.memberStatus === 'accepted').map(l => ({ ...l, isOwner: false as unknown as number, pending: false })) as typeof ownedLists;
+		pendingInvitations = sharedLists.filter(l => l.memberStatus === 'pending').map(l => ({
+			id: l.id, name: l.name, description: l.description, iconId: l.iconId,
+			ownerId: l.ownerId, ownerUsername: l.ownerUsername ?? null,
+			openCount: l.openCount, updatedAt: l.updatedAt
+		}));
+	} catch {
+		// Migration noch nicht gelaufen – alle geteilten Listen als accepted behandeln
+		const fallback = db
+			.select({
+				id: lists.id, name: lists.name, description: lists.description,
+				iconId: lists.iconId, ownerId: lists.ownerId, ownerUsername: users.username,
+				createdAt: lists.createdAt, updatedAt: lists.updatedAt,
+				openCount: sql<number>`COALESCE(${openCounts.cnt}, 0)`,
+				memberCount: sql<number>`0`, isOwner: sql<number>`0`
+			})
+			.from(listMembers)
+			.innerJoin(lists, eq(listMembers.listId, lists.id))
+			.innerJoin(users, eq(lists.ownerId, users.id))
+			.leftJoin(openCounts, eq(lists.id, openCounts.listId))
+			.where(eq(listMembers.userId, user!.id))
+			.all();
+		acceptedShared = fallback.map(l => ({ ...l, isOwner: false as unknown as number, pending: false })) as typeof ownedLists;
+	}
 
 	const allLists = [
 		...ownedLists.map(l => ({ ...l, isOwner: true, ownerUsername: null, pending: false })),
