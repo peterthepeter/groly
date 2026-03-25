@@ -74,7 +74,7 @@
 			const res = await fetch('/api/lists', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, description: null, iconId: null })
+				body: JSON.stringify({ name, description: null, iconId: 'rezept' })
 			});
 			if (!res.ok) throw new Error();
 			const newList = await res.json();

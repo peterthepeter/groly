@@ -7,7 +7,7 @@
 
 	let { data } = $props();
 
-	type UserEntry = { id: string; username: string; role: string; createdAt: number; lastLoginAt: number | null; listCount: number; itemCount: number };
+	type UserEntry = { id: string; username: string; role: string; createdAt: number; lastLoginAt: number | null; listCount: number; itemCount: number; recipeCount: number };
 
 	function formatLastLogin(ts: number | null): string {
 		if (!ts) return 'Noch nie eingeloggt';
@@ -143,7 +143,7 @@
 						<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{user.username}</div>
 						<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">
 							{user.role === 'admin' ? t.admin_role_admin : t.admin_role_user}
-							· {user.listCount} {user.listCount === 1 ? 'Liste' : 'Listen'}, {user.itemCount} Items
+							· {user.listCount} {user.listCount === 1 ? 'Liste' : 'Listen'}, {user.itemCount} Items, {user.recipeCount} {user.recipeCount === 1 ? 'Rezept' : 'Rezepte'}
 						</div>
 						<div class="text-[10px] truncate" style="color: var(--color-on-surface-variant); opacity: 0.7">
 							{formatLastLogin(user.lastLoginAt)}

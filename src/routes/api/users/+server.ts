@@ -18,10 +18,12 @@ export const GET: RequestHandler = async (event) => {
 			u.created_at AS createdAt,
 			u.last_login_at AS lastLoginAt,
 			CAST(COUNT(DISTINCT l.id) AS INTEGER) AS listCount,
-			CAST(COUNT(i.id) AS INTEGER) AS itemCount
+			CAST(COUNT(DISTINCT i.id) AS INTEGER) AS itemCount,
+			CAST(COUNT(DISTINCT r.id) AS INTEGER) AS recipeCount
 		FROM users u
 		LEFT JOIN lists l ON l.owner_id = u.id
 		LEFT JOIN items i ON i.list_id = l.id
+		LEFT JOIN recipes r ON r.user_id = u.id
 		GROUP BY u.id
 	`);
 	return json(allUsers);

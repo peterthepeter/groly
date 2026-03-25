@@ -1,4 +1,4 @@
-export type ListIconId = 'supermarkt' | 'drogerie' | 'bio' | 'baeckerei' | 'haushalt' | 'online' | 'laden' | 'apotheke';
+export type ListIconId = 'supermarkt' | 'drogerie' | 'bio' | 'baeckerei' | 'haushalt' | 'online' | 'laden' | 'apotheke' | 'rezept';
 
 export interface ListIcon {
 	id: ListIconId;
@@ -64,6 +64,13 @@ export const LIST_ICONS: ListIcon[] = [
 		labelEn: 'Store',
 		color: '#4e342e',
 		svgContent: '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'
+	},
+	{
+		id: 'rezept',
+		label: 'Rezept',
+		labelEn: 'Recipe',
+		color: '#b45309',
+		svgContent: '<path d="M4 21H20V17C21 14 23 12 22 9C21 6 19 4 17 4C16 4 15 8 15 8C14 6 13 3 12 3C11 3 10 6 9 8C9 8 8 6 7 4C5 4 3 6 2 9C1 12 3 14 4 17Z"/>'
 	}
 ];
 
