@@ -9,8 +9,11 @@
 		onClose: () => void;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally
 	let name = $state(item?.name ?? '');
+	// svelte-ignore state_referenced_locally
 	let quantityInfo = $state(item?.quantityInfo ?? '');
+	// svelte-ignore state_referenced_locally
 	let categoryOverride = $state<string | null>(item?.categoryOverride ?? null);
 	let categoryOpen = $state(false);
 

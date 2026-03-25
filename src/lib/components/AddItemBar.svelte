@@ -107,6 +107,7 @@
 
 		<!-- Eingabefelder -->
 		<div class="space-y-2 mb-3">
+			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				bind:this={nameInput}
 				type="text"

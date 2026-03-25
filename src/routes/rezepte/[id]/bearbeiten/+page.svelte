@@ -183,11 +183,11 @@
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
 					</svg>
-					<button onclick={() => { if (servings > 1) servings--; }} class="w-7 h-7 rounded-full flex items-center justify-center active:opacity-60" style="background-color: var(--color-surface-high)">
+					<button onclick={() => { if (servings > 1) servings--; }} aria-label="Portionen verringern" class="w-7 h-7 rounded-full flex items-center justify-center active:opacity-60" style="background-color: var(--color-surface-high)">
 						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
 					</button>
 					<span class="text-sm font-bold w-4 text-center" style="color: var(--color-on-surface)">{servings}</span>
-					<button onclick={() => servings++} class="w-7 h-7 rounded-full flex items-center justify-center active:opacity-60" style="background-color: var(--color-surface-high)">
+					<button onclick={() => servings++} aria-label="Portionen erhöhen" class="w-7 h-7 rounded-full flex items-center justify-center active:opacity-60" style="background-color: var(--color-surface-high)">
 						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 					</button>
 				</div>
@@ -232,6 +232,7 @@
 							       style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; height: 44px" />
 							{#if ingredients.length > 1}
 								<button onclick={() => removeIngredient(ing.id)}
+								        aria-label="Zutat entfernen"
 								        class="w-9 h-9 flex items-center justify-center rounded-xl flex-shrink-0 active:opacity-60"
 								        style="background-color: color-mix(in srgb, var(--color-error) 12%, var(--color-surface-container))">
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round">
@@ -271,6 +272,7 @@
 							></textarea>
 							{#if steps.length > 1}
 								<button onclick={() => removeStep(step.id)}
+								        aria-label="Schritt entfernen"
 								        class="w-9 h-9 flex items-center justify-center rounded-xl flex-shrink-0 mt-1 active:opacity-60"
 								        style="background-color: color-mix(in srgb, var(--color-error) 12%, var(--color-surface-container))">
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round">

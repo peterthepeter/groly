@@ -149,6 +149,7 @@
 						</button>
 						<button
 							onclick={() => newListMode = false}
+							aria-label="Abbrechen"
 							class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 active:opacity-70"
 							style="background-color: var(--color-surface-high)"
 						>

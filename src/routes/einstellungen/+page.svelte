@@ -403,6 +403,7 @@
 								<button
 									onclick={() => userSettings.moveUp(i)}
 									disabled={i === 0}
+									aria-label="Nach oben"
 									class="p-1 rounded-lg disabled:opacity-20"
 									style="color: var(--color-on-surface-variant)"
 								>
@@ -413,6 +414,7 @@
 								<button
 									onclick={() => userSettings.moveDown(i)}
 									disabled={i === userSettings.categoryOrder.length - 1}
+									aria-label="Nach unten"
 									class="p-1 rounded-lg disabled:opacity-20"
 									style="color: var(--color-on-surface-variant)"
 								>

@@ -15,13 +15,11 @@
       "Bash(git push:*)",
       "Bash(python3:*)",
       "Bash(npx:*)",
-      "Bash(cat:*)",
       "Bash(grep:*)",
       "Bash(sips -z 512 512 /Users/christian/Downloads/Groly.png --out /Users/christian/Documents/groly/static/icons/icon-512.png)",
       "Bash(sips -z 192 192 /Users/christian/Downloads/Groly.png --out /Users/christian/Documents/groly/static/icons/icon-192.png)",
       "Bash(sips -z 180 180 /Users/christian/Downloads/Groly.png --out /Users/christian/Documents/groly/static/icons/apple-touch-icon.png)",
       "Bash(sips -z 32 32 /Users/christian/Downloads/Groly.png --out /Users/christian/Documents/groly/static/icons/favicon-32.png)",
-      "Bash(convert --version)",
       "Bash(node -e \"require\\(''sharp''\\)\")",
       "Bash(node -e \"require\\(''canvas''\\)\")",
       "Bash(npm list:*)",
@@ -42,7 +40,6 @@
       "Bash(git diff:*)",
       "Bash(git checkout:*)",
       "WebFetch(domain:world.openfoodfacts.org)",
-      "Bash(curl -s --max-time 30 -A \"groly-brands-builder/1.0 \\(christian@example.com\\)\" \"https://world.openfoodfacts.org/category/en:beverages/country/en:germany/brands.json\")",
       "Bash(curl -s --max-time 30 -A \"groly-brands-builder/1.0\" \"https://world.openfoodfacts.org/category/en:beverages/country/en:germany/brands.json\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
       "Bash(curl -sL --max-time 30 -A \"groly-brands-builder/1.0\" \"https://world.openfoodfacts.org/category/en:beverages/country/en:germany/brands.json\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
       "Bash(curl -sL --max-time 30 -A \"Mozilla/5.0 \\(compatible; research/1.0\\)\" \"https://world.openfoodfacts.org/category/en:beverages/country/en:germany/brands.json\" -w \"\\\\nHTTP_STATUS:%{http_code}\")",
@@ -52,9 +49,12 @@
       "Bash(npm ls:*)",
       "Bash(curl:*)",
       "Bash(ls -la /Users/christian/Documents/groly/src/routes/listen/[id]/)",
-      "Bash(/Users/christian/Documents/groly/src/lib/paraglide/messages/de.js:*)",
-      "Bash(/Users/christian/Documents/groly/src/lib/paraglide/messages/en.js:*)",
-      "Bash(/Users/christian/Documents/groly/src/lib/paraglide/messages.js:*)"
+      "Bash(find /Users/christian/Documents/groly/src -type f \\\\\\(-name *.ts -o -name *.svelte -o -name *.js \\\\\\))",
+      "Bash(find src:*)",
+      "Bash(wc -l src/lib/components/*.svelte src/lib/auth/*.ts src/routes/api/recipes/*.ts)",
+      "Bash(ls -la src/routes/api/**/*.ts)",
+      "Bash(find /Users/christian/Documents/groly/.inlang -name *.json)",
+      "Bash(cat -A /Users/christian/Documents/groly/src/routes/listen/[id]/+page.svelte)"
     ]
   }
 }

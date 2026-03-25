@@ -251,6 +251,7 @@
 						<button
 							onclick={() => changeServings(-1)}
 							disabled={currentServings <= 1}
+							aria-label="Portionen verringern"
 							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
 							style="background-color: var(--color-surface-high)"
 						>
@@ -273,6 +274,7 @@
 						</div>
 						<button
 							onclick={() => changeServings(1)}
+							aria-label="Portionen erhöhen"
 							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
 							style="background-color: var(--color-surface-high)"
 						>

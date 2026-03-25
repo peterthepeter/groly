@@ -11,8 +11,11 @@
 		memberCount?: number;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally
 	let name = $state(list?.name ?? '');
+	// svelte-ignore state_referenced_locally
 	let description = $state(list?.description ?? '');
+	// svelte-ignore state_referenced_locally
 	let selectedIconId = $state<string | null>(list?.iconId ?? 'supermarkt');
 	let bottomOffset = $state(0);
 	let notificationsEnabled = $state(true);

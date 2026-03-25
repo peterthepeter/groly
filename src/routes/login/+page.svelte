@@ -4,6 +4,7 @@
 
 	let { data } = $props();
 
+	// svelte-ignore state_referenced_locally
 	let username = $state(data.prefillUsername);
 	let password = $state('');
 	let error = $state('');
