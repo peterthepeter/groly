@@ -32,6 +32,8 @@
 	let pushSubscribed = $state(false);
 	let pushLoading = $state(false);
 	let pushError = $state('');
+	let pushTestResult = $state('');
+	let pushTestSuccess = $state(false);
 
 	async function initPushState() {
 		if (typeof window === 'undefined') return;
@@ -96,6 +98,30 @@
 			pushError = e instanceof Error ? e.message : String(e);
 		}
 		pushLoading = false;
+	}
+
+	async function testPush() {
+		pushTestResult = '...';
+		pushTestSuccess = false;
+		try {
+			const res = await fetch('/api/push/test', { method: 'POST' });
+			const data = await res.json();
+			if (!data.ok) {
+				pushTestResult = `Fehler: ${data.error}`;
+			} else {
+				const r = data.results?.[0];
+				if (!r) {
+					pushTestResult = 'Keine Subscription gefunden';
+				} else if (r.status === 'sent') {
+					pushTestResult = 'Gesendet! Hast du was bekommen?';
+					pushTestSuccess = true;
+				} else {
+					pushTestResult = `Fehlgeschlagen: ${r.error}`;
+				}
+			}
+		} catch {
+			pushTestResult = 'Netzwerkfehler';
+		}
 	}
 
 	async function unsubscribePush() {
@@ -466,6 +492,20 @@
 						<div class="w-4 flex-shrink-0"></div>
 					</div>
 				</div>
+				{#if pushSubscribed}
+					<div class="px-5 pb-4 flex items-center gap-3">
+						<button
+							onclick={testPush}
+							class="text-xs px-3 py-1.5 rounded-lg active:opacity-70"
+							style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+						>
+							Test-Push senden
+						</button>
+						{#if pushTestResult}
+							<span class="text-xs" style="color: {pushTestSuccess ? 'var(--color-primary)' : 'var(--color-error)'}">{pushTestResult}</span>
+						{/if}
+					</div>
+				{/if}
 				{#if pushError}
 					<div class="px-5 pb-4 text-xs" style="color: var(--color-error)">{pushError}</div>
 				{/if}
