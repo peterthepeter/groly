@@ -204,11 +204,23 @@
 			};
 		}
 
+		function handleOnline() {
+			if (retryTimeout !== null) {
+				clearTimeout(retryTimeout);
+				retryTimeout = null;
+			}
+			if (!sse || sse.readyState === EventSource.CLOSED) {
+				connect();
+			}
+		}
+
 		connect();
+		window.addEventListener('online', handleOnline);
 
 		return () => {
 			sse?.close();
 			if (retryTimeout !== null) clearTimeout(retryTimeout);
+			window.removeEventListener('online', handleOnline);
 		};
 	});
 </script>
