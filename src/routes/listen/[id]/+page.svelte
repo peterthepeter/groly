@@ -172,6 +172,7 @@
 		let retryDelay = 1000;
 		let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 		let sse: EventSource | null = null;
+		let connected = false;
 
 		function handleMessage(e: MessageEvent) {
 			try {
@@ -195,7 +196,11 @@
 
 		function connect() {
 			sse = new EventSource(`/api/lists/${id}/events`);
-			sse.onopen = () => { retryDelay = 1000; };
+			sse.onopen = () => {
+				retryDelay = 1000;
+				if (connected) void loadItems();
+				connected = true;
+			};
 			sse.onmessage = handleMessage;
 			sse.onerror = () => {
 				sse?.close();
