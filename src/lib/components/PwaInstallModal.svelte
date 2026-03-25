@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { currentLang } from '$lib/i18n.svelte';
+	import { onMount } from 'svelte';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -7,6 +8,26 @@
 
 	type Platform = 'ios' | 'android';
 	let activePlatform = $state<Platform>('ios');
+
+	let deferredPrompt = $state<any>(null);
+	let installDone = $state(false);
+
+	onMount(() => {
+		const handler = (e: Event) => {
+			e.preventDefault();
+			deferredPrompt = e;
+		};
+		window.addEventListener('beforeinstallprompt', handler);
+		return () => window.removeEventListener('beforeinstallprompt', handler);
+	});
+
+	async function triggerInstall() {
+		if (!deferredPrompt) return;
+		deferredPrompt.prompt();
+		const { outcome } = await deferredPrompt.userChoice;
+		deferredPrompt = null;
+		if (outcome === 'accepted') installDone = true;
+	}
 </script>
 
 <!-- Backdrop -->
@@ -104,52 +125,81 @@
 				{/each}
 			{/if}
 		{:else}
-			{#if lang === 'en'}
-				{@const steps = [
-					{ n: 1, text: 'Open Groly in Chrome.' },
-					{ n: 2, text: 'Tap the three-dot menu (⋮) in the top right corner.' },
-					{ n: 3, text: 'Tap "Add to Home screen" or "Install app".' },
-					{ n: 4, text: 'Confirm with "Add". Groly will appear on your home screen and runs in its own window.' }
-				]}
-				{#each steps as s}
-					<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
-					     style="background-color: var(--color-surface-container)">
-						<div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-						     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
-							{s.n}
-						</div>
-						<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">
-							{s.text}
-						</div>
+			{#if installDone}
+				<div class="px-3 py-4 rounded-xl text-center"
+				     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent)">
+					<div class="text-2xl mb-1">✓</div>
+					<div class="text-sm font-semibold" style="color: var(--color-on-surface)">
+						{lang === 'en' ? 'Installed!' : 'Installiert!'}
 					</div>
-				{/each}
-				<div class="px-3 py-2.5 rounded-xl text-xs leading-relaxed"
-				     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-on-surface-variant)">
-					💡 Chrome may also show an "Install" banner at the bottom of the screen automatically.
+					<div class="text-xs mt-1" style="color: var(--color-on-surface-variant)">
+						{lang === 'en' ? 'Groly has been added to your home screen.' : 'Groly wurde zum Startbildschirm hinzugefügt.'}
+					</div>
+				</div>
+			{:else if deferredPrompt}
+				<button
+					onclick={triggerInstall}
+					class="w-full flex items-center justify-center gap-3 py-4 rounded-xl text-sm font-semibold transition-colors active:opacity-80"
+					style="background-color: var(--color-primary); color: var(--color-on-primary)"
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+						<polyline points="8 10 12 14 16 10"/>
+						<line x1="12" y1="14" x2="12" y2="6"/>
+					</svg>
+					{lang === 'en' ? 'Install Groly' : 'Groly installieren'}
+				</button>
+				<div class="px-3 py-2 text-xs text-center" style="color: var(--color-on-surface-variant)">
+					{lang === 'en' ? 'Tap the button above to install directly.' : 'Tippe auf den Button, um die App direkt zu installieren.'}
 				</div>
 			{:else}
-				{@const steps = [
-					{ n: 1, text: 'Öffne Groly in Chrome.' },
-					{ n: 2, text: 'Tippe auf das Drei-Punkte-Menü (⋮) oben rechts.' },
-					{ n: 3, text: 'Wähle „Zum Startbildschirm hinzufügen" oder „App installieren".' },
-					{ n: 4, text: 'Bestätige mit „Hinzufügen". Groly erscheint auf dem Startbildschirm und läuft im eigenen Fenster.' }
-				]}
-				{#each steps as s}
-					<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
-					     style="background-color: var(--color-surface-container)">
-						<div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-						     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
-							{s.n}
+				{#if lang === 'en'}
+					{@const steps = [
+						{ n: 1, text: 'Open Groly in Chrome.' },
+						{ n: 2, text: 'Tap the three-dot menu (⋮) in the top right corner.' },
+						{ n: 3, text: 'Tap "Add to Home screen" or "Install app".' },
+						{ n: 4, text: 'Confirm with "Add". Groly will appear on your home screen and runs in its own window.' }
+					]}
+					{#each steps as s}
+						<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
+						     style="background-color: var(--color-surface-container)">
+							<div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+							     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
+								{s.n}
+							</div>
+							<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">
+								{s.text}
+							</div>
 						</div>
-						<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">
-							{s.text}
-						</div>
+					{/each}
+					<div class="px-3 py-2.5 rounded-xl text-xs leading-relaxed"
+					     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-on-surface-variant)">
+						💡 If you're already using Chrome, the install button may appear automatically next time.
 					</div>
-				{/each}
-				<div class="px-3 py-2.5 rounded-xl text-xs leading-relaxed"
-				     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-on-surface-variant)">
-					💡 Chrome zeigt manchmal auch automatisch ein „Installieren"-Banner am unteren Bildschirmrand an.
-				</div>
+				{:else}
+					{@const steps = [
+						{ n: 1, text: 'Öffne Groly in Chrome.' },
+						{ n: 2, text: 'Tippe auf das Drei-Punkte-Menü (⋮) oben rechts.' },
+						{ n: 3, text: 'Wähle „Zum Startbildschirm hinzufügen" oder „App installieren".' },
+						{ n: 4, text: 'Bestätige mit „Hinzufügen". Groly erscheint auf dem Startbildschirm und läuft im eigenen Fenster.' }
+					]}
+					{#each steps as s}
+						<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
+						     style="background-color: var(--color-surface-container)">
+							<div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+							     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
+								{s.n}
+							</div>
+							<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">
+								{s.text}
+							</div>
+						</div>
+					{/each}
+					<div class="px-3 py-2.5 rounded-xl text-xs leading-relaxed"
+					     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-on-surface-variant)">
+						💡 Falls du Chrome verwendest, erscheint der Installieren-Button beim nächsten Besuch möglicherweise automatisch.
+					</div>
+				{/if}
 			{/if}
 		{/if}
 	</div>
