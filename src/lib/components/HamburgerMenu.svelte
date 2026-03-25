@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import InfoModal from '$lib/components/InfoModal.svelte';
+	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
 
 	let { open = $bindable(false), user }: {
 		open: boolean;
@@ -10,6 +11,7 @@
 	} = $props();
 
 	let infoOpen = $state(false);
+	let pwaOpen = $state(false);
 
 	function close() { open = false; }
 
@@ -119,6 +121,11 @@
 			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_settings}</span>
 		</button>
 
+		<!-- Section label -->
+		<div class="px-4 pt-2 pb-0.5">
+			<span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant); opacity: 0.6">{currentLang() === 'en' ? 'Info' : 'Infos'}</span>
+		</div>
+
 		<button
 			onclick={() => { close(); infoOpen = true; }}
 			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
@@ -128,7 +135,20 @@
 				<line x1="12" y1="8" x2="12" y2="12"/>
 				<line x1="12" y1="16" x2="12.01" y2="16"/>
 			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Info' : 'Infos'}</span>
+			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'How to use' : 'Bedienung'}</span>
+		</button>
+
+		<button
+			onclick={() => { close(); pwaOpen = true; }}
+			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+		>
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+				<line x1="12" y1="18" x2="12.01" y2="18"/>
+				<polyline points="8 10 12 6 16 10"/>
+				<line x1="12" y1="6" x2="12" y2="14"/>
+			</svg>
+			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Install App' : 'App installieren'}</span>
 		</button>
 
 		<button
@@ -150,4 +170,8 @@
 
 {#if infoOpen}
 	<InfoModal onClose={() => infoOpen = false} />
+{/if}
+
+{#if pwaOpen}
+	<PwaInstallModal onClose={() => pwaOpen = false} />
 {/if}
