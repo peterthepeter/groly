@@ -2,6 +2,15 @@ import { offlineDb } from './db';
 import type { OfflineList, OfflineItem } from './db';
 import { networkStore } from '$lib/stores/online.svelte';
 
+export function generateClientId(): string {
+	const bytes = new Uint8Array(12);
+	crypto.getRandomValues(bytes);
+	return btoa(String.fromCharCode(...bytes))
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=/g, '');
+}
+
 async function apiFetch(url: string, options?: RequestInit) {
 	const res = await fetch(url, {
 		...options,

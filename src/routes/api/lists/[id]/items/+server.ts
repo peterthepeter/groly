@@ -54,10 +54,12 @@ export const POST: RequestHandler = async (event) => {
 	if (!list || permission === null) return json({ error: 'Nicht gefunden' }, { status: 404 });
 	if (permission === 'read') return json({ error: 'Keine Schreibberechtigung' }, { status: 403 });
 
-	const { name, quantityInfo } = await event.request.json();
+	const { name, quantityInfo, id: clientId } = await event.request.json();
 	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
 
-	const id = generateId(16);
+	const id = typeof clientId === 'string' && clientId.length > 0 && clientId.length <= 32
+		? clientId
+		: generateId(16);
 	const ts = now();
 	const trimmedName = name.trim();
 	const trimmedQty = quantityInfo?.trim() ?? null;

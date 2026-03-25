@@ -9,7 +9,7 @@
 	import CheckedDrawer from '$lib/components/CheckedDrawer.svelte';
 	import AddItemModal from '$lib/components/AddItemModal.svelte';
 	import AddItemBar from '$lib/components/AddItemBar.svelte';
-	import { execute, cacheItemsData, getOfflineItems, getOfflineListName, updateOfflineItem, deleteOfflineItem } from '$lib/sync/manager';
+	import { execute, generateClientId, cacheItemsData, getOfflineItems, getOfflineListName, updateOfflineItem, deleteOfflineItem } from '$lib/sync/manager';
 	import { t, list_items_open } from '$lib/i18n.svelte';
 	import { getCategoryKey } from '$lib/categories';
 	import { userSettings } from '$lib/userSettings.svelte';
@@ -103,19 +103,29 @@
 	}
 
 	async function addItem(name: string, quantityInfo: string) {
-		const res = await fetch(`/api/lists/${listId}/items`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name, quantityInfo })
-		});
-		if (res.ok) {
-			const newItem = await res.json();
-			items = [...items, newItem];
-			void cacheItemsData(items);
-			if (!suggestions.includes(name)) {
-				suggestions = [name, ...suggestions].slice(0, 30);
+		const id = generateClientId();
+		const optimisticItem: Item = {
+			id, listId: listId ?? '', name: name.trim(),
+			quantityInfo: quantityInfo.trim() || null,
+			isChecked: false, checkedAt: null, categoryOverride: null,
+			createdByUsername: data.user?.username ?? null,
+			updatedAt: Math.floor(Date.now() / 1000)
+		};
+		await execute(
+			() => fetch(`/api/lists/${listId}/items`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ id, name, quantityInfo })
+			}).then(r => { if (!r.ok) throw new Error(); }),
+			{ type: 'create_item', payload: { id, listId: listId ?? '', name, quantityInfo }, createdAt: Date.now() },
+			() => {
+				items = [...items, optimisticItem];
+				void cacheItemsData(items);
+				if (!suggestions.includes(name)) {
+					suggestions = [name, ...suggestions].slice(0, 30);
+				}
 			}
-		}
+		);
 	}
 
 	async function saveEditItem(name: string, quantityInfo: string, categoryOverride: string | null) {
@@ -168,8 +178,11 @@
 				const ev = JSON.parse(e.data);
 
 				if (ev.type === 'item_added') {
-					items = [...items, ev.item];
-					void cacheItemsData(items);
+					// Ignore items already present (own adds via optimistic update, or SSE dedup)
+					if (!items.some(i => i.id === ev.item.id)) {
+						items = [...items, ev.item];
+						void cacheItemsData(items);
+					}
 				} else if (ev.type === 'item_updated') {
 					items = items.map(i => i.id === ev.item.id ? { ...i, ...ev.item } : i);
 					void updateOfflineItem(ev.item.id, ev.item);
@@ -270,9 +283,11 @@
 				</div>
 			{:else if displayItems.length > 0}
 				<div class="grid grid-cols-3 gap-3 mt-3" style={userSettings.categorySortEnabled ? 'direction: rtl' : ''}>
-					{#each { length: gridPrefix } as _}
-						<div class="aspect-square"></div>
-					{/each}
+					{#if userSettings.categorySortEnabled}
+						{#each { length: gridPrefix } as _}
+							<div class="aspect-square"></div>
+						{/each}
+					{/if}
 					{#each displayItems as item (item.id)}
 						<ItemTile
 							{item}
@@ -282,6 +297,11 @@
 							currentUsername={data.user?.username ?? null}
 						/>
 					{/each}
+					{#if !userSettings.categorySortEnabled}
+						{#each { length: gridPrefix } as _}
+							<div class="aspect-square"></div>
+						{/each}
+					{/if}
 				</div>
 			{/if}
 		{/if}

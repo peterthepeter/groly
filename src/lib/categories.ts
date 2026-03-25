@@ -377,8 +377,8 @@ function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'
 
 function matchesKeyword(name: string, keyword: string): boolean {
 	if (new RegExp('(^|\\s)' + escapeRegex(keyword), 'i').test(name)) return true;
-	if (keyword.length >= 5 && name.includes(keyword)) return true;
-	if (new RegExp(escapeRegex(keyword) + '(\\s|$)', 'i').test(name)) return true;
+	if (keyword.length >= 6 && name.includes(keyword)) return true;
+	if (new RegExp('(^|[\\s-])' + escapeRegex(keyword) + '(\\s|$)', 'i').test(name)) return true;
 	return false;
 }
 
