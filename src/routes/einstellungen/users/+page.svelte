@@ -84,19 +84,21 @@
 		}
 	}
 
-	function buildCredentialsText(): string {
+	function buildMessage1(): string {
 		if (!createdCredentials) return '';
 		const url = `${window.location.origin}/login?u=${encodeURIComponent(createdCredentials.username)}`;
-		return `Hallo ${createdCredentials.username},\n\nhier sind deine Groly-Zugangsdaten:\n${url}\n\nBenutzername: ${createdCredentials.username}\nPasswort: ${createdCredentials.password}\n\nBitte ändere dein Passwort nach der ersten Anmeldung.`;
+		return `Hallo ${createdCredentials.username},\n\nhier sind deine Groly-Zugangsdaten:\n${url}\n\nBenutzername: ${createdCredentials.username}\nPasswort:`;
+	}
+
+	function buildMessage2(): string {
+		return createdCredentials?.password ?? '';
 	}
 
 	async function copyToClipboard(text: string): Promise<void> {
-		// Secure context (HTTPS): modern API
 		if (navigator.clipboard && window.isSecureContext) {
 			await navigator.clipboard.writeText(text);
 			return;
 		}
-		// Fallback for HTTP (local network)
 		const textarea = document.createElement('textarea');
 		textarea.value = text;
 		textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none;top:0;left:0';
@@ -109,14 +111,17 @@
 
 	async function copyCredentials() {
 		if (!createdCredentials) return;
-		await copyToClipboard(buildCredentialsText());
+		await copyToClipboard(`${buildMessage1()} ${buildMessage2()}`);
 		copyFeedback = true;
 		setTimeout(() => copyFeedback = false, 2000);
 	}
 
-	async function shareCredentials() {
-		if (!createdCredentials) return;
-		await navigator.share({ text: buildCredentialsText() });
+	async function shareMessage1() {
+		await navigator.share({ text: buildMessage1() });
+	}
+
+	async function shareMessage2() {
+		await navigator.share({ text: buildMessage2() });
 	}
 
 	async function savePassword() {
@@ -246,20 +251,33 @@
 							{t.admin_copy_credentials}
 						{/if}
 					</button>
-					{#if canShare}
-						<button
-							onclick={shareCredentials}
-							class="flex items-center justify-center gap-2 px-4 py-3 rounded-full text-sm font-semibold"
-							style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-								<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-							</svg>
-							{t.admin_share_credentials}
-						</button>
-					{/if}
 				</div>
+			{#if canShare}
+				<div class="flex gap-2">
+					<button
+						onclick={shareMessage1}
+						class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold"
+						style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+					>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+							<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+						</svg>
+						{t.admin_share_msg1}
+					</button>
+					<button
+						onclick={shareMessage2}
+						class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold"
+						style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+					>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+							<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+						</svg>
+						{t.admin_share_msg2}
+					</button>
+				</div>
+			{/if}
 
 				<!-- Create another -->
 				<button

@@ -97,7 +97,8 @@ class TranslationProxy {
 	get admin_cannot_delete_last_admin() { void _lang; return m.admin_cannot_delete_last_admin(); }
 	get admin_cannot_delete_bootstrap() { void _lang; return m.admin_cannot_delete_bootstrap(); }
 	get admin_copy_credentials() { void _lang; return m.admin_copy_credentials(); }
-	get admin_share_credentials() { void _lang; return m.admin_share_credentials(); }
+	get admin_share_msg1() { void _lang; return m.admin_share_msg1(); }
+	get admin_share_msg2() { void _lang; return m.admin_share_msg2(); }
 	get admin_must_change_hint() { void _lang; return m.admin_must_change_hint(); }
 	get admin_copied() { void _lang; return m.admin_copied(); }
 	get admin_create_another() { void _lang; return m.admin_create_another(); }
