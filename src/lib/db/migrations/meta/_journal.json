@@ -85,6 +85,13 @@
       "when": 1743000000000,
       "tag": "0011_fix_recipe_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1774427553727,
+      "tag": "0012_recipe_indexes",
+      "breakpoints": true
     }
   ]
 }

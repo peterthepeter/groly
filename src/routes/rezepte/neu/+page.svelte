@@ -96,7 +96,7 @@
 	</div>
 
 	<div class="flex-1 overflow-y-auto px-4 space-y-4"
-	     style="padding-top: calc(env(safe-area-inset-top) + 4.5rem); padding-bottom: 6rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + 5.5rem); padding-bottom: 6rem">
 
 		<!-- Title -->
 		<div>

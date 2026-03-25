@@ -3,11 +3,11 @@ import { users, sessions } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 
-function generateId(len = 24): string {
+export function generateId(len = 24): string {
 	return randomBytes(len).toString('base64url').slice(0, len);
 }
 
-function now(): number {
+export function now(): number {
 	return Math.floor(Date.now() / 1000);
 }
 

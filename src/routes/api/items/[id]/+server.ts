@@ -6,7 +6,7 @@ import { lists, items, listMembers } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { emit } from '$lib/server/listEvents';
 
-function now() { return Math.floor(Date.now() / 1000); }
+import { now } from '$lib/auth';
 
 async function getWritableItem(itemId: string, userId: string) {
 	const item = db.select().from(items).where(eq(items.id, itemId)).get();

@@ -4,10 +4,8 @@ import { adminGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { users } from '$lib/db/schema';
 import { eq, asc, count } from 'drizzle-orm';
-import { hashPassword } from '$lib/auth';
+import { hashPassword, now } from '$lib/auth';
 import { validatePassword } from '$lib/password';
-
-function now() { return Math.floor(Date.now() / 1000); }
 
 export const PATCH: RequestHandler = async (event) => {
 	const { error } = adminGuard(event);

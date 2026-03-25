@@ -5,7 +5,7 @@ import { db } from '$lib/db';
 import { lists, listMembers } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
-function now() { return Math.floor(Date.now() / 1000); }
+import { now } from '$lib/auth';
 
 function getOwnedList(listId: string, userId: string) {
 	return db.select().from(lists).where(and(eq(lists.id, listId), eq(lists.ownerId, userId))).get();

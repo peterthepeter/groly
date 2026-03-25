@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey(),
@@ -102,14 +102,14 @@ export const recipeIngredients = sqliteTable('recipe_ingredients', {
 	unit: text('unit'),
 	name: text('name').notNull(),
 	sortOrder: integer('sort_order').notNull().default(0)
-});
+}, (t) => [index('recipe_ingredients_recipe_id_idx').on(t.recipeId)]);
 
 export const recipeSteps = sqliteTable('recipe_steps', {
 	id: text('id').primaryKey(),
 	recipeId: text('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
 	stepNumber: integer('step_number').notNull(),
 	text: text('text').notNull()
-});
+}, (t) => [index('recipe_steps_recipe_id_idx').on(t.recipeId)]);
 
 export const recipeShares = sqliteTable('recipe_shares', {
 	id: text('id').primaryKey(),

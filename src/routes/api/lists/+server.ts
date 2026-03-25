@@ -4,10 +4,7 @@ import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { lists, items, listMembers, users } from '$lib/db/schema';
 import { eq, count, sql } from 'drizzle-orm';
-import { randomBytes } from 'crypto';
-
-function now() { return Math.floor(Date.now() / 1000); }
-function generateId() { return randomBytes(12).toString('base64url'); }
+import { now, generateId } from '$lib/auth';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -113,7 +110,7 @@ export const POST: RequestHandler = async (event) => {
 	const { name, description, iconId } = await event.request.json();
 	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
 
-	const id = generateId();
+	const id = generateId(16);
 	const ts = now();
 	const safeIconId = iconId ?? null;
 	db.insert(lists).values({ id, name: name.trim(), description: description?.trim() ?? null, iconId: safeIconId, ownerId: user!.id, createdAt: ts, updatedAt: ts }).run();

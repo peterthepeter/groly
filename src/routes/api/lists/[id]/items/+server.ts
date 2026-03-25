@@ -4,12 +4,9 @@ import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { lists, items, listMembers, users } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { randomBytes } from 'crypto';
 import { emit } from '$lib/server/listEvents';
 import { sendPushToListMembers } from '$lib/server/pushNotifications';
-
-function now() { return Math.floor(Date.now() / 1000); }
-function generateId() { return randomBytes(12).toString('base64url'); }
+import { now, generateId } from '$lib/auth';
 
 function getListAccess(listId: string, userId: string): { list: typeof lists.$inferSelect; permission: 'owner' | 'write' | 'read' | null } {
 	const list = db.select().from(lists).where(eq(lists.id, listId)).get();
@@ -60,7 +57,7 @@ export const POST: RequestHandler = async (event) => {
 	const { name, quantityInfo } = await event.request.json();
 	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
 
-	const id = generateId();
+	const id = generateId(16);
 	const ts = now();
 	const trimmedName = name.trim();
 	const trimmedQty = quantityInfo?.trim() ?? null;

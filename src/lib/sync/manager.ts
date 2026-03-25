@@ -119,6 +119,9 @@ export function initSync() {
 	window.addEventListener('online', () => {
 		processPendingMutations();
 	});
-	// Initial prüfen
-	offlineDb.pendingMutations.count().then((c) => networkStore.setPending(c));
+	// Initial prüfen und ggf. sofort abarbeiten
+	offlineDb.pendingMutations.count().then((c) => {
+		networkStore.setPending(c);
+		if (c > 0) processPendingMutations();
+	});
 }
