@@ -96,6 +96,15 @@ class TranslationProxy {
 	get admin_cannot_delete_self() { void _lang; return m.admin_cannot_delete_self(); }
 	get admin_cannot_delete_last_admin() { void _lang; return m.admin_cannot_delete_last_admin(); }
 	get admin_cannot_delete_bootstrap() { void _lang; return m.admin_cannot_delete_bootstrap(); }
+	get admin_copy_credentials() { void _lang; return m.admin_copy_credentials(); }
+	get admin_share_credentials() { void _lang; return m.admin_share_credentials(); }
+	get admin_must_change_hint() { void _lang; return m.admin_must_change_hint(); }
+	get admin_copied() { void _lang; return m.admin_copied(); }
+	get admin_create_another() { void _lang; return m.admin_create_another(); }
+	get push_prompt_title() { void _lang; return m.push_prompt_title(); }
+	get push_prompt_body() { void _lang; return m.push_prompt_body(); }
+	get push_prompt_accept() { void _lang; return m.push_prompt_accept(); }
+	get push_prompt_decline() { void _lang; return m.push_prompt_decline(); }
 	// sync
 	get sync_offline() { void _lang; return m.sync_offline(); }
 	get sync_syncing() { void _lang; return m.sync_syncing(); }

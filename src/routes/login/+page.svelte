@@ -2,7 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n.svelte';
 
-	let username = $state('');
+	let { data } = $props();
+
+	let username = $state(data.prefillUsername);
 	let password = $state('');
 	let error = $state('');
 	let loading = $state(false);

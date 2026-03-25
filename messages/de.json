@@ -122,5 +122,14 @@
   "recipes_empty": "Noch keine Rezepte",
   "recipes_empty_hint": "Tippe auf + um ein Rezept hinzuzufügen",
   "recipes_search_placeholder": "Rezepte suchen…",
-  "recipes_no_results": "Keine Treffer für"
+  "recipes_no_results": "Keine Treffer für",
+  "admin_copy_credentials": "Zugangsdaten kopieren",
+  "admin_share_credentials": "Per App teilen",
+  "admin_must_change_hint": "Passwort muss bei der ersten Anmeldung geändert werden",
+  "admin_copied": "Kopiert!",
+  "admin_create_another": "Weiteren Nutzer anlegen",
+  "push_prompt_title": "Benachrichtigungen aktivieren",
+  "push_prompt_body": "Bleib informiert, wenn sich in deinen Listen etwas ändert.",
+  "push_prompt_accept": "Aktivieren",
+  "push_prompt_decline": "Nicht jetzt"
 }

@@ -11,6 +11,9 @@
 	import MemberListModal from '$lib/components/MemberListModal.svelte';
 	import { t, lists_active } from '$lib/i18n.svelte';
 	import { getListIcon } from '$lib/listIcons';
+	import { env as publicEnv } from '$env/dynamic/public';
+
+	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
 	let { data } = $props();
 
@@ -29,6 +32,80 @@
 	let loading = $state(true);
 	let sortMode = $state(false);
 	let customOrder = $state<string[]>([]);
+	let showPushPrompt = $state(false);
+	let pushPromptLoading = $state(false);
+
+	const PUSH_PROMPT_KEY = 'groly_push_prompt_dismissed';
+
+	function isPWA(): boolean {
+		if (typeof window === 'undefined') return false;
+		return window.matchMedia('(display-mode: standalone)').matches ||
+			(navigator as { standalone?: boolean }).standalone === true;
+	}
+
+	async function checkPushPrompt() {
+		if (!isPWA()) return;
+		if (localStorage.getItem(PUSH_PROMPT_KEY)) return;
+		if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+		if (Notification.permission !== 'default') return;
+		// Small delay so the page settles first
+		await new Promise(r => setTimeout(r, 1500));
+		showPushPrompt = true;
+	}
+
+	function dismissPushPrompt() {
+		localStorage.setItem(PUSH_PROMPT_KEY, '1');
+		showPushPrompt = false;
+	}
+
+	function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+		const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+		const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+		const rawData = atob(base64);
+		return Uint8Array.from([...rawData].map(c => c.charCodeAt(0))).buffer;
+	}
+
+	async function swReady(): Promise<ServiceWorkerRegistration> {
+		let reg = await navigator.serviceWorker.getRegistration('/');
+		if (!reg) reg = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+		return new Promise<ServiceWorkerRegistration>((resolve, reject) => {
+			const timeout = setTimeout(() => reject(new Error('SW timeout')), 10000);
+			function check() {
+				const r = reg!;
+				if (r.active) { clearTimeout(timeout); resolve(r); return; }
+				const active = r.active ?? r.installing ?? r.waiting;
+				if (active) {
+					active.addEventListener('statechange', function handler() {
+						if (r.active) { clearTimeout(timeout); active.removeEventListener('statechange', handler); resolve(r); }
+					});
+				} else { setTimeout(check, 200); }
+			}
+			check();
+		});
+	}
+
+	async function acceptPushPrompt() {
+		if (!PUBLIC_VAPID_KEY) { dismissPushPrompt(); return; }
+		pushPromptLoading = true;
+		try {
+			const sw = await swReady();
+			const perm = await Notification.requestPermission();
+			if (perm === 'granted') {
+				const sub = await sw.pushManager.subscribe({
+					userVisibleOnly: true,
+					applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+				});
+				const json = sub.toJSON();
+				await fetch('/api/push/subscribe', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys })
+				});
+			}
+		} catch { /* ignore */ }
+		pushPromptLoading = false;
+		dismissPushPrompt();
+	}
 
 	const openCount = $derived(lists.length);
 
@@ -199,6 +276,7 @@
 		loadLists();
 		initSync();
 		if (data.user?.mustChangePassword) goto('/einstellungen?mustChange=1');
+		else checkPushPrompt();
 	});
 </script>
 
@@ -400,4 +478,51 @@
 		onLeave={() => leaveList(memberOptions!.id)}
 		onClose={() => memberOptions = null}
 	/>
+{/if}
+
+<!-- Push Notification Prompt -->
+{#if showPushPrompt}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={dismissPushPrompt}></div>
+	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-10 pt-4"
+	     style="background-color: var(--color-surface-low)">
+		<div class="flex justify-center mb-5">
+			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
+		</div>
+
+		<!-- Icon -->
+		<div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+		     style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))">
+			<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+				<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+			</svg>
+		</div>
+
+		<h2 class="text-lg font-bold mb-1" style="color: var(--color-on-surface)">{t.push_prompt_title}</h2>
+		<p class="text-sm mb-6" style="color: var(--color-on-surface-variant)">{t.push_prompt_body}</p>
+
+		<div class="flex gap-3">
+			<button
+				onclick={dismissPushPrompt}
+				class="flex-1 py-3.5 rounded-full text-sm font-semibold"
+				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+			>
+				{t.push_prompt_decline}
+			</button>
+			<button
+				onclick={acceptPushPrompt}
+				disabled={pushPromptLoading}
+				class="flex-1 py-3.5 rounded-full text-sm font-semibold disabled:opacity-60"
+				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+			>
+				{#if pushPromptLoading}
+					<span class="inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+				{:else}
+					{t.push_prompt_accept}
+				{/if}
+			</button>
+		</div>
+	</div>
 {/if}

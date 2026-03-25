@@ -122,5 +122,14 @@
   "recipes_empty": "No recipes yet",
   "recipes_empty_hint": "Tap + to add a recipe",
   "recipes_search_placeholder": "Search recipes…",
-  "recipes_no_results": "No results for"
+  "recipes_no_results": "No results for",
+  "admin_copy_credentials": "Copy credentials",
+  "admin_share_credentials": "Share via app",
+  "admin_must_change_hint": "Password must be changed on first login",
+  "admin_copied": "Copied!",
+  "admin_create_another": "Add another user",
+  "push_prompt_title": "Enable notifications",
+  "push_prompt_body": "Stay informed when something changes in your lists.",
+  "push_prompt_accept": "Enable",
+  "push_prompt_decline": "Not now"
 }

@@ -21,6 +21,11 @@
 		return `vor ${Math.floor(diff / 2592000)} Mon.`;
 	}
 
+	function generatePassword(): string {
+		const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+		return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+	}
+
 	let users = $state<UserEntry[]>([]);
 	let menuOpen = $state(false);
 	let showCreateForm = $state(false);
@@ -29,6 +34,9 @@
 	let newRole = $state<'user' | 'admin'>('user');
 	let error = $state('');
 	let success = $state('');
+	let createdCredentials = $state<{ username: string; password: string } | null>(null);
+	let copyFeedback = $state(false);
+	let canShare = $state(false);
 
 	// Edit modal state
 	let editUser = $state<UserEntry | null>(null);
@@ -56,13 +64,15 @@
 	async function createUser(e: SubmitEvent) {
 		e.preventDefault();
 		error = '';
+		const usernameToCreate = newUsername.trim();
+		const passwordToCreate = newPassword;
 		const res = await fetch('/api/users', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ username: newUsername.trim(), password: newPassword, role: newRole })
+			body: JSON.stringify({ username: usernameToCreate, password: passwordToCreate, role: newRole })
 		});
 		if (res.ok) {
-			success = t.admin_user_created;
+			createdCredentials = { username: usernameToCreate, password: passwordToCreate };
 			newUsername = '';
 			newPassword = '';
 			newRole = 'user';
@@ -72,6 +82,41 @@
 			const d = await res.json();
 			error = d.error ?? 'Fehler';
 		}
+	}
+
+	function buildCredentialsText(): string {
+		if (!createdCredentials) return '';
+		const url = `${window.location.origin}/login?u=${encodeURIComponent(createdCredentials.username)}`;
+		return `Hallo ${createdCredentials.username},\n\nhier sind deine Groly-Zugangsdaten:\n${url}\n\nBenutzername: ${createdCredentials.username}\nPasswort: ${createdCredentials.password}\n\nBitte ändere dein Passwort nach der ersten Anmeldung.`;
+	}
+
+	async function copyToClipboard(text: string): Promise<void> {
+		// Secure context (HTTPS): modern API
+		if (navigator.clipboard && window.isSecureContext) {
+			await navigator.clipboard.writeText(text);
+			return;
+		}
+		// Fallback for HTTP (local network)
+		const textarea = document.createElement('textarea');
+		textarea.value = text;
+		textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none;top:0;left:0';
+		document.body.appendChild(textarea);
+		textarea.focus();
+		textarea.select();
+		document.execCommand('copy');
+		document.body.removeChild(textarea);
+	}
+
+	async function copyCredentials() {
+		if (!createdCredentials) return;
+		await copyToClipboard(buildCredentialsText());
+		copyFeedback = true;
+		setTimeout(() => copyFeedback = false, 2000);
+	}
+
+	async function shareCredentials() {
+		if (!createdCredentials) return;
+		await navigator.share({ text: buildCredentialsText() });
 	}
 
 	async function savePassword() {
@@ -113,20 +158,16 @@
 		editSuccess = '';
 	}
 
-	onMount(loadUsers);
+	onMount(() => {
+		loadUsers();
+		canShare = typeof navigator !== 'undefined' && 'share' in navigator;
+	});
 </script>
 
 <div class="h-screen flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader title={t.admin_users_title} onMenuOpen={() => menuOpen = true} />
 
 	<div class="flex-1 overflow-y-auto pb-8 px-4 space-y-3" style="padding-top: calc(env(safe-area-inset-top) + 6rem)">
-		{#if success}
-			<div class="rounded-xl px-4 py-3 text-sm"
-			     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
-				{success}
-			</div>
-		{/if}
-
 		<!-- User List -->
 		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
 			{#each users as user, i (user.id)}
@@ -156,10 +197,85 @@
 			{/each}
 		</div>
 
+		<!-- Credentials card after successful creation -->
+		{#if createdCredentials}
+			<div class="rounded-2xl p-5 space-y-4" style="background-color: var(--color-surface-card)">
+				<div class="flex items-center gap-2">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+						<polyline points="22 4 12 14.01 9 11.01"/>
+					</svg>
+					<span class="text-sm font-semibold" style="color: var(--color-primary)">{t.admin_user_created}</span>
+				</div>
+
+				<!-- Credentials display -->
+				<div class="rounded-xl p-4 space-y-2" style="background-color: var(--color-surface-container)">
+					<div class="flex items-center justify-between gap-2">
+						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.admin_username_label}</span>
+						<span class="text-sm font-mono font-semibold" style="color: var(--color-on-surface)">{createdCredentials.username}</span>
+					</div>
+					<div class="h-px" style="background-color: var(--color-outline-variant)"></div>
+					<div class="flex items-center justify-between gap-2">
+						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.admin_password_label}</span>
+						<span class="text-sm font-mono font-semibold tracking-wider" style="color: var(--color-on-surface)">{createdCredentials.password}</span>
+					</div>
+				</div>
+
+				<!-- Must change hint -->
+				<p class="text-xs px-1" style="color: var(--color-on-surface-variant)">
+					⚠ {t.admin_must_change_hint}
+				</p>
+
+				<!-- Action buttons -->
+				<div class="flex gap-2">
+					<button
+						onclick={copyCredentials}
+						class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold transition-colors"
+						style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+					>
+						{#if copyFeedback}
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="20 6 9 17 4 12"/>
+							</svg>
+							{t.admin_copied}
+						{:else}
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+								<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+							</svg>
+							{t.admin_copy_credentials}
+						{/if}
+					</button>
+					{#if canShare}
+						<button
+							onclick={shareCredentials}
+							class="flex items-center justify-center gap-2 px-4 py-3 rounded-full text-sm font-semibold"
+							style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+						>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+								<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+							</svg>
+							{t.admin_share_credentials}
+						</button>
+					{/if}
+				</div>
+
+				<!-- Create another -->
+				<button
+					onclick={() => { createdCredentials = null; newPassword = generatePassword(); showCreateForm = true; }}
+					class="w-full py-3 rounded-full text-sm font-semibold"
+					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+				>
+					{t.admin_create_another}
+				</button>
+			</div>
+		{/if}
+
 		<!-- Add User -->
-		{#if !showCreateForm}
+		{#if !showCreateForm && !createdCredentials}
 			<button
-				onclick={() => showCreateForm = true}
+				onclick={() => { newPassword = generatePassword(); showCreateForm = true; }}
 				class="w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-left active:opacity-70"
 				style="background-color: var(--color-surface-card)"
 			>
@@ -171,7 +287,7 @@
 				</div>
 				<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.admin_add_user}</span>
 			</button>
-		{:else}
+		{:else if showCreateForm}
 			<div class="rounded-2xl p-5" style="background-color: var(--color-surface-card)">
 				<h3 class="text-sm font-bold mb-4" style="color: var(--color-on-surface)">{t.admin_add_user}</h3>
 				<form onsubmit={createUser} class="space-y-3">
@@ -186,9 +302,18 @@
 						       class="w-full bg-transparent outline-none text-base" style="color: var(--color-on-surface)" />
 					</div>
 					<div>
-						<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
-							<input type="password" placeholder={t.admin_password_label} bind:value={newPassword} required
-							       class="w-full bg-transparent outline-none text-base" style="color: var(--color-on-surface)" />
+						<div class="rounded-xl px-4 py-3.5 flex items-center gap-2" style="background-color: var(--color-surface-container)">
+							<input type="text" placeholder={t.admin_password_label} bind:value={newPassword} required
+							       class="flex-1 bg-transparent outline-none text-base font-mono" style="color: var(--color-on-surface)" />
+							<button type="button" onclick={() => newPassword = generatePassword()}
+							        class="flex-shrink-0 p-1.5 rounded-lg active:opacity-60"
+							        style="color: var(--color-on-surface-variant)"
+							        title="Neues Passwort generieren">
+								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="23 4 23 10 17 10"/>
+									<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+								</svg>
+							</button>
 						</div>
 						<p class="text-[11px] mt-1.5 px-1" style="color: var(--color-on-surface-variant)">{PASSWORD_HINT}</p>
 					</div>
