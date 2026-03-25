@@ -46,13 +46,12 @@ export const POST: RequestHandler = async (event) => {
 					{ endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
 					JSON.stringify({ title: 'Groly Test', body: 'Push funktioniert!', url: '/' })
 				);
-				return { endpoint: sub.endpoint.slice(0, 60), status: 'sent' };
+				return { status: 'sent', error: `endpoint=${sub.endpoint.slice(0, 60)}` };
 			} catch (err: unknown) {
 				const e = err as { statusCode?: number; message?: string };
 				return {
-					endpoint: sub.endpoint.slice(0, 60),
 					status: 'failed',
-					error: `statusCode=${e.statusCode} message=${e.message}`
+					error: `${e.statusCode} | ${sub.endpoint.slice(0, 55)}`
 				};
 			}
 		})
