@@ -117,11 +117,15 @@
 	}
 
 	async function shareMessage1() {
-		await navigator.share({ text: buildMessage1() });
+		const text = buildMessage1();
+		if (navigator.share) await navigator.share({ text });
+		else await copyToClipboard(text);
 	}
 
 	async function shareMessage2() {
-		await navigator.share({ text: buildMessage2() });
+		const text = buildMessage2();
+		if (navigator.share) await navigator.share({ text });
+		else await copyToClipboard(text);
 	}
 
 	async function savePassword() {
@@ -252,32 +256,30 @@
 						{/if}
 					</button>
 				</div>
-			{#if canShare}
-				<div class="flex gap-2">
-					<button
-						onclick={shareMessage1}
-						class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold"
-						style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-					>
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-							<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-						</svg>
-						{t.admin_share_msg1}
-					</button>
-					<button
-						onclick={shareMessage2}
-						class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold"
-						style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-					>
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-							<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-						</svg>
-						{t.admin_share_msg2}
-					</button>
-				</div>
-			{/if}
+			<div class="flex gap-2">
+				<button
+					onclick={shareMessage1}
+					class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold"
+					style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+				>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+						<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+					</svg>
+					{t.admin_share_msg1}
+				</button>
+				<button
+					onclick={shareMessage2}
+					class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold"
+					style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+				>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+						<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+					</svg>
+					{t.admin_share_msg2}
+				</button>
+			</div>
 
 				<!-- Create another -->
 				<button
