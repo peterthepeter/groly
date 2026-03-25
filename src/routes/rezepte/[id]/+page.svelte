@@ -45,6 +45,45 @@
 		loading = false;
 	}
 
+	// Servings auto-save
+	let servingsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+	let servingsSaved = $state(false);
+
+	function changeServings(delta: number) {
+		const next = currentServings + delta;
+		if (next < 1) return;
+		currentServings = next;
+		if (servingsSaveTimer) clearTimeout(servingsSaveTimer);
+		servingsSaveTimer = setTimeout(() => saveServings(next), 800);
+	}
+
+	async function saveServings(servings: number) {
+		if (!recipe) return;
+		try {
+			const res = await fetch(`/api/recipes/${recipeId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					title: recipe.title,
+					description: recipe.description,
+					imageUrl: recipe.imageUrl,
+					sourceUrl: recipe.sourceUrl,
+					servings,
+					prepTime: recipe.prepTime,
+					cookTime: recipe.cookTime,
+					ingredients: recipe.ingredients.map(i => ({ amount: i.amount, unit: i.unit, name: i.name })),
+					steps: recipe.steps.map(s => ({ text: s.text }))
+				})
+			});
+			if (res.ok) {
+				originalServings = servings;
+				recipe = { ...recipe, servings };
+				servingsSaved = true;
+				setTimeout(() => servingsSaved = false, 1500);
+			}
+		} catch {}
+	}
+
 	// Inline title editing
 	let editingTitle = $state(false);
 	let editTitleValue = $state('');
@@ -210,7 +249,7 @@
 					<!-- Servings Stepper -->
 					<div class="flex items-center gap-2 ml-auto">
 						<button
-							onclick={() => { if (currentServings > 1) currentServings--; }}
+							onclick={() => changeServings(-1)}
 							disabled={currentServings <= 1}
 							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
 							style="background-color: var(--color-surface-high)"
@@ -219,14 +258,21 @@
 								<line x1="5" y1="12" x2="19" y2="12"/>
 							</svg>
 						</button>
-						<div class="flex items-center gap-1">
+						<div class="flex items-center gap-1 relative">
+							{#if servingsSaved}
+								<svg class="absolute -top-2 -right-2 w-3 h-3" viewBox="0 0 24 24" fill="none"
+								     stroke="var(--color-primary)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"
+								     style="animation: fadeInOut 1.5s ease-in-out forwards">
+									<polyline points="20 6 9 17 4 12"/>
+								</svg>
+							{/if}
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
 							</svg>
 							<span class="text-sm font-bold w-5 text-center" style="color: var(--color-on-surface)">{currentServings}</span>
 						</div>
 						<button
-							onclick={() => currentServings++}
+							onclick={() => changeServings(1)}
 							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
 							style="background-color: var(--color-surface-high)"
 						>
