@@ -11,7 +11,7 @@
 	}
 
 	let { list, onClick, onLongPress, onShare = null }: {
-		list: { id: string; name: string; description: string | null; openCount: number; iconId?: string | null };
+		list: { id: string; name: string; description: string | null; openCount: number; iconId?: string | null; ownerUsername?: string | null };
 		onClick: () => void;
 		onLongPress: () => void;
 		onShare?: (() => void) | null;
@@ -83,6 +83,15 @@
 				<circle cx="9" cy="7" r="4"/>
 				<line x1="19" y1="8" x2="19" y2="14"/>
 				<line x1="22" y1="11" x2="16" y2="11"/>
+			</svg>
+		</div>
+	{:else if list.ownerUsername}
+		<div class="flex-shrink-0 p-1.5 -mr-1">
+			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+				<circle cx="9" cy="7" r="4"/>
+				<path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+				<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
 			</svg>
 		</div>
 	{/if}
