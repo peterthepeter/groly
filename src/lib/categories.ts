@@ -98,7 +98,7 @@ export const CATEGORIES: CategoryDef[] = [
 		],
 		category: {
 			color: '#60A5FA',
-			svgContent: `<path d="M8 2h8l2 5v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7l2-5z"/><line x1="6" y1="10" x2="18" y2="10"/>`
+			svgContent: `<path d="M3 20l9-16 9 16H3z"/><circle cx="10" cy="15" r="1"/><circle cx="15" cy="13" r="1"/>`
 		}
 	},
 	{
