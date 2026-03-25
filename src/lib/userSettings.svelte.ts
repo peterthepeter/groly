@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { type UserSettings, DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
+import { DEFAULT_CATEGORY_ORDER } from '$lib/categories';
 export type { UserSettings } from '$lib/userSettingsTypes';
 export { DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
 import type { AvailableLanguageTag } from '$lib/paraglide/runtime';
@@ -31,10 +32,32 @@ function saveCache(s: UserSettings) {
 }
 
 function merge(stored: UserSettings): Required<typeof DEFAULT_SETTINGS> {
+	let order: string[];
+	if (!stored.categoryOrder) {
+		order = [...DEFAULT_SETTINGS.categoryOrder];
+	} else {
+		// Migration: fehlende Kategorien aus dem Default an der richtigen Stelle einfügen
+		order = [...stored.categoryOrder];
+		for (const key of DEFAULT_CATEGORY_ORDER) {
+			if (order.includes(key)) continue;
+			// Vor dem nächsten Default-Nachfolger einfügen, der bereits in der Order ist
+			const defaultIdx = DEFAULT_CATEGORY_ORDER.indexOf(key);
+			let inserted = false;
+			for (let i = defaultIdx + 1; i < DEFAULT_CATEGORY_ORDER.length; i++) {
+				const resultIdx = order.indexOf(DEFAULT_CATEGORY_ORDER[i]);
+				if (resultIdx !== -1) {
+					order.splice(resultIdx, 0, key);
+					inserted = true;
+					break;
+				}
+			}
+			if (!inserted) order.push(key);
+		}
+	}
 	return {
 		lang: stored.lang ?? DEFAULT_SETTINGS.lang,
 		categorySortEnabled: stored.categorySortEnabled ?? DEFAULT_SETTINGS.categorySortEnabled,
-		categoryOrder: stored.categoryOrder ?? [...DEFAULT_SETTINGS.categoryOrder]
+		categoryOrder: order
 	};
 }
 

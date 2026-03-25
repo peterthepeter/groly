@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
@@ -28,6 +28,7 @@
 	let userPermission = $state<'owner' | 'write' | 'read'>('write');
 	let searchQuery = $state('');
 	let searchOpen = $state(false);
+	let scrollContainer = $state<HTMLDivElement | null>(null);
 
 	const listId = $derived($page.params.id);
 	const openItems = $derived.by(() => {
@@ -78,6 +79,8 @@
 			items = (await getOfflineItems(listId ?? '')).map(item => ({ ...item, createdByUsername: null }));
 		}
 		loading = false;
+		await tick();
+		scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight });
 	}
 
 	async function toggleItem(item: Item) {
@@ -163,7 +166,6 @@
 		function handleMessage(e: MessageEvent) {
 			try {
 				const ev = JSON.parse(e.data);
-				if (ev.byUserId === data.user?.id) return; // eigene Änderungen bereits optimistisch angewendet
 
 				if (ev.type === 'item_added') {
 					items = [...items, ev.item];
@@ -206,6 +208,11 @@
 		onSearch={showSearch && !searchOpen ? () => searchOpen = true : null}
 	/>
 
+	<!-- Spacer: reserviert den Platz der fixen Header-Bar im Flex-Flow,
+	     damit der Scroll-Container erst darunter beginnt und Touch-Events
+	     im Header-Bereich nicht in den Scroll-Container fallen. -->
+	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
+
 	<!-- Suchleiste (fixiert unter dem Header, nur wenn aktiv) -->
 	{#if searchOpen}
 		<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto px-4 py-2"
@@ -238,8 +245,9 @@
 	{/if}
 
 	<!-- Bottom-Anchored Content -->
-	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + {searchOpen ? '8.75rem' : '5.25rem'}); padding-bottom: 6.5rem">
+	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
+	     style="padding-top: {searchOpen ? '3.5rem' : '0'}; padding-bottom: 6.5rem">
+		<div class="min-h-full flex flex-col justify-end">
 		{#if loading}
 			<div class="flex justify-center py-8">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"
@@ -277,6 +285,7 @@
 				</div>
 			{/if}
 		{/if}
+		</div>
 	</div>
 
 	{#if !addModalOpen && userPermission !== 'read'}

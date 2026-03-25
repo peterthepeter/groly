@@ -72,6 +72,8 @@ export async function execute<T>(
 	await offlineDb.pendingMutations.add(offlineMutation);
 	const count = await offlineDb.pendingMutations.count();
 	networkStore.setPending(count);
+	// Sofort versuchen, die Queue zu leeren (z.B. 409-Konflikte bereinigen)
+	if (networkStore.online) void processPendingMutations();
 	return null;
 }
 

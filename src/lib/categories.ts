@@ -211,32 +211,21 @@ export const CATEGORIES: CategoryDef[] = [
 	{
 		key: 'haushalt',
 		keywords: [
-			'spülmittel', 'putzmittel', 'waschmittel', 'toilettenpapier', 'seife', 'shampoo',
-			'zahnpasta', 'müllbeutel', 'schwamm', 'reiniger', 'weichspüler', 'geschirrspüler',
-			'tabs', 'duschgel', 'deo', 'deodorant', 'rasierer', 'kondome', 'tampons', 'binden',
-			'wattestäbchen', 'watte', 'pflaster', 'klebeband', 'folie', 'backpapier', 'haushalt',
-			'einweghandschuhe', 'küchenrolle', 'papiertaschentuch', 'taschentuch', 'putztuch',
-			'lappen', 'besen', 'mop', 'staubsauger', 'kerze', 'batterien', 'glühbirne',
+			'spülmittel', 'putzmittel', 'waschmittel', 'toilettenpapier', 'müllbeutel', 'schwamm',
+			'reiniger', 'weichspüler', 'geschirrspüler', 'tabs', 'klebeband', 'folie', 'backpapier',
+			'haushalt', 'einweghandschuhe', 'küchenrolle', 'papiertaschentuch', 'taschentuch',
+			'putztuch', 'lappen', 'besen', 'mop', 'staubsauger', 'kerze', 'batterien', 'glühbirne',
 			'geschirrspülmittel', 'waschmaschinentabs', 'alufolie', 'frischhaltefolie',
 			'gefrierbeutel', 'badreiniger', 'kalklöser', 'entkalker', 'rohrreiniger',
-			'desinfektionsmittel', 'handseife', 'flüssigseife', 'bodylotion', 'creme',
-			'sonnencreme', 'zahnbürste', 'mundwasser', 'zahnstocher', 'rasierschaum',
-			'nassrasierer', 'wattepads', 'haargummi', 'haarspray', 'haargel', 'conditioner',
-			'spülung', 'mundspülung', 'deo roll-on', 'antitranspirant', 'insektenschutz',
-			'mückenspray', 'papiertücher', 'feuchttücher', 'windeln', 'babytücher',
+			'desinfektionsmittel', 'papiertücher', 'feuchttücher', 'windeln', 'babytücher',
 			// English
 			'dish soap', 'washing up liquid', 'detergent', 'laundry detergent', 'toilet paper',
-			'toilet roll', 'loo roll', 'soap', 'shampoo', 'toothpaste', 'trash bags', 'bin bags',
-			'garbage bags', 'sponge', 'cleaner', 'fabric softener', 'dishwasher tablets',
-			'dishwasher pods', 'shower gel', 'body wash', 'deodorant', 'razor', 'razors',
-			'condoms', 'tampons', 'pads', 'sanitary pads', 'cotton swabs', 'cotton buds',
-			'plaster', 'bandage', 'tape', 'foil', 'aluminium foil', 'aluminum foil',
-			'cling film', 'plastic wrap', 'baking paper', 'parchment paper', 'kitchen roll',
-			'paper towels', 'tissues', 'wet wipes', 'baby wipes', 'nappies', 'diapers',
-			'broom', 'mop', 'candle', 'candles', 'batteries', 'light bulb', 'light bulbs',
-			'hand soap', 'liquid soap', 'body lotion', 'lotion', 'sunscreen', 'sun cream',
-			'toothbrush', 'mouthwash', 'conditioner', 'hair spray', 'hair gel', 'dry shampoo',
-			'antiperspirant', 'insect repellent', 'bug spray', 'household', 'cleaning'
+			'toilet roll', 'loo roll', 'trash bags', 'bin bags', 'garbage bags', 'sponge',
+			'cleaner', 'fabric softener', 'dishwasher tablets', 'dishwasher pods',
+			'tape', 'foil', 'aluminium foil', 'aluminum foil', 'cling film', 'plastic wrap',
+			'baking paper', 'parchment paper', 'kitchen roll', 'paper towels', 'tissues',
+			'wet wipes', 'baby wipes', 'nappies', 'diapers', 'broom', 'mop',
+			'candle', 'candles', 'batteries', 'light bulb', 'light bulbs', 'household', 'cleaning'
 		],
 		category: {
 			color: '#A78BFA',
@@ -327,11 +316,44 @@ export const CATEGORIES: CategoryDef[] = [
 			color: '#D97706',
 			svgContent: `<path d="M8 2h8"/><path d="M9 2v2"/><path d="M15 2v2"/><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M6 10h12"/>`
 		}
+	},
+	{
+		key: 'koerperpflege',
+		keywords: [
+			'seife', 'shampoo', 'duschgel', 'deo', 'deodorant', 'rasierer', 'kondome', 'tampons',
+			'binden', 'wattestäbchen', 'watte', 'pflaster', 'handseife', 'flüssigseife',
+			'bodylotion', 'creme', 'sonnencreme', 'zahnbürste', 'zahnpasta', 'mundwasser',
+			'zahnstocher', 'rasierschaum', 'nassrasierer', 'wattepads', 'haargummi', 'haarspray',
+			'haargel', 'conditioner', 'spülung', 'mundspülung', 'deo roll-on', 'antitranspirant',
+			'insektenschutz', 'mückenspray',
+			'lippenstift', 'mascara', 'foundation', 'concealer', 'rouge', 'lidschatten', 'eyeliner',
+			'make-up', 'makeup', 'nagellack', 'parfüm', 'parfum', 'aftershave', 'gesichtscreme',
+			'gesichtswasser', 'serum', 'primer', 'highlighter', 'lipliner', 'lipgloss',
+			'lippenbalsam', 'lippenpflege', 'peeling', 'gesichtsmaske', 'bb cream', 'cc cream',
+			'nagelschere', 'nagelfeile', 'pinzette', 'haarfarbe', 'haartönung', 'körperpeeling',
+			'wimperntusche', 'abschminkpad', 'abschminke', 'mizellenwasser', 'reinigungsmilch',
+			// English
+			'soap', 'shampoo', 'shower gel', 'body wash', 'deodorant', 'razor', 'razors',
+			'condoms', 'tampons', 'pads', 'sanitary pads', 'cotton swabs', 'cotton buds',
+			'plaster', 'bandage', 'hand soap', 'liquid soap', 'body lotion', 'lotion',
+			'sunscreen', 'sun cream', 'toothbrush', 'toothpaste', 'mouthwash', 'conditioner',
+			'hair spray', 'hair gel', 'dry shampoo', 'antiperspirant', 'insect repellent', 'bug spray',
+			'lipstick', 'mascara', 'foundation', 'concealer', 'blush', 'eyeshadow', 'eyeliner',
+			'makeup', 'nail polish', 'perfume', 'aftershave', 'face cream', 'facial cream',
+			'toner', 'serum', 'primer', 'highlighter', 'lip liner', 'lip gloss', 'lip balm',
+			'chapstick', 'face mask', 'facial mask', 'bb cream', 'tweezers', 'nail scissors',
+			'nail file', 'hair dye', 'hair color', 'body scrub', 'exfoliator',
+			'micellar water', 'cleansing milk', 'make up remover', 'personal care', 'beauty', 'skincare'
+		],
+		category: {
+			color: '#F472B6',
+			svgContent: `<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>`
+		}
 	}
 ];
 
 // Default sort order (index 0 = bottom of grid, index last = top of grid)
-export const DEFAULT_CATEGORY_ORDER = ['obst', 'nudeln', 'backwaren', 'milch', 'fleisch', 'konserven', 'gewuerze', 'getraenke', 'tiefkuehl', 'snacks', 'haushalt', 'default'];
+export const DEFAULT_CATEGORY_ORDER = ['obst', 'nudeln', 'backwaren', 'milch', 'fleisch', 'konserven', 'getraenke', 'tiefkuehl', 'snacks', 'gewuerze', 'haushalt', 'koerperpflege', 'default'];
 
 export const CATEGORY_LABELS: Record<string, { de: string; en: string }> = {
 	obst:      { de: 'Obst & Gemüse',      en: 'Fruit & Veg' },
@@ -344,8 +366,9 @@ export const CATEGORY_LABELS: Record<string, { de: string; en: string }> = {
 	getraenke: { de: 'Getränke',            en: 'Drinks' },
 	tiefkuehl: { de: 'Tiefkühlkost',       en: 'Frozen' },
 	snacks:    { de: 'Snacks & Süßes',     en: 'Snacks' },
-	haushalt:  { de: 'Haushalt',            en: 'Household' },
-	default:   { de: 'Alles andere',        en: 'Everything else' },
+	haushalt:      { de: 'Haushalt',            en: 'Household' },
+	koerperpflege: { de: 'Körperpflege',        en: 'Personal Care' },
+	default:       { de: 'Alles andere',        en: 'Everything else' },
 };
 
 const categoryByKey = new Map(CATEGORIES.map(c => [c.key, c.category]));
