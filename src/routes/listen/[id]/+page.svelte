@@ -262,7 +262,7 @@
 
 	<!-- Bottom-Anchored Content -->
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'}); padding-bottom: 6.5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'}); padding-bottom: 5rem">
 		<div class="min-h-full flex flex-col justify-end">
 		{#if loading}
 			<div class="flex justify-center py-8">

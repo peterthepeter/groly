@@ -116,7 +116,7 @@
 	/>
 
 	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 4rem); padding-bottom: 6.5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + 4rem); padding-bottom: 5rem">
 
 		<!-- Pending Shares -->
 		{#each pendingShares as share (share.id)}
@@ -238,7 +238,7 @@
 
 	<!-- Bottom Nav -->
 	<div class="fixed bottom-0 left-0 right-0 z-30 max-w-[430px] mx-auto flex justify-center px-6 pointer-events-none"
-	     style="padding-bottom: clamp(8px, calc(env(safe-area-inset-bottom) - 28px), 16px)">
+	     style="padding-bottom: clamp(6px, calc(env(safe-area-inset-bottom) - 32px), 12px)">
 		<div class="flex items-center gap-3 pointer-events-auto">
 			<!-- Listen Tab -->
 			<button
