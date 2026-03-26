@@ -63,8 +63,8 @@ export const POST: RequestHandler = async (event) => {
 
 	// Push-Benachrichtigung an eingeladenen User
 	await sendPushToUser(target.id, {
-		title: 'Einladung zu Liste',
-		body: `${user!.username ?? 'Jemand'} möchte die Liste "${list.name}" mit dir teilen`,
+		title: `Groly – ${user!.username ?? 'Jemand'}`,
+		body: `${user!.username ?? 'Jemand'} möchte die Einkaufsliste ${list.name} mit dir teilen`,
 		url: '/'
 	});
 

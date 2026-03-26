@@ -51,8 +51,8 @@ export const POST: RequestHandler = async (event) => {
 		}).run();
 
 		await sendPushToUser(target.id, {
-			title: 'Rezept erhalten',
-			body: `${user!.username} möchte das Rezept "${recipe.title}" mit dir teilen`,
+			title: `Groly – ${user!.username}`,
+			body: `${user!.username} teilt das Rezept ${recipe.title} mit dir`,
 			url: '/rezepte'
 		});
 
