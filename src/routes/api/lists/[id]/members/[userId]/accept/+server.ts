@@ -2,8 +2,9 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { listMembers } from '$lib/db/schema';
+import { lists, listMembers } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { emitMemberCountToOwner } from '$lib/server/userEvents';
 
 export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -30,6 +31,9 @@ export const POST: RequestHandler = async (event) => {
 		.set({ status: 'accepted' })
 		.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, user!.id)))
 		.run();
+
+	const list = db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, listId)).get();
+	if (list) emitMemberCountToOwner(listId, list.ownerId);
 
 	return json({ ok: true });
 };

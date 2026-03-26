@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
+	import { on } from '$lib/sseStore.svelte';
 	import { goto } from '$app/navigation';
 	import { initSync, execute, cacheListsData, getOfflineLists, updateOfflineList, deleteOfflineList } from '$lib/sync/manager';
 	import AppHeader from '$lib/components/AppHeader.svelte';
@@ -278,6 +279,44 @@
 		if (data.user?.mustChangePassword) goto('/einstellungen?mustChange=1');
 		else checkPushPrompt();
 	});
+
+	// SSE-Handler: Live-Updates für die Übersicht
+	const offHandlers = [
+		on('list_invitation', (ev) => {
+			const inv = ev.invitation as PendingInvitation;
+			if (!pendingInvitations.some(i => i.id === inv.id)) {
+				pendingInvitations = [...pendingInvitations, inv];
+			}
+		}),
+		on('list_member_count_changed', (ev) => {
+			lists = lists.map(l => l.id === ev.listId ? { ...l, memberCount: ev.memberCount as number } : l);
+		}),
+		on('list_updated', (ev) => {
+			const update = ev.list as Partial<ListItem>;
+			lists = lists.map(l => l.id === ev.listId ? { ...l, ...update } : l);
+		}),
+		on('list_deleted', (ev) => {
+			lists = lists.filter(l => l.id !== ev.listId);
+			pendingInvitations = pendingInvitations.filter(i => i.id !== ev.listId);
+			customOrder = customOrder.filter(id => id !== ev.listId);
+		}),
+		on('item_added', (ev) => {
+			lists = lists.map(l => l.id === ev.listId ? { ...l, openCount: l.openCount + 1 } : l);
+		}),
+		on('item_updated', (ev) => {
+			const delta = (ev.openCountDelta as number) ?? 0;
+			if (delta !== 0) {
+				lists = lists.map(l => l.id === ev.listId ? { ...l, openCount: Math.max(0, l.openCount + delta) } : l);
+			}
+		}),
+		on('item_deleted', (ev) => {
+			if (!ev.wasChecked) {
+				lists = lists.map(l => l.id === ev.listId ? { ...l, openCount: Math.max(0, l.openCount - 1) } : l);
+			}
+		}),
+	];
+
+	onDestroy(() => offHandlers.forEach(off => off()));
 </script>
 
 <div class="h-screen flex flex-col overflow-hidden" style="background-color: var(--color-bg)">

@@ -4,7 +4,7 @@ import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { lists, items, listMembers } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { emit } from '$lib/server/listEvents';
+import { emitToListMembers } from '$lib/server/userEvents';
 
 import { now } from '$lib/auth';
 
@@ -48,7 +48,10 @@ export const PUT: RequestHandler = async (event) => {
 	db.update(lists).set({ updatedAt: ts }).where(eq(lists.id, item.listId)).run();
 
 	const updated = db.select().from(items).where(eq(items.id, item.id)).get()!;
-	emit(item.listId, { type: 'item_updated', item: { id: updated.id, name: updated.name, quantityInfo: updated.quantityInfo, isChecked: updated.isChecked, checkedAt: updated.checkedAt, categoryOverride: updated.categoryOverride, updatedAt: updated.updatedAt }, byUserId: user!.id });
+	const openCountDelta = body.isChecked !== undefined
+		? (body.isChecked && !item.isChecked ? -1 : !body.isChecked && item.isChecked ? 1 : 0)
+		: 0;
+	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: { id: updated.id, name: updated.name, quantityInfo: updated.quantityInfo, isChecked: updated.isChecked, checkedAt: updated.checkedAt, categoryOverride: updated.categoryOverride, updatedAt: updated.updatedAt }, openCountDelta, byUserId: user!.id });
 
 	return json({ ok: true });
 };
@@ -61,6 +64,6 @@ export const DELETE: RequestHandler = async (event) => {
 	if (!item) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	db.delete(items).where(eq(items.id, item.id)).run();
-	emit(item.listId, { type: 'item_deleted', id: item.id, byUserId: user!.id });
+	emitToListMembers(item.listId, { type: 'item_deleted', listId: item.listId, id: item.id, wasChecked: item.isChecked, byUserId: user!.id });
 	return json({ ok: true });
 };

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
+	import { on } from '$lib/sseStore.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
@@ -166,68 +167,34 @@
 		searchQuery = '';
 	}
 
-	// SSE — Echtzeit-Updates von anderen Usern empfangen, mit Reconnect-Backoff
-	$effect(() => {
-		const id = listId;
-		let retryDelay = 1000;
-		let retryTimeout: ReturnType<typeof setTimeout> | null = null;
-		let sse: EventSource | null = null;
-		let connected = false;
-
-		function handleMessage(e: MessageEvent) {
-			try {
-				const ev = JSON.parse(e.data);
-
-				if (ev.type === 'item_added') {
-					// Ignore items already present (own adds via optimistic update, or SSE dedup)
-					if (!items.some(i => i.id === ev.item.id)) {
-						items = [...items, ev.item];
-						void cacheItemsData(items);
-					}
-				} else if (ev.type === 'item_updated') {
-					items = items.map(i => i.id === ev.item.id ? { ...i, ...ev.item } : i);
-					void updateOfflineItem(ev.item.id, ev.item);
-				} else if (ev.type === 'item_deleted') {
-					items = items.filter(i => i.id !== ev.id);
-					void deleteOfflineItem(ev.id);
-				}
-			} catch { /* JSON parse error ignorieren */ }
-		}
-
-		function connect() {
-			sse = new EventSource(`/api/lists/${id}/events`);
-			sse.onopen = () => {
-				retryDelay = 1000;
-				if (connected) void loadItems();
-				connected = true;
-			};
-			sse.onmessage = handleMessage;
-			sse.onerror = () => {
-				sse?.close();
-				retryTimeout = setTimeout(connect, retryDelay);
-				retryDelay = Math.min(retryDelay * 2, 30_000);
-			};
-		}
-
-		function handleOnline() {
-			if (retryTimeout !== null) {
-				clearTimeout(retryTimeout);
-				retryTimeout = null;
+	// SSE — Echtzeit-Updates via globalem SSE-Kanal (Verbindung liegt im Root-Layout)
+	let sseConnectedSinceMount = false;
+	const offHandlers = [
+		on('sse_connected', () => {
+			// Beim Reconnect Items neu laden (bei erstem Connect schon via onMount geschehen)
+			if (sseConnectedSinceMount) void loadItems();
+			sseConnectedSinceMount = true;
+		}),
+		on('item_added', (ev) => {
+			if (ev.listId !== listId) return;
+			if (!items.some(i => i.id === (ev.item as Item).id)) {
+				items = [...items, ev.item as Item];
+				void cacheItemsData(items);
 			}
-			if (!sse || sse.readyState === EventSource.CLOSED) {
-				connect();
-			}
-		}
+		}),
+		on('item_updated', (ev) => {
+			if (ev.listId !== listId) return;
+			items = items.map(i => i.id === (ev.item as Item).id ? { ...i, ...(ev.item as Item) } : i);
+			void updateOfflineItem((ev.item as Item).id, ev.item as Partial<Item>);
+		}),
+		on('item_deleted', (ev) => {
+			if (ev.listId !== listId) return;
+			items = items.filter(i => i.id !== ev.id);
+			void deleteOfflineItem(ev.id as string);
+		}),
+	];
 
-		connect();
-		window.addEventListener('online', handleOnline);
-
-		return () => {
-			sse?.close();
-			if (retryTimeout !== null) clearTimeout(retryTimeout);
-			window.removeEventListener('online', handleOnline);
-		};
-	});
+	onDestroy(() => offHandlers.forEach(off => off()));
 </script>
 
 <div class="h-screen flex flex-col overflow-hidden" style="background-color: var(--color-bg)">

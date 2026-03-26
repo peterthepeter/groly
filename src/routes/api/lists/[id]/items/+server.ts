@@ -4,7 +4,7 @@ import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { lists, items, listMembers, users } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { emit } from '$lib/server/listEvents';
+import { emitToListMembers } from '$lib/server/userEvents';
 import { sendPushToListMembers } from '$lib/server/pushNotifications';
 import { now, generateId } from '$lib/auth';
 
@@ -71,7 +71,7 @@ export const POST: RequestHandler = async (event) => {
 	const creator = db.select({ username: users.username }).from(users).where(eq(users.id, user!.id)).get();
 	const newItem = { id, listId: event.params.id, name: trimmedName, quantityInfo: trimmedQty, isChecked: false, checkedAt: null, categoryOverride: null, createdBy: user!.id, createdByUsername: creator?.username ?? null, createdAt: ts, updatedAt: ts };
 
-	emit(event.params.id, { type: 'item_added', item: newItem, byUserId: user!.id });
+	emitToListMembers(event.params.id, { type: 'item_added', listId: event.params.id, item: newItem, byUserId: user!.id });
 
 	void sendPushToListMembers(event.params.id, user!.id, {
 		title: list.name,
