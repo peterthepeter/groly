@@ -117,7 +117,7 @@
 	onMount(() => loadRecipe());
 </script>
 
-<div class="h-screen flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
+<div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<!-- Header -->
 	<div class="fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
 	     style="padding-top: calc(env(safe-area-inset-top) + 1rem)">

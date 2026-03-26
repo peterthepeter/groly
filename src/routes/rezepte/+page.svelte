@@ -108,7 +108,7 @@
 	});
 </script>
 
-<div class="h-screen flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
+<div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader
 		title={t.recipes_title}
 		subtitle="{recipes.length} / {limit}"

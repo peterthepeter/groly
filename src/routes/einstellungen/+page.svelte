@@ -187,7 +187,7 @@
 	}
 </script>
 
-<div class="h-screen flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
+<div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader title={t.settings_title} onMenuOpen={() => menuOpen = true} />
 
 	<div class="flex-1 overflow-y-auto pb-8 px-4" style="padding-top: calc(env(safe-area-inset-top) + 6rem)">

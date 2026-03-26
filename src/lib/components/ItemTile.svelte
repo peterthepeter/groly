@@ -53,8 +53,8 @@
 		</span>
 
 		<!-- Icon — obere Hälfte zentriert -->
-		<div class="absolute inset-0 flex items-start justify-center pt-[30px]">
-			<svg width="44" height="44" viewBox="0 0 24 24" fill="none"
+		<div class="absolute inset-0 flex items-start justify-center pt-[30px] max-[374px]:pt-[22px]">
+			<svg class="w-11 h-11 max-[374px]:w-9 max-[374px]:h-9" viewBox="0 0 24 24" fill="none"
 			     stroke={category.color} stroke-width="1.3"
 			     stroke-linecap="round" stroke-linejoin="round">
 				{@html category.svgContent}
@@ -62,7 +62,7 @@
 		</div>
 
 		<!-- Name + Menge — feste Höhe, Name immer auf gleicher Y-Position -->
-		<div class="absolute bottom-0 left-0 right-0 px-2.5 pb-2 flex flex-col items-center justify-end" style="height: 3.2rem">
+		<div class="absolute bottom-0 left-0 right-0 px-2.5 pb-2 flex flex-col items-center justify-end h-[3.6rem] max-[374px]:h-[2.6rem]">
 			<span class="block text-xs font-bold leading-snug line-clamp-2 text-center w-full"
 			      style="color: var(--color-on-surface)">{item.name}</span>
 			<span class="block text-[10px] leading-tight text-center mt-0.5 truncate w-full"
