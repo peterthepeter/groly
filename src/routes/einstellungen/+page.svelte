@@ -47,6 +47,13 @@
 		}
 	}
 
+	function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
+		return Promise.race([
+			promise,
+			new Promise<never>((_, reject) => setTimeout(() => reject(new Error(msg)), ms))
+		]);
+	}
+
 	async function subscribePush() {
 		pushLoading = true;
 		pushError = '';
@@ -62,11 +69,24 @@
 			pushPermission = perm;
 			if (perm !== 'granted') { pushLoading = false; return; }
 
-			const reg = await navigator.serviceWorker.ready;
-			const sub = await reg.pushManager.subscribe({
-				userVisibleOnly: true,
-				applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-			});
+			// SW sicherstellen (Fallback falls auto-registration noch nicht abgeschlossen)
+			if (!await navigator.serviceWorker.getRegistration('/')) {
+				await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+			}
+			const reg = await withTimeout(
+				navigator.serviceWorker.ready,
+				10_000,
+				'Service Worker nicht bereit'
+			);
+			// iOS/APNs-Verbindung kann beim ersten Mal hängen — Timeout verhindert einfrieren
+			const sub = await withTimeout(
+				reg.pushManager.subscribe({
+					userVisibleOnly: true,
+					applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+				}),
+				15_000,
+				'Push-Aktivierung fehlgeschlagen – bitte erneut versuchen'
+			);
 			const json = sub.toJSON();
 			await fetch('/api/push/subscribe', {
 				method: 'POST',
