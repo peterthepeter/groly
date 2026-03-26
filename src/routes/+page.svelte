@@ -159,6 +159,15 @@
 	}
 
 	async function loadLists() {
+		// Gecachte Daten sofort anzeigen, während der Netzwerk-Fetch läuft (stale-while-revalidate)
+		if (lists.length === 0) {
+			const cached = await getOfflineLists();
+			if (cached.length > 0) {
+				lists = cached as unknown as ListItem[];
+				loading = false;
+			}
+		}
+
 		try {
 			const res = await fetch('/api/lists');
 			if (!res.ok) throw new Error();
@@ -172,8 +181,10 @@
 				void cacheListsData(lists);
 			}
 		} catch {
-			lists = (await getOfflineLists()) as unknown as ListItem[];
-			pendingInvitations = [];
+			if (lists.length === 0) {
+				lists = (await getOfflineLists()) as unknown as ListItem[];
+				pendingInvitations = [];
+			}
 		}
 		loading = false;
 	}
@@ -278,10 +289,15 @@
 		initSync();
 		if (data.user?.mustChangePassword) goto('/einstellungen?mustChange=1');
 		else checkPushPrompt();
+
+		const handleOnline = () => void loadLists();
+		window.addEventListener('online', handleOnline);
+		return () => window.removeEventListener('online', handleOnline);
 	});
 
 	// SSE-Handler: Live-Updates für die Übersicht
 	const offHandlers = [
+		on('sse_connected', () => void loadLists()),
 		on('list_invitation', (ev) => {
 			const inv = ev.invitation as PendingInvitation;
 			if (!pendingInvitations.some(i => i.id === inv.id)) {
