@@ -25,8 +25,8 @@
 	}
 </script>
 
-<div class="fixed bottom-0 left-0 right-0 z-30 max-w-[430px] mx-auto flex justify-center px-6 pointer-events-none"
-     style="padding-bottom: 16px">
+<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto flex justify-center px-6 pointer-events-none"
+     style="bottom: calc(-1 * env(safe-area-inset-bottom, 0px)); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); background: linear-gradient(to top, var(--color-bg) 40%, transparent)">
 	<div class="flex items-center gap-3 pointer-events-auto">
 		<!-- Lists Tab Pill -->
 		<button
