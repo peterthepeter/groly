@@ -26,7 +26,7 @@
 </script>
 
 <div class="fixed bottom-0 left-0 right-0 z-30 max-w-[430px] mx-auto flex justify-center px-6 pointer-events-none"
-     style="padding-bottom: max(env(safe-area-inset-bottom), 20px)">
+     style="padding-bottom: max(calc(env(safe-area-inset-bottom) - 16px), 8px)">
 	<div class="flex items-center gap-3 pointer-events-auto">
 		<!-- Lists Tab Pill -->
 		<button
