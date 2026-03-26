@@ -75,6 +75,11 @@
 	async function subscribePush() {
 		pushLoading = true;
 		pushError = '';
+		if (!PUBLIC_VAPID_KEY) {
+			pushError = 'Push-Konfiguration fehlt (PUBLIC_VAPID_PUBLIC_KEY nicht gesetzt).';
+			pushLoading = false;
+			return;
+		}
 		try {
 			const sw = await swReady();
 			const perm = await Notification.requestPermission();
