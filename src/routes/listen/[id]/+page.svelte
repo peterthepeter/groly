@@ -62,6 +62,21 @@
 	);
 
 	async function loadItems() {
+		// Gecachte Daten sofort anzeigen, während der Netzwerk-Fetch läuft (stale-while-revalidate)
+		if (items.length === 0) {
+			const [cachedName, cachedItems] = await Promise.all([
+				getOfflineListName(listId ?? ''),
+				getOfflineItems(listId ?? '')
+			]);
+			if (cachedItems.length > 0) {
+				listName = cachedName || listName;
+				items = cachedItems.map(item => ({ ...item, createdByUsername: null }));
+				loading = false;
+				await tick();
+				scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight });
+			}
+		}
+
 		try {
 			const [listRes, itemsRes, suggestRes] = await Promise.all([
 				fetch(`/api/lists/${listId}`),
@@ -76,8 +91,10 @@
 			if (suggestRes.ok) suggestions = await suggestRes.json();
 			void cacheItemsData(items);
 		} catch {
-			listName = await getOfflineListName(listId ?? '');
-			items = (await getOfflineItems(listId ?? '')).map(item => ({ ...item, createdByUsername: null }));
+			if (items.length === 0) {
+				listName = await getOfflineListName(listId ?? '');
+				items = (await getOfflineItems(listId ?? '')).map(item => ({ ...item, createdByUsername: null }));
+			}
 		}
 		loading = false;
 		await tick();
@@ -160,7 +177,12 @@
 		);
 	}
 
-	onMount(loadItems);
+	onMount(() => {
+		void loadItems();
+		const handleOnline = () => void loadItems();
+		window.addEventListener('online', handleOnline);
+		return () => window.removeEventListener('online', handleOnline);
+	});
 
 	function closeSearch() {
 		searchOpen = false;
