@@ -40,36 +40,11 @@
 		pushPermission = Notification.permission;
 		if (pushPermission === 'granted') {
 			try {
-				const sw = await swReady();
-				const sub = await sw.pushManager.getSubscription();
+				const reg = await navigator.serviceWorker.ready;
+				const sub = await reg.pushManager.getSubscription();
 				pushSubscribed = !!sub;
 			} catch { /* ignore on init */ }
 		}
-	}
-
-	async function swReady(): Promise<ServiceWorkerRegistration> {
-		// Explicitly register SW if not already registered
-		let reg = await navigator.serviceWorker.getRegistration('/');
-		if (!reg) {
-			reg = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
-		}
-		// Wait for active SW (with timeout)
-		return new Promise<ServiceWorkerRegistration>((resolve, reject) => {
-			const timeout = setTimeout(() => reject(new Error('Service Worker konnte nicht aktiviert werden.')), 10000);
-			function check() {
-				const r = reg!;
-				const active = r.active ?? r.installing ?? r.waiting;
-				if (r.active) { clearTimeout(timeout); resolve(r); return; }
-				if (active) {
-					active.addEventListener('statechange', function handler() {
-						if (r.active) { clearTimeout(timeout); active.removeEventListener('statechange', handler); resolve(r); }
-					});
-				} else {
-					setTimeout(check, 200);
-				}
-			}
-			check();
-		});
 	}
 
 	async function subscribePush() {
@@ -81,12 +56,14 @@
 			return;
 		}
 		try {
-			const sw = await swReady();
+			// iOS: requestPermission muss als erstes aufgerufen werden,
+			// solange der User-Gesture-Kontext noch aktiv ist.
 			const perm = await Notification.requestPermission();
 			pushPermission = perm;
 			if (perm !== 'granted') { pushLoading = false; return; }
 
-			const sub = await sw.pushManager.subscribe({
+			const reg = await navigator.serviceWorker.ready;
+			const sub = await reg.pushManager.subscribe({
 				userVisibleOnly: true,
 				applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
 			});
@@ -107,8 +84,8 @@
 		pushLoading = true;
 		pushError = '';
 		try {
-			const sw = await swReady();
-			const sub = await sw.pushManager.getSubscription();
+			const reg = await navigator.serviceWorker.ready;
+			const sub = await reg.pushManager.getSubscription();
 			if (sub) {
 				await fetch('/api/push/subscribe', {
 					method: 'DELETE',
@@ -124,11 +101,14 @@
 		pushLoading = false;
 	}
 
-	function urlBase64ToUint8Array(base64String: string): Uint8Array {
+	function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 		const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
 		const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
 		const rawData = atob(base64);
-		return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+		const buffer = new ArrayBuffer(rawData.length);
+		const view = new Uint8Array(buffer);
+		for (let i = 0; i < rawData.length; i++) view[i] = rawData.charCodeAt(i);
+		return view;
 	}
 
 	$effect(() => { initPushState(); });

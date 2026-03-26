@@ -59,40 +59,25 @@
 		showPushPrompt = false;
 	}
 
-	function urlBase64ToUint8Array(base64String: string): Uint8Array {
+	function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 		const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
 		const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
 		const rawData = atob(base64);
-		return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-	}
-
-	async function swReady(): Promise<ServiceWorkerRegistration> {
-		let reg = await navigator.serviceWorker.getRegistration('/');
-		if (!reg) reg = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
-		return new Promise<ServiceWorkerRegistration>((resolve, reject) => {
-			const timeout = setTimeout(() => reject(new Error('SW timeout')), 10000);
-			function check() {
-				const r = reg!;
-				if (r.active) { clearTimeout(timeout); resolve(r); return; }
-				const active = r.active ?? r.installing ?? r.waiting;
-				if (active) {
-					active.addEventListener('statechange', function handler() {
-						if (r.active) { clearTimeout(timeout); active.removeEventListener('statechange', handler); resolve(r); }
-					});
-				} else { setTimeout(check, 200); }
-			}
-			check();
-		});
+		const buffer = new ArrayBuffer(rawData.length);
+		const view = new Uint8Array(buffer);
+		for (let i = 0; i < rawData.length; i++) view[i] = rawData.charCodeAt(i);
+		return view;
 	}
 
 	async function acceptPushPrompt() {
 		if (!PUBLIC_VAPID_KEY) { dismissPushPrompt(); return; }
 		pushPromptLoading = true;
 		try {
-			const sw = await swReady();
+			// iOS: requestPermission zuerst, solange User-Gesture-Kontext aktiv
 			const perm = await Notification.requestPermission();
 			if (perm === 'granted') {
-				const sub = await sw.pushManager.subscribe({
+				const reg = await navigator.serviceWorker.ready;
+				const sub = await reg.pushManager.subscribe({
 					userVisibleOnly: true,
 					applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
 				});
