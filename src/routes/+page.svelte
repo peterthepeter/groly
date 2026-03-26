@@ -431,7 +431,7 @@
 
 	<!-- Bottom Nav mit Rezepte-Tab -->
 	<div class="fixed bottom-0 left-0 right-0 z-30 max-w-[430px] mx-auto flex justify-center px-6 pointer-events-none"
-	     style="padding-bottom: clamp(6px, calc(env(safe-area-inset-bottom) - 32px), 12px)">
+	     style="padding-bottom: 8px">
 		<div class="flex items-center gap-3 pointer-events-auto">
 			<!-- Listen Tab (active) -->
 			<button
