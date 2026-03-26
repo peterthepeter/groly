@@ -32,19 +32,22 @@
 	let pushSubscribed = $state(false);
 	let pushLoading = $state(false);
 	let pushError = $state('');
+	// SW-Registration vorab laden, damit subscribePush() ohne async-Wartezeit starten kann
+	let cachedReg: ServiceWorkerRegistration | null = null;
 
 	async function initPushState() {
 		if (typeof window === 'undefined') return;
 		pushSupported = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
 		if (!pushSupported) return;
 		pushPermission = Notification.permission;
-		if (pushPermission === 'granted') {
-			try {
-				const reg = await navigator.serviceWorker.ready;
+		try {
+			const reg = await navigator.serviceWorker.ready;
+			if (reg) cachedReg = reg;
+			if (pushPermission === 'granted' && reg?.pushManager) {
 				const sub = await reg.pushManager.getSubscription();
 				pushSubscribed = !!sub;
-			} catch { /* ignore on init */ }
-		}
+			}
+		} catch { /* ignore on init */ }
 	}
 
 	function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
@@ -58,34 +61,41 @@
 		pushLoading = true;
 		pushError = '';
 		if (!PUBLIC_VAPID_KEY) {
-			pushError = 'Push-Konfiguration fehlt (PUBLIC_VAPID_PUBLIC_KEY nicht gesetzt).';
+			pushError = 'Push-Konfiguration fehlt (VAPID-Key nicht gesetzt).';
+			pushLoading = false;
+			return;
+		}
+		const keyBytes = urlBase64ToUint8Array(PUBLIC_VAPID_KEY);
+		if (keyBytes.length !== 65) {
+			pushError = `Ungültiger VAPID-Key (${keyBytes.length} Bytes, erwartet 65).`;
 			pushLoading = false;
 			return;
 		}
 		try {
-			// iOS: requestPermission muss als erstes aufgerufen werden,
-			// solange der User-Gesture-Kontext noch aktiv ist.
+			// iOS: requestPermission zuerst, solange der User-Gesture-Kontext aktiv ist
 			const perm = await Notification.requestPermission();
 			pushPermission = perm;
 			if (perm !== 'granted') { pushLoading = false; return; }
 
-			// SW sicherstellen (Fallback falls auto-registration noch nicht abgeschlossen)
-			if (!await navigator.serviceWorker.getRegistration('/')) {
-				await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+			// SW-Registration: pre-warmed aus initPushState verwenden (kein await nötig)
+			// oder bei Bedarf frisch holen – aber NACH requestPermission, damit der
+			// dabei enthaltene setTimeout nicht den User-Gesture-Kontext bricht.
+			let reg = cachedReg;
+			if (!reg) {
+				reg = await withTimeout(navigator.serviceWorker.ready, 10_000, 'Service Worker nicht bereit.');
+				if (reg) cachedReg = reg;
 			}
-			const reg = await withTimeout(
-				navigator.serviceWorker.ready,
-				10_000,
-				'Service Worker nicht bereit'
-			);
-			// iOS/APNs-Verbindung kann beim ersten Mal hängen — Timeout verhindert einfrieren
+			if (!reg?.pushManager) {
+				pushError = 'Push-Manager nicht verfügbar – bitte Seite neu laden.';
+				pushLoading = false;
+				return;
+			}
+
+			// subscribe() mit Timeout (iOS/APNs kann beim ersten Mal hängen)
 			const sub = await withTimeout(
-				reg.pushManager.subscribe({
-					userVisibleOnly: true,
-					applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-				}),
+				reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes }),
 				15_000,
-				'Push-Aktivierung fehlgeschlagen – bitte erneut versuchen'
+				'Push-Aktivierung fehlgeschlagen – bitte erneut versuchen.'
 			);
 			const json = sub.toJSON();
 			await fetch('/api/push/subscribe', {
@@ -95,7 +105,12 @@
 			});
 			pushSubscribed = true;
 		} catch (e) {
-			pushError = e instanceof Error ? e.message : String(e);
+			const msg = e instanceof Error ? e.message : String(e);
+			// iOS wirft manchmal beim ersten Versuch einen internen Fehler –
+			// beim zweiten Versuch klappt es meist.
+			pushError = msg.includes('evaluating')
+				? 'iOS-Fehler beim Aktivieren – bitte erneut versuchen.'
+				: msg;
 		}
 		pushLoading = false;
 	}
@@ -104,8 +119,8 @@
 		pushLoading = true;
 		pushError = '';
 		try {
-			const reg = await navigator.serviceWorker.ready;
-			const sub = await reg.pushManager.getSubscription();
+			const reg = cachedReg ?? await navigator.serviceWorker.ready;
+			const sub = await reg?.pushManager?.getSubscription();
 			if (sub) {
 				await fetch('/api/push/subscribe', {
 					method: 'DELETE',
@@ -195,12 +210,12 @@
 			newPassword = '';
 			confirmPassword = '';
 			if (mustChange) {
-			if (pushSupported && !pushSubscribed) {
-				showPushPrompt = true;
-			} else {
-				setTimeout(() => goto('/'), 1500);
+				if (pushSupported && !pushSubscribed) {
+					showPushPrompt = true;
+				} else {
+					setTimeout(() => goto('/'), 1500);
+				}
 			}
-		}
 		} else {
 			const data = await res.json();
 			error = data.error ?? t.settings_password_error;
