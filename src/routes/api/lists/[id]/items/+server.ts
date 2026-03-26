@@ -5,7 +5,7 @@ import { db } from '$lib/db';
 import { lists, items, listMembers, users } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { emitToListMembers } from '$lib/server/userEvents';
-import { sendPushToListMembers } from '$lib/server/pushNotifications';
+import { schedulePushForItemAdded } from '$lib/server/pushDebounce';
 import { now, generateId } from '$lib/auth';
 
 function getListAccess(listId: string, userId: string): { list: typeof lists.$inferSelect; permission: 'owner' | 'write' | 'read' | null } {
@@ -73,9 +73,12 @@ export const POST: RequestHandler = async (event) => {
 
 	emitToListMembers(event.params.id, { type: 'item_added', listId: event.params.id, item: newItem, byUserId: user!.id });
 
-	void sendPushToListMembers(event.params.id, user!.id, {
-		title: list.name,
-		body: `${creator?.username ?? 'Jemand'} hat „${trimmedName}" hinzugefügt`,
+	schedulePushForItemAdded({
+		listId: event.params.id,
+		listName: list.name,
+		itemName: trimmedName,
+		adderUserId: user!.id,
+		adderUsername: creator?.username ?? 'Jemand',
 		url: `/listen/${event.params.id}`
 	});
 
