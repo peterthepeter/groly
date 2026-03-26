@@ -229,11 +229,6 @@
 		onSearch={showSearch && !searchOpen ? () => searchOpen = true : null}
 	/>
 
-	<!-- Spacer: reserviert den Platz der fixen Header-Bar im Flex-Flow,
-	     damit der Scroll-Container erst darunter beginnt und Touch-Events
-	     im Header-Bereich nicht in den Scroll-Container fallen. -->
-	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
-
 	<!-- Suchleiste (fixiert unter dem Header, nur wenn aktiv) -->
 	{#if searchOpen}
 		<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto px-4 py-2"
@@ -267,7 +262,7 @@
 
 	<!-- Bottom-Anchored Content -->
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
-	     style="padding-top: {searchOpen ? '3.5rem' : '0'}; padding-bottom: 6.5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'}); padding-bottom: 6.5rem">
 		<div class="min-h-full flex flex-col justify-end">
 		{#if loading}
 			<div class="flex justify-center py-8">

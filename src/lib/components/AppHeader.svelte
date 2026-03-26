@@ -14,7 +14,7 @@
 </script>
 
 <header class="fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
-        style="padding-top: calc(env(safe-area-inset-top) + 1rem)">
+        style="padding-top: calc(env(safe-area-inset-top) + 1rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px)">
 	<div class="flex items-center justify-between rounded-2xl px-4 py-3"
 	     style="background-color: var(--color-surface-low)">
 		<!-- Left: Hamburger + App Name -->
