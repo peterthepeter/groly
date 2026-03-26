@@ -87,9 +87,11 @@
 			const listData = await listRes.json();
 			listName = listData.name;
 			userPermission = listData.userPermission ?? 'write';
-			items = await itemsRes.json();
+			const newItems: Item[] = await itemsRes.json();
 			if (suggestRes.ok) suggestions = await suggestRes.json();
-			void cacheItemsData(items);
+			// Cache als plain objects (vor State-Zuweisung)
+			void cacheItemsData(newItems);
+			items = newItems;
 		} catch {
 			if (items.length === 0) {
 				listName = await getOfflineListName(listId ?? '');

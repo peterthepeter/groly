@@ -159,27 +159,23 @@
 	}
 
 	async function loadLists() {
-		// Gecachte Daten sofort anzeigen, während der Netzwerk-Fetch läuft (stale-while-revalidate)
-		if (lists.length === 0) {
-			const cached = await getOfflineLists();
-			if (cached.length > 0) {
-				lists = cached as unknown as ListItem[];
-				loading = false;
-			}
+		// Gecachte Daten sofort anzeigen (stale-while-revalidate)
+		const cached = await getOfflineLists();
+		if (cached.length > 0 && lists.length === 0) {
+			lists = cached as unknown as ListItem[];
+			loading = false;
 		}
 
 		try {
 			const res = await fetch('/api/lists');
 			if (!res.ok) throw new Error();
 			const json = await res.json();
-			if (json && typeof json === 'object' && 'lists' in json) {
-				lists = json.lists;
-				pendingInvitations = json.pendingInvitations ?? [];
-				void cacheListsData(lists);
-			} else {
-				lists = json;
-				void cacheListsData(lists);
-			}
+			const newLists: ListItem[] = (json && typeof json === 'object' && 'lists' in json) ? json.lists : json;
+			const newInvitations = json?.pendingInvitations ?? [];
+			// Cache als plain objects (vor State-Zuweisung, um Svelte-Proxy-Probleme mit IndexedDB zu vermeiden)
+			void cacheListsData(newLists);
+			lists = newLists;
+			pendingInvitations = newInvitations;
 		} catch {
 			if (lists.length === 0) {
 				lists = (await getOfflineLists()) as unknown as ListItem[];
