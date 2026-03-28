@@ -135,5 +135,9 @@
   "push_prompt_decline": "Nicht jetzt",
   "install_banner_text": "Als App installieren für das beste Erlebnis.",
   "pwa_install_subtitle": "Push-Mitteilungen und Offline-Nutzung funktionieren nur als installierte App.",
-  "pwa_update_available": "Update verfügbar – neu laden"
+  "pwa_update_available": "Update verfügbar – neu laden",
+  "pwa_update_title": "Update verfügbar",
+  "pwa_update_body": "Eine neue Version von Groly ist bereit. Tippe auf Neu laden, um sofort zu aktualisieren.",
+  "pwa_update_reload": "Neu laden",
+  "pwa_update_later": "Später"
 }
