@@ -1,25 +1,23 @@
 <script lang="ts">
-	import { currentLang } from '$lib/i18n.svelte';
-	import { onMount } from 'svelte';
+	import { currentLang, t } from '$lib/i18n.svelte';
 
-	let { onClose }: { onClose: () => void } = $props();
+	let { onClose, deferredPrompt = $bindable<any>(null) }: {
+		onClose: () => void;
+		deferredPrompt?: any;
+	} = $props();
 
 	const lang = $derived(currentLang());
 
 	type Platform = 'ios' | 'android';
-	let activePlatform = $state<Platform>('ios');
 
-	let deferredPrompt = $state<any>(null);
+	function detectPlatform(): Platform {
+		if (typeof navigator === 'undefined') return 'ios';
+		return /android/i.test(navigator.userAgent) ? 'android' : 'ios';
+	}
+
+	let activePlatform = $state<Platform>(detectPlatform());
+
 	let installDone = $state(false);
-
-	onMount(() => {
-		const handler = (e: Event) => {
-			e.preventDefault();
-			deferredPrompt = e;
-		};
-		window.addEventListener('beforeinstallprompt', handler);
-		return () => window.removeEventListener('beforeinstallprompt', handler);
-	});
 
 	async function triggerInstall() {
 		if (!deferredPrompt) return;
@@ -51,6 +49,9 @@
 		</h2>
 		<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant)">
 			{lang === 'en' ? 'Add Groly to your home screen for the best experience' : 'Groly zum Startbildschirm hinzufügen für die beste Erfahrung'}
+		</p>
+		<p class="text-xs mt-1.5" style="color: var(--color-on-surface-variant)">
+			{t.pwa_install_subtitle}
 		</p>
 	</div>
 

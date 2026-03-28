@@ -5,9 +5,10 @@
 	import InfoModal from '$lib/components/InfoModal.svelte';
 	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
 
-	let { open = $bindable(false), user }: {
+	let { open = $bindable(false), user, installPrompt = null }: {
 		open: boolean;
 		user: { username: string; role: string } | null;
+		installPrompt?: any;
 	} = $props();
 
 	let infoOpen = $state(false);
@@ -173,5 +174,5 @@
 {/if}
 
 {#if pwaOpen}
-	<PwaInstallModal onClose={() => pwaOpen = false} />
+	<PwaInstallModal onClose={() => pwaOpen = false} deferredPrompt={installPrompt} />
 {/if}

@@ -13,6 +13,7 @@
 	import { t, lists_active } from '$lib/i18n.svelte';
 	import { getListIcon } from '$lib/listIcons';
 	import { env as publicEnv } from '$env/dynamic/public';
+	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
@@ -35,13 +36,28 @@
 	let customOrder = $state<string[]>([]);
 	let showPushPrompt = $state(false);
 	let pushPromptLoading = $state(false);
+	let showInstallBanner = $state(false);
+	let showInstallModal = $state(false);
+	let installPrompt = $state<any>(null);
 
 	const PUSH_PROMPT_KEY = 'groly_push_prompt_dismissed';
+	const INSTALL_BANNER_KEY = 'groly_install_banner_dismissed';
 
 	function isPWA(): boolean {
 		if (typeof window === 'undefined') return false;
 		return window.matchMedia('(display-mode: standalone)').matches ||
 			(navigator as { standalone?: boolean }).standalone === true;
+	}
+
+	function checkInstallBanner() {
+		if (isPWA()) return;
+		if (localStorage.getItem(INSTALL_BANNER_KEY)) return;
+		showInstallBanner = true;
+	}
+
+	function dismissInstallBanner() {
+		localStorage.setItem(INSTALL_BANNER_KEY, '1');
+		showInstallBanner = false;
 	}
 
 	async function checkPushPrompt() {
@@ -269,11 +285,20 @@
 		loadLists();
 		initSync();
 		if (data.user?.mustChangePassword) goto('/einstellungen?mustChange=1');
-		else checkPushPrompt();
+		else { checkInstallBanner(); checkPushPrompt(); }
+
+		const handleBeforeInstall = (e: Event) => {
+			e.preventDefault();
+			installPrompt = e;
+		};
+		window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
 		const handleOnline = () => void loadLists();
 		window.addEventListener('online', handleOnline);
-		return () => window.removeEventListener('online', handleOnline);
+		return () => {
+			window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+			window.removeEventListener('online', handleOnline);
+		};
 	});
 
 	// SSE-Handler: Live-Updates für die Übersicht
@@ -335,9 +360,57 @@
 		{/snippet}
 	</AppHeader>
 
+	<!-- Install Banner -->
+	{#if showInstallBanner}
+		<div class="fixed left-0 right-0 z-20 max-w-[430px] mx-auto px-4 pointer-events-none"
+		     style="top: calc(env(safe-area-inset-top) + 5.5rem)">
+			<div class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-auto"
+			     style="background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-container)); outline: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)">
+				<!-- Icon -->
+				<div class="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center"
+				     style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="5" y="2" width="14" height="20" rx="2"/>
+						<polyline points="8 10 12 14 16 10"/>
+						<line x1="12" y1="14" x2="12" y2="6"/>
+					</svg>
+				</div>
+				<!-- Text -->
+				<p class="flex-1 text-xs leading-snug" style="color: var(--color-on-surface-variant)">
+					{t.install_banner_text}
+				</p>
+				<!-- Info button -->
+				<button
+					onclick={() => showInstallModal = true}
+					class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center active:opacity-60"
+					style="background-color: var(--color-primary); color: var(--color-on-primary)"
+					aria-label="Installationsanleitung"
+				>
+					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="10"/>
+						<line x1="12" y1="8" x2="12" y2="8"/>
+						<path d="M12 12v5"/>
+					</svg>
+				</button>
+				<!-- Dismiss -->
+				<button
+					onclick={dismissInstallBanner}
+					class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center active:opacity-60"
+					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+					aria-label="Schließen"
+				>
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+						<line x1="18" y1="6" x2="6" y2="18"/>
+						<line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Bottom-Anchored Content -->
 	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 4rem); padding-bottom: 5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + {showInstallBanner ? '9' : '4'}rem); padding-bottom: 5rem">
 		{#if loading}
 			<div class="flex justify-center py-8">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"
@@ -479,7 +552,7 @@
 	</div>
 </div>
 
-<HamburgerMenu bind:open={menuOpen} user={data.user} />
+<HamburgerMenu bind:open={menuOpen} user={data.user} {installPrompt} />
 
 {#if addModalOpen}
 	<AddListModal
@@ -514,6 +587,10 @@
 		onLeave={() => leaveList(memberOptions!.id)}
 		onClose={() => memberOptions = null}
 	/>
+{/if}
+
+{#if showInstallModal}
+	<PwaInstallModal onClose={() => showInstallModal = false} deferredPrompt={installPrompt} />
 {/if}
 
 <!-- Push Notification Prompt -->

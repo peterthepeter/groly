@@ -132,5 +132,7 @@
   "push_prompt_title": "Benachrichtigungen aktivieren",
   "push_prompt_body": "Bleib informiert, wenn sich in deinen Listen etwas ändert.",
   "push_prompt_accept": "Aktivieren",
-  "push_prompt_decline": "Nicht jetzt"
+  "push_prompt_decline": "Nicht jetzt",
+  "install_banner_text": "Als App installieren für das beste Erlebnis.",
+  "pwa_install_subtitle": "Push-Mitteilungen und Offline-Nutzung funktionieren nur als installierte App."
 }

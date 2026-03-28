@@ -106,6 +106,8 @@ class TranslationProxy {
 	get push_prompt_body() { void _lang; return m.push_prompt_body(); }
 	get push_prompt_accept() { void _lang; return m.push_prompt_accept(); }
 	get push_prompt_decline() { void _lang; return m.push_prompt_decline(); }
+	get install_banner_text() { void _lang; return m.install_banner_text(); }
+	get pwa_install_subtitle() { void _lang; return m.pwa_install_subtitle(); }
 	// sync
 	get sync_offline() { void _lang; return m.sync_offline(); }
 	get sync_syncing() { void _lang; return m.sync_syncing(); }

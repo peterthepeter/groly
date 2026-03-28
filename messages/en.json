@@ -132,5 +132,7 @@
   "push_prompt_title": "Enable notifications",
   "push_prompt_body": "Stay informed when something changes in your lists.",
   "push_prompt_accept": "Enable",
-  "push_prompt_decline": "Not now"
+  "push_prompt_decline": "Not now",
+  "install_banner_text": "Install as app for the best experience.",
+  "pwa_install_subtitle": "Push notifications and offline use only work when installed as an app."
 }
