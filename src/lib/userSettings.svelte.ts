@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
-import { type UserSettings, DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
+import { type UserSettings, type ListCategorySettings, DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
 import { DEFAULT_CATEGORY_ORDER } from '$lib/categories';
-export type { UserSettings } from '$lib/userSettingsTypes';
+export type { UserSettings, ListCategorySettings } from '$lib/userSettingsTypes';
 export { DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
 import type { AvailableLanguageTag } from '$lib/paraglide/runtime';
 
@@ -68,6 +68,7 @@ const initial = merge(cache);
 let _lang = $state(initial.lang);
 let _categorySortEnabled = $state(initial.categorySortEnabled);
 let _categoryOrder = $state<string[]>(initial.categoryOrder);
+let _listCategorySettings = $state<Record<string, ListCategorySettings>>(cache.listCategorySettings ?? {});
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -77,7 +78,8 @@ function scheduleSave() {
 		const settings: UserSettings = {
 			lang: _lang,
 			categorySortEnabled: _categorySortEnabled,
-			categoryOrder: _categoryOrder
+			categoryOrder: _categoryOrder,
+			listCategorySettings: _listCategorySettings
 		};
 		saveCache(settings);
 		try {
@@ -111,6 +113,37 @@ export const userSettings = {
 		[arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
 		_categoryOrder = arr;
 		scheduleSave();
+	},
+
+	// Per-list category settings
+	getListCategorySettings(listId: string): ListCategorySettings | null {
+		return _listCategorySettings[listId] ?? null;
+	},
+	setListCategorySettings(listId: string, settings: ListCategorySettings) {
+		_listCategorySettings = { ..._listCategorySettings, [listId]: settings };
+		scheduleSave();
+	},
+	clearListCategorySettings(listId: string) {
+		const next = { ..._listCategorySettings };
+		delete next[listId];
+		_listCategorySettings = next;
+		scheduleSave();
+	},
+	moveListCategoryUp(listId: string, index: number) {
+		const s = _listCategorySettings[listId];
+		if (!s || index <= 0) return;
+		const arr = [...s.order];
+		[arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+		_listCategorySettings = { ..._listCategorySettings, [listId]: { ...s, order: arr } };
+		scheduleSave();
+	},
+	moveListCategoryDown(listId: string, index: number) {
+		const s = _listCategorySettings[listId];
+		if (!s || index >= s.order.length - 1) return;
+		const arr = [...s.order];
+		[arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
+		_listCategorySettings = { ..._listCategorySettings, [listId]: { ...s, order: arr } };
+		scheduleSave();
 	}
 };
 
@@ -124,6 +157,7 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_lang = merged.lang;
 		_categorySortEnabled = merged.categorySortEnabled;
 		_categoryOrder = merged.categoryOrder;
+		_listCategorySettings = settings.listCategorySettings ?? {};
 		saveCache(settings);
 		return settings;
 	} catch { return null; }

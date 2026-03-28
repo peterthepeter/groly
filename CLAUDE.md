@@ -66,6 +66,18 @@ Required env vars at runtime:
 - `ADMIN_USERNAME` / `ADMIN_PASSWORD` — only needed on first run
 - `ORIGIN` — for HTTPS cookie validation in production
 
+## Release checklist (vor jedem Push/Release)
+
+**PFLICHT vor jedem `git push`:** Claude muss den User fragen:
+1. „Welche Versionsnummer soll die neue Version bekommen?" (SemVer, z.B. `1.2.0`)
+2. „Was soll im Changelog stehen?" (de + en, als Stichpunkte)
+
+Danach diese zwei Dateien aktualisieren:
+- **`src/lib/changelog.ts`** — neuen Eintrag oben einfügen (de + en)
+- **`package.json`** — `"version"` auf die neue Versionsnummer setzen
+
+Erst dann darf gepusht werden.
+
 ## UI conventions
 
 - **Mobile-first**: Bottom navigation, touch-optimized components.

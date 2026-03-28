@@ -34,8 +34,10 @@
 	const listId = $derived($page.params.id);
 	const openItems = $derived.by(() => {
 		const unchecked = items.filter(i => !i.isChecked);
-		if (!userSettings.categorySortEnabled) return unchecked;
-		const order = userSettings.categoryOrder;
+		const listSettings = listId ? userSettings.getListCategorySettings(listId) : null;
+		const sortEnabled = listSettings !== null ? listSettings.enabled : userSettings.categorySortEnabled;
+		if (!sortEnabled) return unchecked;
+		const order = listSettings !== null ? listSettings.order : userSettings.categoryOrder;
 		return [...unchecked].sort((a, b) => {
 			const ai = order.indexOf(getCategoryKey(a.name, a.categoryOverride));
 			const bi = order.indexOf(getCategoryKey(b.name, b.categoryOverride));

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import IconPicker from '$lib/components/IconPicker.svelte';
+	import { userSettings } from '$lib/userSettings.svelte';
+	import { CATEGORY_LABELS, DEFAULT_CATEGORY_ORDER } from '$lib/categories';
 
 	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0 }: {
 		list?: { id: string; name: string; description: string | null; iconId?: string | null } | null;
@@ -21,6 +23,27 @@
 	let notificationsEnabled = $state(true);
 	let notifLoading = $state(false);
 	let shareAfterCreate = $state(false);
+	let categorySortOpen = $state(false);
+
+	const listCatSettings = $derived(list?.id ? userSettings.getListCategorySettings(list.id) : null);
+
+	function enableCustomSort() {
+		if (!list?.id) return;
+		userSettings.setListCategorySettings(list.id, {
+			enabled: userSettings.categorySortEnabled,
+			order: [...userSettings.categoryOrder]
+		});
+	}
+
+	function resetToGlobal() {
+		if (!list?.id) return;
+		userSettings.clearListCategorySettings(list.id);
+	}
+
+	function toggleListSortEnabled() {
+		if (!list?.id || !listCatSettings) return;
+		userSettings.setListCategorySettings(list.id, { ...listCatSettings, enabled: !listCatSettings.enabled });
+	}
 
 	// Notification-Präferenz laden wenn Liste besteht und geteilt ist
 	$effect(() => {
@@ -147,6 +170,133 @@
 					{notificationsEnabled ? 'An' : 'Aus'}
 				</span>
 			</button>
+		{/if}
+
+		<!-- Kategorie-Sortierung (nur beim Bearbeiten) -->
+		{#if list}
+			<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+				<!-- Header / Toggle -->
+				<button
+					type="button"
+					onclick={() => categorySortOpen = !categorySortOpen}
+					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
+					style="height: 52px"
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+					     stroke="var(--color-primary)"
+					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="8" y1="6" x2="21" y2="6"/>
+						<line x1="8" y1="12" x2="21" y2="12"/>
+						<line x1="8" y1="18" x2="21" y2="18"/>
+						<line x1="3" y1="6" x2="3.01" y2="6"/>
+						<line x1="3" y1="12" x2="3.01" y2="12"/>
+						<line x1="3" y1="18" x2="3.01" y2="18"/>
+					</svg>
+					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
+						{currentLang() === 'en' ? 'Category sorting' : 'Kategorien sortieren'}
+					</span>
+					<span class="text-xs font-medium mr-1" style="color: {listCatSettings ? 'var(--color-primary)' : 'var(--color-outline)'}">
+						{listCatSettings
+							? (currentLang() === 'en' ? 'Custom' : 'Angepasst')
+							: (currentLang() === 'en' ? 'Automatic' : 'Automatisch')}
+					</span>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
+					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({categorySortOpen ? 180 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+						<polyline points="6 9 12 15 18 9"/>
+					</svg>
+				</button>
+
+				{#if categorySortOpen}
+					<div class="px-4 pb-4">
+						{#if !listCatSettings}
+							<!-- Auto mode -->
+							<p class="text-xs mb-3" style="color: var(--color-on-surface-variant)">
+								{currentLang() === 'en'
+									? 'Uses the global setting from preferences.'
+									: 'Verwendet die globale Einstellung aus den Einstellungen.'}
+							</p>
+							<button
+								type="button"
+								onclick={enableCustomSort}
+								class="w-full py-2.5 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity"
+								style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+							>
+								{currentLang() === 'en' ? 'Customise for this list' : 'Für diese Liste anpassen'}
+							</button>
+						{:else}
+							<!-- Custom mode: enabled toggle -->
+							<button
+								type="button"
+								onclick={toggleListSortEnabled}
+								class="w-full flex items-center gap-3 mb-3 active:opacity-70 transition-opacity"
+							>
+								<span class="flex-1 text-xs text-left" style="color: var(--color-on-surface-variant)">
+									{currentLang() === 'en' ? 'Sort by category' : 'Nach Kategorie sortieren'}
+								</span>
+								<div class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
+								     style="background-color: {listCatSettings.enabled ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
+									<div class="absolute top-0.5 w-5 h-5 rounded-full transition-transform shadow-sm"
+									     style="background-color: white; left: {listCatSettings.enabled ? '1.25rem' : '0.125rem'}"></div>
+								</div>
+							</button>
+
+							{#if listCatSettings.enabled}
+								<p class="text-xs mb-2" style="color: var(--color-on-surface-variant)">
+									{currentLang() === 'en'
+										? 'First category appears at the bottom of the grid.'
+										: 'Erste Kategorie erscheint unten im Raster.'}
+								</p>
+								<!-- Scrollable category list -->
+								<div class="space-y-1 mb-3 overflow-y-auto" style="max-height: 220px">
+									{#each listCatSettings.order as key, i}
+										<div class="flex items-center gap-2 rounded-xl px-3 py-2"
+										     style="background-color: var(--color-surface-low)">
+											<span class="flex-1 text-xs font-medium" style="color: var(--color-on-surface)">
+												{i + 1}. {CATEGORY_LABELS[key]?.[currentLang()] ?? key}
+											</span>
+											<button
+												type="button"
+												onclick={() => list && userSettings.moveListCategoryUp(list.id, i)}
+												disabled={i === 0}
+												aria-label="Nach oben"
+												class="p-1 rounded-lg disabled:opacity-20"
+												style="color: var(--color-on-surface-variant)"
+											>
+												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+													<polyline points="18 15 12 9 6 15"/>
+												</svg>
+											</button>
+											<button
+												type="button"
+												onclick={() => list && userSettings.moveListCategoryDown(list.id, i)}
+												disabled={i === listCatSettings.order.length - 1}
+												aria-label="Nach unten"
+												class="p-1 rounded-lg disabled:opacity-20"
+												style="color: var(--color-on-surface-variant)"
+											>
+												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+													<polyline points="6 9 12 15 18 9"/>
+												</svg>
+											</button>
+										</div>
+									{/each}
+								</div>
+							{/if}
+
+							<!-- Reset to global -->
+							<button
+								type="button"
+								onclick={resetToGlobal}
+								class="w-full py-2 rounded-xl text-xs font-medium active:opacity-70 transition-opacity"
+								style="background-color: color-mix(in srgb, var(--color-outline) 12%, transparent); color: var(--color-on-surface-variant)"
+							>
+								{currentLang() === 'en' ? 'Reset to global setting' : 'Auf globale Einstellung zurücksetzen'}
+							</button>
+						{/if}
+					</div>
+				{/if}
+			</div>
 		{/if}
 
 		<!-- Icon Picker -->
