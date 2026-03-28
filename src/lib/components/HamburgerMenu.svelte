@@ -4,6 +4,8 @@
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import InfoModal from '$lib/components/InfoModal.svelte';
 	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
+	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import { CHANGELOG } from '$lib/changelog';
 
 	let { open = $bindable(false), user, installPrompt = null }: {
 		open: boolean;
@@ -13,6 +15,7 @@
 
 	let infoOpen = $state(false);
 	let pwaOpen = $state(false);
+	let changelogOpen = $state(false);
 
 	function close() { open = false; }
 
@@ -153,6 +156,16 @@
 		</button>
 
 		<button
+			onclick={() => { close(); changelogOpen = true; }}
+			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+		>
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+			</svg>
+			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? "What's new" : 'Was ist neu'}</span>
+		</button>
+
+		<button
 			onclick={logout}
 			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
 		>
@@ -175,4 +188,12 @@
 
 {#if pwaOpen}
 	<PwaInstallModal onClose={() => pwaOpen = false} deferredPrompt={installPrompt} />
+{/if}
+
+{#if changelogOpen}
+	<ChangelogModal
+		entries={CHANGELOG.slice(0, 3)}
+		lang={currentLang()}
+		onClose={() => changelogOpen = false}
+	/>
 {/if}
