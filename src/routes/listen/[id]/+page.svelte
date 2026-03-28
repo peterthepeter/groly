@@ -285,7 +285,7 @@
 					<p class="text-sm" style="color: var(--color-on-surface-variant)">Keine Ergebnisse</p>
 				</div>
 			{:else if displayItems.length > 0}
-				<div class="grid grid-cols-3 gap-3 mt-3" style={userSettings.categorySortEnabled ? 'direction: rtl' : ''}>
+				<div class="grid grid-cols-3 gap-2 mt-3" style={userSettings.categorySortEnabled ? 'direction: rtl' : ''}>
 					{#if userSettings.categorySortEnabled}
 						{#each { length: gridPrefix } as _}
 							<div class="aspect-square"></div>

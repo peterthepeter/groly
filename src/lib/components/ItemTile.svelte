@@ -63,9 +63,9 @@
 
 		<!-- Name + Menge — feste Höhe, Name immer auf gleicher Y-Position -->
 		<div class="absolute bottom-0 left-0 right-0 px-2.5 pb-2 flex flex-col items-center justify-end h-[3.6rem] max-[374px]:h-[2.6rem]">
-			<span class="block text-xs font-bold leading-snug line-clamp-2 text-center w-full"
+			<span class="text-xs font-bold leading-snug line-clamp-2 max-[374px]:line-clamp-1 text-center w-full"
 			      style="color: var(--color-on-surface)">{item.name}</span>
-			<span class="block text-[10px] leading-tight text-center mt-0.5 truncate w-full"
+			<span class="text-[10px] leading-tight text-center mt-0.5 truncate w-full"
 			      style="color: {category.color}; visibility: {item.quantityInfo ? 'visible' : 'hidden'}">
 				{item.quantityInfo || '\u00a0'}
 			</span>
