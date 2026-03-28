@@ -3,11 +3,13 @@
 	import { onMount } from 'svelte';
 	import { initLanguage } from '$lib/i18n.svelte';
 	import { dispatch } from '$lib/sseStore.svelte';
+	import { initUpdateDetection } from '$lib/stores/pwa.svelte';
 
 	let { data, children } = $props();
 
 	onMount(() => {
 		initLanguage();
+		initUpdateDetection();
 
 		// Re-register push subscription once per day (fire-and-forget, kein await nötig)
 		void (async () => {

@@ -134,5 +134,6 @@
   "push_prompt_accept": "Enable",
   "push_prompt_decline": "Not now",
   "install_banner_text": "Install as app for the best experience.",
-  "pwa_install_subtitle": "Push notifications and offline use only work when installed as an app."
+  "pwa_install_subtitle": "Push notifications and offline use only work when installed as an app.",
+  "pwa_update_available": "Update available – reload"
 }

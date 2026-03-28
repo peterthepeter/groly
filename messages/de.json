@@ -134,5 +134,6 @@
   "push_prompt_accept": "Aktivieren",
   "push_prompt_decline": "Nicht jetzt",
   "install_banner_text": "Als App installieren für das beste Erlebnis.",
-  "pwa_install_subtitle": "Push-Mitteilungen und Offline-Nutzung funktionieren nur als installierte App."
+  "pwa_install_subtitle": "Push-Mitteilungen und Offline-Nutzung funktionieren nur als installierte App.",
+  "pwa_update_available": "Update verfügbar – neu laden"
 }

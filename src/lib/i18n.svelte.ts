@@ -178,6 +178,7 @@ class TranslationProxy {
 	get recipe_ingredient_placeholder() { void _lang; return m.recipe_ingredient_placeholder(); }
 	get recipe_username_placeholder() { void _lang; return m.recipe_username_placeholder(); }
 	get recipe_share_error_self() { void _lang; return m.recipe_share_error_self(); }
+	get pwa_update_available() { void _lang; return m.pwa_update_available(); }
 }
 
 export const t = new TranslationProxy();

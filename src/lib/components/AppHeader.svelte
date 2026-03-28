@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { networkStore } from '$lib/stores/online.svelte';
 	import { t, sync_pending } from '$lib/i18n.svelte';
+	import { pwaStore, applyUpdate } from '$lib/stores/pwa.svelte';
 
 	import type { Snippet } from 'svelte';
 
@@ -65,6 +66,22 @@
 					</svg>
 				</button>
 			{/if}
+			{#if pwaStore.updateAvailable}
+				<button
+					onclick={applyUpdate}
+					class="update-btn flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg active:opacity-60 transition-opacity"
+					aria-label={t.pwa_update_available}
+					title={t.pwa_update_available}
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+					     stroke="var(--color-primary)" stroke-width="2.5"
+					     stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="10"/>
+						<polyline points="16 12 12 8 8 12"/>
+						<line x1="12" y1="16" x2="12" y2="8"/>
+					</svg>
+				</button>
+			{/if}
 			<div class="text-right">
 				<div class="text-sm font-semibold truncate max-w-28" style="color: var(--color-on-surface)">{title}</div>
 				{#if subtitle}
@@ -74,3 +91,13 @@
 		</div>
 	</div>
 </header>
+
+<style>
+	@keyframes update-pulse {
+		0%, 100% { opacity: 1; transform: scale(1); }
+		50% { opacity: 0.65; transform: scale(0.9); }
+	}
+	.update-btn {
+		animation: update-pulse 2.2s ease-in-out infinite;
+	}
+</style>
