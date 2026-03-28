@@ -1,10 +1,14 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { initLanguage } from '$lib/i18n.svelte';
+	import { initLanguage, currentLang } from '$lib/i18n.svelte';
 	import { dispatch } from '$lib/sseStore.svelte';
 	import { initUpdateDetection, checkForUpdate } from '$lib/stores/pwa.svelte';
 	import { afterNavigate } from '$app/navigation';
+	import WhatsNewModal from '$lib/components/WhatsNewModal.svelte';
+	import { LATEST_CHANGES } from '$lib/changelog';
+
+	let whatsNewOpen = $state(false);
 
 	let { data, children } = $props();
 
@@ -13,6 +17,13 @@
 	onMount(() => {
 		initLanguage();
 		initUpdateDetection();
+
+		// "Was ist neu" nach Update anzeigen
+		const lastVersion = localStorage.getItem('groly_last_version');
+		if (lastVersion && lastVersion !== LATEST_CHANGES.version) {
+			whatsNewOpen = true;
+		}
+		localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
 
 		// Re-register push subscription once per day (fire-and-forget, kein await nötig)
 		void (async () => {
@@ -89,3 +100,11 @@
 <div class="max-w-[430px] mx-auto relative">
 	{@render children()}
 </div>
+
+{#if whatsNewOpen}
+	<WhatsNewModal
+		version={LATEST_CHANGES.version}
+		items={currentLang() === 'en' ? LATEST_CHANGES.en : LATEST_CHANGES.de}
+		onClose={() => { whatsNewOpen = false; }}
+	/>
+{/if}

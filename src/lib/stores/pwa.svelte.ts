@@ -42,6 +42,10 @@ export async function applyUpdate() {
 
 	const reg = await navigator.serviceWorker.ready;
 	if (reg.waiting) {
+		// Aktuelle Version speichern, damit nach dem Reload "Was ist neu" angezeigt werden kann
+		const { LATEST_CHANGES } = await import('$lib/changelog');
+		localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
+
 		navigator.serviceWorker.addEventListener('controllerchange', () => {
 			window.location.reload();
 		}, { once: true });

@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { t, currentLang } from '$lib/i18n.svelte';
+	import { t } from '$lib/i18n.svelte';
 	import { applyUpdate } from '$lib/stores/pwa.svelte';
-	import { LATEST_CHANGES } from '$lib/changelog';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -41,21 +40,6 @@
 			<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{t.pwa_update_title}</h2>
 			<p class="text-xs mt-1 leading-relaxed" style="color: var(--color-on-surface-variant)">{t.pwa_update_body}</p>
 		</div>
-	</div>
-
-	<!-- Changelog -->
-	<div class="px-6 mb-5">
-		<p class="text-xs font-semibold uppercase tracking-wide mb-2" style="color: var(--color-on-surface-variant)">
-			{currentLang() === 'en' ? "What's new" : 'Was ist neu'} · v{LATEST_CHANGES.version}
-		</p>
-		<ul class="space-y-1.5">
-			{#each (currentLang() === 'en' ? LATEST_CHANGES.en : LATEST_CHANGES.de) as item}
-				<li class="flex items-start gap-2 text-sm" style="color: var(--color-on-surface)">
-					<span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: var(--color-primary)"></span>
-					{item}
-				</li>
-			{/each}
-		</ul>
 	</div>
 
 	<!-- Buttons -->
