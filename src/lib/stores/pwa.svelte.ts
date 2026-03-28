@@ -25,6 +25,18 @@ export function initUpdateDetection() {
 	}).catch(() => { /* SW not available in dev */ });
 }
 
+let _lastUpdateCheck = 0;
+
+// Call this on each SvelteKit navigation to trigger a SW update check.
+// Throttled to at most once per minute to avoid unnecessary network requests.
+export function checkForUpdate() {
+	if (!('serviceWorker' in navigator)) return;
+	const now = Date.now();
+	if (now - _lastUpdateCheck < 60_000) return;
+	_lastUpdateCheck = now;
+	navigator.serviceWorker.ready.then((reg) => reg.update()).catch(() => {});
+}
+
 export async function applyUpdate() {
 	if (!('serviceWorker' in navigator)) return;
 

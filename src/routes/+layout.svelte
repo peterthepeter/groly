@@ -3,9 +3,12 @@
 	import { onMount } from 'svelte';
 	import { initLanguage } from '$lib/i18n.svelte';
 	import { dispatch } from '$lib/sseStore.svelte';
-	import { initUpdateDetection } from '$lib/stores/pwa.svelte';
+	import { initUpdateDetection, checkForUpdate } from '$lib/stores/pwa.svelte';
+	import { afterNavigate } from '$app/navigation';
 
 	let { data, children } = $props();
+
+	afterNavigate(() => checkForUpdate());
 
 	onMount(() => {
 		initLanguage();
