@@ -51,6 +51,7 @@ Add the container via the Unraid Docker UI or Community Applications:
 - **Port:** `3000` (WebUI)
 - **Path:** `/app/data` → e.g. `/mnt/user/appdata/groly`
 - **Variables:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ORIGIN`, `NODE_ENV=production`
+- **Push notifications (optional):** additionally set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_SUBJECT` — see [Push Notifications](#push-notifications-optional) below
 
 The volume `/app/data` contains the SQLite database. An admin user is created on first start and is prompted to change the password on first login.
 
