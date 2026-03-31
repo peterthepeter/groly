@@ -1,6 +1,6 @@
 # Groly
 
-Mobile-first PWA grocery list app for self-hosting. Designed for small teams and families, runs as a Docker container on a home server.
+Mobile-first PWA grocery list app for self-hosting. Designed for small teams and families, runs as a Docker container on a home server. Ready for **Unraid** and any other Docker-based home server setup.
 
 ## Features
 
@@ -19,18 +19,38 @@ Mobile-first PWA grocery list app for self-hosting. Designed for small teams and
 
 ## Docker Deployment
 
-```yaml
-image: ghcr.io/peterthepeter/groly:latest
-ports:
-  - "3000:3000"
-volumes:
-  - /mnt/user/appdata/groly:/app/data
-environment:
-  - ADMIN_USERNAME=your-username
-  - ADMIN_PASSWORD=secure-password
-  - ORIGIN=https://your-domain.com
-  - NODE_ENV=production
+The image is published to GitHub Container Registry and can be pulled directly:
+
 ```
+ghcr.io/peterthepeter/groly:latest
+```
+
+### Docker Compose
+
+```yaml
+services:
+  groly:
+    image: ghcr.io/peterthepeter/groly:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - /mnt/user/appdata/groly:/app/data
+    environment:
+      - ADMIN_USERNAME=your-username
+      - ADMIN_PASSWORD=secure-password
+      - ORIGIN=https://your-domain.com
+      - NODE_ENV=production
+    restart: unless-stopped
+```
+
+### Unraid
+
+Add the container via the Unraid Docker UI or Community Applications:
+
+- **Repository:** `ghcr.io/peterthepeter/groly:latest`
+- **Port:** `3000` (WebUI)
+- **Path:** `/app/data` → e.g. `/mnt/user/appdata/groly`
+- **Variables:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ORIGIN`, `NODE_ENV=production`
 
 The volume `/app/data` contains the SQLite database. An admin user is created on first start and is prompted to change the password on first login.
 
