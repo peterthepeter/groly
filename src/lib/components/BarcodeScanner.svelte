@@ -6,7 +6,7 @@
 		onClose: () => void;
 	} = $props();
 
-	type ScanPhase = 'requesting' | 'scanning' | 'loading' | 'feedback' | 'not_found' | 'denied' | 'unsupported';
+	type ScanPhase = 'requesting' | 'scanning' | 'loading' | 'feedback' | 'not_found' | 'denied' | 'error';
 
 	let phase = $state<ScanPhase>('requesting');
 	let feedbackText = $state('');
@@ -14,16 +14,32 @@
 	let stream = $state<MediaStream | null>(null);
 	let rafId = 0;
 
-	// Kamera-Setup
-	$effect(() => {
-		if (!('BarcodeDetector' in window)) {
-			phase = 'unsupported';
-			return;
-		}
+	// Detektor-Klasse (nativ oder Polyfill)
+	let DetectorClass = $state<typeof BarcodeDetector | null>(null);
 
+	// Kamera-Setup + Polyfill laden
+	$effect(() => {
 		let cancelled = false;
 
 		async function start() {
+			// Nativ verfügbar?
+			let Cls: typeof BarcodeDetector;
+			if ('BarcodeDetector' in window) {
+				Cls = BarcodeDetector;
+			} else {
+				// Polyfill für iOS < 17 und andere Browser
+				try {
+					const { BarcodeDetector: PolyDetector } = await import('barcode-detector/ponyfill');
+					Cls = PolyDetector as unknown as typeof BarcodeDetector;
+				} catch {
+					phase = 'error';
+					return;
+				}
+			}
+
+			if (cancelled) return;
+			DetectorClass = Cls;
+
 			try {
 				const mediaStream = await navigator.mediaDevices.getUserMedia({
 					video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
@@ -36,7 +52,7 @@
 				phase = 'scanning';
 			} catch (err) {
 				if (cancelled) return;
-				phase = (err as Error).name === 'NotAllowedError' ? 'denied' : 'unsupported';
+				phase = (err as Error).name === 'NotAllowedError' ? 'denied' : 'error';
 			}
 		}
 
@@ -55,12 +71,12 @@
 		videoEl.play().catch(() => {});
 	});
 
-	// Scan-Loop (nur wenn phase === 'scanning')
+	// Scan-Loop (nur wenn phase === 'scanning' und Detector geladen)
 	$effect(() => {
-		if (phase !== 'scanning' || !videoEl) return;
+		if (phase !== 'scanning' || !videoEl || !DetectorClass) return;
 
-		const detector = new BarcodeDetector({
-			formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e']
+		const detector = new DetectorClass({
+			formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39']
 		});
 
 		let running = true;
@@ -125,11 +141,11 @@
 	}
 </script>
 
-<!-- Full-screen Overlay -->
-<div class="fixed inset-0 z-[70] bg-black overflow-hidden">
+<!-- Full-screen Overlay — deckt auch Tastatur ab -->
+<div class="fixed inset-0 z-[70] bg-black overflow-hidden" style="height: 100dvh">
 
-	<!-- Kamera-Video (immer im Hintergrund, außer bei denied/unsupported) -->
-	{#if phase !== 'denied' && phase !== 'unsupported'}
+	<!-- Kamera-Video -->
+	{#if phase !== 'denied' && phase !== 'error'}
 		<!-- svelte-ignore a11y_media_has_caption -->
 		<video
 			bind:this={videoEl}
@@ -139,15 +155,15 @@
 		></video>
 	{/if}
 
-	<!-- Dunkler Overlay-Gradient für bessere Lesbarkeit der UI-Elemente -->
+	<!-- Gradient für bessere Lesbarkeit -->
 	<div class="absolute inset-0 pointer-events-none"
-	     style="background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 20%, transparent 70%, rgba(0,0,0,0.6) 100%)">
+	     style="background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 20%, transparent 65%, rgba(0,0,0,0.65) 100%)">
 	</div>
 
 	<!-- Schließen-Button oben rechts -->
 	<button
 		onclick={handleClose}
-		class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
+		class="absolute top-12 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
 		style="background-color: rgba(0,0,0,0.4); color: white"
 		aria-label="Schließen"
 	>
@@ -157,28 +173,26 @@
 		</svg>
 	</button>
 
-	<!-- Retikel (nur im Scan-Modus) -->
+	<!-- Retikel -->
 	{#if phase === 'scanning' || phase === 'loading' || phase === 'feedback' || phase === 'not_found'}
 		<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
 			<div class="relative" style="width: 76%; aspect-ratio: 2 / 1">
-				<!-- Ecken des Retikel-Rahmens -->
 				<div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-white rounded-tl-md"></div>
 				<div class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-white rounded-tr-md"></div>
 				<div class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-white rounded-bl-md"></div>
 				<div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-white rounded-br-md"></div>
-				<!-- Scan-Linie Animation -->
 				{#if phase === 'scanning'}
-					<div class="scan-line absolute left-2 right-2 h-px opacity-70" style="background: linear-gradient(to right, transparent, white, transparent)"></div>
+					<div class="scan-line absolute left-2 right-2 h-px opacity-70"
+					     style="background: linear-gradient(to right, transparent, white, transparent)"></div>
 				{/if}
 			</div>
 		</div>
 	{/if}
 
-	<!-- Status-Anzeige unten -->
-	<div class="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-12 px-6 gap-3">
+	<!-- Status unten -->
+	<div class="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-16 px-6 gap-3">
 
 		{#if phase === 'requesting'}
-			<!-- Spinner -->
 			<div class="w-8 h-8 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
 
 		{:else if phase === 'scanning'}
@@ -208,7 +222,6 @@
 			</div>
 
 		{:else if phase === 'denied'}
-			<!-- Fehler-Card mittig -->
 			<div class="absolute inset-0 flex items-center justify-center p-6">
 				<div class="w-full max-w-xs rounded-3xl p-6 text-center space-y-4"
 				     style="background-color: var(--color-surface-low)">
@@ -219,21 +232,15 @@
 							<line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
 						</svg>
 					</div>
-					<div>
-						<p class="font-semibold text-sm mb-1" style="color: var(--color-on-surface)">{t.barcode_camera_denied}</p>
-					</div>
-					<button
-						onclick={handleClose}
-						class="w-full h-11 rounded-full text-sm font-semibold"
-						style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-					>
+					<p class="text-sm" style="color: var(--color-on-surface)">{t.barcode_camera_denied}</p>
+					<button onclick={handleClose} class="w-full h-11 rounded-full text-sm font-semibold"
+					        style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)">
 						{t.close}
 					</button>
 				</div>
 			</div>
 
-		{:else if phase === 'unsupported'}
-			<!-- Info-Card mittig -->
+		{:else if phase === 'error'}
 			<div class="absolute inset-0 flex items-center justify-center p-6">
 				<div class="w-full max-w-xs rounded-3xl p-6 text-center space-y-4"
 				     style="background-color: var(--color-surface-low)">
@@ -244,14 +251,9 @@
 							<line x1="2" y1="20" x2="22" y2="20"/>
 						</svg>
 					</div>
-					<div>
-						<p class="font-semibold text-sm mb-1" style="color: var(--color-on-surface)">{t.barcode_unsupported}</p>
-					</div>
-					<button
-						onclick={handleClose}
-						class="w-full h-11 rounded-full text-sm font-semibold"
-						style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-					>
+					<p class="text-sm" style="color: var(--color-on-surface)">{t.barcode_unsupported}</p>
+					<button onclick={handleClose} class="w-full h-11 rounded-full text-sm font-semibold"
+					        style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)">
 						{t.close}
 					</button>
 				</div>

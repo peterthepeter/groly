@@ -161,7 +161,7 @@
 		<button
 			type="button"
 			onpointerdown={(e) => e.preventDefault()}
-			onclick={() => scannerOpen = true}
+			onclick={() => { (document.activeElement as HTMLElement)?.blur(); scannerOpen = true; }}
 			class="w-full h-11 rounded-full flex items-center justify-center gap-2 text-sm font-medium mb-2"
 			style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
 			aria-label={t.barcode_scan}
