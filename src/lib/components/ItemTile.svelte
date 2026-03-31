@@ -93,7 +93,7 @@
 		onpointercancel={endPress}
 		oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
 		class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
-		style="background-color: var(--color-surface-card)"
+		style="background-color: var(--color-surface-card); touch-action: pan-y;"
 	>
 		<!-- Creator — top right -->
 		<span class="absolute top-2.5 right-2.5 text-[10px] font-semibold leading-none"
