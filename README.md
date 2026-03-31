@@ -6,10 +6,10 @@ Mobile-first PWA grocery list app for self-hosting. Designed for small teams and
 
 - **Shared lists** – Share lists with other users; changes sync in real time via Server-Sent Events.
 - **Offline-first** – Add, check off, edit, and delete items without internet. Changes sync automatically when back online.
-- **Barcode scan** – Scan product barcodes with your camera to add items directly to your list (iOS and Android).
+- **Barcode scan** – Scan product barcodes with your camera to add items directly to your list (iOS and Android). Product names are looked up via the [Open Food Facts](https://world.openfoodfacts.org/) database — an open, community-maintained food product database. No API key required.
 - **Push notifications** – Get notified when someone adds an item to a shared list, and when a new app version is available. Works on iOS (16.4+) and Android.
 - **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list. Import recipes from popular recipe websites by URL.
-- **Category sorting** – Items are auto-categorized and displayed in a custom order matching your supermarket layout. Configurable globally and per list.
+- **Category sorting** – Items are automatically assigned a category based on keyword matching (e.g. "milk" → Dairy, "apple" → Fruit & Vegetables). The display order of categories can be customized in Settings to match your supermarket layout — globally or individually per list. Users can also override the category of any single item.
 - **Swipe to peek** – Swipe left or right on any item tile whose name is truncated to reveal the full name in an overlay, without accidentally checking it off.
 - **In-app changelog** – A "What's New" modal appears after each update and is always accessible from the menu.
 - **Multi-user** – Admin creates users, resets passwords, and manages sharing invitations.
