@@ -18,12 +18,14 @@
 		initLanguage();
 		initUpdateDetection();
 
-		// "Was ist neu" nach Update anzeigen
-		const lastVersion = localStorage.getItem('groly_last_version');
-		if (lastVersion && lastVersion !== LATEST_CHANGES.version) {
-			whatsNewOpen = true;
+		// "Was ist neu" nach Update anzeigen – nur wenn eingeloggt
+		if (data.user) {
+			const lastVersion = localStorage.getItem('groly_last_version');
+			if (lastVersion && lastVersion !== LATEST_CHANGES.version) {
+				whatsNewOpen = true;
+			}
+			localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
 		}
-		localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
 
 		// Re-register push subscription once per day (fire-and-forget, kein await nötig)
 		void (async () => {
