@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getCategoryForItem } from '$lib/categories';
+	import { onMount } from 'svelte';
 
 	let { item, onTap, onLongPress, createdByUsername = null, currentUsername = null }: {
 		item: { id: string; name: string; quantityInfo: string | null; categoryOverride?: string | null };
@@ -23,15 +24,61 @@
 
 	const category = $derived(getCategoryForItem(item.name, item.categoryOverride));
 
-	function startPress() {
+	// Truncation detection
+	let nameEl: HTMLElement | null = null;
+	let isTruncated = $state(false);
+
+	// Swipe gesture state
+	let startX = 0;
+	let startY = 0;
+	let swipeConsumed = false;
+
+	// Overlay
+	let showOverlay = $state(false);
+
+	onMount(() => {
+		checkTruncation();
+	});
+
+	$effect(() => {
+		// Re-check if item name changes
+		item.name;
+		checkTruncation();
+	});
+
+	function checkTruncation() {
+		if (nameEl) {
+			isTruncated = nameEl.scrollHeight > nameEl.clientHeight || nameEl.scrollWidth > nameEl.clientWidth;
+		}
+	}
+
+	function startPress(e: PointerEvent) {
 		longFired = false;
+		swipeConsumed = false;
+		startX = e.clientX;
+		startY = e.clientY;
 		pressTimer = setTimeout(() => { longFired = true; onLongPress(); }, 500);
 	}
+
+	function handleMove(e: PointerEvent) {
+		if (swipeConsumed || !isTruncated) return;
+		const dx = e.clientX - startX;
+		const dy = e.clientY - startY;
+		// Only horizontal swipe: |dx| dominates and crosses threshold
+		if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 18) {
+			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+			swipeConsumed = true;
+			showOverlay = true;
+		}
+	}
+
 	function endPress() {
 		if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 	}
+
 	function handleClick() {
 		if (longFired) { longFired = false; return; }
+		if (swipeConsumed) { swipeConsumed = false; return; }
 		onTap();
 	}
 </script>
@@ -40,6 +87,7 @@
 	<button
 		onclick={handleClick}
 		onpointerdown={startPress}
+		onpointermove={handleMove}
 		onpointerup={endPress}
 		onpointercancel={endPress}
 		oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
@@ -63,7 +111,8 @@
 
 		<!-- Name + Menge — feste Höhe, Name immer auf gleicher Y-Position -->
 		<div class="absolute bottom-0 left-0 right-0 px-2.5 pb-2 flex flex-col items-center justify-end h-[3.6rem] max-[374px]:h-[2.6rem]">
-			<span class="text-xs font-bold leading-snug line-clamp-2 max-[374px]:line-clamp-1 text-center w-full"
+			<span bind:this={nameEl}
+			      class="text-xs font-bold leading-snug line-clamp-2 max-[374px]:line-clamp-1 text-center w-full"
 			      style="color: var(--color-on-surface)">{item.name}</span>
 			<span class="text-[10px] leading-tight text-center mt-0.5 truncate w-full"
 			      style="color: {category.color}; visibility: {item.quantityInfo ? 'visible' : 'hidden'}">
@@ -72,3 +121,23 @@
 		</div>
 	</button>
 </div>
+
+<!-- Full-name overlay – nur wenn Name abgeschnitten und Swipe ausgelöst -->
+{#if showOverlay}
+	<div
+		role="button"
+		tabindex="-1"
+		class="fixed inset-0 z-50 flex items-center justify-center"
+		onclick={() => showOverlay = false}
+		onkeydown={(e) => { if (e.key === 'Escape') showOverlay = false; }}
+	>
+		<div class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
+		<div class="relative rounded-2xl px-6 py-5 mx-6 text-center shadow-2xl"
+		     style="background-color: var(--color-surface-card); max-width: 80vw">
+			<p class="text-sm font-bold leading-snug" style="color: var(--color-on-surface)">{item.name}</p>
+			{#if item.quantityInfo}
+				<p class="text-xs mt-1.5 font-medium" style="color: {category.color}">{item.quantityInfo}</p>
+			{/if}
+		</div>
+	</div>
+{/if}
