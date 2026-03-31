@@ -57,6 +57,8 @@ The volume `/app/data` contains the SQLite database. An admin user is created on
 
 > **HTTPS required.** Session cookies, the service worker, and push notifications only work over HTTPS. Accessing via a local IP without HTTPS will not work in production mode.
 
+> **Reverse proxy recommended.** Run Groly behind a reverse proxy (e.g. Nginx Proxy Manager, Traefik, or Caddy) to handle HTTPS termination and domain routing. Optionally add an intrusion detection layer (e.g. CrowdSec) for additional protection.
+
 > **Architecture:** The Docker image is built for `linux/amd64` only.
 
 ### Environment Variables
