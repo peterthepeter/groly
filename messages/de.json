@@ -139,5 +139,10 @@
   "pwa_update_title": "Update verfügbar",
   "pwa_update_body": "Eine neue Version von Groly ist bereit. Tippe auf Neu laden, um sofort zu aktualisieren.",
   "pwa_update_reload": "Neu laden",
-  "pwa_update_later": "Später"
+  "pwa_update_later": "Später",
+  "barcode_scan": "Barcode scannen",
+  "barcode_not_found": "Produkt nicht gefunden",
+  "barcode_camera_denied": "Kamera-Zugriff verweigert. Bitte erlaube den Kamera-Zugriff in den Browser-Einstellungen.",
+  "barcode_added": "hinzugefügt",
+  "barcode_unsupported": "Barcode-Scan wird von diesem Browser nicht unterstützt."
 }

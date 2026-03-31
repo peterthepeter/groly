@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
+	import BarcodeScanner from './BarcodeScanner.svelte';
 
 	let { onAdd, onClose, suggestions = [] }: {
 		onAdd: (name: string, quantityInfo: string) => Promise<void>;
@@ -14,6 +15,7 @@
 	let nameInput: HTMLInputElement;
 	let showSuggestions = $state(false);
 	let bottomOffset = $state(0);
+	let scannerOpen = $state(false);
 
 	const isNumeric = $derived(/^\d+$/.test(quantityInfo.trim()) || quantityInfo.trim() === '');
 
@@ -73,6 +75,11 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter') handleAdd();
 		if (e.key === 'Escape') onClose();
+	}
+
+	function handleBarcodeFound(productName: string) {
+		void onAdd(productName, '');
+		// Scanner bleibt offen für weitere Scans
 	}
 </script>
 
@@ -150,6 +157,29 @@
 			</div>
 		</div>
 
+		<!-- Barcode scannen -->
+		<button
+			type="button"
+			onpointerdown={(e) => e.preventDefault()}
+			onclick={() => scannerOpen = true}
+			class="w-full h-11 rounded-full flex items-center justify-center gap-2 text-sm font-medium mb-2"
+			style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+			aria-label={t.barcode_scan}
+		>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M3 9V6a2 2 0 0 1 2-2h2"/>
+				<path d="M3 15v3a2 2 0 0 0 2 2h2"/>
+				<path d="M21 9V6a2 2 0 0 0-2-2h-2"/>
+				<path d="M21 15v3a2 2 0 0 1-2 2h-2"/>
+				<line x1="7" y1="12" x2="7" y2="12"/>
+				<line x1="10" y1="9" x2="10" y2="15"/>
+				<line x1="13" y1="9" x2="13" y2="15"/>
+				<line x1="16" y1="9" x2="16" y2="15"/>
+				<line x1="19" y1="12" x2="19" y2="12"/>
+			</svg>
+			{t.barcode_scan}
+		</button>
+
 		<!-- Schließen links, Hinzufügen rechts -->
 		<div class="flex gap-2">
 			<button
@@ -171,3 +201,10 @@
 		</div>
 	</div>
 </div>
+
+{#if scannerOpen}
+	<BarcodeScanner
+		onFound={handleBarcodeFound}
+		onClose={() => scannerOpen = false}
+	/>
+{/if}

@@ -120,6 +120,11 @@ export const recipeShares = sqliteTable('recipe_shares', {
 	createdAt: integer('created_at').notNull()
 });
 
+export const appMeta = sqliteTable('app_meta', {
+	key: text('key').primaryKey(),
+	value: text('value').notNull()
+});
+
 export type User = typeof users.$inferSelect;
 export type List = typeof lists.$inferSelect;
 export type Item = typeof items.$inferSelect;

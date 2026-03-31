@@ -92,6 +92,13 @@
       "when": 1774427553727,
       "tag": "0012_recipe_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1774944000000,
+      "tag": "0013_app_meta",
+      "breakpoints": true
     }
   ]
 }

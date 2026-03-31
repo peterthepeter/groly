@@ -183,6 +183,12 @@ class TranslationProxy {
 	get pwa_update_body() { void _lang; return m.pwa_update_body(); }
 	get pwa_update_reload() { void _lang; return m.pwa_update_reload(); }
 	get pwa_update_later() { void _lang; return m.pwa_update_later(); }
+	// barcode
+	get barcode_scan() { void _lang; return m.barcode_scan(); }
+	get barcode_not_found() { void _lang; return m.barcode_not_found(); }
+	get barcode_camera_denied() { void _lang; return m.barcode_camera_denied(); }
+	get barcode_added() { void _lang; return m.barcode_added(); }
+	get barcode_unsupported() { void _lang; return m.barcode_unsupported(); }
 }
 
 export const t = new TranslationProxy();

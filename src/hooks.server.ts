@@ -2,22 +2,44 @@ import { type Handle, json } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
-import { runMigrations } from '$lib/db';
+import { runMigrations, db } from '$lib/db';
+import { appMeta } from '$lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { LATEST_CHANGES } from '$lib/changelog';
+import { sendPushToAllSubscribers } from '$lib/server/pushNotifications';
 
 let initialized = false;
 
-function init() {
+async function init() {
 	if (initialized) return;
+	initialized = true;
 	runMigrations();
 	bootstrapAdmin();
-	initialized = true;
+	await notifyOnNewVersion();
+}
+
+async function notifyOnNewVersion() {
+	const currentVersion = LATEST_CHANGES.version;
+	const row = db.select().from(appMeta).where(eq(appMeta.key, 'last_push_version')).get();
+	if (row?.value === currentVersion) return;
+
+	const body = LATEST_CHANGES.de.join(' · ');
+	await sendPushToAllSubscribers({
+		title: `Groly ${currentVersion} ist da!`,
+		body: body.length > 120 ? body.slice(0, 117) + '…' : body
+	});
+
+	db.insert(appMeta)
+		.values({ key: 'last_push_version', value: currentVersion })
+		.onConflictDoUpdate({ target: appMeta.key, set: { value: currentVersion } })
+		.run();
 }
 
 const SECURITY_HEADERS: Record<string, string> = {
 	'X-Content-Type-Options': 'nosniff',
 	'X-Frame-Options': 'DENY',
 	'Referrer-Policy': 'strict-origin-when-cross-origin',
-	'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+	'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()'
 };
 
 const CSP = [
@@ -36,7 +58,7 @@ const CSP = [
 const ALLOWED_WHILE_MUST_CHANGE = ['/api/auth/logout', '/api/users/me', '/api/auth/me'];
 
 export const handle: Handle = async ({ event, resolve }) => {
-	init();
+	await init();
 
 	const sessionId = event.cookies.get('session');
 	const user = sessionId ? getSession(sessionId) : null;

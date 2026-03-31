@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.2.5',
+		de: [
+			'Barcode-Scan: Items per Kamera-Scan zur Einkaufsliste hinzufügen',
+			'Push-Benachrichtigung bei neuen App-Versionen',
+		],
+		en: [
+			'Barcode scan: add items to your shopping list by scanning barcodes',
+			'Push notification when a new app version is available',
+		]
+	},
+	{
 		version: '0.2.1',
 		de: [
 			'Changelog im Hamburger-Menü unter „Was ist neu" einsehbar',
