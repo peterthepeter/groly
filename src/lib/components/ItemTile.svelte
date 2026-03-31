@@ -57,6 +57,7 @@
 		swipeConsumed = false;
 		startX = e.clientX;
 		startY = e.clientY;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 		pressTimer = setTimeout(() => { longFired = true; onLongPress(); }, 500);
 	}
 
