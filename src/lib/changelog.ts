@@ -6,10 +6,12 @@ export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 		de: [
 			'Barcode-Scan: Items per Kamera-Scan zur Einkaufsliste hinzufügen',
 			'Push-Benachrichtigung bei neuen App-Versionen',
+			'Bedienungshinweis: Lange Item-Namen per Swipe als Pop-Up anzeigen',
 		],
 		en: [
 			'Barcode scan: add items to your shopping list by scanning barcodes',
 			'Push notification when a new app version is available',
+			'Usage hint: swipe long item names to show the full name in a popup',
 		]
 	},
 	{
