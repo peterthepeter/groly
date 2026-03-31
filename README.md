@@ -1,6 +1,6 @@
 # Groly
 
-Mobile-first PWA grocery list app for self-hosting. Designed for small teams and families (~10 users), runs as a Docker container on a home server.
+Mobile-first PWA grocery list app for self-hosting. Designed for small teams and families, runs as a Docker container on a home server.
 
 ## Features
 
@@ -8,7 +8,7 @@ Mobile-first PWA grocery list app for self-hosting. Designed for small teams and
 - **Offline-first** – Add, check off, edit, and delete items without internet. Changes sync automatically when back online.
 - **Barcode scan** – Scan product barcodes with your camera to add items directly to your list (iOS and Android).
 - **Push notifications** – Get notified when someone adds an item to a shared list, and when a new app version is available. Works on iOS (16.4+) and Android.
-- **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list.
+- **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list. Import recipes from popular recipe websites by URL.
 - **Category sorting** – Items are auto-categorized and displayed in a custom order matching your supermarket layout. Configurable globally and per list.
 - **Swipe to peek** – Swipe left or right on any item tile whose name is truncated to reveal the full name in an overlay, without accidentally checking it off.
 - **In-app changelog** – A "What's New" modal appears after each update and is always accessible from the menu.
