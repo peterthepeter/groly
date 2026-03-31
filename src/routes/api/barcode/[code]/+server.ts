@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	try {
 		const res = await fetch(
-			`https://world.openfoodfacts.org/api/v2/product/${code}?fields=product_name,product_name_de`,
+			`https://world.openfoodfacts.org/api/v2/product/${code}?fields=product_name,product_name_de,brands`,
 			{
 				headers: { 'User-Agent': 'Groly/0.2.1 (self-hosted grocery list app)' },
 				signal: AbortSignal.timeout(5000)
@@ -23,12 +23,20 @@ export const GET: RequestHandler = async ({ params }) => {
 
 		if (data.status !== 1 || !data.product) return json({ name: null });
 
-		const name: string | null =
+		const productName: string =
 			(data.product.product_name_de as string | undefined)?.trim() ||
 			(data.product.product_name as string | undefined)?.trim() ||
-			null;
+			'';
 
-		return json({ name: name || null });
+		if (!productName) return json({ name: null });
+
+		// Ersten Hersteller voranstellen, falls nicht schon im Produktnamen enthalten
+		const brand = (data.product.brands as string | undefined)?.split(',')[0]?.trim() || '';
+		const name = brand && !productName.toLowerCase().includes(brand.toLowerCase())
+			? `${brand} ${productName}`
+			: productName;
+
+		return json({ name });
 	} catch {
 		return json({ name: null });
 	}

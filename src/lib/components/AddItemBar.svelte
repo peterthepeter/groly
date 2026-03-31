@@ -205,6 +205,6 @@
 {#if scannerOpen}
 	<BarcodeScanner
 		onFound={handleBarcodeFound}
-		onClose={() => scannerOpen = false}
+		onClose={() => { scannerOpen = false; onClose(); }}
 	/>
 {/if}
