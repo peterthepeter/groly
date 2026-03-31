@@ -125,6 +125,12 @@ export const appMeta = sqliteTable('app_meta', {
 	value: text('value').notNull()
 });
 
+export const barcodeCache = sqliteTable('barcode_cache', {
+	barcode: text('barcode').primaryKey(),
+	name: text('name').notNull(),
+	lastSeenAt: integer('last_seen_at').notNull()
+});
+
 export type User = typeof users.$inferSelect;
 export type List = typeof lists.$inferSelect;
 export type Item = typeof items.$inferSelect;
@@ -135,3 +141,4 @@ export type Recipe = typeof recipes.$inferSelect;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type RecipeStep = typeof recipeSteps.$inferSelect;
 export type RecipeShare = typeof recipeShares.$inferSelect;
+export type BarcodeCache = typeof barcodeCache.$inferSelect;

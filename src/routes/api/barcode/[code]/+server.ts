@@ -1,5 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { db } from '$lib/db';
+import { barcodeCache } from '$lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const { code } = params;
@@ -8,6 +11,17 @@ export const GET: RequestHandler = async ({ params }) => {
 		return json({ name: null }, { status: 400 });
 	}
 
+	// Cache-Hit prüfen
+	const cached = db.select().from(barcodeCache).where(eq(barcodeCache.barcode, code)).get();
+	if (cached) {
+		db.update(barcodeCache)
+			.set({ lastSeenAt: Date.now() })
+			.where(eq(barcodeCache.barcode, code))
+			.run();
+		return json({ name: cached.name });
+	}
+
+	// Open Food Facts abfragen
 	try {
 		const res = await fetch(
 			`https://world.openfoodfacts.org/api/v2/product/${code}?fields=product_name,product_name_de,brands`,
@@ -35,6 +49,12 @@ export const GET: RequestHandler = async ({ params }) => {
 		const name = brand && !productName.toLowerCase().includes(brand.toLowerCase())
 			? `${brand} ${productName}`
 			: productName;
+
+		// In Cache schreiben
+		db.insert(barcodeCache)
+			.values({ barcode: code, name, lastSeenAt: Date.now() })
+			.onConflictDoUpdate({ target: barcodeCache.barcode, set: { name, lastSeenAt: Date.now() } })
+			.run();
 
 		return json({ name });
 	} catch {

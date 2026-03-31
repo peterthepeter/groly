@@ -3,12 +3,18 @@ import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
 import { runMigrations, db } from '$lib/db';
-import { appMeta } from '$lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { appMeta, barcodeCache } from '$lib/db/schema';
+import { eq, lt } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
 import { sendPushToAllSubscribers } from '$lib/server/pushNotifications';
 
 let initialized = false;
+
+const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
+
+function cleanupBarcodeCache() {
+	db.delete(barcodeCache).where(lt(barcodeCache.lastSeenAt, Date.now() - SIX_MONTHS_MS)).run();
+}
 
 async function init() {
 	if (initialized) return;
@@ -16,6 +22,8 @@ async function init() {
 	runMigrations();
 	bootstrapAdmin();
 	await notifyOnNewVersion();
+	cleanupBarcodeCache();
+	setInterval(cleanupBarcodeCache, 24 * 60 * 60 * 1000);
 }
 
 async function notifyOnNewVersion() {

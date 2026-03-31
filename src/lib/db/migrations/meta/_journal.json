@@ -99,6 +99,13 @@
       "when": 1774944000000,
       "tag": "0013_app_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1774979936781,
+      "tag": "0014_barcode_cache",
+      "breakpoints": true
     }
   ]
 }
