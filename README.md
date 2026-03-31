@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="static/icons/icon.svg" width="96" alt="Groly" />
+</p>
+
 # Groly
 
 Mobile-first PWA grocery list app for self-hosting. Designed for small teams and families, runs as a Docker container on a home server. Ready for **Unraid** and any other Docker-based home server setup.
