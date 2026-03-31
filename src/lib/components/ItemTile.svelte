@@ -28,9 +28,9 @@
 	let nameEl: HTMLElement | null = null;
 	let isTruncated = $state(false);
 
-	// Swipe gesture state
-	let startX = 0;
-	let startY = 0;
+	// Swipe gesture state (touch-based, zuverlässiger auf iOS)
+	let touchStartX = 0;
+	let touchStartY = 0;
 	let swipeConsumed = false;
 
 	// Overlay
@@ -52,25 +52,11 @@
 		}
 	}
 
+	// --- Tap / Long-press via Pointer Events ---
 	function startPress(e: PointerEvent) {
 		longFired = false;
 		swipeConsumed = false;
-		startX = e.clientX;
-		startY = e.clientY;
-		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 		pressTimer = setTimeout(() => { longFired = true; onLongPress(); }, 500);
-	}
-
-	function handleMove(e: PointerEvent) {
-		if (swipeConsumed || !isTruncated) return;
-		const dx = e.clientX - startX;
-		const dy = e.clientY - startY;
-		// Only horizontal swipe: |dx| dominates and crosses threshold
-		if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 18) {
-			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-			swipeConsumed = true;
-			showOverlay = true;
-		}
 	}
 
 	function endPress() {
@@ -82,15 +68,36 @@
 		if (swipeConsumed) { swipeConsumed = false; return; }
 		onTap();
 	}
+
+	// --- Swipe-Erkennung via Touch Events (iOS-zuverlässig) ---
+	function handleTouchStart(e: TouchEvent) {
+		if (!isTruncated) return;
+		const t = e.touches[0];
+		touchStartX = t.clientX;
+		touchStartY = t.clientY;
+	}
+
+	function handleTouchMove(e: TouchEvent) {
+		if (swipeConsumed || !isTruncated) return;
+		const t = e.touches[0];
+		const dx = t.clientX - touchStartX;
+		const dy = t.clientY - touchStartY;
+		if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 18) {
+			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+			swipeConsumed = true;
+			showOverlay = true;
+		}
+	}
 </script>
 
 <div class="relative aspect-square" style="direction: ltr">
 	<button
 		onclick={handleClick}
 		onpointerdown={startPress}
-		onpointermove={handleMove}
 		onpointerup={endPress}
 		onpointercancel={endPress}
+		ontouchstart={handleTouchStart}
+		ontouchmove={handleTouchMove}
 		oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
 		class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
 		style="background-color: var(--color-surface-card); touch-action: pan-y;"
