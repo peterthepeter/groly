@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n.svelte';
+	import { BrowserMultiFormatReader } from '@zxing/browser';
 
 	let { onFound, onClose }: {
 		onFound: (name: string) => void;
@@ -12,43 +13,17 @@
 	let feedbackText = $state('');
 	let videoEl = $state<HTMLVideoElement | null>(null);
 	let stream = $state<MediaStream | null>(null);
-	let rafId = 0;
 
-	// Detektor-Klasse (nativ oder Polyfill)
-	let DetectorClass = $state<typeof BarcodeDetector | null>(null);
-
-	// Kamera-Setup + Polyfill laden
+	// Kamera-Setup
 	$effect(() => {
 		let cancelled = false;
 
 		async function start() {
-			// Nativ verfügbar?
-			let Cls: typeof BarcodeDetector;
-			if ('BarcodeDetector' in window) {
-				Cls = BarcodeDetector;
-			} else {
-				// Polyfill für iOS < 17 und andere Browser
-				try {
-					const { BarcodeDetector: PolyDetector, prepareZXingModule } = await import('barcode-detector/ponyfill');
-					await prepareZXingModule();
-					Cls = PolyDetector as unknown as typeof BarcodeDetector;
-				} catch {
-					phase = 'error';
-					return;
-				}
-			}
-
-			if (cancelled) return;
-			DetectorClass = Cls;
-
 			try {
 				const mediaStream = await navigator.mediaDevices.getUserMedia({
 					video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
 				});
-				if (cancelled) {
-					mediaStream.getTracks().forEach(t => t.stop());
-					return;
-				}
+				if (cancelled) { mediaStream.getTracks().forEach(t => t.stop()); return; }
 				stream = mediaStream;
 				phase = 'scanning';
 			} catch (err) {
@@ -58,11 +33,7 @@
 		}
 
 		void start();
-
-		return () => {
-			cancelled = true;
-			stopCamera();
-		};
+		return () => { cancelled = true; stopCamera(); };
 	});
 
 	// Stream → Video verbinden
@@ -72,46 +43,34 @@
 		videoEl.play().catch(() => {});
 	});
 
-	// Scan-Loop (nur wenn phase === 'scanning' und Detector geladen)
+	// ZXing Scan-Loop
 	$effect(() => {
-		if (phase !== 'scanning' || !videoEl || !DetectorClass) return;
+		if (phase !== 'scanning' || !videoEl || !stream) return;
 
-		const detector = new DetectorClass({
-			formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39']
+		let active = true;
+		let stopControls: (() => void) | null = null;
+
+		const reader = new BrowserMultiFormatReader();
+
+		reader.decodeFromVideoElement(videoEl, async (result, _err) => {
+			if (!active || !result) return;
+			active = false;
+			stopControls?.();
+			await handleBarcode(result.getText());
+		}).then(controls => {
+			stopControls = () => controls.stop();
+			if (!active) controls.stop();
+		}).catch(() => {
+			if (active) phase = 'error';
 		});
 
-		let running = true;
-
-		async function tick() {
-			if (!running) return;
-			if (!videoEl || videoEl.readyState < 2) {
-				if (running) rafId = requestAnimationFrame(tick);
-				return;
-			}
-			try {
-				const barcodes = await detector.detect(videoEl);
-				if (!running) return;
-				if (barcodes.length > 0) {
-					running = false;
-					await handleBarcode(barcodes[0].rawValue);
-					return;
-				}
-			} catch {
-				// Frame noch nicht bereit
-			}
-			if (running) rafId = requestAnimationFrame(tick);
-		}
-
-		rafId = requestAnimationFrame(tick);
-
 		return () => {
-			running = false;
-			cancelAnimationFrame(rafId);
+			active = false;
+			stopControls?.();
 		};
 	});
 
 	function stopCamera() {
-		cancelAnimationFrame(rafId);
 		stream?.getTracks().forEach(t => t.stop());
 		stream = null;
 	}
@@ -142,7 +101,7 @@
 	}
 </script>
 
-<!-- Full-screen Overlay — deckt auch Tastatur ab -->
+<!-- Full-screen Overlay -->
 <div class="fixed inset-0 z-[70] bg-black overflow-hidden" style="height: 100dvh">
 
 	<!-- Kamera-Video -->
@@ -156,12 +115,12 @@
 		></video>
 	{/if}
 
-	<!-- Gradient für bessere Lesbarkeit -->
+	<!-- Gradient -->
 	<div class="absolute inset-0 pointer-events-none"
 	     style="background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 20%, transparent 65%, rgba(0,0,0,0.65) 100%)">
 	</div>
 
-	<!-- Schließen-Button oben rechts -->
+	<!-- Schließen-Button -->
 	<button
 		onclick={handleClose}
 		class="absolute top-12 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
