@@ -29,7 +29,8 @@
 			} else {
 				// Polyfill für iOS < 17 und andere Browser
 				try {
-					const { BarcodeDetector: PolyDetector } = await import('barcode-detector/ponyfill');
+					const { BarcodeDetector: PolyDetector, prepareZXingModule } = await import('barcode-detector/ponyfill');
+					await prepareZXingModule();
 					Cls = PolyDetector as unknown as typeof BarcodeDetector;
 				} catch {
 					phase = 'error';
