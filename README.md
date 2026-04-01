@@ -10,7 +10,7 @@ Mobile-first PWA grocery list app for self-hosting. Designed for small teams and
 
 - **Shared lists** – Share lists with other users; changes sync in real time via Server-Sent Events.
 - **Offline-first** – Add, check off, edit, and delete items without internet. Changes sync automatically when back online.
-- **Barcode scan** – Scan product barcodes with your camera to add items directly to your list (iOS and Android). Product names are looked up via the [Open Food Facts](https://world.openfoodfacts.org/) database — an open, community-maintained food product database. No API key required. Lookups are routed through your server (user IPs are not exposed to Open Food Facts) and cached persistently in SQLite. Cached entries that haven't been scanned for 6 months are removed automatically once per day.
+- **Barcode scan** – Scan product barcodes with your camera to add items directly to your list (iOS and Android). Uses the native [BarcodeDetector API](https://developer.mozilla.org/en-US/docs/Web/API/BarcodeDetector) where available (Chrome/Android) with [ZBar WASM](https://github.com/undecaf/zbar-wasm) as a fallback for iOS and Firefox. Product names are looked up via [Open Food Facts](https://world.openfoodfacts.org/), [Open Products Facts](https://world.openproductsfacts.org/), and [Open Beauty Facts](https://world.openbeautyfacts.org/) — open, community-maintained product databases covering food, household, and personal care items. No API key required. Lookups are routed through your server (user IPs are not exposed) and cached persistently in SQLite. An offline indicator is shown in the scanner when there is no internet connection.
 - **Push notifications** – Get notified when someone adds an item to a shared list, and when a new app version is available. Works on iOS (16.4+) and Android.
 - **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list. Import recipes from popular recipe websites by URL.
 - **Category sorting** – Items are automatically assigned a category based on keyword matching (e.g. "milk" → Dairy, "apple" → Fruit & Vegetables). The display order of categories can be customized in Settings to match your supermarket layout — globally or individually per list. Users can also override the category of any single item.
@@ -112,7 +112,7 @@ environment:
 | Real-time | Server-Sent Events (SSE) |
 | Offline | Dexie.js (IndexedDB) + mutation queue |
 | Push | Web Push API + VAPID (web-push) |
-| Barcode | @zxing/browser |
+| Barcode | BarcodeDetector API + ZBar WASM (@undecaf/zbar-wasm) |
 | PWA | vite-plugin-pwa + Workbox |
 | CSS | Tailwind CSS v4 |
 | i18n | Paraglide-SvelteKit |
