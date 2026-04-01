@@ -13,6 +13,18 @@
 	let feedbackText = $state('');
 	let videoEl = $state<HTMLVideoElement | null>(null);
 	let stream = $state<MediaStream | null>(null);
+	let isOnline = $state(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+	$effect(() => {
+		function setOnline() { isOnline = true; }
+		function setOffline() { isOnline = false; }
+		window.addEventListener('online', setOnline);
+		window.addEventListener('offline', setOffline);
+		return () => {
+			window.removeEventListener('online', setOnline);
+			window.removeEventListener('offline', setOffline);
+		};
+	});
 
 	// Kamera-Setup
 	$effect(() => {
@@ -90,8 +102,12 @@
 				setTimeout(() => { phase = 'scanning'; }, 2000);
 			}
 		} catch {
-			phase = 'not_found';
-			setTimeout(() => { phase = 'scanning'; }, 2000);
+			if (!navigator.onLine) {
+				phase = 'scanning';
+			} else {
+				phase = 'not_found';
+				setTimeout(() => { phase = 'scanning'; }, 2000);
+			}
 		}
 	}
 
@@ -119,6 +135,23 @@
 	<div class="absolute inset-0 pointer-events-none"
 	     style="background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 20%, transparent 65%, rgba(0,0,0,0.65) 100%)">
 	</div>
+
+	<!-- Offline-Banner -->
+	{#if !isOnline}
+		<div class="offline-banner absolute top-0 left-0 right-0 z-20 flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold"
+		     style="background-color: rgba(180, 83, 9, 0.92); color: white; padding-top: max(0.625rem, env(safe-area-inset-top))">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+				<line x1="1" y1="1" x2="23" y2="23"/>
+				<path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+				<path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+				<path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+				<path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+				<path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+				<line x1="12" y1="20" x2="12.01" y2="20"/>
+			</svg>
+			{t.barcode_offline}
+		</div>
+	{/if}
 
 	<!-- Schließen-Button -->
 	<button
@@ -233,5 +266,14 @@
 		0%   { top: 15%; }
 		50%  { top: 85%; }
 		100% { top: 15%; }
+	}
+
+	.offline-banner {
+		animation: slideDown 0.3s ease-out;
+	}
+
+	@keyframes slideDown {
+		from { transform: translateY(-100%); opacity: 0; }
+		to   { transform: translateY(0);    opacity: 1; }
 	}
 </style>

@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.2.6',
+		de: [
+			'Barcode-Scanner: Offline-Status wird dauerhaft im Scanner-Fenster angezeigt',
+			'Offline: Kein irreführendes „Produkt nicht gefunden" mehr bei fehlendem Internet',
+		],
+		en: [
+			'Barcode scanner: offline status is now permanently shown in the scanner overlay',
+			'Offline: no more misleading "product not found" when there is no internet connection',
+		]
+	},
+	{
 		version: '0.2.5',
 		de: [
 			'Barcode-Scan: Items per Kamera-Scan zur Einkaufsliste hinzufügen',

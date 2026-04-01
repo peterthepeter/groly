@@ -189,6 +189,7 @@ class TranslationProxy {
 	get barcode_camera_denied() { void _lang; return m.barcode_camera_denied(); }
 	get barcode_added() { void _lang; return m.barcode_added(); }
 	get barcode_unsupported() { void _lang; return m.barcode_unsupported(); }
+	get barcode_offline() { void _lang; return m.barcode_offline(); }
 }
 
 export const t = new TranslationProxy();
