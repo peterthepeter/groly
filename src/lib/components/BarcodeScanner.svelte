@@ -213,7 +213,7 @@
 	<!-- Schließen-Button -->
 	<button
 		onclick={handleClose}
-		class="absolute top-12 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
+		class="absolute top-20 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
 		style="background-color: rgba(0,0,0,0.4); color: white"
 		aria-label="Schließen"
 	>
