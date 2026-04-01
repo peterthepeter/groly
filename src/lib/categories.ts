@@ -80,7 +80,7 @@ export const CATEGORIES: CategoryDef[] = [
 	{
 		key: 'milch',
 		keywords: [
-			'milch', 'käse', 'joghurt', 'butter', 'quark', 'sahne', 'ei', 'eier', 'mozzarella',
+			'milch', 'käse', 'joghurt', 'butter', 'quark', 'speisequark', 'magerquark', 'sahne', 'ei', 'eier', 'mozzarella',
 			'parmesan', 'gouda', 'emmentaler', 'brie', 'camembert', 'ricotta', 'frischkäse',
 			'schmand', 'crème fraîche', 'kondensmilch', 'buttermilch', 'kefir', 'skyr',
 			'schlagsahne', 'mascarpone', 'gruyere', 'feta', 'hüttenkäse',
@@ -105,7 +105,7 @@ export const CATEGORIES: CategoryDef[] = [
 		key: 'fleisch',
 		keywords: [
 			'fleisch', 'huhn', 'hähnchen', 'hühnchen', 'rind', 'rindfleisch', 'schwein', 'schweinefleisch',
-			'wurst', 'würstchen', 'fisch', 'lachs', 'thunfisch', 'schnitzel', 'hack', 'hackfleisch',
+			'wurst', 'würstchen', 'wiener würstchen', 'fisch', 'lachs', 'thunfisch', 'schnitzel', 'hack', 'hackfleisch',
 			'steak', 'filet', 'pute', 'truthahn', 'lamm', 'kalb', 'kalbfleisch', 'speck', 'schinken',
 			'salami', 'chorizo', 'mortadella', 'leberwurst', 'blutwurst', 'bratwurst', 'currywurst',
 			'frikadelle', 'burger', 'mett', 'forelle', 'hering', 'garnelen', 'shrimps', 'muscheln',

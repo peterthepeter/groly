@@ -72,8 +72,11 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'cailler': 'snacks',
 	'camille bloch': 'snacks',
 	'frey': 'snacks',
+	"fisherman's friend": 'snacks',
+	'fishermans friend': 'snacks',
 
 	// ── Milch & Käse ────────────────────────────────────────────────────────
+	'aldi milsani': 'milch',
 	'müller': 'milch',
 	'ehrmann': 'milch',
 	'danone': 'milch',
@@ -200,6 +203,8 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'john west': 'fleisch',
 
 	// ── Getränke ─────────────────────────────────────────────────────────────
+	'more nutrition': 'getraenke',
+	'zerup': 'getraenke',
 	'coca-cola': 'getraenke',
 	'coca cola': 'getraenke',
 	'coke': 'getraenke',
@@ -313,6 +318,7 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'block house': 'tiefkuehl',
 
 	// ── Haushalt & Pflege ────────────────────────────────────────────────────
+	'ecover': 'haushalt',
 	'persil': 'haushalt',
 	'ariel': 'haushalt',
 	'lenor': 'haushalt',
