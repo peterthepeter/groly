@@ -488,6 +488,8 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	// ── Supermarkt-Eigenmarken: Lidl ─────────────────────────────────────────
 	'lidl': 'obst',
 	'milbona': 'milch',
+	'pilos': 'milch',
+	'meine metzgerei': 'fleisch',
 	'freshona': 'obst',
 	'crownfield': 'backwaren',
 	'vitafit': 'getraenke',
@@ -497,10 +499,16 @@ export const BRAND_CATEGORIES: Record<string, string> = {
 	'picard': 'tiefkuehl',
 	'bio organic': 'obst',
 	'chef select': 'konserven',
+	'floralys': 'haushalt',
+	'formil': 'haushalt',
+	'w5': 'haushalt',
+	'cien': 'haushalt',
 
 	// ── Supermarkt-Eigenmarken: Aldi ─────────────────────────────────────────
 	'aldi': 'obst',
 	'milsani': 'milch',
+	'milfina': 'milch',
+	'ombia': 'haushalt',
 	'harvest basket': 'backwaren',
 	'simply nature': 'obst',
 	'back country': 'backwaren',
