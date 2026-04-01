@@ -20,41 +20,6 @@ const DEFAULT: Category = {
 
 export const CATEGORIES: CategoryDef[] = [
 	{
-		key: 'obst',
-		keywords: [
-			'apfel', 'äpfel', 'birne', 'birnen', 'banane', 'bananen', 'tomate', 'tomaten', 'salat', 'karotte', 'karotten',
-			'obst', 'gemüse', 'zwiebel', 'knoblauch', 'zitrone', 'gurke', 'gurken', 'paprika',
-			'kartoffel', 'kartoffeln', 'beere', 'beeren', 'erdbeere', 'erdbeeren', 'heidelbeere',
-			'himbeere', 'orange', 'orangen', 'mandarine', 'kiwi', 'mango', 'ananas', 'trauben',
-			'brokkoli', 'spinat', 'möhre', 'möhren', 'sellerie', 'lauch', 'zucchini', 'avocado',
-			'pilze', 'champignon', 'kohlrabi', 'blumenkohl', 'rotkohl', 'weißkohl', 'eisberg',
-			'rucola', 'feldsalat', 'radieschen', 'rettich', 'ingwer', 'petersilie', 'schnittlauch',
-			'basilikum', 'minze', 'thymian', 'rosinen', 'datteln', 'feigen', 'pflaume', 'kirsche',
-			'pfirsich', 'nektarine', 'melone', 'wassermelone', 'granatapfel',
-			'mais', 'spargel', 'aubergine', 'fenchel', 'artischocke', 'papaya', 'süßkartoffel',
-			'kopfsalat', 'rote bete', 'pastinake', 'staudensellerie', 'frühlingszwiebel',
-			'zitronengras', 'koriander', 'dill', 'rosmarin', 'salbei', 'pak choi', 'mairübe',
-			// English
-			'apple', 'apples', 'pear', 'pears', 'banana', 'bananas', 'tomato', 'tomatoes', 'lettuce',
-			'carrot', 'carrots', 'fruit', 'vegetable', 'vegetables', 'onion', 'onions', 'garlic',
-			'lemon', 'lemons', 'cucumber', 'cucumbers', 'bell pepper', 'pepper', 'potato', 'potatoes',
-			'berry', 'berries', 'strawberry', 'strawberries', 'blueberry', 'blueberries',
-			'raspberry', 'raspberries', 'mandarin', 'grapes', 'broccoli', 'spinach', 'celery',
-			'zucchini', 'courgette', 'avocado', 'mushroom', 'mushrooms', 'cauliflower',
-			'red cabbage', 'iceberg', 'arugula', 'rocket', 'radish', 'ginger', 'parsley',
-			'chives', 'basil', 'mint', 'thyme', 'raisins', 'figs', 'plum', 'plums',
-			'cherry', 'cherries', 'peach', 'peaches', 'nectarine', 'melon', 'watermelon',
-			'pomegranate', 'corn', 'asparagus', 'eggplant', 'aubergine', 'fennel', 'artichoke',
-			'papaya', 'sweet potato', 'sweet potatoes', 'spring onion', 'scallion', 'lemongrass',
-			'cilantro', 'coriander', 'dill', 'rosemary', 'sage', 'leek', 'turnip', 'kohlrabi',
-			'bok choy', 'pak choi', 'lime', 'limes', 'grapefruit', 'dates', 'coconut'
-		],
-		category: {
-			color: 'var(--color-primary)',
-			svgContent: `<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>`
-		}
-	},
-	{
 		key: 'backwaren',
 		keywords: [
 			'brot', 'brötchen', 'toast', 'kuchen', 'mehl', 'backen', 'croissant', 'baguette',
@@ -349,6 +314,45 @@ export const CATEGORIES: CategoryDef[] = [
 			color: '#F472B6',
 			svgContent: `<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>`
 		}
+	},
+	// Obst steht bewusst am Ende: Frucht-/Gemüsenamen tauchen häufig als
+	// Zutat oder Geschmacksrichtung in anderen Produkten auf (z.B. "Erdbeer-Joghurt",
+	// "Apfelsaft"). Durch Scoring + letzte Position gewinnt Obst nur wenn es
+	// mehr Treffer hat als jede andere Kategorie.
+	{
+		key: 'obst',
+		keywords: [
+			'apfel', 'äpfel', 'birne', 'birnen', 'banane', 'bananen', 'tomate', 'tomaten', 'salat', 'karotte', 'karotten',
+			'obst', 'gemüse', 'zwiebel', 'knoblauch', 'zitrone', 'gurke', 'gurken', 'paprika',
+			'kartoffel', 'kartoffeln', 'beere', 'beeren', 'erdbeere', 'erdbeeren', 'heidelbeere',
+			'himbeere', 'orange', 'orangen', 'mandarine', 'kiwi', 'mango', 'ananas', 'trauben',
+			'brokkoli', 'spinat', 'möhre', 'möhren', 'sellerie', 'lauch', 'zucchini', 'avocado',
+			'pilze', 'champignon', 'kohlrabi', 'blumenkohl', 'rotkohl', 'weißkohl', 'eisberg',
+			'rucola', 'feldsalat', 'radieschen', 'rettich', 'ingwer', 'petersilie', 'schnittlauch',
+			'basilikum', 'minze', 'thymian', 'rosinen', 'datteln', 'feigen', 'pflaume', 'kirsche',
+			'pfirsich', 'nektarine', 'melone', 'wassermelone', 'granatapfel',
+			'mais', 'spargel', 'aubergine', 'fenchel', 'artischocke', 'papaya', 'süßkartoffel',
+			'kopfsalat', 'rote bete', 'pastinake', 'staudensellerie', 'frühlingszwiebel',
+			'zitronengras', 'koriander', 'dill', 'rosmarin', 'salbei', 'pak choi', 'mairübe',
+			// English
+			'apple', 'apples', 'pear', 'pears', 'banana', 'bananas', 'tomato', 'tomatoes', 'lettuce',
+			'carrot', 'carrots', 'fruit', 'vegetable', 'vegetables', 'onion', 'onions', 'garlic',
+			'lemon', 'lemons', 'cucumber', 'cucumbers', 'bell pepper', 'pepper', 'potato', 'potatoes',
+			'berry', 'berries', 'strawberry', 'strawberries', 'blueberry', 'blueberries',
+			'raspberry', 'raspberries', 'mandarin', 'grapes', 'broccoli', 'spinach', 'celery',
+			'zucchini', 'courgette', 'avocado', 'mushroom', 'mushrooms', 'cauliflower',
+			'red cabbage', 'iceberg', 'arugula', 'rocket', 'radish', 'ginger', 'parsley',
+			'chives', 'basil', 'mint', 'thyme', 'raisins', 'figs', 'plum', 'plums',
+			'cherry', 'cherries', 'peach', 'peaches', 'nectarine', 'melon', 'watermelon',
+			'pomegranate', 'corn', 'asparagus', 'eggplant', 'aubergine', 'fennel', 'artichoke',
+			'papaya', 'sweet potato', 'sweet potatoes', 'spring onion', 'scallion', 'lemongrass',
+			'cilantro', 'coriander', 'dill', 'rosemary', 'sage', 'leek', 'turnip', 'kohlrabi',
+			'bok choy', 'pak choi', 'lime', 'limes', 'grapefruit', 'dates', 'coconut'
+		],
+		category: {
+			color: 'var(--color-primary)',
+			svgContent: `<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>`
+		}
 	}
 ];
 
@@ -382,6 +386,17 @@ function matchesKeyword(name: string, keyword: string): boolean {
 	return false;
 }
 
+// Zählt Keyword-Treffer für eine Kategorie (Scoring statt First-Match).
+// Obst steht am Ende des Arrays → gewinnt bei Gleichstand nie gegen eine
+// frühere Kategorie (strict >), sondern nur bei mehr Treffern.
+function scoreKeywords(name: string, keywords: string[]): number {
+	let score = 0;
+	for (const k of keywords) {
+		if (matchesKeyword(name, k)) score++;
+	}
+	return score;
+}
+
 function getBrandKey(name: string): string | null {
 	const lower = name.toLowerCase().trim();
 	// Exact match first
@@ -395,17 +410,25 @@ function getBrandKey(name: string): string | null {
 	return null;
 }
 
+function getBestCategoryKey(lower: string): string {
+	let bestKey = DEFAULT_KEY;
+	let bestScore = 0;
+	for (const { key, keywords } of CATEGORIES) {
+		const score = scoreKeywords(lower, keywords);
+		if (score > bestScore) {
+			bestScore = score;
+			bestKey = key;
+		}
+	}
+	return bestKey;
+}
+
 export function getCategoryForItem(name: string, override?: string | null): Category {
 	if (override) return categoryByKey.get(override) ?? DEFAULT;
 	const lower = name.toLowerCase();
 	const brandKey = getBrandKey(lower);
 	if (brandKey) return categoryByKey.get(brandKey) ?? DEFAULT;
-	for (const { keywords, category } of CATEGORIES) {
-		if (keywords.some(k => matchesKeyword(lower, k))) {
-			return category;
-		}
-	}
-	return DEFAULT;
+	return categoryByKey.get(getBestCategoryKey(lower)) ?? DEFAULT;
 }
 
 export function getCategoryKey(name: string, override?: string | null): string {
@@ -413,12 +436,7 @@ export function getCategoryKey(name: string, override?: string | null): string {
 	const lower = name.toLowerCase();
 	const brandKey = getBrandKey(lower);
 	if (brandKey) return brandKey;
-	for (const { key, keywords } of CATEGORIES) {
-		if (keywords.some(k => matchesKeyword(lower, k))) {
-			return key;
-		}
-	}
-	return DEFAULT_KEY;
+	return getBestCategoryKey(lower);
 }
 
 export function getCategoryByKey(key: string): Category {
