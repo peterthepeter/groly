@@ -176,7 +176,7 @@ export const CATEGORIES: CategoryDef[] = [
 	{
 		key: 'haushalt',
 		keywords: [
-			'spülmittel', 'putzmittel', 'waschmittel', 'toilettenpapier', 'müllbeutel', 'schwamm',
+			'spülmittel', 'klarspüler', 'putzmittel', 'waschmittel', 'toilettenpapier', 'müllbeutel', 'schwamm',
 			'reiniger', 'weichspüler', 'geschirrspüler', 'tabs', 'klebeband', 'folie', 'backpapier',
 			'haushalt', 'einweghandschuhe', 'küchenrolle', 'papiertaschentuch', 'taschentuch',
 			'putztuch', 'lappen', 'besen', 'mop', 'staubsauger', 'kerze', 'batterien', 'glühbirne',
