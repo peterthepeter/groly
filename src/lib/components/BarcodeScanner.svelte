@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { t } from '$lib/i18n.svelte';
-	import { BrowserMultiFormatReader } from '@zxing/browser';
+
+	// Minimale Typen für die native BarcodeDetector API (Chrome/Android)
+	interface NativeBarcodeDetector {
+		detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>>;
+	}
+	interface NativeBarcodeDetectorStatic {
+		new(options?: { formats?: string[] }): NativeBarcodeDetector;
+		getSupportedFormats(): Promise<string[]>;
+	}
 
 	let { onFound, onClose }: {
 		onFound: (name: string) => void;
@@ -33,7 +41,7 @@
 		async function start() {
 			try {
 				const mediaStream = await navigator.mediaDevices.getUserMedia({
-					video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+					video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }
 				});
 				if (cancelled) { mediaStream.getTracks().forEach(t => t.stop()); return; }
 				stream = mediaStream;
@@ -55,30 +63,79 @@
 		videoEl.play().catch(() => {});
 	});
 
-	// ZXing Scan-Loop
+	// Scan-Loop: native BarcodeDetector → ZBar-WASM Fallback
 	$effect(() => {
 		if (phase !== 'scanning' || !videoEl || !stream) return;
 
 		let active = true;
-		let stopControls: (() => void) | null = null;
+		let rafId = 0;
+		let frameScanning = false;
+		let lastScanTime = 0;
+		const SCAN_INTERVAL = 150; // ms zwischen Scans
 
-		const reader = new BrowserMultiFormatReader();
+		let scanFrame: (() => Promise<string | null>) | null = null;
 
-		reader.decodeFromVideoElement(videoEl, async (result, _err) => {
-			if (!active || !result) return;
-			active = false;
-			stopControls?.();
-			await handleBarcode(result.getText());
-		}).then(controls => {
-			stopControls = () => controls.stop();
-			if (!active) controls.stop();
-		}).catch(() => {
-			if (active) phase = 'error';
-		});
+		async function init() {
+			// Priorität 1: Native BarcodeDetector (Chrome/Android, hardware-beschleunigt)
+			if ('BarcodeDetector' in window) {
+				try {
+					const BD = (window as unknown as { BarcodeDetector: NativeBarcodeDetectorStatic }).BarcodeDetector;
+					const supported = await BD.getSupportedFormats();
+					const wanted = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'];
+					const formats = wanted.filter(f => supported.includes(f));
+					const detector = new BD({ formats: formats.length ? formats : ['ean_13', 'ean_8'] });
+					scanFrame = async () => {
+						if (!videoEl || videoEl.readyState < 2) return null;
+						const results = await detector.detect(videoEl);
+						return results[0]?.rawValue ?? null;
+					};
+				} catch {
+					// Weiter zu ZBar
+				}
+			}
+
+			// Priorität 2: ZBar-WASM (iOS, Firefox, Fallback)
+			if (!scanFrame) {
+				const canvas = document.createElement('canvas');
+				const ctx = canvas.getContext('2d')!;
+				const { scanImageData } = await import('@undecaf/zbar-wasm');
+				scanFrame = async () => {
+					if (!videoEl || videoEl.readyState < 2) return null;
+					const w = videoEl.videoWidth;
+					const h = videoEl.videoHeight;
+					if (!w || !h) return null;
+					if (canvas.width !== w) canvas.width = w;
+					if (canvas.height !== h) canvas.height = h;
+					ctx.drawImage(videoEl, 0, 0, w, h);
+					const imageData = ctx.getImageData(0, 0, w, h);
+					const symbols = await scanImageData(imageData);
+					return symbols[0]?.decode() ?? null;
+				};
+			}
+
+			if (active) rafId = requestAnimationFrame(loop);
+		}
+
+		function loop(timestamp: number) {
+			if (!active) return;
+			rafId = requestAnimationFrame(loop);
+			if (frameScanning || timestamp - lastScanTime < SCAN_INTERVAL || !scanFrame) return;
+			frameScanning = true;
+			lastScanTime = timestamp;
+			scanFrame().then(result => {
+				frameScanning = false;
+				if (result && active) {
+					active = false;
+					void handleBarcode(result);
+				}
+			}).catch(() => { frameScanning = false; });
+		}
+
+		void init();
 
 		return () => {
 			active = false;
-			stopControls?.();
+			cancelAnimationFrame(rafId);
 		};
 	});
 
