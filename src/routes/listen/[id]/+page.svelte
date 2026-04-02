@@ -182,7 +182,21 @@
 		);
 	}
 
-	afterNavigate(({ to }) => {
+	afterNavigate(({ to, from }) => {
+		const fromId = from?.params?.id;
+		const toId = to?.params?.id;
+
+		// When navigating between different lists (component is reused by SvelteKit),
+		// reset state so we don't briefly show the old list's items.
+		if (fromId && toId && fromId !== toId) {
+			items = [];
+			loading = true;
+			listName = '';
+			addModalOpen = false;
+			editItem = null;
+			void loadItems();
+		}
+
 		// Handle shortcut ?action param — fires on every navigation incl. same-route
 		const action = to?.url.searchParams.get('action');
 		if (action === 'add' || action === 'scanner') {

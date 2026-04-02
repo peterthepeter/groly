@@ -16,6 +16,9 @@
 	function execute(sc: Shortcut) {
 		onClose();
 		const params = sc.action !== 'go' ? `?action=${sc.action}` : '';
+		if (sc.action === 'add') {
+			(document.getElementById('ios-keyboard-bridge') as HTMLInputElement | null)?.focus();
+		}
 		goto(`/listen/${sc.listId}${params}`);
 	}
 </script>

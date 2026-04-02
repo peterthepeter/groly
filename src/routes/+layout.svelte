@@ -105,6 +105,20 @@
 	{@render children()}
 </div>
 
+<!--
+	iOS keyboard bridge: focused synchronously in the shortcut gesture handler
+	before goto() so that iOS keeps the keyboard context alive across navigation.
+	Focus then transfers to the real input when AddItemBar mounts.
+-->
+<input
+	id="ios-keyboard-bridge"
+	type="text"
+	aria-hidden="true"
+	readonly
+	tabindex="-1"
+	style="position:fixed; left:-9999px; top:0; opacity:0; pointer-events:none; width:1px; height:1px;"
+/>
+
 {#if whatsNewOpen}
 	<WhatsNewModal
 		version={LATEST_CHANGES.version}

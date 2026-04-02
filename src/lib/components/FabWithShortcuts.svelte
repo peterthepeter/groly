@@ -56,6 +56,12 @@
 					if (sc) {
 						shortcutMenu.hide();
 						const params = sc.action !== 'go' ? `?action=${sc.action}` : '';
+						// iOS keyboard bridge: focus synchronously here (user gesture context)
+						// so iOS keeps the keyboard alive across navigation; AddItemBar.onMount
+						// will transfer focus to the real input.
+						if (sc.action === 'add') {
+							(document.getElementById('ios-keyboard-bridge') as HTMLInputElement | null)?.focus();
+						}
 						goto(`/listen/${sc.listId}${params}`);
 						return;
 					}
