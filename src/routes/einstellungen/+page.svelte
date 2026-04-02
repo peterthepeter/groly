@@ -502,7 +502,7 @@
 		</div>
 
 		<!-- Schnellzugriff (Shortcuts) -->
-		<div class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div id="schnellzugriff" class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
 			<button
 				onclick={openShortcutsSection}
 				class="w-full flex items-center justify-between px-5 py-5"

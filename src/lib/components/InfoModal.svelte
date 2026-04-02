@@ -59,6 +59,7 @@
 		{
 			title: 'Quick access',
 			text: 'Long-press the + button to reveal up to 4 shortcuts. Slide your finger to the desired shortcut and release to navigate — or just release over empty space to cancel.',
+			link: { href: '/einstellungen#schnellzugriff', label: 'Set up shortcuts in Settings' },
 			svg: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`
 		}
 	] : [
@@ -115,6 +116,7 @@
 		{
 			title: 'Schnellzugriff',
 			text: 'Lange auf den + Button drücken, um bis zu 4 Schnellzugriffe anzuzeigen. Finger zum gewünschten Shortcut schieben und loslassen – oder auf einer leeren Stelle loslassen, um abzubrechen.',
+			link: { href: '/einstellungen#schnellzugriff', label: 'Schnellzugriffe in den Einstellungen anlegen' },
 			svg: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`
 		}
 	]);
@@ -164,6 +166,11 @@
 					     style="color: var(--color-on-surface)">{item.title}</div>
 					<div class="text-xs leading-relaxed"
 					     style="color: var(--color-on-surface-variant)">{item.text}</div>
+					{#if item.link}
+						<a href={item.link.href} onclick={onClose}
+						   class="text-xs font-medium mt-1 inline-block"
+						   style="color: var(--color-primary)">{item.link.label}</a>
+					{/if}
 				</div>
 			</div>
 		{/each}
