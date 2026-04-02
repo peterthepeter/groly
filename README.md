@@ -14,6 +14,7 @@ Mobile-first PWA grocery list app for self-hosting. Designed for small teams and
 - **Push notifications** – Get notified when someone adds an item to a shared list, and when a new app version is available. Works on iOS (16.4+) and Android.
 - **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list. Import recipes from popular recipe websites by URL.
 - **Category sorting** – Items are automatically assigned a category based on keyword matching (e.g. "milk" → Dairy, "apple" → Fruit & Vegetables). The display order of categories can be customized in Settings to match your supermarket layout — globally or individually per list. Users can also override the category of any single item.
+- **Quick access shortcuts** – Long-press the + button to reveal up to 4 configurable shortcuts. Slide your finger to the desired shortcut and release to navigate — or release over empty space to cancel. Each shortcut can open a list, open a list with the add-item dialog, or jump straight into the barcode scanner. Configurable per user in Settings and synced across devices.
 - **Swipe to peek** – Swipe left or right on any item tile whose name is truncated to reveal the full name in an overlay, without accidentally checking it off.
 - **In-app changelog** – A "What's New" modal appears after each update and is always accessible from the menu.
 - **Multi-user** – Admin creates users, resets passwords, and manages sharing invitations.
