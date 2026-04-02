@@ -8,6 +8,7 @@
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { CATEGORY_LABELS } from '$lib/categories';
 	import { validatePassword, PASSWORD_HINT } from '$lib/password';
+	import { shortcuts, type Shortcut, type ShortcutAction } from '$lib/shortcuts.svelte';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
@@ -131,6 +132,86 @@
 		if (!data.user?.id) return;
 		const res = await fetch(`/api/lists/${listId}/members/${data.user.id}`, { method: 'DELETE' });
 		if (res.ok) sharedLists = sharedLists.filter(l => l.id !== listId);
+	}
+
+	// ── Shortcuts ──────────────────────────────────────────────────────────────
+	let shortcutsOpen = $state(false);
+	let allLists = $state<{ id: string; name: string }[]>([]);
+	let allListsLoaded = $state(false);
+
+	type ShortcutDraft = { name: string; listId: string; action: ShortcutAction };
+	let editingId = $state<string | null>(null);   // null = adding new
+	let showShortcutForm = $state(false);
+	let draft = $state<ShortcutDraft>({ name: '', listId: '', action: 'go' });
+
+	async function loadAllLists() {
+		if (allListsLoaded) return;
+		try {
+			const res = await fetch('/api/lists');
+			if (!res.ok) return;
+			const json = await res.json();
+			const raw = json?.lists ?? json;
+			allLists = raw.map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }));
+			allListsLoaded = true;
+			if (!draft.listId && allLists.length > 0) draft.listId = allLists[0].id;
+		} catch { /* ignore */ }
+	}
+
+	function openShortcutsSection() {
+		shortcutsOpen = !shortcutsOpen;
+		if (shortcutsOpen) void loadAllLists();
+	}
+
+	// Ensure draft.listId is set once allLists loads (async race condition fix)
+	$effect(() => {
+		if (showShortcutForm && allLists.length > 0 && !draft.listId) {
+			draft.listId = allLists[0].id;
+		}
+	});
+
+	function startAdd() {
+		editingId = null;
+		draft = { name: '', listId: allLists[0]?.id ?? '', action: 'go' };
+		showShortcutForm = true;
+	}
+
+	function startEdit(sc: Shortcut) {
+		editingId = sc.id;
+		draft = { name: sc.name, listId: sc.listId, action: sc.action };
+		showShortcutForm = true;
+	}
+
+	function cancelShortcutForm() {
+		showShortcutForm = false;
+		editingId = null;
+	}
+
+	function generateId(): string {
+		// crypto.randomUUID() is only available in secure contexts (HTTPS/localhost).
+		// Use a simple fallback that works on plain HTTP (local dev via IP).
+		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+			return crypto.randomUUID();
+		}
+		return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+	}
+
+	function saveShortcut() {
+		if (!draft.name.trim() || !draft.listId) return;
+		const listName = allLists.find(l => l.id === draft.listId)?.name ?? '';
+		if (editingId) {
+			shortcuts.update(editingId, { name: draft.name.trim(), listId: draft.listId, listName, action: draft.action });
+		} else {
+			shortcuts.add({ id: generateId(), name: draft.name.trim(), listId: draft.listId, listName, action: draft.action });
+		}
+		showShortcutForm = false;
+		editingId = null;
+	}
+
+	function actionLabel(action: ShortcutAction): string {
+		if (currentLang() === 'en') {
+			return action === 'scanner' ? 'Scanner' : action === 'add' ? 'Add item' : 'Open';
+		}
+		return action === 'scanner' ? 'Scanner' : action === 'add' ? 'Artikel hinzufügen' : 'Öffnen';
 	}
 
 	$effect(() => { loadSharedLists(); });
@@ -416,6 +497,172 @@
 							? 'Enable the toggle above to configure category order.'
 							: 'Aktiviere den Schalter oben, um die Kategoriereihenfolge festzulegen.'}
 					</p>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Schnellzugriff (Shortcuts) -->
+		<div class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
+			<button
+				onclick={openShortcutsSection}
+				class="w-full flex items-center justify-between px-5 py-5"
+			>
+				<h2 class="text-base font-bold" style="color: var(--color-on-surface)">
+					{currentLang() === 'en' ? 'Quick access' : 'Schnellzugriff'}
+				</h2>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+				     style="transform: rotate({shortcutsOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+					<polyline points="9 18 15 12 9 6"/>
+				</svg>
+			</button>
+
+			{#if shortcutsOpen}
+				<div class="px-5 pb-5">
+					<p class="text-xs mb-4" style="color: var(--color-on-surface-variant)">
+						{currentLang() === 'en'
+							? 'Long-press the + button to access up to 4 shortcuts.'
+							: 'Lange auf den + Button drücken um bis zu 4 Schnellzugriffe zu öffnen.'}
+					</p>
+
+					<!-- Existing shortcuts -->
+					{#if shortcuts.list.length > 0}
+						<div class="space-y-2 mb-3">
+							{#each shortcuts.list as sc (sc.id)}
+								<div class="flex items-center gap-2 rounded-xl px-3 py-2.5"
+								     style="background-color: var(--color-surface-container)">
+									<!-- Action icon -->
+									<div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+									     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent)">
+										{#if sc.action === 'scanner'}
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M3 9V6a2 2 0 0 1 2-2h2"/>
+												<path d="M3 15v3a2 2 0 0 0 2 2h2"/>
+												<path d="M21 9V6a2 2 0 0 0-2-2h-2"/>
+												<path d="M21 15v3a2 2 0 0 1-2 2h-2"/>
+												<line x1="10" y1="9" x2="10" y2="15"/>
+												<line x1="13" y1="9" x2="13" y2="15"/>
+												<line x1="16" y1="9" x2="16" y2="15"/>
+											</svg>
+										{:else if sc.action === 'add'}
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round">
+												<line x1="12" y1="5" x2="12" y2="19"/>
+												<line x1="5" y1="12" x2="19" y2="12"/>
+											</svg>
+										{:else}
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<polyline points="9 18 15 12 9 6"/>
+											</svg>
+										{/if}
+									</div>
+									<!-- Info -->
+									<div class="flex-1 min-w-0">
+										<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{sc.name}</div>
+										<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">
+											{sc.listName} · {actionLabel(sc.action)}
+										</div>
+									</div>
+									<!-- Edit -->
+									<button
+										onclick={() => startEdit(sc)}
+										class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 active:opacity-60"
+										style="color: var(--color-on-surface-variant)"
+										aria-label="Bearbeiten"
+									>
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+											<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+										</svg>
+									</button>
+									<!-- Delete -->
+									<button
+										onclick={() => shortcuts.remove(sc.id)}
+										class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 active:opacity-60"
+										style="color: var(--color-error)"
+										aria-label="Löschen"
+									>
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+											<line x1="18" y1="6" x2="6" y2="18"/>
+											<line x1="6" y1="6" x2="18" y2="18"/>
+										</svg>
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+
+					<!-- Shortcut edit/add form -->
+					{#if showShortcutForm}
+						<div class="rounded-xl px-4 py-4 mb-3 space-y-3"
+						     style="background-color: var(--color-surface-container)">
+							<!-- Name -->
+							<input
+								type="text"
+								placeholder={currentLang() === 'en' ? 'Shortcut name' : 'Name des Schnellzugriffs'}
+								bind:value={draft.name}
+								class="w-full rounded-xl px-4 py-3 text-base outline-none"
+								style="background-color: var(--color-surface-card); color: var(--color-on-surface)"
+							/>
+
+							<!-- List picker -->
+							{#if allLists.length > 0}
+								<div class="rounded-xl px-4 py-3" style="background-color: var(--color-surface-card)">
+									<select
+										bind:value={draft.listId}
+										class="w-full bg-transparent outline-none text-sm"
+										style="color: var(--color-on-surface)"
+									>
+										{#each allLists as l (l.id)}
+											<option value={l.id}>{l.name}</option>
+										{/each}
+									</select>
+								</div>
+							{/if}
+
+							<!-- Action picker -->
+							<div class="flex gap-2">
+								{#each (['go', 'add', 'scanner'] as ShortcutAction[]) as action}
+									<button
+										onclick={() => draft.action = action}
+										class="flex-1 py-2.5 rounded-full text-xs font-semibold transition-colors"
+										style="background-color: {draft.action === action ? 'var(--color-primary)' : 'var(--color-surface-card)'}; color: {draft.action === action ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+									>
+										{actionLabel(action)}
+									</button>
+								{/each}
+							</div>
+
+							<!-- Save / Cancel -->
+							<div class="flex gap-2">
+								<button
+									onclick={cancelShortcutForm}
+									class="flex-1 py-3 rounded-full text-sm font-semibold"
+									style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+								>
+									{t.list_cancel}
+								</button>
+								<button
+									onclick={saveShortcut}
+									disabled={!draft.name.trim() || !draft.listId}
+									class="flex-1 py-3 rounded-full text-sm font-semibold disabled:opacity-40"
+									style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+								>
+									{t.list_save}
+								</button>
+							</div>
+						</div>
+					{:else if shortcuts.list.length < 4}
+						<button
+							onclick={startAdd}
+							class="w-full py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2"
+							style="background-color: var(--color-surface-container); color: var(--color-primary)"
+						>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+								<line x1="12" y1="5" x2="12" y2="19"/>
+								<line x1="5" y1="12" x2="19" y2="12"/>
+							</svg>
+							{currentLang() === 'en' ? 'Add shortcut' : 'Schnellzugriff hinzufügen'}
+						</button>
+					{/if}
 				</div>
 			{/if}
 		</div>

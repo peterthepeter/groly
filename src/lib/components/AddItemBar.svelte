@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { tick, onMount } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
 	import BarcodeScanner from './BarcodeScanner.svelte';
 
-	let { onAdd, onClose, suggestions = [] }: {
+	let { onAdd, onClose, suggestions = [], autoOpenScanner = false }: {
 		onAdd: (name: string, quantityInfo: string) => Promise<void>;
 		onClose: () => void;
 		suggestions?: string[];
+		autoOpenScanner?: boolean;
 	} = $props();
 
 	let name = $state('');
@@ -16,6 +17,7 @@
 	let showSuggestions = $state(false);
 	let bottomOffset = $state(0);
 	let scannerOpen = $state(false);
+	onMount(() => { if (autoOpenScanner) scannerOpen = true; });
 
 	const isNumeric = $derived(/^\d+$/.test(quantityInfo.trim()) || quantityInfo.trim() === '');
 

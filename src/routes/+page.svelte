@@ -14,6 +14,7 @@
 	import { getListIcon } from '$lib/listIcons';
 	import { env as publicEnv } from '$env/dynamic/public';
 	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
+	import FabWithShortcuts from '$lib/components/FabWithShortcuts.svelte';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
@@ -525,17 +526,7 @@
 			</button>
 
 			<!-- FAB Add Button -->
-			<button
-				onclick={() => { if (!sortMode) addModalOpen = true; }}
-				class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-				style="background-color: var(--color-primary)"
-				aria-label={t.add}
-			>
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.5" stroke-linecap="round">
-					<line x1="12" y1="5" x2="12" y2="19"/>
-					<line x1="5" y1="12" x2="19" y2="12"/>
-				</svg>
-			</button>
+			<FabWithShortcuts onTap={() => { if (!sortMode) addModalOpen = true; }} label={t.add} />
 
 			<!-- Rezepte Tab -->
 			<button

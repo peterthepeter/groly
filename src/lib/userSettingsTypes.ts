@@ -6,11 +6,22 @@ export type ListCategorySettings = {
 	order: string[];
 };
 
+export type ShortcutAction = 'go' | 'add' | 'scanner';
+
+export type Shortcut = {
+	id: string;
+	name: string;
+	listId: string;
+	listName: string;
+	action: ShortcutAction;
+};
+
 export type UserSettings = {
 	lang?: AvailableLanguageTag;
 	categorySortEnabled?: boolean;
 	categoryOrder?: string[];
 	listCategorySettings?: Record<string, ListCategorySettings>;
+	shortcuts?: Shortcut[];
 };
 
 export const DEFAULT_SETTINGS = {

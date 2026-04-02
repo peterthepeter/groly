@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.2.7',
+		de: [
+			'Schnellzugriff: + Button lang drücken für bis zu 4 Shortcuts zu Listen oder dem Scanner',
+			'Schnellzugriff in Einstellungen konfigurierbar (Name, Liste, Aktion)',
+			'Bedienungshinweis für Schnellzugriff in der Hilfe ergänzt',
+		],
+		en: [
+			'Quick access: long-press the + button for up to 4 shortcuts to lists or the scanner',
+			'Quick access shortcuts configurable in Settings (name, list, action)',
+			'Usage hint for quick access added to the help section',
+		]
+	},
+	{
 		version: '0.2.6',
 		de: [
 			'Barcode-Scanner: Offline-Status wird dauerhaft im Scanner-Fenster angezeigt',

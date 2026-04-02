@@ -6,13 +6,15 @@
 	import { initUpdateDetection, checkForUpdate } from '$lib/stores/pwa.svelte';
 	import { afterNavigate } from '$app/navigation';
 	import WhatsNewModal from '$lib/components/WhatsNewModal.svelte';
+	import ShortcutMenu from '$lib/components/ShortcutMenu.svelte';
+	import { shortcuts, shortcutMenu } from '$lib/shortcuts.svelte';
 	import { LATEST_CHANGES } from '$lib/changelog';
 
 	let whatsNewOpen = $state(false);
 
 	let { data, children } = $props();
 
-	afterNavigate(() => checkForUpdate());
+	afterNavigate(() => { checkForUpdate(); shortcutMenu.hide(); });
 
 	onMount(() => {
 		initLanguage();
@@ -109,4 +111,9 @@
 		items={currentLang() === 'en' ? LATEST_CHANGES.en : LATEST_CHANGES.de}
 		onClose={() => { whatsNewOpen = false; }}
 	/>
+{/if}
+
+<!-- ShortcutMenu at root level — avoids BottomNav's z-30 stacking context -->
+{#if shortcutMenu.open}
+	<ShortcutMenu shortcuts={shortcuts.list} onClose={shortcutMenu.hide} />
 {/if}

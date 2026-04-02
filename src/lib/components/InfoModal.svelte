@@ -55,6 +55,11 @@
 			title: 'Updates',
 			text: 'When a new version is available, an arrow icon appears in the top bar. Tap it to open a dialog and reload the app — no need to close it manually.',
 			svg: `<circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/>`
+		},
+		{
+			title: 'Quick access',
+			text: 'Long-press the + button to reveal up to 4 shortcuts. Slide your finger to the desired shortcut and release to navigate — or just release over empty space to cancel.',
+			svg: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`
 		}
 	] : [
 		{
@@ -106,6 +111,11 @@
 			title: 'Updates',
 			text: 'Wenn eine neue Version verfügbar ist, erscheint ein Pfeil-Icon in der oberen Leiste. Antippen öffnet einen Dialog zum Neu laden – die App muss nicht manuell geschlossen werden.',
 			svg: `<circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/>`
+		},
+		{
+			title: 'Schnellzugriff',
+			text: 'Lange auf den + Button drücken, um bis zu 4 Schnellzugriffe anzuzeigen. Finger zum gewünschten Shortcut schieben und loslassen – oder auf einer leeren Stelle loslassen, um abzubrechen.',
+			svg: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`
 		}
 	]);
 </script>

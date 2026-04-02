@@ -30,6 +30,7 @@
 	let searchQuery = $state('');
 	let searchOpen = $state(false);
 	let scrollContainer = $state<HTMLDivElement | null>(null);
+	let autoScannerOnOpen = $state(false);
 
 	const listId = $derived($page.params.id);
 	const openItems = $derived.by(() => {
@@ -182,6 +183,16 @@
 	}
 
 	onMount(() => {
+		// Handle shortcut ?action param — open add bar or scanner immediately
+		const action = new URLSearchParams(window.location.search).get('action');
+		if (action === 'add' || action === 'scanner') {
+			editItem = null;
+			addModalOpen = true;
+			if (action === 'scanner') autoScannerOnOpen = true;
+			// Clean the URL so refreshing doesn't re-trigger the action
+			history.replaceState({}, '', window.location.pathname);
+		}
+
 		void loadItems();
 		const handleOnline = () => void loadItems();
 		window.addEventListener('online', handleOnline);
@@ -324,8 +335,9 @@
 {#if addModalOpen && !editItem}
 	<AddItemBar
 		onAdd={addItem}
-		onClose={() => { addModalOpen = false; }}
+		onClose={() => { addModalOpen = false; autoScannerOnOpen = false; }}
 		{suggestions}
+		autoOpenScanner={autoScannerOnOpen}
 	/>
 {/if}
 

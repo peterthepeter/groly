@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n.svelte';
+	import FabWithShortcuts from './FabWithShortcuts.svelte';
 
 	let { onAdd, onListsPress = null }: { onAdd: () => void; onListsPress?: (() => void) | null } = $props();
 
@@ -47,16 +48,6 @@
 		</button>
 
 		<!-- FAB Add Button -->
-		<button
-			onclick={onAdd}
-			class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-			style="background-color: var(--color-primary)"
-			aria-label={t.add}
-		>
-			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.5" stroke-linecap="round">
-				<line x1="12" y1="5" x2="12" y2="19"/>
-				<line x1="5" y1="12" x2="19" y2="12"/>
-			</svg>
-		</button>
+		<FabWithShortcuts onTap={onAdd} label={t.add} />
 	</div>
 </div>

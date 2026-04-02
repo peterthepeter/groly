@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
-import { type UserSettings, type ListCategorySettings, DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
+import { type UserSettings, type ListCategorySettings, type Shortcut, DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
 import { DEFAULT_CATEGORY_ORDER } from '$lib/categories';
-export type { UserSettings, ListCategorySettings } from '$lib/userSettingsTypes';
+export type { UserSettings, ListCategorySettings, Shortcut } from '$lib/userSettingsTypes';
 export { DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
 import type { AvailableLanguageTag } from '$lib/paraglide/runtime';
 
@@ -69,6 +69,7 @@ let _lang = $state(initial.lang);
 let _categorySortEnabled = $state(initial.categorySortEnabled);
 let _categoryOrder = $state<string[]>(initial.categoryOrder);
 let _listCategorySettings = $state<Record<string, ListCategorySettings>>(cache.listCategorySettings ?? {});
+let _shortcuts = $state<Shortcut[]>(cache.shortcuts ?? []);
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -79,7 +80,8 @@ function scheduleSave() {
 			lang: _lang,
 			categorySortEnabled: _categorySortEnabled,
 			categoryOrder: _categoryOrder,
-			listCategorySettings: _listCategorySettings
+			listCategorySettings: _listCategorySettings,
+			shortcuts: _shortcuts
 		};
 		saveCache(settings);
 		try {
@@ -144,6 +146,22 @@ export const userSettings = {
 		[arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
 		_listCategorySettings = { ..._listCategorySettings, [listId]: { ...s, order: arr } };
 		scheduleSave();
+	},
+
+	// Shortcuts
+	get shortcuts() { return _shortcuts; },
+	addShortcut(s: Shortcut) {
+		if (_shortcuts.length >= 4) return;
+		_shortcuts = [..._shortcuts, s];
+		scheduleSave();
+	},
+	updateShortcut(id: string, changes: Partial<Omit<Shortcut, 'id'>>) {
+		_shortcuts = _shortcuts.map(s => s.id === id ? { ...s, ...changes } : s);
+		scheduleSave();
+	},
+	removeShortcut(id: string) {
+		_shortcuts = _shortcuts.filter(s => s.id !== id);
+		scheduleSave();
 	}
 };
 
@@ -158,6 +176,7 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_categorySortEnabled = merged.categorySortEnabled;
 		_categoryOrder = merged.categoryOrder;
 		_listCategorySettings = settings.listCategorySettings ?? {};
+		_shortcuts = settings.shortcuts ?? [];
 		saveCache(settings);
 		return settings;
 	} catch { return null; }
