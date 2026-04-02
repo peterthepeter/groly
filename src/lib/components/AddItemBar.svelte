@@ -17,7 +17,13 @@
 	let showSuggestions = $state(false);
 	let bottomOffset = $state(0);
 	let scannerOpen = $state(false);
-	onMount(() => { if (autoOpenScanner) scannerOpen = true; });
+	onMount(() => {
+		if (autoOpenScanner) {
+			scannerOpen = true;
+		} else {
+			nameInput?.focus();
+		}
+	});
 
 	const isNumeric = $derived(/^\d+$/.test(quantityInfo.trim()) || quantityInfo.trim() === '');
 

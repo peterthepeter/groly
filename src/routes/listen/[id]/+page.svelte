@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { on } from '$lib/sseStore.svelte';
-	import { goto } from '$app/navigation';
+	import { goto, afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
@@ -182,17 +182,19 @@
 		);
 	}
 
-	onMount(() => {
-		// Handle shortcut ?action param — open add bar or scanner immediately
-		const action = new URLSearchParams(window.location.search).get('action');
+	afterNavigate(({ to }) => {
+		// Handle shortcut ?action param — fires on every navigation incl. same-route
+		const action = to?.url.searchParams.get('action');
 		if (action === 'add' || action === 'scanner') {
 			editItem = null;
 			addModalOpen = true;
-			if (action === 'scanner') autoScannerOnOpen = true;
+			autoScannerOnOpen = action === 'scanner';
 			// Clean the URL so refreshing doesn't re-trigger the action
 			history.replaceState({}, '', window.location.pathname);
 		}
+	});
 
+	onMount(() => {
 		void loadItems();
 		const handleOnline = () => void loadItems();
 		window.addEventListener('online', handleOnline);
