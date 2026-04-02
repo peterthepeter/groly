@@ -130,7 +130,7 @@
 				bind:value={name}
 				oninput={() => showSuggestions = true}
 				onkeydown={handleKeydown}
-				autofocus
+				autofocus={!autoOpenScanner}
 				autocomplete="off"
 				class="w-full rounded-xl px-4 py-3 text-base font-medium outline-none"
 				style="background-color: var(--color-surface-card); color: var(--color-on-surface)"
