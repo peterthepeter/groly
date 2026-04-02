@@ -418,7 +418,7 @@
 		</div>
 
 		<!-- Kategorie-Sortierung -->
-		<div class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div id="kategorien-sortieren" class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
 			<button
 				onclick={() => categorySortOpen = !categorySortOpen}
 				class="w-full flex items-center justify-between px-5 py-5"

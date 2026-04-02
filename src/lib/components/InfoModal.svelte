@@ -5,51 +5,21 @@
 
 	const lang = $derived(currentLang());
 
-	const items = $derived(lang === 'en' ? [
+	type InfoSection = { section: string };
+	type InfoItem = { title: string; text: string; svg: string; link?: { href: string; label: string } };
+	type Entry = InfoSection | InfoItem;
+
+	const items = $derived<Entry[]>(lang === 'en' ? [
+		{ section: 'App & Basics' },
 		{
 			title: 'One-handed use',
 			text: 'Groly is built for mobile from the ground up. New items are added at the bottom — lists grow upward. Navigation and dialogs open from the bottom too.',
 			svg: `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`
 		},
 		{
-			title: 'Lists',
-			text: 'Tap a list to open it. Long-press a list name to edit it. Long-press the Lists tab at the bottom to enter sort mode.',
-			svg: `<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>`
-		},
-		{
-			title: 'Items',
-			text: 'Tap an item to check it off. Long-press to edit quantity, category, or delete it.',
-			svg: `<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/>`
-		},
-		{
-			title: 'Long names',
-			text: 'Swipe a long item name left or right to see the full name in a popup.',
-			svg: `<polyline points="18 9 21 12 18 15"/><polyline points="6 9 3 12 6 15"/><line x1="3" y1="12" x2="21" y2="12"/>`
-		},
-		{
-			title: 'Sharing',
-			text: 'Long-press a list name to open its settings, then tap the share icon to invite other users. They\'ll receive an invitation.',
-			svg: `<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>`
-		},
-		{
-			title: 'Notifications',
-			text: 'Shared lists support push notifications. Enable them in Settings to stay updated when others make changes.',
-			svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
-		},
-		{
 			title: 'Offline',
 			text: 'The app works without internet. Changes are saved locally and synced automatically once you\'re back online.',
 			svg: `<line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>`
-		},
-		{
-			title: 'Categories',
-			text: 'Items are categorized automatically. Long-press an item and choose a category to override it manually.',
-			svg: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`
-		},
-		{
-			title: 'Recipes',
-			text: 'Browse your saved recipes and tap one to open it. Adjust the serving size — it saves automatically. Deselect ingredients you don\'t need, then tap the cart icon to add everything to a shopping list.',
-			svg: `<path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="20" x2="15" y2="20"/>`
 		},
 		{
 			title: 'Updates',
@@ -61,52 +31,60 @@
 			text: 'Long-press the + button to reveal up to 4 shortcuts. Slide your finger to the desired shortcut and release to navigate — or just release over empty space to cancel.',
 			link: { href: '/einstellungen#schnellzugriff', label: 'Set up shortcuts in Settings' },
 			svg: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`
+		},
+
+		{ section: 'Lists' },
+		{
+			title: 'Lists',
+			text: 'Tap a list to open it. Long-press a list name to edit it. Long-press the Lists tab at the bottom to enter sort mode.',
+			svg: `<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>`
+		},
+		{
+			title: 'Sharing',
+			text: 'Long-press a list name to open its settings, then tap the share icon to invite other users. They\'ll receive an invitation.',
+			svg: `<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>`
+		},
+		{
+			title: 'Notifications',
+			text: 'Shared lists support push notifications. Enable them in Settings to stay updated when others make changes.',
+			svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
+		},
+
+		{ section: 'Items' },
+		{
+			title: 'Items',
+			text: 'Tap an item to check it off. Long-press to edit quantity, category, or delete it.',
+			svg: `<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/>`
+		},
+		{
+			title: 'Long names',
+			text: 'Swipe a long item name left or right to see the full name in a popup.',
+			svg: `<polyline points="18 9 21 12 18 15"/><polyline points="6 9 3 12 6 15"/><line x1="3" y1="12" x2="21" y2="12"/>`
+		},
+		{
+			title: 'Categories',
+			text: 'Items are categorized automatically. Long-press an item to override its category manually. You can enable and reorder global category sorting in Settings. For per-list sorting, long-press a list name → Edit → "Category sorting".',
+			link: { href: '/einstellungen#kategorien-sortieren', label: 'Category sorting in Settings' },
+			svg: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`
+		},
+
+		{ section: 'More' },
+		{
+			title: 'Recipes',
+			text: 'Browse your saved recipes and tap one to open it. Adjust the serving size — it saves automatically. Deselect ingredients you don\'t need, then tap the cart icon to add everything to a shopping list.',
+			svg: `<path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="20" x2="15" y2="20"/>`
 		}
 	] : [
+		{ section: 'App & Grundlagen' },
 		{
 			title: 'Einhandbedienung',
 			text: 'Groly ist von Grund auf für das Smartphone gebaut. Neue Items reihen sich unten an – die Liste wächst nach oben. Auch Navigation und Dialoge öffnen sich von unten.',
 			svg: `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`
 		},
 		{
-			title: 'Listen',
-			text: 'Tippe auf eine Liste, um sie zu öffnen. Langer Druck auf einen Listennamen öffnet den Bearbeiten-Dialog. Langer Druck auf den Listen-Tab unten aktiviert den Sortiermodus.',
-			svg: `<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>`
-		},
-		{
-			title: 'Items',
-			text: 'Kurzes Tippen hakt ein Item ab. Langes Drücken öffnet den Bearbeiten-Dialog mit Menge, Kategorie und Löschen.',
-			svg: `<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/>`
-		},
-		{
-			title: 'Lange Namen',
-			text: 'Wische bei langen Item-Namen nach links oder rechts, um den vollständigen Namen im Pop-Up anzuzeigen.',
-			svg: `<polyline points="18 9 21 12 18 15"/><polyline points="6 9 3 12 6 15"/><line x1="3" y1="12" x2="21" y2="12"/>`
-		},
-		{
-			title: 'Teilen',
-			text: 'Langer Druck auf einen Listennamen öffnet den Bearbeiten-Dialog. Dort über das Teilen-Icon andere Nutzer einladen – diese erhalten eine Einladung.',
-			svg: `<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>`
-		},
-		{
-			title: 'Benachrichtigungen',
-			text: 'Bei geteilten Listen kannst du Push-Nachrichten aktivieren. Einstellungen → Benachrichtigungen.',
-			svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
-		},
-		{
 			title: 'Offline',
 			text: 'Die App funktioniert ohne Internet. Änderungen werden lokal gespeichert und automatisch synchronisiert.',
 			svg: `<line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>`
-		},
-		{
-			title: 'Kategorien',
-			text: 'Items werden automatisch kategorisiert. Langer Druck auf ein Item → Kategorie manuell überschreiben.',
-			svg: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`
-		},
-		{
-			title: 'Rezepte',
-			text: 'Tippe auf ein Rezept, um es zu öffnen. Passe die Portionenzahl an – sie wird automatisch gespeichert. Hake Zutaten ab, die du nicht brauchst, und tippe dann auf das Einkaufswagen-Icon, um alles in eine Liste zu übertragen.',
-			svg: `<path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="20" x2="15" y2="20"/>`
 		},
 		{
 			title: 'Updates',
@@ -118,6 +96,48 @@
 			text: 'Lange auf den + Button drücken, um bis zu 4 Schnellzugriffe anzuzeigen. Finger zum gewünschten Shortcut schieben und loslassen – oder auf einer leeren Stelle loslassen, um abzubrechen.',
 			link: { href: '/einstellungen#schnellzugriff', label: 'Schnellzugriffe in den Einstellungen anlegen' },
 			svg: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`
+		},
+
+		{ section: 'Listen' },
+		{
+			title: 'Listen',
+			text: 'Tippe auf eine Liste, um sie zu öffnen. Langer Druck auf einen Listennamen öffnet den Bearbeiten-Dialog. Langer Druck auf den Listen-Tab unten aktiviert den Sortiermodus.',
+			svg: `<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>`
+		},
+		{
+			title: 'Teilen',
+			text: 'Langer Druck auf einen Listennamen öffnet den Bearbeiten-Dialog. Dort über das Teilen-Icon andere Nutzer einladen – diese erhalten eine Einladung.',
+			svg: `<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>`
+		},
+		{
+			title: 'Benachrichtigungen',
+			text: 'Bei geteilten Listen kannst du Push-Nachrichten aktivieren. Einstellungen → Benachrichtigungen.',
+			svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
+		},
+
+		{ section: 'Items' },
+		{
+			title: 'Items',
+			text: 'Kurzes Tippen hakt ein Item ab. Langes Drücken öffnet den Bearbeiten-Dialog mit Menge, Kategorie und Löschen.',
+			svg: `<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/>`
+		},
+		{
+			title: 'Lange Namen',
+			text: 'Wische bei langen Item-Namen nach links oder rechts, um den vollständigen Namen im Pop-Up anzuzeigen.',
+			svg: `<polyline points="18 9 21 12 18 15"/><polyline points="6 9 3 12 6 15"/><line x1="3" y1="12" x2="21" y2="12"/>`
+		},
+		{
+			title: 'Kategorien',
+			text: 'Items werden automatisch kategorisiert. Langer Druck auf ein Item → Kategorie manuell überschreiben. Die globale Kategoriesortierung lässt sich in den Einstellungen aktivieren und umsortieren. Für listenspezifische Einstellungen: langer Druck auf den Listennamen → Bearbeiten → „Kategorien sortieren".',
+			link: { href: '/einstellungen#kategorien-sortieren', label: 'Kategoriesortierung in den Einstellungen' },
+			svg: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`
+		},
+
+		{ section: 'Weiteres' },
+		{
+			title: 'Rezepte',
+			text: 'Tippe auf ein Rezept, um es zu öffnen. Passe die Portionenzahl an – sie wird automatisch gespeichert. Hake Zutaten ab, die du nicht brauchst, und tippe dann auf das Einkaufswagen-Icon, um alles in eine Liste zu übertragen.',
+			svg: `<path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="20" x2="15" y2="20"/>`
 		}
 	]);
 </script>
@@ -147,32 +167,40 @@
 	</div>
 
 	<!-- Items -->
-	<div class="px-4 space-y-1 overflow-y-auto" style="max-height: 65vh">
-		{#each items as item, i (i)}
-			<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
-			     style="background-color: var(--color-surface-container)">
-				<!-- Icon badge -->
-				<div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
-				     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent)">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-					     stroke="var(--color-primary)" stroke-width="2"
-					     stroke-linecap="round" stroke-linejoin="round">
-						{@html item.svg}
-					</svg>
+	<div class="px-4 overflow-y-auto" style="max-height: 65vh">
+		{#each items as entry, i (i)}
+			{#if 'section' in entry}
+				<div class="flex items-center gap-2 px-1 pb-2" class:mt-4={i > 0}>
+					<span class="text-[10px] font-semibold uppercase tracking-widest"
+					      style="color: var(--color-on-surface-variant); opacity: 0.6">{entry.section}</span>
+					<div class="flex-1 h-px" style="background-color: var(--color-outline-variant); opacity: 0.4"></div>
 				</div>
-				<!-- Text -->
-				<div class="flex-1 min-w-0">
-					<div class="text-sm font-semibold leading-tight mb-0.5"
-					     style="color: var(--color-on-surface)">{item.title}</div>
-					<div class="text-xs leading-relaxed"
-					     style="color: var(--color-on-surface-variant)">{item.text}</div>
-					{#if item.link}
-						<a href={item.link.href} onclick={onClose}
-						   class="text-xs font-medium mt-1 inline-block"
-						   style="color: var(--color-primary)">{item.link.label}</a>
-					{/if}
+			{:else}
+				<div class="flex items-start gap-3 px-3 py-3 rounded-xl mb-1"
+				     style="background-color: var(--color-surface-container)">
+					<!-- Icon badge -->
+					<div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
+					     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent)">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+						     stroke="var(--color-primary)" stroke-width="2"
+						     stroke-linecap="round" stroke-linejoin="round">
+							{@html entry.svg}
+						</svg>
+					</div>
+					<!-- Text -->
+					<div class="flex-1 min-w-0">
+						<div class="text-sm font-semibold leading-tight mb-0.5"
+						     style="color: var(--color-on-surface)">{entry.title}</div>
+						<div class="text-xs leading-relaxed"
+						     style="color: var(--color-on-surface-variant)">{entry.text}</div>
+						{#if entry.link}
+							<a href={entry.link.href} onclick={onClose}
+							   class="text-xs font-medium mt-1 inline-block"
+							   style="color: var(--color-primary)">{entry.link.label}</a>
+						{/if}
+					</div>
 				</div>
-			</div>
+			{/if}
 		{/each}
 	</div>
 
