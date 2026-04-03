@@ -213,8 +213,8 @@
 	<!-- Schließen-Button -->
 	<button
 		onclick={handleClose}
-		class="absolute top-20 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
-		style="background-color: rgba(0,0,0,0.4); color: white"
+		class="absolute bottom-6 right-4 z-10 w-12 h-12 rounded-full flex items-center justify-center"
+		style="background-color: rgba(0,0,0,0.5); color: white; margin-bottom: env(safe-area-inset-bottom)"
 		aria-label="Schließen"
 	>
 		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">

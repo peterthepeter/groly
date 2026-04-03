@@ -111,6 +111,10 @@ export const CATEGORIES: CategoryDef[] = [
 			'kombucha', 'almdudler', 'bionade', 'matcha', 'eiskaffee', 'frappuccino',
 			'apfelschorle', 'weinschorle', 'bananenmilch', 'hafermilch', 'mandelmilch', 'sojamilch',
 			'reismilch', 'kokosmilch', 'oatly', 'alpro', 'brause', 'zitronenwasser', 'cold brew',
+			// Tee-Komposita (deutsches Kompositum ohne Bindestrich wird nicht per "tee" erkannt)
+			'kamillentee', 'pfefferminztee', 'früchtetee', 'kräutertee', 'grüntee', 'schwarztee',
+			'ingwertee', 'fencheltee', 'hagebuttentee', 'rooibostee', 'beuteltee', 'instanttee',
+			'hibiskustee', 'holundertee', 'brennnesseltee', 'löwenzahntee', 'zitronentee',
 			// English
 			'water', 'juice', 'beer', 'wine', 'coffee', 'tea', 'lemonade', 'drink', 'drinks',
 			'mineral water', 'sparkling water', 'orange juice', 'apple juice', 'smoothie',
