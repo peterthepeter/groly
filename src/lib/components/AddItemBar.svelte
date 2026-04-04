@@ -38,6 +38,23 @@
 		else quantityInfo = String(n - 1);
 	}
 
+	// Quick capture: comma-separated multi-item input
+	const UNIT_RE = /^(\d+(?:[.,]\d+)?\s*(?:x|g|kg|mg|ml|l|el|tl|stk\.?|stück|pck\.?|pkg\.?|dose|flasche|becher|tüte|bund|zehe|scheibe)?)(?:\s+)(.+)$/i;
+
+	function parseQuickItem(token: string): { name: string; quantityInfo: string } {
+		const trimmed = token.trim();
+		const match = trimmed.match(UNIT_RE);
+		if (match?.[2]) return { quantityInfo: match[1].trim(), name: match[2].trim() };
+		return { name: trimmed, quantityInfo: '' };
+	}
+
+	const isMultiItem = $derived(name.includes(','));
+	const parsedItems = $derived(
+		isMultiItem
+			? name.split(',').map(t => t.trim()).filter(t => t.length > 0).map(parseQuickItem)
+			: []
+	);
+
 	$effect(() => {
 		const vv = window.visualViewport;
 		if (!vv) return;
@@ -63,7 +80,15 @@
 		if (!name.trim() || adding) return;
 		adding = true;
 		showSuggestions = false;
-		await onAdd(name.trim(), quantityInfo.trim());
+
+		if (isMultiItem) {
+			for (const item of parsedItems) {
+				if (item.name) await onAdd(item.name, item.quantityInfo);
+			}
+		} else {
+			await onAdd(name.trim(), quantityInfo.trim());
+		}
+
 		name = '';
 		quantityInfo = '';
 		adding = false;
@@ -135,34 +160,51 @@
 				class="w-full rounded-xl px-4 py-3 text-base font-medium outline-none"
 				style="background-color: var(--color-surface-card); color: var(--color-on-surface)"
 			/>
-			<div class="flex items-center gap-2 rounded-xl px-4 py-3"
-			     style="background-color: var(--color-surface-card)">
-				<input
-					type="text"
-					placeholder={t.item_quantity_placeholder}
-					bind:value={quantityInfo}
-					onkeydown={handleKeydown}
-					autocomplete="off"
-					class="flex-1 bg-transparent outline-none text-base min-w-0"
-					style="color: var(--color-on-surface)"
-				/>
-				<button
-					onpointerdown={(e) => e.preventDefault()}
-					onclick={decrement}
-					disabled={!isNumeric || quantityInfo.trim() === ''}
-					tabindex="-1"
-					class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
-					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-				>−</button>
-				<button
-					onpointerdown={(e) => e.preventDefault()}
-					onclick={increment}
-					disabled={!isNumeric}
-					tabindex="-1"
-					class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
-					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-				>+</button>
-			</div>
+
+			<!-- Multi-item preview chips -->
+			{#if isMultiItem && parsedItems.length > 0}
+				<div class="flex gap-1.5 flex-wrap px-1">
+					{#each parsedItems as item}
+						{#if item.name}
+							<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+							      style="background-color: color-mix(in srgb, var(--color-primary) 13%, transparent); color: var(--color-primary)">
+								{#if item.quantityInfo}<span class="font-bold">{item.quantityInfo}</span><span style="opacity:0.5">·</span>{/if}{item.name}
+							</span>
+						{/if}
+					{/each}
+				</div>
+			{/if}
+
+			{#if !isMultiItem}
+				<div class="flex items-center gap-2 rounded-xl px-4 py-3"
+				     style="background-color: var(--color-surface-card)">
+					<input
+						type="text"
+						placeholder={t.item_quantity_placeholder}
+						bind:value={quantityInfo}
+						onkeydown={handleKeydown}
+						autocomplete="off"
+						class="flex-1 bg-transparent outline-none text-base min-w-0"
+						style="color: var(--color-on-surface)"
+					/>
+					<button
+						onpointerdown={(e) => e.preventDefault()}
+						onclick={decrement}
+						disabled={!isNumeric || quantityInfo.trim() === ''}
+						tabindex="-1"
+						class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+						style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+					>−</button>
+					<button
+						onpointerdown={(e) => e.preventDefault()}
+						onclick={increment}
+						disabled={!isNumeric}
+						tabindex="-1"
+						class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+						style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+					>+</button>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Barcode scannen -->
@@ -204,7 +246,11 @@
 				class="flex-1 h-12 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
 				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 			>
-				{t.add}
+				{#if isMultiItem && parsedItems.filter(i => i.name).length > 1}
+					{parsedItems.filter(i => i.name).length}× {t.add}
+				{:else}
+					{t.add}
+				{/if}
 			</button>
 		</div>
 	</div>

@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.2.9',
+		de: [
+			'Schnelleingabe: Mehrere Artikel auf einmal tippen, kommagetrennt – z.\u202fB. „2x Milch, 500g Hackfleisch, Brot"',
+			'Mengenangaben am Anfang werden automatisch erkannt und dem Artikel zugeordnet',
+			'Vorschau der erkannten Artikel direkt im Eingabefeld',
+		],
+		en: [
+			'Quick entry: type multiple items at once, comma-separated — e.g. "2x Milk, 500g Ground beef, Bread"',
+			'Quantities at the start of each item are recognized and assigned automatically',
+			'Live preview of parsed items shown directly in the input',
+		]
+	},
+	{
 		version: '0.2.8',
 		de: [
 			'Rezepte: Abgewählte Zutaten werden gespeichert und beim nächsten Öffnen wiederhergestellt',

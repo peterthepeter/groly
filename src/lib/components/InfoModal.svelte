@@ -57,6 +57,11 @@
 			svg: `<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/>`
 		},
 		{
+			title: 'Quick entry',
+			text: 'Add multiple items at once by separating them with commas — e.g. "2x Milk, 500g Ground beef, Bread". Quantities at the start of each item are recognized automatically.',
+			svg: `<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="9" x2="11" y2="9"/>`
+		},
+		{
 			title: 'Long names',
 			text: 'Swipe a long item name left or right to see the full name in a popup.',
 			svg: `<polyline points="18 9 21 12 18 15"/><polyline points="6 9 3 12 6 15"/><line x1="3" y1="12" x2="21" y2="12"/>`
@@ -120,6 +125,11 @@
 			title: 'Items',
 			text: 'Kurzes Tippen hakt ein Item ab. Langes Drücken öffnet den Bearbeiten-Dialog mit Menge, Kategorie und Löschen.',
 			svg: `<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/>`
+		},
+		{
+			title: 'Schnelleingabe',
+			text: 'Mehrere Artikel auf einmal eingeben: Komma-getrennt tippen, z.\u202fB. „2x Milch, 500g Hackfleisch, Brot". Mengenangaben am Anfang jedes Artikels werden automatisch erkannt.',
+			svg: `<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="9" x2="11" y2="9"/>`
 		},
 		{
 			title: 'Lange Namen',
