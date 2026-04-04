@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.2.8',
+		de: [
+			'Rezepte: Abgewählte Zutaten werden gespeichert und beim nächsten Öffnen wiederhergestellt',
+			'Praktisch für Gewürze & Co., die man immer vorrätig hat',
+		],
+		en: [
+			'Recipes: deselected ingredients are saved and restored when you open the recipe again',
+			'Handy for spices and staples you always have at home',
+		]
+	},
+	{
 		version: '0.2.7',
 		de: [
 			'Schnellzugriff: + Button lang drücken für bis zu 4 Shortcuts zu Listen oder dem Scanner',

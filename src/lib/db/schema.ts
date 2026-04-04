@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey(),
@@ -120,6 +120,11 @@ export const recipeShares = sqliteTable('recipe_shares', {
 	createdAt: integer('created_at').notNull()
 });
 
+export const recipeIngredientExclusions = sqliteTable('recipe_ingredient_exclusions', {
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	ingredientId: text('ingredient_id').notNull().references(() => recipeIngredients.id, { onDelete: 'cascade' })
+}, (t) => [primaryKey({ columns: [t.userId, t.ingredientId] })]);
+
 export const appMeta = sqliteTable('app_meta', {
 	key: text('key').primaryKey(),
 	value: text('value').notNull()
@@ -142,3 +147,4 @@ export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type RecipeStep = typeof recipeSteps.$inferSelect;
 export type RecipeShare = typeof recipeShares.$inferSelect;
 export type BarcodeCache = typeof barcodeCache.$inferSelect;
+export type RecipeIngredientExclusion = typeof recipeIngredientExclusions.$inferSelect;

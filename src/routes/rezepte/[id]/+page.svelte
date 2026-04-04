@@ -18,11 +18,32 @@
 
 	let excludedIngredients = $state(new Set<string>());
 
+	async function loadExclusions() {
+		try {
+			const res = await fetch(`/api/recipes/${recipeId}/exclusions`);
+			if (res.ok) {
+				const data = await res.json();
+				excludedIngredients = new Set(data.excludedIds);
+			}
+		} catch {}
+	}
+
+	async function saveExclusions(excluded: Set<string>) {
+		try {
+			await fetch(`/api/recipes/${recipeId}/exclusions`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ excludedIds: [...excluded] })
+			});
+		} catch {}
+	}
+
 	function toggleIngredient(id: string) {
 		const next = new Set(excludedIngredients);
 		if (next.has(id)) next.delete(id);
 		else next.add(id);
 		excludedIngredients = next;
+		saveExclusions(next);
 	}
 
 	const selectedCount = $derived(
@@ -39,6 +60,7 @@
 			recipe = data;
 			currentServings = data.servings;
 			originalServings = data.servings;
+			await loadExclusions();
 		} catch {
 			goto('/rezepte');
 		}
