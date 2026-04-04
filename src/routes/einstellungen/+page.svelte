@@ -136,6 +136,7 @@
 
 	// ── Shortcuts ──────────────────────────────────────────────────────────────
 	let shortcutsOpen = $state(false);
+	let locationOpen = $state(false);
 	let allLists = $state<{ id: string; name: string }[]>([]);
 	let allListsLoaded = $state(false);
 
@@ -663,6 +664,61 @@
 							{currentLang() === 'en' ? 'Add shortcut' : 'Schnellzugriff hinzufügen'}
 						</button>
 					{/if}
+				</div>
+			{/if}
+		</div>
+
+		<!-- Standorterkennung -->
+		<div class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
+			<button
+				onclick={() => locationOpen = !locationOpen}
+				class="w-full flex items-center justify-between px-5 py-5"
+			>
+				<h2 class="text-base font-bold" style="color: var(--color-on-surface)">
+					{currentLang() === 'en' ? 'Location detection' : 'Standorterkennung'}
+				</h2>
+				<div class="flex items-center gap-3">
+					<!-- Toggle -->
+					<div
+						role="switch"
+						aria-checked={userSettings.locationNavEnabled}
+						onclick={(e) => { e.stopPropagation(); userSettings.locationNavEnabled = !userSettings.locationNavEnabled; }}
+						onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.locationNavEnabled = !userSettings.locationNavEnabled; } }}
+						tabindex="0"
+						class="relative w-12 h-6 rounded-full overflow-hidden transition-colors flex-shrink-0"
+						style="background-color: {userSettings.locationNavEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+					>
+						{#if userSettings.locationNavEnabled}
+							<span class="absolute top-0.5 h-5 w-5 rounded-full"
+							      style="background-color: white; transform: translateX(1.625rem)"></span>
+						{/if}
+					</div>
+					<!-- Chevron -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({locationOpen ? 90 : 0}deg); transition: transform 0.2s">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</div>
+			</button>
+
+			{#if locationOpen}
+				<div class="px-5 pb-5">
+					<p class="text-xs mb-3 leading-relaxed" style="color: var(--color-on-surface-variant)">
+						{currentLang() === 'en'
+							? 'Automatically opens a list when you open the app at a saved location (within 100 m). Works when resuming from background too.'
+							: 'Öffnet eine Liste automatisch, wenn du die App an einem gespeicherten Standort öffnest (innerhalb von 100 m). Funktioniert auch beim Wechsel aus dem Hintergrund.'}
+					</p>
+					<div class="rounded-xl px-4 py-3 text-xs leading-relaxed mb-2"
+					     style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)">
+						{currentLang() === 'en'
+							? '🔒 Your GPS location never leaves your device. Only the search query is sent to OpenStreetMap once during setup — not linked to your identity.'
+							: '🔒 Dein GPS-Standort verlässt nie dein Gerät. Nur der Suchbegriff wird einmalig beim Einrichten an OpenStreetMap gesendet – ohne Verbindung zu deiner Identität.'}
+					</div>
+					<p class="text-xs px-1" style="color: var(--color-on-surface-variant)">
+						{currentLang() === 'en'
+							? 'Set a location per list: long-press a list → Edit.'
+							: 'Standort pro Liste: langer Druck auf eine Liste → Bearbeiten.'}
+					</p>
 				</div>
 			{/if}
 		</div>

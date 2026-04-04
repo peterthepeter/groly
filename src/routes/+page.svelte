@@ -11,6 +11,7 @@
 	import InvitationCard from '$lib/components/InvitationCard.svelte';
 	import MemberListModal from '$lib/components/MemberListModal.svelte';
 	import { t, lists_active } from '$lib/i18n.svelte';
+	import { userSettings } from '$lib/userSettings.svelte';
 	import { getListIcon } from '$lib/listIcons';
 	import { env as publicEnv } from '$env/dynamic/public';
 	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
@@ -20,7 +21,7 @@
 
 	let { data } = $props();
 
-	type ListItem = { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; openCount: number; memberCount: number; updatedAt: number; isOwner: boolean; ownerUsername: string | null };
+	type ListItem = { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; openCount: number; memberCount: number; updatedAt: number; isOwner: boolean; ownerUsername: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null };
 	type PendingInvitation = { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; ownerUsername: string | null; openCount: number; updatedAt: number };
 
 	const STORAGE_KEY = 'groly_list_order';
@@ -185,6 +186,7 @@
 			}
 		}
 		loading = false;
+		checkLocationAndNavigate();
 	}
 
 	async function createList(name: string, description: string, iconId: string | null, shareAfterCreate?: boolean) {
@@ -205,7 +207,7 @@
 		addModalOpen = false;
 	}
 
-	async function saveEditList(name: string, description: string, iconId: string | null) {
+	async function saveEditList(name: string, description: string, iconId: string | null, _shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null) {
 		if (!editList) return;
 		const id = editList.id;
 		editList = null;
@@ -213,11 +215,11 @@
 			() => fetch(`/api/lists/${id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, description, iconId })
+				body: JSON.stringify({ name, description, iconId, locationLat, locationLng, locationName })
 			}).then(r => { if (!r.ok) throw new Error(); }),
 			{ type: 'update_list', payload: { id, name, description, iconId }, createdAt: Date.now() },
 			() => {
-				lists = lists.map(l => l.id === id ? { ...l, name, description: description || null, iconId } : l);
+				lists = lists.map(l => l.id === id ? { ...l, name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null } : l);
 				void updateOfflineList(id, { name, description: description || null });
 			}
 		);
@@ -281,6 +283,34 @@
 		// short tap on lists tab: go to / (already there)
 	}
 
+	const LOCATION_RADIUS_M = 100;
+	const LOC_NAV_KEY = 'groly_loc_nav_done';
+
+	function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+		const R = 6371000;
+		const dLat = (lat2 - lat1) * Math.PI / 180;
+		const dLng = (lng2 - lng1) * Math.PI / 180;
+		const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+		return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	}
+
+	function checkLocationAndNavigate() {
+		if (sessionStorage.getItem(LOC_NAV_KEY)) return;
+		if (!userSettings.locationNavEnabled) return;
+		if (!('geolocation' in navigator)) return;
+		sessionStorage.setItem(LOC_NAV_KEY, '1');
+		navigator.geolocation.getCurrentPosition((pos) => {
+			const { latitude, longitude } = pos.coords;
+			const match = lists.find(l =>
+				l.locationLat != null &&
+				l.locationLng != null &&
+				!userSettings.isListLocationDisabled(l.id) &&
+				haversineDistance(latitude, longitude, l.locationLat, l.locationLng) <= LOCATION_RADIUS_M
+			);
+			if (match) goto(`/listen/${match.id}`);
+		}, () => { /* permission denied or error — silently ignore */ }, { timeout: 8000, maximumAge: 30000 });
+	}
+
 	onMount(() => {
 		loadCustomOrder();
 		loadLists();
@@ -296,9 +326,19 @@
 
 		const handleOnline = () => void loadLists();
 		window.addEventListener('online', handleOnline);
+
+		const handleVisibility = () => {
+			if (document.visibilityState === 'visible') {
+				sessionStorage.removeItem(LOC_NAV_KEY);
+				checkLocationAndNavigate();
+			}
+		};
+		document.addEventListener('visibilitychange', handleVisibility);
+
 		return () => {
 			window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
 			window.removeEventListener('online', handleOnline);
+			document.removeEventListener('visibilitychange', handleVisibility);
 		};
 	});
 

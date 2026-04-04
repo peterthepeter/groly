@@ -70,6 +70,8 @@ let _categorySortEnabled = $state(initial.categorySortEnabled);
 let _categoryOrder = $state<string[]>(initial.categoryOrder);
 let _listCategorySettings = $state<Record<string, ListCategorySettings>>(cache.listCategorySettings ?? {});
 let _shortcuts = $state<Shortcut[]>(cache.shortcuts ?? []);
+let _locationNavEnabled = $state<boolean>(cache.locationNavEnabled ?? false);
+let _listLocationDisabled = $state<string[]>(cache.listLocationDisabled ?? []);
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -81,7 +83,9 @@ function scheduleSave() {
 			categorySortEnabled: _categorySortEnabled,
 			categoryOrder: _categoryOrder,
 			listCategorySettings: _listCategorySettings,
-			shortcuts: _shortcuts
+			shortcuts: _shortcuts,
+			locationNavEnabled: _locationNavEnabled,
+			listLocationDisabled: _listLocationDisabled
 		};
 		saveCache(settings);
 		try {
@@ -148,6 +152,24 @@ export const userSettings = {
 		scheduleSave();
 	},
 
+	// Location navigation
+	get locationNavEnabled() { return _locationNavEnabled; },
+	set locationNavEnabled(v: boolean) { _locationNavEnabled = v; scheduleSave(); },
+
+	isListLocationDisabled(listId: string): boolean {
+		return _listLocationDisabled.includes(listId);
+	},
+	setListLocationDisabled(listId: string, disabled: boolean) {
+		if (disabled) {
+			if (!_listLocationDisabled.includes(listId)) {
+				_listLocationDisabled = [..._listLocationDisabled, listId];
+			}
+		} else {
+			_listLocationDisabled = _listLocationDisabled.filter(id => id !== listId);
+		}
+		scheduleSave();
+	},
+
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
 	addShortcut(s: Shortcut) {
@@ -177,6 +199,8 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_categoryOrder = merged.categoryOrder;
 		_listCategorySettings = settings.listCategorySettings ?? {};
 		_shortcuts = settings.shortcuts ?? [];
+		_locationNavEnabled = settings.locationNavEnabled ?? false;
+		_listLocationDisabled = settings.listLocationDisabled ?? [];
 		saveCache(settings);
 		return settings;
 	} catch { return null; }

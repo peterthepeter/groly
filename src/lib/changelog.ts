@@ -2,6 +2,23 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.3.0',
+		de: [
+			'Standorterkennung: Liste öffnet sich automatisch, wenn du einen gespeicherten Supermarkt erreichst',
+			'Standort pro Liste in den Listen-Einstellungen hinterlegbar – per Adresssuche oder aktuellem GPS-Standort',
+			'Global in den Einstellungen aktivierbar, pro Liste einzeln deaktivierbar',
+			'Funktioniert beim App-Start und beim Zurückwechseln aus dem Hintergrund',
+			'Datenschutz: GPS-Standort verlässt nie das Gerät',
+		],
+		en: [
+			'Location detection: a list opens automatically when you arrive at a saved store location',
+			'Set a location per list in the list settings — via address search or current GPS position',
+			'Enable globally in Settings, disable per list individually',
+			'Works on app launch and when returning from background',
+			'Privacy: your GPS location never leaves your device',
+		]
+	},
+	{
 		version: '0.2.9',
 		de: [
 			'Schnelleingabe: Mehrere Artikel auf einmal tippen, kommagetrennt – z.\u202fB. „2x Milch, 500g Hackfleisch, Brot"',

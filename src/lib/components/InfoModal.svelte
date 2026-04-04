@@ -49,6 +49,12 @@
 			text: 'Shared lists support push notifications. Enable them in Settings to stay updated when others make changes.',
 			svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
 		},
+		{
+			title: 'Location detection',
+			text: 'Enable "Location detection" in Settings, then set a location per list via long-press → Edit. When you open the app at a saved location (within 100 m), that list opens automatically. Works when coming back from background too. Your GPS location never leaves your device — only the address search query is sent to OpenStreetMap (one-time setup).',
+			link: { href: '/einstellungen', label: 'Enable in Settings' },
+			svg: `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`
+		},
 
 		{ section: 'Items' },
 		{
@@ -118,6 +124,12 @@
 			title: 'Benachrichtigungen',
 			text: 'Bei geteilten Listen kannst du Push-Nachrichten aktivieren. Einstellungen → Benachrichtigungen.',
 			svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
+		},
+		{
+			title: 'Standorterkennung',
+			text: '„Standorterkennung" in den Einstellungen aktivieren, dann pro Liste per langem Druck → Bearbeiten einen Standort festlegen. Wenn du die App an einem gespeicherten Ort öffnest (innerhalb von 100 m), wird diese Liste automatisch geöffnet – auch wenn die App im Hintergrund lief. Dein GPS-Standort verlässt nie dein Gerät. Nur der Suchbegriff bei der Adresssuche wird einmalig an OpenStreetMap gesendet.',
+			link: { href: '/einstellungen', label: 'In den Einstellungen aktivieren' },
+			svg: `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`
 		},
 
 		{ section: 'Items' },

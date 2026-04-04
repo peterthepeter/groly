@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey(),
@@ -29,6 +29,9 @@ export const lists = sqliteTable('lists', {
 	ownerId: text('owner_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
+	locationLat: real('location_lat'),
+	locationLng: real('location_lng'),
+	locationName: text('location_name'),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull()
 });

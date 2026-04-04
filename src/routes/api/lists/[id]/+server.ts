@@ -37,12 +37,20 @@ export const PUT: RequestHandler = async (event) => {
 	const list = getOwnedList(event.params.id, user!.id);
 	if (!list) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
-	const { name, description, iconId } = await event.request.json();
+	const { name, description, iconId, locationLat, locationLng, locationName } = await event.request.json();
 	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
 
 	const trimmedName = name.trim();
 	const trimmedDesc = description?.trim() ?? null;
-	db.update(lists).set({ name: trimmedName, description: trimmedDesc, iconId: iconId ?? null, updatedAt: now() }).where(eq(lists.id, list.id)).run();
+	db.update(lists).set({
+		name: trimmedName,
+		description: trimmedDesc,
+		iconId: iconId ?? null,
+		locationLat: locationLat ?? null,
+		locationLng: locationLng ?? null,
+		locationName: locationName ?? null,
+		updatedAt: now()
+	}).where(eq(lists.id, list.id)).run();
 	emitToListMembers(list.id, { type: 'list_updated', listId: list.id, list: { name: trimmedName, description: trimmedDesc, iconId: iconId ?? null } });
 	return json({ ok: true });
 };

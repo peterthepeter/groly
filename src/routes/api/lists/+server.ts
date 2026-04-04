@@ -32,6 +32,9 @@ export const GET: RequestHandler = async (event) => {
 			iconId: lists.iconId,
 			ownerId: lists.ownerId,
 			ownerUsername: sql<string>`NULL`,
+			locationLat: lists.locationLat,
+			locationLng: lists.locationLng,
+			locationName: lists.locationName,
 			createdAt: lists.createdAt,
 			updatedAt: lists.updatedAt,
 			openCount: sql<number>`COALESCE(${openCounts.cnt}, 0)`,
@@ -56,6 +59,9 @@ export const GET: RequestHandler = async (event) => {
 				iconId: lists.iconId,
 				ownerId: lists.ownerId,
 				ownerUsername: users.username,
+				locationLat: lists.locationLat,
+				locationLng: lists.locationLng,
+				locationName: lists.locationName,
 				createdAt: lists.createdAt,
 				updatedAt: lists.updatedAt,
 				openCount: sql<number>`COALESCE(${openCounts.cnt}, 0)`,
@@ -82,6 +88,7 @@ export const GET: RequestHandler = async (event) => {
 			.select({
 				id: lists.id, name: lists.name, description: lists.description,
 				iconId: lists.iconId, ownerId: lists.ownerId, ownerUsername: users.username,
+				locationLat: lists.locationLat, locationLng: lists.locationLng, locationName: lists.locationName,
 				createdAt: lists.createdAt, updatedAt: lists.updatedAt,
 				openCount: sql<number>`COALESCE(${openCounts.cnt}, 0)`,
 				memberCount: sql<number>`0`, isOwner: sql<number>`0`

@@ -22,6 +22,8 @@ export type UserSettings = {
 	categoryOrder?: string[];
 	listCategorySettings?: Record<string, ListCategorySettings>;
 	shortcuts?: Shortcut[];
+	locationNavEnabled?: boolean;
+	listLocationDisabled?: string[];
 };
 
 export const DEFAULT_SETTINGS = {
