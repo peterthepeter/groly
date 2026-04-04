@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getListIcon } from '$lib/listIcons';
 	import { list_items_open } from '$lib/i18n.svelte';
+	import { userSettings } from '$lib/userSettings.svelte';
 
 	// Fallback: konsistente Farbe aus dem Listennamen
 	const COLORS = ['#006c54', '#2e6771', '#4d626c', '#5a4080', '#a0522d', '#1a6b3c'];
@@ -11,11 +12,17 @@
 	}
 
 	let { list, onClick, onLongPress, onShare = null }: {
-		list: { id: string; name: string; description: string | null; openCount: number; iconId?: string | null; ownerUsername?: string | null };
+		list: { id: string; name: string; description: string | null; openCount: number; iconId?: string | null; ownerUsername?: string | null; locationLat?: number | null };
 		onClick: () => void;
 		onLongPress: () => void;
 		onShare?: (() => void) | null;
 	} = $props();
+
+	const showLocationBadge = $derived(
+		userSettings.locationNavEnabled &&
+		list.locationLat != null &&
+		!userSettings.isListLocationDisabled(list.id)
+	);
 
 	const icon = $derived(getListIcon(list.iconId));
 	const color = $derived(icon ? icon.color : colorForName(list.name));
@@ -92,6 +99,16 @@
 				<circle cx="9" cy="7" r="4"/>
 				<path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
 				<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+			</svg>
+		</div>
+	{/if}
+
+	<!-- Location badge -->
+	{#if showLocationBadge}
+		<div class="flex-shrink-0 p-1.5 -mr-1">
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6">
+				<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+				<circle cx="12" cy="10" r="3"/>
 			</svg>
 		</div>
 	{/if}
