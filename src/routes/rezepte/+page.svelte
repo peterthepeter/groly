@@ -27,6 +27,8 @@
 		createdAt: number;
 	};
 
+	const STORAGE_KEY = 'groly_recipe_order';
+
 	let recipes = $state<Recipe[]>([]);
 	let limit = $state(50);
 	let pendingShares = $state<PendingShare[]>([]);
@@ -35,17 +37,87 @@
 	let addSheetOpen = $state(false);
 	let searchQuery = $state('');
 	let sharesLoading = $state<Record<string, boolean>>({});
+	let sortMode = $state(false);
+	let customOrder = $state<string[]>([]);
+
+	// Apply custom order to recipes
+	const orderedRecipes = $derived(
+		customOrder.length > 0
+			? (() => {
+				const mapped = customOrder.map(id => recipes.find(r => r.id === id)).filter(Boolean) as Recipe[];
+				const missing = recipes.filter(r => !customOrder.includes(r.id));
+				return [...mapped, ...missing];
+			})()
+			: recipes
+	);
 
 	const filteredRecipes = $derived(
-		searchQuery.trim()
-			? recipes.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()))
-			: recipes
+		sortMode
+			? orderedRecipes
+			: searchQuery.trim()
+				? orderedRecipes.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()))
+				: orderedRecipes
 	);
 
 	const totalTime = (r: Recipe) => {
 		const mins = (r.prepTime ?? 0) + (r.cookTime ?? 0);
 		return mins > 0 ? `${mins} ${t.recipe_minutes}` : null;
 	};
+
+	function loadCustomOrder() {
+		try {
+			const stored = localStorage.getItem(STORAGE_KEY);
+			customOrder = stored ? JSON.parse(stored) : [];
+		} catch { customOrder = []; }
+	}
+
+	function saveCustomOrder() {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(customOrder));
+	}
+
+	function enterSortMode() {
+		customOrder = orderedRecipes.map(r => r.id);
+		sortMode = true;
+	}
+
+	function exitSortMode() {
+		saveCustomOrder();
+		sortMode = false;
+	}
+
+	function moveUp(index: number) {
+		if (index === 0) return;
+		const next = [...customOrder];
+		[next[index - 1], next[index]] = [next[index], next[index - 1]];
+		customOrder = next;
+	}
+
+	function moveDown(index: number) {
+		if (index === customOrder.length - 1) return;
+		const next = [...customOrder];
+		[next[index], next[index + 1]] = [next[index + 1], next[index]];
+		customOrder = next;
+	}
+
+	// Long-press auf Rezepte-Tab → Sortier-Modus
+	let recipesTabPressTimer: ReturnType<typeof setTimeout> | null = null;
+	let recipesTabLongFired = false;
+
+	function handleRecipesTabPointerDown() {
+		recipesTabLongFired = false;
+		recipesTabPressTimer = setTimeout(() => {
+			recipesTabLongFired = true;
+			recipesTabPressTimer = null;
+			if (sortMode) exitSortMode(); else enterSortMode();
+		}, 500);
+	}
+	function handleRecipesTabPointerUp() {
+		if (recipesTabPressTimer) { clearTimeout(recipesTabPressTimer); recipesTabPressTimer = null; }
+	}
+	function handleRecipesTabClick() {
+		if (recipesTabLongFired) { recipesTabLongFired = false; return; }
+		// short tap: already on recipes page
+	}
 
 	async function loadRecipes() {
 		try {
@@ -104,6 +176,7 @@
 	}
 
 	onMount(() => {
+		loadCustomOrder();
 		loadRecipes();
 		loadShares();
 	});
@@ -111,10 +184,22 @@
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader
-		title={t.recipes_title}
-		subtitle="{recipes.length} / {limit}"
-		onMenuOpen={() => menuOpen = true}
-	/>
+		title={sortMode ? 'Sortierung' : t.recipes_title}
+		subtitle={sortMode ? 'Reihenfolge anpassen' : `${recipes.length} / ${limit}`}
+		onMenuOpen={() => { if (!sortMode) menuOpen = true; }}
+	>
+		{#snippet actions()}
+			{#if sortMode}
+				<button
+					onclick={exitSortMode}
+					class="px-4 py-1.5 rounded-full text-sm font-semibold"
+					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+				>
+					Fertig
+				</button>
+			{/if}
+		{/snippet}
+	</AppHeader>
 
 	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
 	     style="padding-top: calc(env(safe-area-inset-top) + 4rem); padding-bottom: 5rem">
@@ -153,8 +238,8 @@
 			</div>
 		{/each}
 
-		<!-- Search (shows when >5 recipes) -->
-		{#if recipes.length > 5}
+		<!-- Search (shows when >5 recipes and not in sort mode) -->
+		{#if recipes.length > 5 && !sortMode}
 			<div class="mb-4 flex items-center gap-2 px-4 rounded-xl"
 			     style="background-color: var(--color-surface-container); height: 44px">
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
@@ -190,7 +275,72 @@
 					<p class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipes_empty_hint}</p>
 				{/if}
 			</div>
+		{:else if sortMode}
+			<!-- Sort Mode -->
+			<div class="space-y-2">
+				{#each filteredRecipes as recipe, i (recipe.id)}
+					<div class="flex items-center gap-2">
+						<!-- Sort controls -->
+						<div class="flex flex-col gap-0.5 flex-shrink-0">
+							<button
+								onclick={() => moveUp(i)}
+								disabled={i === 0}
+								class="w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-20 active:opacity-60"
+								style="color: var(--color-on-surface-variant)"
+								aria-label="Nach oben"
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="18 15 12 9 6 15"/>
+								</svg>
+							</button>
+							<button
+								onclick={() => moveDown(i)}
+								disabled={i === filteredRecipes.length - 1}
+								class="w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-20 active:opacity-60"
+								style="color: var(--color-on-surface-variant)"
+								aria-label="Nach unten"
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="6 9 12 15 18 9"/>
+								</svg>
+							</button>
+						</div>
+
+						<!-- Card (nicht navigierbar im Sort-Modus) -->
+						<div class="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl"
+						     style="background-color: var(--color-surface-card)">
+							<!-- Thumbnail -->
+							<div class="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden"
+							     style="background-color: var(--color-surface-container)">
+								{#if recipe.imageUrl}
+									<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
+								{:else}
+									<div class="w-full h-full flex items-center justify-center font-bold text-base"
+									     style="color: var(--color-primary); font-family: 'Plus Jakarta Sans', sans-serif">
+										{recipe.title[0]?.toUpperCase() ?? '?'}
+									</div>
+								{/if}
+							</div>
+
+							<!-- Info -->
+							<div class="flex-1 min-w-0">
+								<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{recipe.title}</div>
+								<div class="text-xs mt-0.5 truncate" style="color: var(--color-on-surface-variant)">
+									{totalTime(recipe) ?? recipe.description ?? ''}
+								</div>
+							</div>
+
+							<!-- Drag indicator -->
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
+								<line x1="3" y1="8" x2="21" y2="8"/>
+								<line x1="3" y1="16" x2="21" y2="16"/>
+							</svg>
+						</div>
+					</div>
+				{/each}
+			</div>
 		{:else}
+			<!-- Normal Mode -->
 			<div class="space-y-2">
 				{#each filteredRecipes as recipe (recipe.id)}
 					<button
@@ -256,10 +406,15 @@
 			</button>
 
 			<!-- FAB -->
-			<FabWithShortcuts onTap={() => addSheetOpen = true} label={t.recipe_add} />
+			<FabWithShortcuts onTap={() => { if (!sortMode) addSheetOpen = true; }} label={t.recipe_add} />
 
-			<!-- Rezepte Tab (active) -->
+			<!-- Rezepte Tab (active) mit Long-Press -->
 			<button
+				onclick={handleRecipesTabClick}
+				onpointerdown={handleRecipesTabPointerDown}
+				onpointerup={handleRecipesTabPointerUp}
+				onpointercancel={handleRecipesTabPointerUp}
+				oncontextmenu={(e) => e.preventDefault()}
 				class="flex items-center gap-2 px-6 h-14 rounded-full glass select-none"
 				style="background-color: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface-container)); outline: 1.5px solid color-mix(in srgb, var(--color-primary) 40%, transparent)"
 			>
