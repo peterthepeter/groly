@@ -339,7 +339,7 @@
 									bind:value={locationQuery}
 									onkeydown={(e) => e.key === 'Enter' && searchLocation()}
 									class="w-full bg-transparent outline-none text-xs"
-									style="color: var(--color-on-surface); font-size: 14px"
+									style="color: var(--color-on-surface); font-size: 16px"
 								/>
 							</div>
 							<button
