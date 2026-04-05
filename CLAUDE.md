@@ -57,6 +57,20 @@ Migrations run automatically on server startup via `src/hooks.server.ts`.
 ### Database tables
 `users`, `sessions`, `lists`, `items`, `listMembers` — defined in `src/lib/server/db/schema.ts`.
 
+### Automatic database cleanup
+
+`src/hooks.server.ts` runs cleanup daily via `setInterval` (triggered on first request after startup):
+
+| Table | Cleanup rule |
+|-------|-------------|
+| `sessions` | Expired sessions deleted (expiry > 30 days after login) |
+| `items` | Checked items deleted after 60 days (`checkedAt`) |
+| `item_history` | Suggestions unused for 6+ months deleted |
+| `barcode_cache` | Entries not seen for 6+ months deleted |
+| `push_subscriptions` | Stale endpoints removed on failed push (HTTP 410/404) |
+
+Active data (`lists`, unchecked `items`, `recipes`, `listMembers`) is only removed by user action. For a ~10-user instance this is not a concern — the database stays well under 10 MB indefinitely.
+
 ## Deployment
 
 Docker image built via GitHub Actions (`.github/workflows/docker.yml`) and pushed to GHCR. Multi-arch (amd64 + arm64).

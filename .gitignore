@@ -12,6 +12,10 @@ node_modules
 .DS_Store
 Thumbs.db
 
+# Editor
+*.swp
+*.swo
+
 # Env
 .env
 .env.*
