@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths-ignore:
       - 'README.md'
+      - 'CLAUDE.md'
       - 'docs/**'
+      - '.gitignore'
   release:
     types: [published]
 
