@@ -20,6 +20,7 @@ Mobile-first PWA grocery list app for self-hosting. Designed for small teams and
 - **Multi-user** – Admin creates users, resets passwords, and manages sharing invitations.
 - **PWA** – Installable on iOS and Android, works like a native app.
 - **Light & Dark mode** – Follows system preference automatically.
+- **Smart suggestions** – When adding items, previously used item names are suggested. Suggestions are tracked per user in a dedicated history table and ranked by usage frequency. Checked-off items older than 60 days are automatically removed from the database; suggestion history is retained for 6 months after last use.
 - **i18n** – German and English.
 
 ## Docker Deployment
