@@ -17,13 +17,18 @@ WORKDIR /app
 # Native addon dependencies (better-sqlite3)
 RUN apk add --no-cache python3 make g++ sqlite-libs
 
+# Non-root user
+RUN addgroup -g 1000 groly && adduser -D -u 1000 -G groly groly
+
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src/lib/db/migrations ./src/lib/db/migrations
 COPY --from=builder /app/package.json ./package.json
 
-# Datenverzeichnis
-RUN mkdir -p /app/data
+# Datenverzeichnis mit korrekten Rechten
+RUN mkdir -p /app/data && chown -R groly:groly /app/data
+
+USER groly
 
 EXPOSE 3000
 ENV NODE_ENV=production

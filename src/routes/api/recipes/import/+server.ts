@@ -133,12 +133,37 @@ function findRecipeInLd(data: unknown): SchemaRecipe | null {
 	return null;
 }
 
+function validateRecipeUrl(raw: string): boolean {
+	let parsed: URL;
+	try {
+		parsed = new URL(raw);
+	} catch {
+		return false;
+	}
+	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+	const host = parsed.hostname.toLowerCase();
+	// Block localhost, loopback, private ranges, link-local, metadata services
+	if (
+		host === 'localhost' ||
+		/^127\./.test(host) ||
+		/^10\./.test(host) ||
+		/^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+		/^192\.168\./.test(host) ||
+		/^169\.254\./.test(host) ||
+		host === '::1' ||
+		/^fc[0-9a-f]{2}:/i.test(host) ||
+		host === '0.0.0.0'
+	) return false;
+	return true;
+}
+
 export const POST: RequestHandler = async (event) => {
 	const { error } = authGuard(event);
 	if (error) return error;
 
 	const { url } = await event.request.json();
 	if (!url?.trim()) return json({ error: 'URL fehlt' }, { status: 400 });
+	if (!validateRecipeUrl(url.trim())) return json({ error: 'Ungültige URL' }, { status: 400 });
 
 	let html: string;
 	try {

@@ -61,6 +61,12 @@ Add the container via the Unraid Docker UI or Community Applications:
 
 The volume `/app/data` contains the SQLite database. An admin user is created on first start and is prompted to change the password on first login.
 
+> **File permissions:** The container runs as user `groly` (UID 1000, GID 1000). Make sure the host data directory is owned by this user:
+> ```bash
+> chown -R 1000:1000 /path/to/your/appdata/groly
+> ```
+> Existing installations upgrading from an older version must run this command once before restarting the container.
+
 > **HTTPS required.** Session cookies, the service worker, and push notifications only work over HTTPS. Accessing via a local IP without HTTPS will not work in production mode.
 
 > **Reverse proxy recommended.** Run Groly behind a reverse proxy (e.g. Nginx Proxy Manager, Traefik, or Caddy) to handle HTTPS termination and domain routing. Optionally add an intrusion detection layer (e.g. CrowdSec) for additional protection.
