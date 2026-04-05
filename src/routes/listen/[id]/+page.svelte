@@ -17,7 +17,9 @@
 	import { userSettings } from '$lib/userSettings.svelte';
 
 	const LISTVIEW_HINT_KEY = 'groly_listview_hint_dismissed';
+	const LOCATION_HINT_KEY = 'groly_location_hint_dismissed';
 	let showListViewHint = $state(false);
+	let showLocationHint = $state(false);
 
 	let { data } = $props();
 
@@ -226,6 +228,14 @@
 			showListViewHint = true;
 		}
 
+		// Hinweis-Banner für Location Service, einmalig pro Gerät
+		if (
+			!userSettings.locationNavEnabled &&
+			!localStorage.getItem(LOCATION_HINT_KEY)
+		) {
+			showLocationHint = true;
+		}
+
 		return () => window.removeEventListener('online', handleOnline);
 	});
 
@@ -233,6 +243,12 @@
 		showListViewHint = false;
 		localStorage.setItem(LISTVIEW_HINT_KEY, '1');
 		if (navigate) goto('/einstellungen');
+	}
+
+	function dismissLocationHint(navigate = false) {
+		showLocationHint = false;
+		localStorage.setItem(LOCATION_HINT_KEY, '1');
+		if (navigate) goto('/einstellungen?expand=location');
 	}
 
 	function closeSearch() {
@@ -337,9 +353,37 @@
 		</div>
 	{/if}
 
+	<!-- Location-Hint-Banner -->
+	{#if showLocationHint}
+		<div class="fixed left-0 right-0 z-20 max-w-[430px] mx-auto px-4 pointer-events-none"
+		     style="top: calc(env(safe-area-inset-top) + 5.5rem + {showListViewHint ? '3.5rem' : '0px'})">
+			<div class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-auto"
+			     style="background-color: var(--color-surface-elevated); border: 1px solid var(--color-outline-variant)">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)"
+				     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
+					<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+				</svg>
+				<div class="flex-1 min-w-0">
+					<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.location_hint_text}</p>
+					<button
+						onclick={() => dismissLocationHint(true)}
+						class="text-xs font-semibold mt-0.5"
+						style="color: var(--color-primary)"
+					>{t.location_hint_action}</button>
+				</div>
+				<button
+					onclick={() => dismissLocationHint(false)}
+					class="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+					aria-label="Hinweis schließen"
+				>×</button>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Bottom-Anchored Content -->
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'}); padding-bottom: 5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'} + {showLocationHint ? '3.5rem' : '0px'}); padding-bottom: 5rem">
 		<div class="min-h-full flex flex-col justify-end">
 		{#if loading}
 			<div class="flex justify-center py-8">

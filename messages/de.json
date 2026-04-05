@@ -150,5 +150,8 @@
   "barcode_camera_denied": "Kamera-Zugriff verweigert. Bitte erlaube den Kamera-Zugriff in den Browser-Einstellungen.",
   "barcode_added": "hinzugefügt",
   "barcode_unsupported": "Barcode-Scan wird von diesem Browser nicht unterstützt.",
-  "barcode_offline": "Kein Internet – Produkte können nicht gesucht werden"
+  "barcode_offline": "Kein Internet – Produkte können nicht gesucht werden",
+  "shortcut_setup_hint": "Schnellzugriff ?",
+  "location_hint_text": "Tipp: Groly kann diese Liste automatisch öffnen, wenn du in der Nähe bist.",
+  "location_hint_action": "In Einstellungen aktivieren"
 }

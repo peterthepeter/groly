@@ -113,6 +113,7 @@
 	}
 
 	$effect(() => { initPushState(); });
+	$effect(() => { if (shortcutsOpen) void loadAllLists(); });
 
 	const mustChange = $derived($page.url.searchParams.get('mustChange') === '1');
 	$effect(() => { if (mustChange) passwordOpen = true; });
@@ -137,8 +138,8 @@
 	}
 
 	// ── Shortcuts ──────────────────────────────────────────────────────────────
-	let shortcutsOpen = $state(false);
-	let locationOpen = $state(false);
+	let shortcutsOpen = $state($page.url.searchParams.get('expand') === 'shortcuts');
+	let locationOpen = $state($page.url.searchParams.get('expand') === 'location');
 	let allLists = $state<{ id: string; name: string }[]>([]);
 	let allListsLoaded = $state(false);
 

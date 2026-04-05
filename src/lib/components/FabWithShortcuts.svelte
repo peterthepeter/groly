@@ -13,7 +13,7 @@
 		pressTimer = setTimeout(() => {
 			longFired = true;
 			pressTimer = null;
-			if (shortcuts.list.length > 0) shortcutMenu.show();
+			shortcutMenu.show();
 		}, 500);
 	}
 
@@ -52,6 +52,11 @@
 				const btn = el?.closest?.('[data-shortcut-id]') as HTMLElement | null;
 				if (btn) {
 					const id = btn.getAttribute('data-shortcut-id');
+					if (id === '__settings__') {
+						shortcutMenu.hide();
+						goto('/einstellungen?expand=shortcuts');
+						return;
+					}
 					const sc = shortcuts.list.find(s => s.id === id);
 					if (sc) {
 						shortcutMenu.hide();
