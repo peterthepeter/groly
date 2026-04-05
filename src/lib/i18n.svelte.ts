@@ -60,6 +60,12 @@ class TranslationProxy {
 	// items
 	get items_checked_label() { void _lang; return m.items_checked_label(); }
 	get items_empty() { void _lang; return m.items_empty(); }
+	// layout
+	get settings_layout_section() { void _lang; return m.settings_layout_section(); }
+	get settings_layout_list_view() { void _lang; return m.settings_layout_list_view(); }
+	get settings_layout_list_view_desc() { void _lang; return m.settings_layout_list_view_desc(); }
+	get listview_hint_text() { void _lang; return m.listview_hint_text(); }
+	get listview_hint_action() { void _lang; return m.listview_hint_action(); }
 	get items_add() { void _lang; return m.items_add(); }
 	// item
 	get item_name_label() { void _lang; return m.item_name_label(); }

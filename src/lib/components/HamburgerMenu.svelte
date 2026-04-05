@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { t, currentLang } from '$lib/i18n.svelte';
+	import { userSettings } from '$lib/userSettings.svelte';
 	import InfoModal from '$lib/components/InfoModal.svelte';
 	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';

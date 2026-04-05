@@ -24,6 +24,8 @@
 	let passwordOpen = $state(false);
 	let langOpen = $state(false);
 	let categorySortOpen = $state(false);
+	let layoutOpen = $state(false);
+	let pushOpen = $state(false);
 	let sharedListsOpen = $state(false);
 	let showPushPrompt = $state(false);
 
@@ -418,6 +420,44 @@
 			{/if}
 		</div>
 
+		<!-- Listen-Ansicht -->
+		<div class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
+			<button
+				onclick={() => layoutOpen = !layoutOpen}
+				class="w-full flex items-center justify-between px-5 py-5"
+			>
+				<h2 class="text-base font-bold" style="color: var(--color-on-surface)">{t.settings_layout_section}</h2>
+				<div class="flex items-center gap-3">
+					<!-- Toggle — auch im eingeklappten Zustand sichtbar -->
+					<div
+						role="switch"
+						aria-checked={userSettings.itemLayout === 'list'}
+						onclick={(e) => { e.stopPropagation(); userSettings.itemLayout = userSettings.itemLayout === 'list' ? 'grid' : 'list'; }}
+						onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.itemLayout = userSettings.itemLayout === 'list' ? 'grid' : 'list'; } }}
+						tabindex="0"
+						class="relative w-12 h-6 rounded-full overflow-hidden transition-colors flex-shrink-0"
+						style="background-color: {userSettings.itemLayout === 'list' ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+					>
+						{#if userSettings.itemLayout === 'list'}
+							<span class="absolute top-0.5 h-5 w-5 rounded-full"
+							      style="background-color: white; transform: translateX(1.625rem)"></span>
+						{/if}
+					</div>
+					<!-- Chevron -->
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({layoutOpen ? 90 : 0}deg); transition: transform 0.2s">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</div>
+			</button>
+
+			{#if layoutOpen}
+				<div class="px-5 pb-5">
+					<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_layout_list_view_desc}</p>
+				</div>
+			{/if}
+		</div>
+
 		<!-- Kategorie-Sortierung -->
 		<div id="kategorien-sortieren" class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
 			<button
@@ -725,35 +765,54 @@
 
 		<!-- Push Notifications -->
 		{#if pushSupported}
-			<div class="rounded-2xl mb-3" style="background-color: var(--color-surface-card)">
-				<div class="flex items-center justify-between px-5 py-5">
-					<span class="text-base font-bold" style="color: var(--color-on-surface)">
+			<div class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--color-surface-card)">
+				<button
+					onclick={() => pushOpen = !pushOpen}
+					class="w-full flex items-center justify-between px-5 py-5"
+				>
+					<h2 class="text-base font-bold" style="color: var(--color-on-surface)">
 						{currentLang() === 'en' ? 'Push Notifications' : 'Push-Benachrichtigungen'}
-					</span>
+					</h2>
 					<div class="flex items-center gap-3">
 						{#if pushPermission === 'denied'}
 							<span class="text-xs" style="color: var(--color-error)">
 								{currentLang() === 'en' ? 'Blocked' : 'Blockiert'}
 							</span>
 						{:else}
-							<button
-								onclick={pushSubscribed ? unsubscribePush : subscribePush}
-								disabled={pushLoading}
-								aria-label={pushSubscribed ? 'Push-Benachrichtigungen deaktivieren' : 'Push-Benachrichtigungen aktivieren'}
-								class="relative w-12 h-6 rounded-full overflow-hidden transition-colors flex-shrink-0 disabled:opacity-50"
-								style="background-color: {pushSubscribed ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+							<div
+								role="switch"
+								aria-checked={pushSubscribed}
+								aria-disabled={pushLoading}
+								onclick={(e) => { e.stopPropagation(); if (!pushLoading) pushSubscribed ? unsubscribePush() : subscribePush(); }}
+								onkeydown={(e) => { if ((e.key === ' ' || e.key === 'Enter') && !pushLoading) { e.stopPropagation(); pushSubscribed ? unsubscribePush() : subscribePush(); } }}
+								tabindex="0"
+								class="relative w-12 h-6 rounded-full overflow-hidden transition-colors flex-shrink-0"
+								style="background-color: {pushSubscribed ? 'var(--color-primary)' : 'var(--color-surface-container)'}; opacity: {pushLoading ? 0.5 : 1}"
 							>
 								{#if pushSubscribed}
 									<span class="absolute top-0.5 h-5 w-5 rounded-full"
 									      style="background-color: white; transform: translateX(1.625rem)"></span>
 								{/if}
-							</button>
+							</div>
 						{/if}
-						<div class="w-4 flex-shrink-0"></div>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						     style="transform: rotate({pushOpen ? 90 : 0}deg); transition: transform 0.2s">
+							<polyline points="9 18 15 12 9 6"/>
+						</svg>
 					</div>
-				</div>
-	{#if pushError}
-					<div class="px-5 pb-4 text-xs" style="color: var(--color-error)">{pushError}</div>
+				</button>
+
+				{#if pushOpen}
+					<div class="px-5 pb-5">
+						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">
+							{currentLang() === 'en'
+								? 'Receive notifications when other users add or change items in a shared list.'
+								: 'Erhalte Benachrichtigungen, wenn andere Nutzer Items in einer geteilten Liste hinzufügen oder ändern.'}
+						</p>
+						{#if pushError}
+							<p class="text-xs mt-3" style="color: var(--color-error)">{pushError}</p>
+						{/if}
+					</div>
 				{/if}
 			</div>
 		{/if}

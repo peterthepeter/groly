@@ -55,6 +55,12 @@
 			link: { href: '/einstellungen', label: 'Enable in Settings' },
 			svg: `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`
 		},
+		{
+			title: 'List view',
+			text: 'Instead of the default tile grid, items can be displayed as compact rows — with category icon, name, and quantity on a single line. Especially useful on small screens where tile names get cut off. Enable it in Settings → "List view".',
+			link: { href: '/einstellungen', label: 'Enable in Settings' },
+			svg: `<line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/>`
+		},
 
 		{ section: 'Items' },
 		{
@@ -130,6 +136,12 @@
 			text: '„Standorterkennung" in den Einstellungen aktivieren, dann pro Liste per langem Druck → Bearbeiten einen Standort festlegen. Wenn du die App an einem gespeicherten Ort öffnest (innerhalb von 100 m), wird diese Liste automatisch geöffnet – auch wenn die App im Hintergrund lief. Dein GPS-Standort verlässt nie dein Gerät. Nur der Suchbegriff bei der Adresssuche wird einmalig an OpenStreetMap gesendet.',
 			link: { href: '/einstellungen', label: 'In den Einstellungen aktivieren' },
 			svg: `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`
+		},
+		{
+			title: 'Listen-Ansicht',
+			text: 'Statt der Standard-Kachelansicht können Items als kompakte Zeilen angezeigt werden – mit Kategorie-Icon, Name und Menge in einer Zeile. Besonders praktisch auf kleinen Bildschirmen, wo Kachelnamen abgeschnitten werden. Aktivieren unter Einstellungen → „Listen-Ansicht".',
+			link: { href: '/einstellungen', label: 'In den Einstellungen aktivieren' },
+			svg: `<line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/>`
 		},
 
 		{ section: 'Items' },

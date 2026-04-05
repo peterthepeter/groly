@@ -72,6 +72,7 @@ let _listCategorySettings = $state<Record<string, ListCategorySettings>>(cache.l
 let _shortcuts = $state<Shortcut[]>(cache.shortcuts ?? []);
 let _locationNavEnabled = $state<boolean>(cache.locationNavEnabled ?? false);
 let _listLocationDisabled = $state<string[]>(cache.listLocationDisabled ?? []);
+let _itemLayout = $state<'grid' | 'list'>(cache.itemLayout ?? 'grid');
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -85,7 +86,8 @@ function scheduleSave() {
 			listCategorySettings: _listCategorySettings,
 			shortcuts: _shortcuts,
 			locationNavEnabled: _locationNavEnabled,
-			listLocationDisabled: _listLocationDisabled
+			listLocationDisabled: _listLocationDisabled,
+			itemLayout: _itemLayout
 		};
 		saveCache(settings);
 		try {
@@ -170,6 +172,10 @@ export const userSettings = {
 		scheduleSave();
 	},
 
+	// Item layout
+	get itemLayout() { return _itemLayout; },
+	set itemLayout(v: 'grid' | 'list') { _itemLayout = v; scheduleSave(); },
+
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
 	addShortcut(s: Shortcut) {
@@ -201,6 +207,7 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_shortcuts = settings.shortcuts ?? [];
 		_locationNavEnabled = settings.locationNavEnabled ?? false;
 		_listLocationDisabled = settings.listLocationDisabled ?? [];
+		_itemLayout = settings.itemLayout ?? 'grid';
 		saveCache(settings);
 		return settings;
 	} catch { return null; }

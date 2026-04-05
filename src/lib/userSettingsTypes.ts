@@ -24,6 +24,7 @@ export type UserSettings = {
 	shortcuts?: Shortcut[];
 	locationNavEnabled?: boolean;
 	listLocationDisabled?: string[];
+	itemLayout?: 'grid' | 'list';
 };
 
 export const DEFAULT_SETTINGS = {

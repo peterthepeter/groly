@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.3.1',
+		de: [
+			'Neue Listen-Ansicht: Items als kompakte Zeilen statt Kacheln – besonders praktisch auf kleinen Bildschirmen',
+			'Aktivierbar unter Einstellungen → „Listen-Ansicht"',
+			'Geräte mit kleinem Bildschirm (< 374\u202fpx) erhalten beim ersten Öffnen einer Liste einen Hinweis',
+			'Einstellungen: Push-Benachrichtigungen und Listen-Ansicht jetzt aufklappbar',
+		],
+		en: [
+			'New list view: items as compact rows instead of tiles — especially handy on small screens',
+			'Enable it in Settings → "List view"',
+			'Devices with a small screen (< 374\u202fpx) get a one-time hint when opening a list',
+			'Settings: push notifications and list view sections are now collapsible',
+		]
+	},
+	{
 		version: '0.3.0',
 		de: [
 			'Standorterkennung: Liste öffnet sich automatisch, wenn du einen gespeicherten Supermarkt erreichst',

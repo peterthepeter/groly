@@ -84,6 +84,7 @@ Erst dann darf gepusht werden.
 - **Input font-size**: Always ≥ 16px to prevent iOS auto-zoom (enforced globally in `app.css`).
 - **Tailwind v4**: No config file — uses CSS-based configuration.
 - **Icons**: List icons defined in `src/lib/listIcons.ts`.
+- **Badge icons in ListCard**: Always use `stroke="var(--color-primary)"`, `width="17" height="17"`, `p-1.5 -mr-1` wrapper — no `opacity` attribute. All badge icons must look identical.
 - **Categories**: Auto-categorization in `src/lib/categories.ts`; users can override per item.
 - Use the `frontend-design` skill for any UI/design changes.
 

@@ -7,6 +7,7 @@
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import ItemTile from '$lib/components/ItemTile.svelte';
+	import ItemRow from '$lib/components/ItemRow.svelte';
 	import CheckedDrawer from '$lib/components/CheckedDrawer.svelte';
 	import AddItemModal from '$lib/components/AddItemModal.svelte';
 	import AddItemBar from '$lib/components/AddItemBar.svelte';
@@ -14,6 +15,9 @@
 	import { t, list_items_open } from '$lib/i18n.svelte';
 	import { getCategoryKey } from '$lib/categories';
 	import { userSettings } from '$lib/userSettings.svelte';
+
+	const LISTVIEW_HINT_KEY = 'groly_listview_hint_dismissed';
+	let showListViewHint = $state(false);
 
 	let { data } = $props();
 
@@ -212,8 +216,24 @@
 		void loadItems();
 		const handleOnline = () => void loadItems();
 		window.addEventListener('online', handleOnline);
+
+		// Hinweis-Banner für kleine Bildschirme (< 374px), einmalig pro Gerät
+		if (
+			window.innerWidth < 374 &&
+			userSettings.itemLayout === 'grid' &&
+			!localStorage.getItem(LISTVIEW_HINT_KEY)
+		) {
+			showListViewHint = true;
+		}
+
 		return () => window.removeEventListener('online', handleOnline);
 	});
+
+	function dismissListViewHint(navigate = false) {
+		showListViewHint = false;
+		localStorage.setItem(LISTVIEW_HINT_KEY, '1');
+		if (navigate) goto('/einstellungen');
+	}
 
 	function closeSearch() {
 		searchOpen = false;
@@ -289,9 +309,37 @@
 		</div>
 	{/if}
 
+	<!-- Hinweis-Banner für kleine Bildschirme -->
+	{#if showListViewHint}
+		<div class="fixed left-0 right-0 z-20 max-w-[430px] mx-auto px-4 pointer-events-none"
+		     style="top: calc(env(safe-area-inset-top) + 5.5rem)">
+			<div class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-auto"
+			     style="background-color: var(--color-surface-elevated); border: 1px solid var(--color-outline-variant)">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)"
+				     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
+					<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+				</svg>
+				<div class="flex-1 min-w-0">
+					<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.listview_hint_text}</p>
+					<button
+						onclick={() => dismissListViewHint(true)}
+						class="text-xs font-semibold mt-0.5"
+						style="color: var(--color-primary)"
+					>{t.listview_hint_action}</button>
+				</div>
+				<button
+					onclick={() => dismissListViewHint(false)}
+					class="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+					aria-label="Hinweis schließen"
+				>×</button>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Bottom-Anchored Content -->
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'}); padding-bottom: 5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'}); padding-bottom: 5rem">
 		<div class="min-h-full flex flex-col justify-end">
 		{#if loading}
 			<div class="flex justify-center py-8">
@@ -301,10 +349,9 @@
 		{:else}
 			<!-- CheckedDrawer – direkt über den offenen Items -->
 			{#if checkedItems.length > 0}
-				<CheckedDrawer {checkedItems} totalChecked={items.filter(i => i.isChecked).length} onUncheck={toggleItem} />
+				<CheckedDrawer {checkedItems} totalChecked={items.filter(i => i.isChecked).length} onUncheck={toggleItem} layout={userSettings.itemLayout} />
 			{/if}
 
-			<!-- Open Items 3er-Grid -->
 			{#if openItems.length === 0 && checkedItems.length === 0}
 				<div class="text-center py-12">
 					<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.items_empty}</p>
@@ -314,6 +361,24 @@
 					<p class="text-sm" style="color: var(--color-on-surface-variant)">Keine Ergebnisse</p>
 				</div>
 			{:else if displayItems.length > 0}
+
+				{#if userSettings.itemLayout === 'list'}
+					<!-- Listen-Ansicht: vertikale Zeilen, von unten nach oben -->
+					<div class="flex flex-col gap-1 mt-2">
+						{#each displayItems as item (item.id)}
+							<div class="rounded-2xl overflow-hidden">
+								<ItemRow
+									{item}
+									onTap={() => toggleItem(item)}
+									onLongPress={userPermission !== 'read' ? () => { editItem = item; addModalOpen = true; } : () => {}}
+									createdByUsername={item.createdByUsername}
+									currentUsername={data.user?.username ?? null}
+								/>
+							</div>
+						{/each}
+					</div>
+				{:else}
+				<!-- Kachel-Ansicht: 3er-Grid -->
 				<div class="grid grid-cols-3 gap-2 mt-3" style={userSettings.categorySortEnabled ? 'direction: rtl' : ''}>
 					{#if userSettings.categorySortEnabled}
 						{#each { length: gridPrefix } as _}
@@ -335,6 +400,7 @@
 						{/each}
 					{/if}
 				</div>
+				{/if}<!-- end grid/list if -->
 			{/if}
 		{/if}
 		</div>
