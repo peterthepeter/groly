@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
 import { runMigrations, db } from '$lib/db';
-import { appMeta, barcodeCache, items, itemHistory } from '$lib/db/schema';
+import { appMeta, barcodeCache, items, itemHistory, sessions } from '$lib/db/schema';
 import { eq, lt, and, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
 import { sendPushToAllSubscribers } from '$lib/server/pushNotifications';
@@ -39,6 +39,16 @@ function cleanupOldData() {
 	db.delete(items).where(and(eq(items.isChecked, true), lt(items.checkedAt, nowS - TWO_MONTHS_S))).run();
 	// Vorschläge löschen, die seit mehr als 6 Monaten nicht genutzt wurden
 	db.delete(itemHistory).where(lt(itemHistory.lastUsedAt, nowS - SIX_MONTHS_S)).run();
+	// Abgelaufene Sessions löschen
+	db.delete(sessions).where(lt(sessions.expiresAt, nowS)).run();
+}
+
+function logMemoryUsage() {
+	const m = process.memoryUsage();
+	const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(2);
+	console.log(
+		`[groly:mem] rss=${mb(m.rss)}MB heap=${mb(m.heapUsed)}/${mb(m.heapTotal)}MB ext=${mb(m.external)}MB`
+	);
 }
 
 async function init() {
@@ -52,6 +62,8 @@ async function init() {
 	cleanupOldData();
 	setInterval(cleanupBarcodeCache, 24 * 60 * 60 * 1000);
 	setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
+	logMemoryUsage();
+	setInterval(logMemoryUsage, 60 * 60 * 1000); // stündlich
 }
 
 async function notifyOnNewVersion() {
