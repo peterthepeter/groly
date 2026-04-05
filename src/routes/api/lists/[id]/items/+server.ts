@@ -2,8 +2,8 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { lists, items, listMembers, users } from '$lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { lists, items, listMembers, users, itemHistory } from '$lib/db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { emitToListMembers } from '$lib/server/userEvents';
 import { schedulePushForItemAdded } from '$lib/server/pushDebounce';
 import { now, generateId } from '$lib/auth';
@@ -64,6 +64,15 @@ export const POST: RequestHandler = async (event) => {
 	const trimmedName = name.trim();
 	const trimmedQty = quantityInfo?.trim() ?? null;
 	db.insert(items).values({ id, listId: event.params.id, name: trimmedName, quantityInfo: trimmedQty, isChecked: false, createdBy: user!.id, createdAt: ts, updatedAt: ts }).run();
+
+	// Item-History für Vorschläge aktualisieren
+	db.insert(itemHistory)
+		.values({ userId: user!.id, name: trimmedName, useCount: 1, lastUsedAt: ts })
+		.onConflictDoUpdate({
+			target: [itemHistory.userId, itemHistory.name],
+			set: { useCount: sql`${itemHistory.useCount} + 1`, lastUsedAt: ts }
+		})
+		.run();
 
 	// Liste updatedAt aktualisieren
 	db.update(lists).set({ updatedAt: ts }).where(eq(lists.id, event.params.id)).run();

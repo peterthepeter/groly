@@ -3,17 +3,42 @@ import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
 import { runMigrations, db } from '$lib/db';
-import { appMeta, barcodeCache } from '$lib/db/schema';
-import { eq, lt } from 'drizzle-orm';
+import { appMeta, barcodeCache, items, itemHistory } from '$lib/db/schema';
+import { eq, lt, and, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
 import { sendPushToAllSubscribers } from '$lib/server/pushNotifications';
 
 let initialized = false;
 
 const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
+const TWO_MONTHS_S = 60 * 24 * 60 * 60;
+const SIX_MONTHS_S = 6 * 30 * 24 * 60 * 60;
 
 function cleanupBarcodeCache() {
 	db.delete(barcodeCache).where(lt(barcodeCache.lastSeenAt, Date.now() - SIX_MONTHS_MS)).run();
+}
+
+function migrateItemHistory() {
+	const done = db.select().from(appMeta).where(eq(appMeta.key, 'item_history_migrated')).get();
+	if (done) return;
+
+	db.run(sql`
+		INSERT OR IGNORE INTO item_history (user_id, name, use_count, last_used_at)
+		SELECT l.owner_id, i.name, COUNT(*) AS use_count, MAX(i.updated_at) AS last_used_at
+		FROM items i
+		JOIN lists l ON i.list_id = l.id
+		GROUP BY l.owner_id, i.name
+	`);
+
+	db.insert(appMeta).values({ key: 'item_history_migrated', value: '1' }).run();
+}
+
+function cleanupOldData() {
+	const nowS = Math.floor(Date.now() / 1000);
+	// Abgehakte Items löschen, die älter als 60 Tage sind
+	db.delete(items).where(and(eq(items.isChecked, true), lt(items.checkedAt, nowS - TWO_MONTHS_S))).run();
+	// Vorschläge löschen, die seit mehr als 6 Monaten nicht genutzt wurden
+	db.delete(itemHistory).where(lt(itemHistory.lastUsedAt, nowS - SIX_MONTHS_S)).run();
 }
 
 async function init() {
@@ -21,9 +46,12 @@ async function init() {
 	initialized = true;
 	runMigrations();
 	bootstrapAdmin();
+	migrateItemHistory();
 	await notifyOnNewVersion();
 	cleanupBarcodeCache();
+	cleanupOldData();
 	setInterval(cleanupBarcodeCache, 24 * 60 * 60 * 1000);
+	setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
 }
 
 async function notifyOnNewVersion() {

@@ -139,6 +139,13 @@ export const barcodeCache = sqliteTable('barcode_cache', {
 	lastSeenAt: integer('last_seen_at').notNull()
 });
 
+export const itemHistory = sqliteTable('item_history', {
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	useCount: integer('use_count').notNull().default(1),
+	lastUsedAt: integer('last_used_at').notNull()
+}, (t) => [primaryKey({ columns: [t.userId, t.name] })]);
+
 export type User = typeof users.$inferSelect;
 export type List = typeof lists.$inferSelect;
 export type Item = typeof items.$inferSelect;
@@ -151,3 +158,4 @@ export type RecipeStep = typeof recipeSteps.$inferSelect;
 export type RecipeShare = typeof recipeShares.$inferSelect;
 export type BarcodeCache = typeof barcodeCache.$inferSelect;
 export type RecipeIngredientExclusion = typeof recipeIngredientExclusions.$inferSelect;
+export type ItemHistory = typeof itemHistory.$inferSelect;
