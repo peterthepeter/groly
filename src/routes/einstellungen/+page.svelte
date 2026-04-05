@@ -755,11 +755,10 @@
 							? '🔒 Your GPS location never leaves your device. Only the search query is sent to OpenStreetMap once during setup — not linked to your identity.'
 							: '🔒 Dein GPS-Standort verlässt nie dein Gerät. Nur der Suchbegriff wird einmalig beim Einrichten an OpenStreetMap gesendet – ohne Verbindung zu deiner Identität.'}
 					</div>
-					<p class="text-xs px-1" style="color: var(--color-on-surface-variant)">
-						{currentLang() === 'en'
-							? 'Set a location per list: long-press a list → Edit.'
-							: 'Standort pro Liste: langer Druck auf eine Liste → Bearbeiten.'}
-					</p>
+					<div class="text-xs px-1 leading-relaxed space-y-1" style="color: var(--color-on-surface-variant)">
+						<p>{currentLang() === 'en' ? '1. Enable the toggle above — activates the feature globally.' : '1. Schalter oben aktivieren — schaltet die Funktion global ein.'}</p>
+						<p>{currentLang() === 'en' ? '2. Set a location per list: long-press a list → Edit.' : '2. Standort pro Liste hinterlegen: langer Druck auf eine Liste → Bearbeiten.'}</p>
+					</div>
 				</div>
 			{/if}
 		</div>
