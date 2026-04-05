@@ -110,6 +110,20 @@ environment:
 - `VAPID_SUBJECT` must be a real `https://` URL or `mailto:` address — a `.local` domain will be rejected by Apple's push service.
 - Generate the keys **once** and keep them. If the keys change, all existing subscriptions become invalid and users need to re-subscribe in Settings.
 
+## Database Maintenance
+
+Groly performs automatic cleanup daily — no manual intervention required:
+
+| Data | Cleanup rule |
+|------|-------------|
+| Checked-off items | Deleted after 60 days |
+| Item suggestions | Deleted after 6 months without use |
+| Barcode cache | Deleted after 6 months without a lookup |
+| Expired sessions | Deleted daily |
+| Stale push subscriptions | Removed automatically on failed delivery (HTTP 410/404) |
+
+Active data (lists, unchecked items, recipes, list members) is only removed by user action. For a typical self-hosted instance (~10 users), the SQLite database stays well under 10 MB indefinitely.
+
 ## Tech Stack
 
 | Layer | Technology |
