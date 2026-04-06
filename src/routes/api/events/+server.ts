@@ -16,7 +16,7 @@ export const GET: RequestHandler = async (event) => {
 
 			const keepalive = setInterval(() => {
 				try { controller.enqueue(enc.encode(': ping\n\n')); }
-				catch { clearInterval(keepalive); }
+				catch { clearInterval(keepalive); unsubscribe(); }
 			}, 25000);
 
 			event.request.signal.addEventListener('abort', () => {
