@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.3.3',
+		de: [
+			'Sicherheit: Rezeptimport prüft nun die tatsächliche IP hinter einem Hostnamen (DNS-Rebinding-Schutz)',
+			'Sicherheit: Login-Rate-Limiting funktioniert jetzt korrekt hinter Reverse Proxies (Caddy, Nginx, Traefik)',
+		],
+		en: [
+			'Security: recipe import now resolves and validates the actual IP behind a hostname (DNS rebinding protection)',
+			'Security: login rate limiting now works correctly behind reverse proxies (Caddy, Nginx, Traefik)',
+		]
+	},
+	{
 		version: '0.3.2',
 		de: [
 			'Sicherheit: Ausstehende Einladungen erhalten keinen Schreibzugriff mehr auf Items und Benachrichtigungseinstellungen',

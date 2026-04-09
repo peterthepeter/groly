@@ -1,15 +1,10 @@
 import { json } from '@sveltejs/kit';
-import type { RequestEvent, RequestHandler } from './$types';
+import type { RequestHandler } from './$types';
 import { login } from '$lib/auth';
 import { checkRateLimit } from '$lib/server/loginRateLimit';
 
-function getIp(event: RequestEvent): string {
-	return event.request.headers.get('x-forwarded-for')?.split(',')[0].trim()
-		?? event.getClientAddress();
-}
-
 export const POST: RequestHandler = async (event) => {
-	if (!checkRateLimit(getIp(event))) {
+	if (!checkRateLimit(event.getClientAddress())) {
 		return json({ error: 'Zu viele Versuche. Bitte warte 15 Minuten.' }, { status: 429 });
 	}
 

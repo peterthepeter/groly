@@ -46,6 +46,7 @@ services:
       - ADMIN_PASSWORD=secure-password
       - ORIGIN=https://your-domain.com
       - NODE_ENV=production
+      - ADDRESS_HEADER=X-Forwarded-For  # required when running behind a reverse proxy
     restart: unless-stopped
 ```
 
@@ -86,6 +87,7 @@ The volume `/app/data` contains the SQLite database. An admin user is created on
 | `PUBLIC_VAPID_PUBLIC_KEY` | Optional | Same value as `VAPID_PUBLIC_KEY` |
 | `VAPID_SUBJECT` | Optional | `https://` URL or `mailto:` address for VAPID |
 | `NODE_ENV` | Recommended | Set to `production` |
+| `ADDRESS_HEADER` | Behind proxy | Set to `X-Forwarded-For` when running behind a reverse proxy (Caddy, Nginx, Traefik). Required for login rate limiting to work per client IP instead of per proxy IP. |
 
 ### Push Notifications (optional)
 
