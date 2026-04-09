@@ -7,6 +7,8 @@ import { appMeta, barcodeCache, items, itemHistory, sessions } from '$lib/db/sch
 import { eq, lt, and, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
 import { sendPushToAllSubscribers } from '$lib/server/pushNotifications';
+import { subsSize } from '$lib/server/userEvents';
+import { attemptsSize } from '$lib/server/loginRateLimit';
 
 let initialized = false;
 
@@ -47,7 +49,7 @@ function logMemoryUsage() {
 	const m = process.memoryUsage();
 	const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(2);
 	console.log(
-		`[groly:mem] rss=${mb(m.rss)}MB heap=${mb(m.heapUsed)}/${mb(m.heapTotal)}MB ext=${mb(m.external)}MB`
+		`[groly:mem] rss=${mb(m.rss)}MB heap=${mb(m.heapUsed)}/${mb(m.heapTotal)}MB ext=${mb(m.external)}MB sse=${subsSize()} ratelimit=${attemptsSize()}`
 	);
 }
 

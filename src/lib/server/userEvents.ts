@@ -8,6 +8,12 @@ const enc = new TextEncoder();
 type Controller = ReadableStreamDefaultController<Uint8Array>;
 const subs = new Map<string, Set<Controller>>();
 
+export function subsSize(): number {
+	let total = 0;
+	for (const set of subs.values()) total += set.size;
+	return total;
+}
+
 export function subscribe(userId: string, ctrl: Controller): () => void {
 	if (!subs.has(userId)) subs.set(userId, new Set());
 	subs.get(userId)!.add(ctrl);

@@ -1,25 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestEvent, RequestHandler } from './$types';
 import { login } from '$lib/auth';
-
-// In-Memory Sliding Window: max. 10 Versuche pro IP in 15 Minuten
-const attempts = new Map<string, { count: number; resetAt: number }>();
+import { checkRateLimit } from '$lib/server/loginRateLimit';
 
 function getIp(event: RequestEvent): string {
 	return event.request.headers.get('x-forwarded-for')?.split(',')[0].trim()
 		?? event.getClientAddress();
-}
-
-function checkRateLimit(ip: string): boolean {
-	const now = Date.now();
-	const entry = attempts.get(ip);
-	if (!entry || now > entry.resetAt) {
-		attempts.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 });
-		return true;
-	}
-	if (entry.count >= 10) return false;
-	entry.count++;
-	return true;
 }
 
 export const POST: RequestHandler = async (event) => {
