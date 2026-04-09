@@ -41,7 +41,7 @@
 			prepTime = data.prepTime ? String(data.prepTime) : '';
 			cookTime = data.cookTime ? String(data.cookTime) : '';
 			ingredients = (data.ingredients ?? []).map((i: any) => ({
-				id: uid(),
+				id: i.id ?? uid(),
 				amount: i.amount ?? '',
 				unit: i.unit ?? '',
 				name: i.name ?? ''
@@ -95,7 +95,7 @@
 					cookTime: cookTime ? parseInt(cookTime) : null,
 					ingredients: ingredients
 						.filter(i => i.name.trim())
-						.map(i => ({ amount: i.amount.trim() || null, unit: i.unit.trim() || null, name: i.name.trim() })),
+						.map(i => ({ id: i.id, amount: i.amount.trim() || null, unit: i.unit.trim() || null, name: i.name.trim() })),
 					steps: steps
 						.filter(s => s.text.trim())
 						.map(s => ({ text: s.text.trim() }))

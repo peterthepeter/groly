@@ -93,7 +93,7 @@
 					servings,
 					prepTime: recipe.prepTime,
 					cookTime: recipe.cookTime,
-					ingredients: recipe.ingredients.map(i => ({ amount: i.amount, unit: i.unit, name: i.name })),
+					ingredients: recipe.ingredients.map(i => ({ id: i.id, amount: i.amount, unit: i.unit, name: i.name })),
 					steps: recipe.steps.map(s => ({ text: s.text }))
 				})
 			});
@@ -133,7 +133,7 @@
 					servings: recipe.servings,
 					prepTime: recipe.prepTime,
 					cookTime: recipe.cookTime,
-					ingredients: recipe.ingredients.map(i => ({ amount: i.amount, unit: i.unit, name: i.name })),
+					ingredients: recipe.ingredients.map(i => ({ id: i.id, amount: i.amount, unit: i.unit, name: i.name })),
 					steps: recipe.steps.map(s => ({ text: s.text }))
 				})
 			});

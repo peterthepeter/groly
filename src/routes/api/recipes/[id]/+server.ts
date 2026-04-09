@@ -56,18 +56,44 @@ export const PUT: RequestHandler = async (event) => {
 	}).where(eq(recipes.id, event.params.id)).run();
 
 	if (Array.isArray(ingredients)) {
-		db.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, event.params.id)).run();
+		const existing = db.select({ id: recipeIngredients.id })
+			.from(recipeIngredients)
+			.where(eq(recipeIngredients.recipeId, event.params.id))
+			.all();
+		const existingIds = new Set(existing.map(i => i.id));
+		const keptIds = new Set<string>();
+
 		for (let i = 0; i < ingredients.length; i++) {
 			const ing = ingredients[i];
 			if (!ing.name?.trim()) continue;
-			db.insert(recipeIngredients).values({
-				id: randomUUID(),
-				recipeId: event.params.id,
-				amount: ing.amount?.trim() || null,
-				unit: ing.unit?.trim() || null,
-				name: ing.name.trim(),
-				sortOrder: i
-			}).run();
+			if (ing.id && existingIds.has(ing.id)) {
+				// Update in place — preserves ID so exclusions survive
+				db.update(recipeIngredients).set({
+					amount: ing.amount?.trim() || null,
+					unit: ing.unit?.trim() || null,
+					name: ing.name.trim(),
+					sortOrder: i
+				}).where(eq(recipeIngredients.id, ing.id)).run();
+				keptIds.add(ing.id);
+			} else {
+				const newId = randomUUID();
+				db.insert(recipeIngredients).values({
+					id: newId,
+					recipeId: event.params.id,
+					amount: ing.amount?.trim() || null,
+					unit: ing.unit?.trim() || null,
+					name: ing.name.trim(),
+					sortOrder: i
+				}).run();
+				keptIds.add(newId);
+			}
+		}
+
+		// Delete removed ingredients (CASCADE removes their exclusions)
+		for (const old of existing) {
+			if (!keptIds.has(old.id)) {
+				db.delete(recipeIngredients).where(eq(recipeIngredients.id, old.id)).run();
+			}
 		}
 	}
 
