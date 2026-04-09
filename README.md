@@ -45,7 +45,6 @@ services:
       - ADMIN_USERNAME=your-username
       - ADMIN_PASSWORD=secure-password
       - ORIGIN=https://your-domain.com
-      - NODE_ENV=production
       - ADDRESS_HEADER=X-Forwarded-For  # required when running behind a reverse proxy
     restart: unless-stopped
 ```
@@ -57,7 +56,7 @@ Add the container via the Unraid Docker UI or Community Applications:
 - **Repository:** `ghcr.io/peterthepeter/groly:latest`
 - **Port:** `3000` (WebUI)
 - **Path:** `/app/data` → e.g. `/mnt/user/appdata/groly`
-- **Variables:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ORIGIN`, `NODE_ENV=production`
+- **Variables:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ORIGIN`
 - **Push notifications (optional):** additionally set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_SUBJECT` — see [Push Notifications](#push-notifications-optional) below
 
 The volume `/app/data` contains the SQLite database. An admin user is created on first start and is prompted to change the password on first login.
@@ -86,7 +85,6 @@ The volume `/app/data` contains the SQLite database. An admin user is created on
 | `VAPID_PRIVATE_KEY` | Optional | VAPID private key for push notifications |
 | `PUBLIC_VAPID_PUBLIC_KEY` | Optional | Same value as `VAPID_PUBLIC_KEY` |
 | `VAPID_SUBJECT` | Optional | `https://` URL or `mailto:` address for VAPID |
-| `NODE_ENV` | Recommended | Set to `production` |
 | `ADDRESS_HEADER` | Behind proxy | Set to `X-Forwarded-For` when running behind a reverse proxy (Caddy, Nginx, Traefik). Required for login rate limiting to work per client IP instead of per proxy IP. |
 
 ### Push Notifications (optional)
