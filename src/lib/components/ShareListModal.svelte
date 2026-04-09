@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { currentLang } from '$lib/i18n.svelte';
+	import { watchVisualViewportBottomOffset } from '$lib/visualViewport';
 
 	let { listId, listName, onClose }: {
 		listId: string;
@@ -68,20 +70,11 @@
 		}
 	}
 
-	$effect(() => {
-		loadMembers();
-		const vv = window.visualViewport;
-		if (!vv) return;
-		function update() {
-			bottomOffset = Math.max(0, window.innerHeight - vv!.height - vv!.offsetTop);
-		}
-		vv.addEventListener('resize', update);
-		vv.addEventListener('scroll', update);
-		update();
-		return () => {
-			vv.removeEventListener('resize', update);
-			vv.removeEventListener('scroll', update);
-		};
+	onMount(() => {
+		void loadMembers();
+		return watchVisualViewportBottomOffset((offset) => {
+			bottomOffset = offset;
+		});
 	});
 </script>
 

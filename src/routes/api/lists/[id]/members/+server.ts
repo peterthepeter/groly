@@ -39,7 +39,11 @@ export const POST: RequestHandler = async (event) => {
 	if (target.id === user!.id) return json({ error: 'Du kannst die Liste nicht mit dir selbst teilen' }, { status: 400 });
 
 	const memberPermission = reqPermission === 'read' ? 'read' : 'write';
-	db.insert(listMembers).values({ listId: event.params.id, userId: target.id, permission: memberPermission, status: 'pending' }).onConflictDoNothing().run();
+	const insertResult = db.insert(listMembers).values({ listId: event.params.id, userId: target.id, permission: memberPermission, status: 'pending' }).onConflictDoNothing().run();
+
+	if (insertResult.changes === 0) {
+		return json({ error: 'Benutzer ist bereits Mitglied dieser Liste' }, { status: 409 });
+	}
 
 	// SSE: memberCount an Owner senden (Teilen-Icon erscheint sofort)
 	emitMemberCountToOwner(event.params.id, user!.id);

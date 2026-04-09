@@ -48,6 +48,7 @@
 	onclick={handleClick}
 	onpointerdown={startPress}
 	onpointerup={endPress}
+	onpointerleave={endPress}
 	onpointercancel={endPress}
 	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
 	class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:opacity-80 text-left select-none"

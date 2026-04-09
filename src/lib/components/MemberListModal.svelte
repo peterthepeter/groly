@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { currentLang } from '$lib/i18n.svelte';
+	import { watchVisualViewportBottomOffset } from '$lib/visualViewport';
 
 	let { list, currentUserId, onLeave, onClose }: {
 		list: { id: string; name: string; ownerUsername?: string | null };
@@ -13,24 +15,14 @@
 	let notifLoading = $state(false);
 	let bottomOffset = $state(0);
 
-	$effect(() => {
+	onMount(() => {
 		fetch(`/api/lists/${list.id}/notifications`)
 			.then(r => r.json())
 			.then(d => { notificationsEnabled = d.enabled ?? true; })
 			.catch(() => {});
-
-		const vv = window.visualViewport;
-		if (!vv) return;
-		function update() {
-			bottomOffset = Math.max(0, window.innerHeight - vv!.height - vv!.offsetTop);
-		}
-		vv.addEventListener('resize', update);
-		vv.addEventListener('scroll', update);
-		update();
-		return () => {
-			vv.removeEventListener('resize', update);
-			vv.removeEventListener('scroll', update);
-		};
+		return watchVisualViewportBottomOffset((offset) => {
+			bottomOffset = offset;
+		});
 	});
 
 	async function toggleNotifications() {

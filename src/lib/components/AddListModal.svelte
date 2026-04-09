@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import IconPicker from '$lib/components/IconPicker.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { CATEGORY_LABELS, DEFAULT_CATEGORY_ORDER } from '$lib/categories';
+	import { watchVisualViewportBottomOffset } from '$lib/visualViewport';
 
 	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0 }: {
 		list?: { id: string; name: string; description: string | null; iconId?: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null } | null;
@@ -153,19 +155,10 @@
 		notifLoading = false;
 	}
 
-	$effect(() => {
-		const vv = window.visualViewport;
-		if (!vv) return;
-		function update() {
-			bottomOffset = Math.max(0, window.innerHeight - vv!.height - vv!.offsetTop);
-		}
-		vv.addEventListener('resize', update);
-		vv.addEventListener('scroll', update);
-		update();
-		return () => {
-			vv.removeEventListener('resize', update);
-			vv.removeEventListener('scroll', update);
-		};
+	onMount(() => {
+		return watchVisualViewportBottomOffset((offset) => {
+			bottomOffset = offset;
+		});
 	});
 
 </script>

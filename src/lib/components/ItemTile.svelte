@@ -95,6 +95,7 @@
 		onclick={handleClick}
 		onpointerdown={startPress}
 		onpointerup={endPress}
+		onpointerleave={endPress}
 		onpointercancel={endPress}
 		ontouchstart={handleTouchStart}
 		ontouchmove={handleTouchMove}

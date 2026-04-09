@@ -34,6 +34,7 @@
 			onclick={handleListsClick}
 			onpointerdown={startListsPress}
 			onpointerup={endListsPress}
+			onpointerleave={endListsPress}
 			onpointercancel={endListsPress}
 			oncontextmenu={(e) => { if (onListsPress) { e.preventDefault(); } }}
 			class="flex items-center gap-2 px-6 h-14 rounded-full glass active:opacity-70 transition-opacity select-none"

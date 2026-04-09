@@ -19,7 +19,7 @@ export const PATCH: RequestHandler = async (event) => {
 	if (!user) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const passwordHash = hashPassword(password);
-	db.update(users).set({ passwordHash, updatedAt: now() }).where(eq(users.id, user.id)).run();
+	db.update(users).set({ passwordHash, mustChangePassword: true, updatedAt: now() }).where(eq(users.id, user.id)).run();
 	return json({ ok: true });
 };
 

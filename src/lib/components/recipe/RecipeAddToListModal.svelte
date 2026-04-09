@@ -53,13 +53,14 @@
 						: null
 				}));
 
-			await Promise.all(toAdd.map(item =>
+			const results = await Promise.all(toAdd.map(item =>
 				fetch(`/api/lists/${listId}/items`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(item)
 				})
 			));
+			if (results.some(r => !r.ok)) throw new Error('Einige Items konnten nicht hinzugefügt werden');
 			goto(`/listen/${listId}`);
 		} finally {
 			addingToList = false;

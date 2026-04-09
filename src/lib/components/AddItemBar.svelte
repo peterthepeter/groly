@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick, onMount } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
+	import { watchVisualViewportBottomOffset } from '$lib/visualViewport';
 	import BarcodeScanner from './BarcodeScanner.svelte';
 
 	let { onAdd, onClose, suggestions = [], autoOpenScanner = false }: {
@@ -23,6 +24,10 @@
 		} else {
 			nameInput?.focus();
 		}
+
+		return watchVisualViewportBottomOffset((offset) => {
+			bottomOffset = offset;
+		});
 	});
 
 	const isNumeric = $derived(/^\d+$/.test(quantityInfo.trim()) || quantityInfo.trim() === '');
@@ -54,21 +59,6 @@
 			? name.split(',').map(t => t.trim()).filter(t => t.length > 0).map(parseQuickItem)
 			: []
 	);
-
-	$effect(() => {
-		const vv = window.visualViewport;
-		if (!vv) return;
-		function update() {
-			bottomOffset = Math.max(0, window.innerHeight - vv!.height - vv!.offsetTop);
-		}
-		vv.addEventListener('resize', update);
-		vv.addEventListener('scroll', update);
-		update();
-		return () => {
-			vv.removeEventListener('resize', update);
-			vv.removeEventListener('scroll', update);
-		};
-	});
 
 	const filtered = $derived(
 		name.length >= 1

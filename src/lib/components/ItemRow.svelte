@@ -37,6 +37,7 @@
 	onclick={handleClick}
 	onpointerdown={startPress}
 	onpointerup={endPress}
+	onpointerleave={endPress}
 	onpointercancel={endPress}
 	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
 	class="w-full flex items-center h-[54px] px-3.5 gap-2.5 active:opacity-70 transition-opacity select-none text-left"

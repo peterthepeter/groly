@@ -37,6 +37,7 @@
 	let searchOpen = $state(false);
 	let scrollContainer = $state<HTMLDivElement | null>(null);
 	let autoScannerOnOpen = $state(false);
+	let itemsLoadVersion = 0;
 
 	const listId = $derived($page.params.id);
 	const openItems = $derived.by(() => {
@@ -45,9 +46,10 @@
 		const sortEnabled = listSettings !== null ? listSettings.enabled : userSettings.categorySortEnabled;
 		if (!sortEnabled) return unchecked;
 		const order = listSettings !== null ? listSettings.order : userSettings.categoryOrder;
+		const orderIndex = new Map(order.map((key, index) => [key, index]));
 		return [...unchecked].sort((a, b) => {
-			const ai = order.indexOf(getCategoryKey(a.name, a.categoryOverride));
-			const bi = order.indexOf(getCategoryKey(b.name, b.categoryOverride));
+			const ai = orderIndex.get(getCategoryKey(a.name, a.categoryOverride)) ?? -1;
+			const bi = orderIndex.get(getCategoryKey(b.name, b.categoryOverride)) ?? -1;
 			// Higher index = top of grid (earlier in array), lower index = bottom (later in array)
 			return bi - ai;
 		});
@@ -71,12 +73,16 @@
 	);
 
 	async function loadItems() {
+		const targetListId = listId ?? '';
+		const requestVersion = ++itemsLoadVersion;
+
 		// Gecachte Daten sofort anzeigen, während der Netzwerk-Fetch läuft (stale-while-revalidate)
 		if (items.length === 0) {
 			const [cachedName, cachedItems] = await Promise.all([
-				getOfflineListName(listId ?? ''),
-				getOfflineItems(listId ?? '')
+				getOfflineListName(targetListId),
+				getOfflineItems(targetListId)
 			]);
+			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
 			if (cachedItems.length > 0) {
 				listName = cachedName || listName;
 				items = cachedItems.map(item => ({ ...item, createdByUsername: null }));
@@ -88,12 +94,13 @@
 
 		try {
 			const [listRes, itemsRes, suggestRes] = await Promise.all([
-				fetch(`/api/lists/${listId}`),
-				fetch(`/api/lists/${listId}/items`),
+				fetch(`/api/lists/${targetListId}`),
+				fetch(`/api/lists/${targetListId}/items`),
 				fetch('/api/suggestions')
 			]);
 			if (!listRes.ok || !itemsRes.ok) throw new Error();
 			const listData = await listRes.json();
+			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
 			listName = listData.name;
 			userPermission = listData.userPermission ?? 'write';
 			const newItems: Item[] = await itemsRes.json();
@@ -102,11 +109,14 @@
 			void cacheItemsData(newItems);
 			items = newItems;
 		} catch {
+			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
 			if (items.length === 0) {
-				listName = await getOfflineListName(listId ?? '');
-				items = (await getOfflineItems(listId ?? '')).map(item => ({ ...item, createdByUsername: null }));
+				listName = await getOfflineListName(targetListId);
+				if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
+				items = (await getOfflineItems(targetListId)).map(item => ({ ...item, createdByUsername: null }));
 			}
 		}
+		if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
 		loading = false;
 		await tick();
 		scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight });

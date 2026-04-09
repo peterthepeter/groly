@@ -15,7 +15,7 @@ async function getWritableItem(itemId: string, userId: string) {
 	if (!list) return null;
 	if (list.ownerId === userId) return item;
 	const member = db.select().from(listMembers).where(and(eq(listMembers.listId, list.id), eq(listMembers.userId, userId))).get();
-	if (member?.permission === 'write') return item;
+	if (member?.permission === 'write' && member?.status === 'accepted') return item;
 	return null;
 }
 

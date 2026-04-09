@@ -55,7 +55,6 @@ function logMemoryUsage() {
 
 async function init() {
 	if (initialized) return;
-	initialized = true;
 	runMigrations();
 	bootstrapAdmin();
 	migrateItemHistory();
@@ -66,6 +65,7 @@ async function init() {
 	setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
 	logMemoryUsage();
 	setInterval(logMemoryUsage, 60 * 60 * 1000); // stündlich
+	initialized = true;
 }
 
 async function notifyOnNewVersion() {

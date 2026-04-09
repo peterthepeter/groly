@@ -41,6 +41,7 @@
 	let showInstallBanner = $state(false);
 	let showInstallModal = $state(false);
 	let installPrompt = $state<any>(null);
+	let listsLoadVersion = 0;
 
 	const PUSH_PROMPT_KEY = 'groly_push_prompt_dismissed';
 	const INSTALL_BANNER_KEY = 'groly_install_banner_dismissed';
@@ -117,7 +118,8 @@
 	const displayedLists = $derived(
 		customOrder.length > 0
 			? (() => {
-				const mapped = customOrder.map(id => lists.find(l => l.id === id)).filter(Boolean) as ListItem[];
+				const listsById = new Map(lists.map((list) => [list.id, list]));
+				const mapped = customOrder.map(id => listsById.get(id)).filter(Boolean) as ListItem[];
 				// Neu hinzugekommene Listen ans Ende
 				const missing = lists.filter(l => !customOrder.includes(l.id));
 				return [...mapped, ...missing];
@@ -162,8 +164,11 @@
 	}
 
 	async function loadLists() {
+		const requestVersion = ++listsLoadVersion;
+
 		// Gecachte Daten sofort anzeigen (stale-while-revalidate)
 		const cached = await getOfflineLists();
+		if (requestVersion !== listsLoadVersion) return;
 		if (cached.length > 0 && lists.length === 0) {
 			lists = cached as unknown as ListItem[];
 			loading = false;
@@ -173,6 +178,7 @@
 			const res = await fetch('/api/lists');
 			if (!res.ok) throw new Error();
 			const json = await res.json();
+			if (requestVersion !== listsLoadVersion) return;
 			const newLists: ListItem[] = (json && typeof json === 'object' && 'lists' in json) ? json.lists : json;
 			const newInvitations = json?.pendingInvitations ?? [];
 			// Cache als plain objects (vor State-Zuweisung, um Svelte-Proxy-Probleme mit IndexedDB zu vermeiden)
@@ -180,11 +186,13 @@
 			lists = newLists;
 			pendingInvitations = newInvitations;
 		} catch {
+			if (requestVersion !== listsLoadVersion) return;
 			if (lists.length === 0) {
 				lists = (await getOfflineLists()) as unknown as ListItem[];
 				pendingInvitations = [];
 			}
 		}
+		if (requestVersion !== listsLoadVersion) return;
 		loading = false;
 		checkLocationAndNavigate();
 	}

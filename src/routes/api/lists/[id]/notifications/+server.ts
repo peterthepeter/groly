@@ -27,7 +27,7 @@ export const PUT: RequestHandler = async (event) => {
 		.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, user!.id)))
 		.get();
 
-	if (!isOwner && !member) return json({ error: 'Keine Berechtigung' }, { status: 403 });
+	if (!isOwner && member?.status !== 'accepted') return json({ error: 'Keine Berechtigung' }, { status: 403 });
 
 	if (isOwner) {
 		// Owner-Präferenz in list_notification_prefs speichern
@@ -62,6 +62,19 @@ export const GET: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const listId = event.params.id;
+
+	const list = db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, listId)).get();
+	if (!list) return json({ error: 'Nicht gefunden' }, { status: 404 });
+
+	const isOwner = list.ownerId === user!.id;
+	const member = db
+		.select()
+		.from(listMembers)
+		.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, user!.id)))
+		.get();
+
+	if (!isOwner && member?.status !== 'accepted') return json({ error: 'Keine Berechtigung' }, { status: 403 });
+
 	const pref = db
 		.select()
 		.from(listNotificationPrefs)
