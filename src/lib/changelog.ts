@@ -2,6 +2,23 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.3.2',
+		de: [
+			'Sicherheit: Ausstehende Einladungen erhalten keinen Schreibzugriff mehr auf Items und Benachrichtigungseinstellungen',
+			'Sicherheit: Doppelte Einladungen lösen keine erneute Push-Benachrichtigung mehr aus',
+			'Sicherheit: Admin-Passwortreset erzwingt jetzt eine Passwortänderung beim nächsten Login',
+			'Fixes: Tipp-Effekt bleibt nicht mehr hängen wenn der Finger die Schaltfläche verlässt',
+			'Fixes: Veraltete Daten können parallele Ladevorgänge nicht mehr überschreiben',
+		],
+		en: [
+			'Security: pending invitations no longer grant write access to items or notification settings',
+			'Security: duplicate invitations no longer trigger a repeated push notification',
+			'Security: admin password reset now forces a password change on next login',
+			'Fix: press effect no longer gets stuck when the pointer leaves a button',
+			'Fix: stale data can no longer overwrite results from a newer load',
+		]
+	},
+	{
 		version: '0.3.1',
 		de: [
 			'Neue Listen-Ansicht: Items als kompakte Zeilen statt Kacheln – besonders praktisch auf kleinen Bildschirmen',
