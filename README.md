@@ -57,17 +57,17 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 
 If you want to run Groly on your home network without exposing it to the internet, you have a few good options:
 
-**Tailscale (recommended for private/VPN-only setups)**
+#### Reverse Proxy
+Run Groly behind Nginx Proxy Manager, Caddy, or Traefik with a real domain and Let's Encrypt. Works well if your server is already reachable from the internet.
+
+#### Tailscale
 Tailscale gives every device a real hostname with a valid Let's Encrypt certificate — no public DNS or port forwarding needed. Free for up to 100 devices.
 1. Install Tailscale on your Unraid server (available as a Community Applications plugin)
 2. Enable HTTPS: Tailscale Admin → DNS → Enable HTTPS
 3. Set `ORIGIN` to your Tailscale hostname, e.g. `https://my-server.tail-xxxxx.ts.net`
 
-**Cloudflare Tunnel**
+#### Cloudflare Tunnel
 Zero-config HTTPS tunnel to your server, no port forwarding required. Free tier available.
-
-**Reverse proxy with a public domain**
-Run Groly behind Nginx Proxy Manager, Caddy, or Traefik with a real domain and Let's Encrypt. Works well if your server is already reachable from the internet.
 
 ## Docker Deployment
 
