@@ -4,7 +4,25 @@
   <img src="static/icons/icon.svg" width="96" alt="Groly" />
 </p>
 
-Mobile-first PWA grocery list app for self-hosting. Designed for small teams and families, runs as a Docker container on a home server. Ready for **Unraid** and any other Docker-based home server setup.
+A grocery list app built **mobile-first from the ground up** — designed for your phone, not adapted to it. Every interaction is touch-optimized: bottom navigation, large tap targets, swipe gestures, and offline support so it works without signal in the store. Also fully usable in a desktop browser.
+
+Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and any other Docker-based home server setup. Designed for families and small teams.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/lists.png" width="180" alt="Lists overview" />
+  <img src="docs/screenshots/list-grid.png" width="180" alt="Shopping list with category grid" />
+  <img src="docs/screenshots/shortcuts.png" width="180" alt="Quick access shortcuts" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/list-sort.png" width="180" alt="List sort mode" />
+  <img src="docs/screenshots/category-sorting.png" width="180" alt="Category sorting settings" />
+  <img src="docs/screenshots/recipe-add.png" width="180" alt="Add recipe" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/recipe-detail.png" width="180" alt="Recipe detail view" />
+</p>
 
 ## Features
 
@@ -22,6 +40,34 @@ Mobile-first PWA grocery list app for self-hosting. Designed for small teams and
 - **Light & Dark mode** – Follows system preference automatically.
 - **Smart suggestions** – When adding items, previously used item names are suggested. Suggestions are tracked per user in a dedicated history table and ranked by usage frequency. Checked-off items older than 60 days are automatically removed from the database; suggestion history is retained for 6 months after last use.
 - **i18n** – German and English.
+
+## HTTPS
+
+**HTTPS is required.** Without it, the following features will not work:
+
+| Feature | Why HTTPS is needed |
+|---------|-------------------|
+| **Offline mode** | Service workers only register over HTTPS (browser requirement) |
+| **PWA installation** | Browsers only allow "Add to Home Screen" over HTTPS |
+| **Push notifications** | The Web Push API is restricted to HTTPS |
+| **Barcode scanner** | Camera access (`getUserMedia`) requires HTTPS |
+| **Session cookies** | The session cookie uses the `Secure` flag in production |
+
+### Getting HTTPS without a public domain
+
+If you want to run Groly on your home network without exposing it to the internet, you have a few good options:
+
+**Tailscale (recommended for private/VPN-only setups)**
+Tailscale gives every device a real hostname with a valid Let's Encrypt certificate — no public DNS or port forwarding needed. Free for up to 100 devices.
+1. Install Tailscale on your Unraid server (available as a Community Applications plugin)
+2. Enable HTTPS: Tailscale Admin → DNS → Enable HTTPS
+3. Set `ORIGIN` to your Tailscale hostname, e.g. `https://my-server.tail-xxxxx.ts.net`
+
+**Cloudflare Tunnel**
+Zero-config HTTPS tunnel to your server, no port forwarding required. Free tier available.
+
+**Reverse proxy with a public domain**
+Run Groly behind Nginx Proxy Manager, Caddy, or Traefik with a real domain and Let's Encrypt. Works well if your server is already reachable from the internet.
 
 ## Docker Deployment
 
@@ -51,8 +97,9 @@ services:
 
 ### Unraid
 
-Add the container via the Unraid Docker UI or Community Applications:
+Install via **Community Applications** (search for "Groly") or add the template manually:
 
+- **Template URL:** `https://raw.githubusercontent.com/peterthepeter/groly/main/unraid/groly.xml`
 - **Repository:** `ghcr.io/peterthepeter/groly:latest`
 - **Port:** `3000` (WebUI)
 - **Path:** `/app/data` → e.g. `/mnt/user/appdata/groly`
@@ -67,11 +114,7 @@ The volume `/app/data` contains the SQLite database. An admin user is created on
 > ```
 > Existing installations upgrading from an older version must run this command once before restarting the container.
 
-> **HTTPS required.** Session cookies, the service worker, and push notifications only work over HTTPS. Accessing via a local IP without HTTPS will not work in production mode.
-
-> **Reverse proxy recommended.** Run Groly behind a reverse proxy (e.g. Nginx Proxy Manager, Traefik, or Caddy) to handle HTTPS termination and domain routing. Optionally add an intrusion detection layer (e.g. CrowdSec) for additional protection.
-
-> **Architecture:** The Docker image is built for `linux/amd64` only.
+> **Architecture:** The Docker image is built for `linux/amd64`.
 
 ### Environment Variables
 
@@ -122,7 +165,7 @@ Groly performs automatic cleanup daily — no manual intervention required:
 | Expired sessions | Deleted daily |
 | Stale push subscriptions | Removed automatically on failed delivery (HTTP 410/404) |
 
-Active data (lists, unchecked items, recipes, list members) is only removed by user action. For a typical self-hosted instance (~10 users), the SQLite database stays well under 10 MB indefinitely.
+Active data (lists, unchecked items, recipes, list members) is only removed by user action. For a typical self-hosted instance, the SQLite database stays well under 10 MB indefinitely.
 
 ## Tech Stack
 
@@ -140,23 +183,3 @@ Active data (lists, unchecked items, recipes, list members) is only removed by u
 | i18n | Paraglide-SvelteKit |
 | Deployment | Docker (Node.js adapter), linux/amd64 |
 
-## Development
-
-```sh
-npm install
-npm run dev
-```
-
-```sh
-npm run check        # type-check
-npm run build        # production build
-npm run preview      # preview production build
-```
-
-After schema changes, generate a Drizzle migration:
-
-```sh
-npx drizzle-kit generate
-```
-
-Migrations run automatically on server startup via `src/hooks.server.ts`.
