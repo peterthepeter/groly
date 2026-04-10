@@ -153,5 +153,8 @@
   "barcode_offline": "No internet – product search unavailable",
   "shortcut_setup_hint": "Quick Access ?",
   "location_hint_text": "Tip: Groly can automatically open this list when you're nearby.",
-  "location_hint_action": "Enable in settings"
+  "location_hint_action": "Enable in settings",
+  "sort_mode_title": "Sort order",
+  "sort_mode_subtitle": "Drag to reorder",
+  "sort_mode_done": "Done"
 }

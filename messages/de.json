@@ -153,5 +153,8 @@
   "barcode_offline": "Kein Internet – Produkte können nicht gesucht werden",
   "shortcut_setup_hint": "Schnellzugriff ?",
   "location_hint_text": "Tipp: Groly kann diese Liste automatisch öffnen, wenn du in der Nähe bist.",
-  "location_hint_action": "In Einstellungen aktivieren"
+  "location_hint_action": "In Einstellungen aktivieren",
+  "sort_mode_title": "Sortierung",
+  "sort_mode_subtitle": "Reihenfolge anpassen",
+  "sort_mode_done": "Fertig"
 }

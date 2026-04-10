@@ -392,8 +392,8 @@
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader
-		title={sortMode ? 'Sortierung' : t.lists_title}
-		subtitle={sortMode ? 'Reihenfolge anpassen' : lists_active(openCount)}
+		title={sortMode ? t.sort_mode_title : t.lists_title}
+		subtitle={sortMode ? t.sort_mode_subtitle : lists_active(openCount)}
 		onMenuOpen={() => { if (!sortMode) menuOpen = true; }}
 	>
 		{#snippet actions()}
@@ -403,7 +403,7 @@
 					class="px-4 py-1.5 rounded-full text-sm font-semibold"
 					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 				>
-					Fertig
+					{t.sort_mode_done}
 				</button>
 			{/if}
 		{/snippet}

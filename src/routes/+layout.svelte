@@ -11,6 +11,13 @@
 	import { LATEST_CHANGES } from '$lib/changelog';
 
 	let whatsNewOpen = $state(false);
+	let httpWarningDismissed = $state(false);
+	const showHttpWarning = $derived(
+		typeof window !== 'undefined' &&
+		window.location.protocol === 'http:' &&
+		!['localhost', '127.0.0.1'].includes(window.location.hostname) &&
+		!httpWarningDismissed
+	);
 
 	let { data, children } = $props();
 
@@ -100,6 +107,23 @@
 <svelte:head>
 	<title>Groly</title>
 </svelte:head>
+
+{#if showHttpWarning}
+	<div
+		class="max-w-[430px] mx-auto flex items-start gap-3 px-4 py-3"
+		style="background-color: rgba(245,158,11,0.15); border-bottom: 1px solid rgba(245,158,11,0.3);"
+		role="alert"
+	>
+		<span style="font-size: 15px; line-height: 1.5; flex: 1; color: #f59e0b;">
+			⚠️ You're accessing Groly over HTTP. Offline mode, push notifications, barcode scanner, and PWA installation require HTTPS.
+		</span>
+		<button
+			onclick={() => httpWarningDismissed = true}
+			aria-label="Dismiss"
+			style="color: #f59e0b; opacity: 0.7; font-size: 18px; line-height: 1; flex-shrink: 0; padding: 2px 4px;"
+		>✕</button>
+	</div>
+{/if}
 
 <div class="max-w-[430px] mx-auto relative">
 	{@render children()}

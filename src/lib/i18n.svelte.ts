@@ -68,6 +68,9 @@ class TranslationProxy {
 	get listview_hint_action() { void _lang; return m.listview_hint_action(); }
 	get location_hint_text() { void _lang; return m.location_hint_text(); }
 	get location_hint_action() { void _lang; return m.location_hint_action(); }
+	get sort_mode_title() { void _lang; return m.sort_mode_title(); }
+	get sort_mode_subtitle() { void _lang; return m.sort_mode_subtitle(); }
+	get sort_mode_done() { void _lang; return m.sort_mode_done(); }
 	get items_add() { void _lang; return m.items_add(); }
 	// item
 	get item_name_label() { void _lang; return m.item_name_label(); }
