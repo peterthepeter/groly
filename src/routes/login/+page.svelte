@@ -2,10 +2,22 @@
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n.svelte';
 
+	import { onMount } from 'svelte';
+
 	let { data } = $props();
 
 	// svelte-ignore state_referenced_locally
 	let username = $state(data.prefillUsername);
+	let showHttpWarning = $state(false);
+
+	onMount(() => {
+		if (
+			window.location.protocol === 'http:' &&
+			!['localhost', '127.0.0.1'].includes(window.location.hostname)
+		) {
+			showHttpWarning = true;
+		}
+	});
 	let password = $state('');
 	let error = $state('');
 	let loading = $state(false);
@@ -31,6 +43,21 @@
 		loading = false;
 	}
 </script>
+
+{#if showHttpWarning}
+<div class="flex items-start gap-3 px-4 py-3"
+     style="background-color: rgba(245,158,11,0.15); border-bottom: 1px solid rgba(245,158,11,0.3);"
+     role="alert">
+	<span style="font-size: 15px; line-height: 1.5; flex: 1; color: #f59e0b;">
+		⚠️ You're accessing Groly over HTTP. Offline mode, push notifications, barcode scanner, and PWA installation require HTTPS.
+	</span>
+	<button
+		onclick={() => showHttpWarning = false}
+		aria-label="Dismiss"
+		style="color: #f59e0b; opacity: 0.7; font-size: 18px; line-height: 1; flex-shrink: 0; padding: 2px 4px;"
+	>✕</button>
+</div>
+{/if}
 
 <div class="min-h-screen flex flex-col items-center justify-center px-6 py-12"
      style="background-color: var(--color-bg)">
