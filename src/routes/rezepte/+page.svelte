@@ -204,8 +204,8 @@
 		{/snippet}
 	</AppHeader>
 
-	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 4rem); padding-bottom: 5rem">
+	<div class="flex-1 flex flex-col overflow-y-auto px-4 min-h-0"
+	     style="justify-content: {activeTab === 'mealplan' ? 'flex-start' : 'flex-end'}; padding-top: calc(env(safe-area-inset-top) + 4rem); padding-bottom: 5rem">
 
 		<!-- Segment switcher -->
 		{#if !sortMode}

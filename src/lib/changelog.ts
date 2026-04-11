@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.4.1',
+		de: [
+			'Wochenplan: Scroll-Problem auf kleinen Bildschirmen behoben',
+			'„Ganze Woche einkaufen"-Button in den Header verschoben (zwischen Pfeil und Edit)',
+		],
+		en: [
+			'Meal plan: fixed scrolling on small screens',
+			'"Shop entire week" button moved to the header (between arrow and edit)',
+		]
+	},
+	{
 		version: '0.4.0',
 		de: [
 			'Wochenplaner: Mahlzeiten für die ganze Woche planen',

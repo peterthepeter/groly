@@ -327,6 +327,21 @@
 		</svg>
 	</button>
 
+	{#if hasAnyEntry && !editMode}
+		<button
+			onclick={() => openListSheet(weekDays.map(d => toISO(d)).filter(d => !!entries[d]))}
+			aria-label={t.meal_plan_add_week_to_list}
+			class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 active:opacity-60 transition-opacity"
+			style="background-color: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface-container)); outline: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)"
+		>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+				<line x1="3" y1="6" x2="21" y2="6"/>
+				<path d="M16 10a4 4 0 0 1-8 0"/>
+			</svg>
+		</button>
+	{/if}
+
 	<button
 		onclick={() => editMode = !editMode}
 		class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 active:opacity-60 transition-opacity"
@@ -352,7 +367,7 @@
 		     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 	</div>
 {:else}
-	<div class="space-y-2 pb-16">
+	<div class="space-y-2 pb-4">
 		{#each weekDays as day, i (toISO(day))}
 			{@const date = toISO(day)}
 			{@const entry = entries[date]}
@@ -463,25 +478,6 @@
 				{/if}
 			</div>
 		{/each}
-	</div>
-{/if}
-
-<!-- Shop entire week button -->
-{#if hasAnyEntry && !editMode}
-	<div class="fixed left-0 right-0 z-20 max-w-[430px] mx-auto px-4 pointer-events-none"
-	     style="bottom: calc(env(safe-area-inset-bottom, 0px) + 80px)">
-		<button
-			onclick={() => openListSheet(weekDays.map(d => toISO(d)).filter(d => !!entries[d]))}
-			class="w-full py-3.5 rounded-2xl text-sm font-semibold pointer-events-auto active:opacity-80 transition-opacity flex items-center justify-center gap-2"
-			style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-		>
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-				<line x1="3" y1="6" x2="21" y2="6"/>
-				<path d="M16 10a4 4 0 0 1-8 0"/>
-			</svg>
-			{t.meal_plan_add_week_to_list}
-		</button>
 	</div>
 {/if}
 
