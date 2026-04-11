@@ -150,6 +150,8 @@
 	let showShortcutForm = $state(false);
 	let draft = $state<ShortcutDraft>({ name: '', listId: '', action: 'go' });
 
+	const draftNeedsList = $derived(draft.action !== 'recipes' && draft.action !== 'mealplan');
+
 	async function loadAllLists() {
 		if (allListsLoaded) return;
 		try {
@@ -183,7 +185,7 @@
 
 	function startEdit(sc: Shortcut) {
 		editingId = sc.id;
-		draft = { name: sc.name, listId: sc.listId, action: sc.action };
+		draft = { name: sc.name, listId: sc.listId ?? '', action: sc.action };
 		showShortcutForm = true;
 	}
 
@@ -202,12 +204,15 @@
 	}
 
 	function saveShortcut() {
-		if (!draft.name.trim() || !draft.listId) return;
+		const needsList = draft.action !== 'recipes' && draft.action !== 'mealplan';
+		if (!draft.name.trim() || (needsList && !draft.listId)) return;
 		const listName = allLists.find(l => l.id === draft.listId)?.name ?? '';
+		const listId = needsList ? draft.listId : undefined;
+		const resolvedListName = needsList ? listName : undefined;
 		if (editingId) {
-			shortcuts.update(editingId, { name: draft.name.trim(), listId: draft.listId, listName, action: draft.action });
+			shortcuts.update(editingId, { name: draft.name.trim(), listId, listName: resolvedListName, action: draft.action });
 		} else {
-			shortcuts.add({ id: generateId(), name: draft.name.trim(), listId: draft.listId, listName, action: draft.action });
+			shortcuts.add({ id: generateId(), name: draft.name.trim(), listId, listName: resolvedListName, action: draft.action });
 		}
 		showShortcutForm = false;
 		editingId = null;
@@ -215,9 +220,17 @@
 
 	function actionLabel(action: ShortcutAction): string {
 		if (currentLang() === 'en') {
-			return action === 'scanner' ? 'Scanner' : action === 'add' ? 'Add item' : 'Open';
+			if (action === 'scanner') return 'Scanner';
+			if (action === 'add') return 'Add item';
+			if (action === 'recipes') return 'Recipes';
+			if (action === 'mealplan') return 'Meal plan';
+			return 'Open';
 		}
-		return action === 'scanner' ? 'Scanner' : action === 'add' ? 'Artikel hinzufügen' : 'Öffnen';
+		if (action === 'scanner') return 'Scanner';
+		if (action === 'add') return 'Artikel hinzufügen';
+		if (action === 'recipes') return 'Rezepte';
+		if (action === 'mealplan') return 'Wochenplan';
+		return 'Öffnen';
 	}
 
 	$effect(() => { loadSharedLists(); });
@@ -406,6 +419,19 @@
 													<line x1="12" y1="5" x2="12" y2="19"/>
 													<line x1="5" y1="12" x2="19" y2="12"/>
 												</svg>
+											{:else if sc.action === 'recipes'}
+												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+													<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+													<path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+												</svg>
+											{:else if sc.action === 'mealplan'}
+												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+													<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+													<line x1="16" y1="2" x2="16" y2="6"/>
+													<line x1="8" y1="2" x2="8" y2="6"/>
+													<line x1="3" y1="10" x2="21" y2="10"/>
+													<line x1="8" y1="14" x2="16" y2="14"/>
+												</svg>
 											{:else}
 												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 													<polyline points="9 18 15 12 9 6"/>
@@ -415,7 +441,9 @@
 										<div class="flex-1 min-w-0">
 											<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{sc.name}</div>
 											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">
-												{sc.listName} · {actionLabel(sc.action)}
+												{sc.action === 'recipes' || sc.action === 'mealplan'
+													? actionLabel(sc.action)
+													: `${sc.listName} · ${actionLabel(sc.action)}`}
 											</div>
 										</div>
 										<button
@@ -454,7 +482,7 @@
 									class="w-full rounded-xl px-4 py-3 text-base outline-none"
 									style="background-color: var(--color-surface-card); color: var(--color-on-surface)"
 								/>
-								{#if allLists.length > 0}
+								{#if draftNeedsList && allLists.length > 0}
 									<div class="rounded-xl px-4 py-3" style="background-color: var(--color-surface-card)">
 										<select
 											bind:value={draft.listId}
@@ -479,6 +507,17 @@
 									{/each}
 								</div>
 								<div class="flex gap-2">
+									{#each (['recipes', 'mealplan'] as ShortcutAction[]) as action}
+										<button
+											onclick={() => draft.action = action}
+											class="flex-1 py-2.5 rounded-full text-xs font-semibold transition-colors"
+											style="background-color: {draft.action === action ? 'var(--color-primary)' : 'var(--color-surface-card)'}; color: {draft.action === action ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+										>
+											{actionLabel(action)}
+										</button>
+									{/each}
+								</div>
+								<div class="flex gap-2">
 									<button
 										onclick={cancelShortcutForm}
 										class="flex-1 py-3 rounded-full text-sm font-semibold"
@@ -488,7 +527,7 @@
 									</button>
 									<button
 										onclick={saveShortcut}
-										disabled={!draft.name.trim() || !draft.listId}
+										disabled={!draft.name.trim() || (draftNeedsList && !draft.listId)}
 										class="flex-1 py-3 rounded-full text-sm font-semibold disabled:opacity-40"
 										style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 									>

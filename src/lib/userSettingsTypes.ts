@@ -6,13 +6,13 @@ export type ListCategorySettings = {
 	order: string[];
 };
 
-export type ShortcutAction = 'go' | 'add' | 'scanner';
+export type ShortcutAction = 'go' | 'add' | 'scanner' | 'recipes' | 'mealplan';
 
 export type Shortcut = {
 	id: string;
 	name: string;
-	listId: string;
-	listName: string;
+	listId?: string;
+	listName?: string;
 	action: ShortcutAction;
 };
 

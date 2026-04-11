@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import FabWithShortcuts from '$lib/components/FabWithShortcuts.svelte';
+	import MealPlanner from '$lib/components/MealPlanner.svelte';
 	import { t } from '$lib/i18n.svelte';
 
 	let { data } = $props();
@@ -39,6 +41,7 @@
 	let sharesLoading = $state<Record<string, boolean>>({});
 	let sortMode = $state(false);
 	let customOrder = $state<string[]>([]);
+	let activeTab = $state<'recipes' | 'mealplan'>($page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
 
 	// Apply custom order to recipes
 	const orderedRecipes = $derived(
@@ -184,8 +187,8 @@
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader
-		title={sortMode ? t.sort_mode_title : t.recipes_title}
-		subtitle={sortMode ? t.sort_mode_subtitle : `${recipes.length} / ${limit}`}
+		title={sortMode ? t.sort_mode_title : activeTab === 'mealplan' ? t.meal_plan_tab : t.recipes_title}
+		subtitle={sortMode ? t.sort_mode_subtitle : activeTab === 'recipes' ? `${recipes.length} / ${limit}` : ''}
 		onMenuOpen={() => { if (!sortMode) menuOpen = true; }}
 	>
 		{#snippet actions()}
@@ -203,6 +206,27 @@
 
 	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
 	     style="padding-top: calc(env(safe-area-inset-top) + 4rem); padding-bottom: 5rem">
+
+		<!-- Segment switcher -->
+		{#if !sortMode}
+			<div class="flex gap-1 p-1 rounded-2xl mb-4 flex-shrink-0" style="background-color: var(--color-surface-container)">
+				<button
+					onclick={() => activeTab = 'recipes'}
+					class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all active:opacity-70"
+					style="background-color: {activeTab === 'recipes' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'recipes' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+				>{t.recipes_title}</button>
+				<button
+					onclick={() => activeTab = 'mealplan'}
+					class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all active:opacity-70"
+					style="background-color: {activeTab === 'mealplan' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'mealplan' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+				>{t.meal_plan_tab}</button>
+			</div>
+		{/if}
+
+		<!-- Meal planner tab -->
+		{#if activeTab === 'mealplan'}
+			<MealPlanner {recipes} />
+		{:else}
 
 		<!-- Pending Shares -->
 		{#each pendingShares as share (share.id)}
@@ -385,6 +409,8 @@
 				{/each}
 			</div>
 		{/if}
+
+		{/if}<!-- end recipes tab -->
 	</div>
 
 	<!-- Bottom Nav -->
@@ -405,8 +431,10 @@
 				<span class="text-xs font-semibold tracking-widest uppercase" style="color: var(--color-on-surface-variant)">{t.nav_lists}</span>
 			</button>
 
-			<!-- FAB -->
-			<FabWithShortcuts onTap={() => { if (!sortMode) addSheetOpen = true; }} label={t.recipe_add} />
+			<!-- FAB (nur im Rezepte-Tab) -->
+			{#if activeTab === 'recipes'}
+				<FabWithShortcuts onTap={() => { if (!sortMode) addSheetOpen = true; }} label={t.recipe_add} />
+			{/if}
 
 			<!-- Rezepte Tab (active) mit Long-Press -->
 			<button

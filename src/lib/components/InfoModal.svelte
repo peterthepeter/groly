@@ -90,6 +90,11 @@
 			title: 'Recipes',
 			text: 'Browse your saved recipes and tap one to open it. Adjust the serving size — it saves automatically. Deselect ingredients you don\'t need, then tap the cart icon to add everything to a shopping list. Long-press the Recipes tab at the bottom to enter sort mode.',
 			svg: `<path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="20" x2="15" y2="20"/>`
+		},
+		{
+			title: 'Meal Plan',
+			text: 'Switch to the "Meal Plan" tab on the Recipes page to plan your meals for the week. Tap any day to assign a recipe or enter a free-text note (e.g. "Leftovers"). Adjust serving counts with the stepper on each day — great for meal prep across multiple days. Tap the cart icon on a day to add its ingredients to a shopping list, or use "Shop entire week" to add all planned meals at once. Excluded ingredients (marked in the recipe) are automatically skipped.',
+			svg: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`
 		}
 	] : [
 		{ section: 'App & Grundlagen' },
@@ -172,6 +177,11 @@
 			title: 'Rezepte',
 			text: 'Tippe auf ein Rezept, um es zu öffnen. Passe die Portionenzahl an – sie wird automatisch gespeichert. Hake Zutaten ab, die du nicht brauchst, und tippe dann auf das Einkaufswagen-Icon, um alles in eine Liste zu übertragen. Langer Druck auf den Rezepte-Tab unten aktiviert den Sortiermodus.',
 			svg: `<path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="20" x2="15" y2="20"/>`
+		},
+		{
+			title: 'Wochenplan',
+			text: 'Wechsle auf den Tab „Wochenplan" auf der Rezepte-Seite, um deine Mahlzeiten für die Woche zu planen. Tippe auf einen Tag, um ein Rezept zuzuweisen oder einen Freitext einzutragen (z.\u202fB. „Reste"). Mit dem Stepper passt du die Portionenzahl pro Tag an – ideal fürs Vorkochen über mehrere Tage. Tippe das Warenkorb-Icon eines Tages, um die Zutaten in eine Einkaufsliste zu übertragen, oder nutze „Ganze Woche einkaufen" für alle geplanten Gerichte auf einmal. Abgehakte Zutaten aus dem Rezept werden automatisch übersprungen.',
+			svg: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`
 		}
 	]);
 </script>

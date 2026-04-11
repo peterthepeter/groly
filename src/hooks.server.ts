@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
 import { runMigrations, db } from '$lib/db';
-import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users } from '$lib/db/schema';
+import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users, mealPlanEntries } from '$lib/db/schema';
 import { eq, lt, and, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
 import { sendPushToUser } from '$lib/server/pushNotifications';
@@ -43,6 +43,10 @@ function cleanupOldData() {
 	db.delete(itemHistory).where(lt(itemHistory.lastUsedAt, nowS - SIX_MONTHS_S)).run();
 	// Abgelaufene Sessions löschen
 	db.delete(sessions).where(lt(sessions.expiresAt, nowS)).run();
+	// Wochenplan-Einträge löschen, die älter als 6 Monate sind
+	const sixMonthsAgoDate = new Date(Date.now() - SIX_MONTHS_MS);
+	const cutoffDate = sixMonthsAgoDate.toISOString().slice(0, 10);
+	db.delete(mealPlanEntries).where(lt(mealPlanEntries.date, cutoffDate)).run();
 }
 
 function logMemoryUsage() {

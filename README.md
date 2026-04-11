@@ -24,6 +24,8 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 </p>
 <p align="center">
   <img src="docs/screenshots/recipe-detail.png" width="180" alt="Recipe detail view" />
+  <img src="docs/screenshots/meal-plan.png" width="180" alt="Weekly meal planner" />
+  <img src="docs/screenshots/meal-plan-edit.png" width="180" alt="Meal plan edit mode" />
 </p>
 
 ## Features
@@ -33,6 +35,7 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Barcode scan** – Scan product barcodes with your camera to add items directly to your list (iOS and Android). Uses the native [BarcodeDetector API](https://developer.mozilla.org/en-US/docs/Web/API/BarcodeDetector) where available (Chrome/Android) with [ZBar WASM](https://github.com/undecaf/zbar-wasm) as a fallback for iOS and Firefox. Product names are looked up via [Open Food Facts](https://world.openfoodfacts.org/), [Open Products Facts](https://world.openproductsfacts.org/), and [Open Beauty Facts](https://world.openbeautyfacts.org/) — open, community-maintained product databases covering food, household, and personal care items. No API key required. Lookups are routed through your server (user IPs are not exposed) and cached persistently in SQLite. An offline indicator is shown in the scanner when there is no internet connection.
 - **Push notifications** – Get notified when someone adds an item to a shared list, and when a new app version is available. Works on iOS (16.4+) and Android.
 - **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list. Import recipes from popular recipe websites by URL.
+- **Weekly meal planner** – Plan meals for every day of the week. Assign recipes or free-text entries per day, adjust servings, and add ingredients from individual days or the entire week directly to a shopping list. Navigate forwards and backwards by week. Configurable as a quick access shortcut.
 - **Category sorting** – Items are automatically assigned a category based on keyword matching (e.g. "milk" → Dairy, "apple" → Fruit & Vegetables). The display order of categories can be customized in Settings to match your supermarket layout — globally or individually per list. Users can also override the category of any single item.
 - **Location-based list opening** – Assign a location to any list (e.g. your supermarket). When you arrive within 100 meters, Groly automatically opens that list — no tapping required. Opt-in per user in Settings.
 - **Quick access shortcuts** – Long-press the + button to reveal up to 4 configurable shortcuts. Slide your finger to the desired shortcut and release to navigate — or release over empty space to cancel. Each shortcut can open a list, open a list with the add-item dialog, or jump straight into the barcode scanner. Configurable per user in Settings and synced across devices.
@@ -180,7 +183,7 @@ Groly performs automatic cleanup daily — no manual intervention required:
 | Expired sessions | Deleted daily |
 | Stale push subscriptions | Removed automatically on failed delivery (HTTP 410/404) |
 
-Active data (lists, unchecked items, recipes, list members) is only removed by user action. For a typical self-hosted instance, the SQLite database stays well under 10 MB indefinitely.
+Active data (lists, unchecked items, recipes, list members) is only removed by user action. For a typical self-hosted instance, the SQLite database stays well under 100 MB indefinitely.
 
 ## Tech Stack
 

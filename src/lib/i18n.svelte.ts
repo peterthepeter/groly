@@ -208,6 +208,23 @@ class TranslationProxy {
 	get barcode_added() { void _lang; return m.barcode_added(); }
 	get barcode_unsupported() { void _lang; return m.barcode_unsupported(); }
 	get barcode_offline() { void _lang; return m.barcode_offline(); }
+	// meal plan
+	get meal_plan_tab() { void _lang; return m.meal_plan_tab(); }
+	get meal_plan_edit() { void _lang; return m.meal_plan_edit(); }
+	get meal_plan_done() { void _lang; return m.meal_plan_done(); }
+	get meal_plan_empty_day() { void _lang; return m.meal_plan_empty_day(); }
+	get meal_plan_add_title() { void _lang; return m.meal_plan_add_title(); }
+	get meal_plan_free_text() { void _lang; return m.meal_plan_free_text(); }
+	get meal_plan_free_text_placeholder() { void _lang; return m.meal_plan_free_text_placeholder(); }
+	get meal_plan_also_on() { void _lang; return m.meal_plan_also_on(); }
+	get meal_plan_add_button() { void _lang; return m.meal_plan_add_button(); }
+	get meal_plan_remove() { void _lang; return m.meal_plan_remove(); }
+	get meal_plan_add_to_list() { void _lang; return m.meal_plan_add_to_list(); }
+	get meal_plan_add_week_to_list() { void _lang; return m.meal_plan_add_week_to_list(); }
+	get meal_plan_servings() { void _lang; return m.meal_plan_servings(); }
+	get meal_plan_no_recipe() { void _lang; return m.meal_plan_no_recipe(); }
+	get meal_plan_search_placeholder() { void _lang; return m.meal_plan_search_placeholder(); }
+	get meal_plan_no_results() { void _lang; return m.meal_plan_no_results(); }
 }
 
 export const t = new TranslationProxy();

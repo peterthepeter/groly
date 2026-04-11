@@ -127,6 +127,13 @@
       "when": 1775376437912,
       "tag": "0017_tearful_puck",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1775910228041,
+      "tag": "0018_wise_meteorite",
+      "breakpoints": true
     }
   ]
 }

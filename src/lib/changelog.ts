@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.4.0',
+		de: [
+			'Wochenplaner: Mahlzeiten für die ganze Woche planen',
+			'Rezepte oder freien Text pro Tag eintragen, Portionen anpassen',
+			'Zutaten einzelner Tage oder der ganzen Woche direkt zur Einkaufsliste hinzufügen',
+			'Wochenplaner als Schnellzugriff konfigurierbar',
+		],
+		en: [
+			'Weekly meal planner: plan your meals for the entire week',
+			'Assign recipes or free text per day, adjust servings',
+			'Add ingredients from individual days or the whole week directly to a shopping list',
+			'Meal planner available as a quick access shortcut',
+		]
+	},
+	{
 		version: '0.3.5',
 		de: [
 			'Einstellungen: Übersichtlichere Gruppierung in Darstellung, Benachrichtigungen & Standort und Konto',

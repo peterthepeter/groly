@@ -162,5 +162,21 @@
   "location_hint_action": "Enable in settings",
   "sort_mode_title": "Sort order",
   "sort_mode_subtitle": "Drag to reorder",
-  "sort_mode_done": "Done"
+  "sort_mode_done": "Done",
+  "meal_plan_tab": "Meal Plan",
+  "meal_plan_edit": "Edit",
+  "meal_plan_done": "Done",
+  "meal_plan_empty_day": "+ Add meal",
+  "meal_plan_add_title": "Meal for",
+  "meal_plan_free_text": "Free text (no recipe)",
+  "meal_plan_free_text_placeholder": "e.g. Leftovers, Eating out …",
+  "meal_plan_also_on": "Also add for",
+  "meal_plan_add_button": "Add",
+  "meal_plan_remove": "Remove",
+  "meal_plan_add_to_list": "Add to shopping list",
+  "meal_plan_add_week_to_list": "Shop entire week",
+  "meal_plan_servings": "Servings",
+  "meal_plan_no_recipe": "No recipe linked",
+  "meal_plan_search_placeholder": "Search recipe …",
+  "meal_plan_no_results": "No recipes found"
 }

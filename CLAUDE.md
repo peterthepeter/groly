@@ -22,7 +22,7 @@ Migrations run automatically on server startup via `src/hooks.server.ts`.
 
 ## Architecture
 
-**Groly** is a mobile-first PWA grocery list app for self-hosting (SvelteKit + SQLite, ~10 users).
+**Groly** is a mobile-first PWA grocery list app for self-hosting, targeting families and small businesses (SvelteKit + SQLite, scales to ~50 users). Published on GitHub.
 
 ### Stack
 | Layer | Technology |
@@ -69,7 +69,7 @@ Migrations run automatically on server startup via `src/hooks.server.ts`.
 | `barcode_cache` | Entries not seen for 6+ months deleted |
 | `push_subscriptions` | Stale endpoints removed on failed push (HTTP 410/404) |
 
-Active data (`lists`, unchecked `items`, `recipes`, `listMembers`) is only removed by user action. For a ~10-user instance this is not a concern — the database stays well under 10 MB indefinitely.
+Active data (`lists`, unchecked `items`, `recipes`, `listMembers`) is only removed by user action. For a typical self-hosted instance (~50 users) this is not a concern — the database stays well under 100 MB indefinitely.
 
 ## Deployment
 
@@ -91,6 +91,14 @@ Danach diese zwei Dateien aktualisieren:
 - **`package.json`** — `"version"` auf die neue Versionsnummer setzen
 
 Erst dann darf gepusht werden.
+
+## Feature development
+
+**PFLICHT:** Vor dem Beginn jeder Feature-Implementierung warten, bis der User explizit "Go" gibt. Niemals eigenständig mit dem Bauen anfangen, auch wenn das Konzept bereits vollständig besprochen wurde.
+
+**Neue Features müssen immer:**
+- Zweisprachig sein (de + en) — alle i18n-Keys in beiden Sprachdateien pflegen
+- In der Bedienungsanleitung (`InfoModal`) dokumentiert werden — neue Funktionen unter dem passenden Abschnitt eintragen
 
 ## UI conventions
 

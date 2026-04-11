@@ -146,6 +146,17 @@ export const itemHistory = sqliteTable('item_history', {
 	lastUsedAt: integer('last_used_at').notNull()
 }, (t) => [primaryKey({ columns: [t.userId, t.name] })]);
 
+export const mealPlanEntries = sqliteTable('meal_plan_entries', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	date: text('date').notNull(), // YYYY-MM-DD
+	recipeId: text('recipe_id').references(() => recipes.id, { onDelete: 'set null' }),
+	note: text('note'),
+	servings: integer('servings'),
+	createdAt: integer('created_at').notNull(),
+	updatedAt: integer('updated_at').notNull()
+}, (t) => [index('meal_plan_entries_user_date_idx').on(t.userId, t.date)]);
+
 export type User = typeof users.$inferSelect;
 export type List = typeof lists.$inferSelect;
 export type Item = typeof items.$inferSelect;
@@ -159,3 +170,4 @@ export type RecipeShare = typeof recipeShares.$inferSelect;
 export type BarcodeCache = typeof barcodeCache.$inferSelect;
 export type RecipeIngredientExclusion = typeof recipeIngredientExclusions.$inferSelect;
 export type ItemHistory = typeof itemHistory.$inferSelect;
+export type MealPlanEntry = typeof mealPlanEntries.$inferSelect;

@@ -162,5 +162,21 @@
   "location_hint_action": "In Einstellungen aktivieren",
   "sort_mode_title": "Sortierung",
   "sort_mode_subtitle": "Reihenfolge anpassen",
-  "sort_mode_done": "Fertig"
+  "sort_mode_done": "Fertig",
+  "meal_plan_tab": "Wochenplan",
+  "meal_plan_edit": "Bearbeiten",
+  "meal_plan_done": "Fertig",
+  "meal_plan_empty_day": "+ Gericht eintragen",
+  "meal_plan_add_title": "Gericht für",
+  "meal_plan_free_text": "Freitext (kein Rezept)",
+  "meal_plan_free_text_placeholder": "z. B. Reste, Auswärts essen …",
+  "meal_plan_also_on": "Auch übernehmen für",
+  "meal_plan_add_button": "Eintragen",
+  "meal_plan_remove": "Entfernen",
+  "meal_plan_add_to_list": "Zu Einkaufsliste hinzufügen",
+  "meal_plan_add_week_to_list": "Ganze Woche einkaufen",
+  "meal_plan_servings": "Portionen",
+  "meal_plan_no_recipe": "Kein Rezept verlinkt",
+  "meal_plan_search_placeholder": "Rezept suchen …",
+  "meal_plan_no_results": "Keine Rezepte gefunden"
 }
