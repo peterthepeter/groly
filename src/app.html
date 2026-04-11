@@ -15,6 +15,14 @@
 		<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet" />
 		%sveltekit.head%
 	</head>
+	<script>
+		try {
+			var s = JSON.parse(localStorage.getItem('groly_settings') || '{}');
+			var t = s.theme;
+			if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+			else if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+		} catch(e) {}
+	</script>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>

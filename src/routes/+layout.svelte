@@ -9,12 +9,21 @@
 	import ShortcutMenu from '$lib/components/ShortcutMenu.svelte';
 	import { shortcuts, shortcutMenu } from '$lib/shortcuts.svelte';
 	import { LATEST_CHANGES } from '$lib/changelog';
+	import { userSettings } from '$lib/userSettings.svelte';
 
 	let whatsNewOpen = $state(false);
 
 	let { data, children } = $props();
 
 	afterNavigate(() => { checkForUpdate(); shortcutMenu.hide(); });
+
+	function applyTheme(theme: 'system' | 'light' | 'dark') {
+		if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+		else if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+		else document.documentElement.removeAttribute('data-theme');
+	}
+
+	$effect(() => { applyTheme(userSettings.theme); });
 
 	onMount(() => {
 		initLanguage();

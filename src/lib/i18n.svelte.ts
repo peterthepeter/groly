@@ -134,6 +134,10 @@ class TranslationProxy {
 	get language() { void _lang; return m.language(); }
 	get language_de() { void _lang; return m.language_de(); }
 	get language_en() { void _lang; return m.language_en(); }
+	get theme() { void _lang; return m.theme(); }
+	get theme_system() { void _lang; return m.theme_system(); }
+	get theme_light() { void _lang; return m.theme_light(); }
+	get theme_dark() { void _lang; return m.theme_dark(); }
 	get must_change_password() { void _lang; return m.must_change_password(); }
 	get confirm_delete_list() { void _lang; return m.confirm_delete_list(); }
 	get confirm_delete_item() { void _lang; return m.confirm_delete_item(); }

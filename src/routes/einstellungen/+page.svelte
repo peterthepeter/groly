@@ -23,6 +23,7 @@
 	let menuOpen = $state(false);
 	let passwordOpen = $state(false);
 	let langOpen = $state(false);
+	let themeOpen = $state(false);
 	let categorySortOpen = $state(false);
 	let layoutOpen = $state(false);
 	let checkedItemsOpen = $state(false);
@@ -861,6 +862,50 @@
 								style="background-color: {currentLang() === 'en' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {currentLang() === 'en' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
 							>
 								{t.language_en}
+							</button>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Erscheinungsbild -->
+			<div style="border-top: 1px solid var(--color-outline-variant)">
+				<button
+					onclick={() => themeOpen = !themeOpen}
+					class="w-full flex items-center justify-between px-5 py-5"
+				>
+					<div class="flex items-center gap-3">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.theme}</span>
+					</div>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({themeOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</button>
+				{#if themeOpen}
+					<div class="px-5 pb-4">
+						<div class="flex gap-2">
+							<button
+								onclick={() => userSettings.theme = 'system'}
+								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity"
+								style="background-color: {userSettings.theme === 'system' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.theme === 'system' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+							>
+								{t.theme_system}
+							</button>
+							<button
+								onclick={() => userSettings.theme = 'light'}
+								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity"
+								style="background-color: {userSettings.theme === 'light' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.theme === 'light' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+							>
+								{t.theme_light}
+							</button>
+							<button
+								onclick={() => userSettings.theme = 'dark'}
+								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity"
+								style="background-color: {userSettings.theme === 'dark' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.theme === 'dark' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+							>
+								{t.theme_dark}
 							</button>
 						</div>
 					</div>
