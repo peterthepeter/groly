@@ -124,6 +124,11 @@ services:
       - ADMIN_PASSWORD=secure-password
       - ORIGIN=https://your-domain.com
       - ADDRESS_HEADER=X-Forwarded-For  # required when running behind a reverse proxy
+      # Optional: push notifications (see Push Notifications section below)
+      # - VAPID_PUBLIC_KEY=<publicKey>
+      # - VAPID_PRIVATE_KEY=<privateKey>
+      # - PUBLIC_VAPID_PUBLIC_KEY=<same publicKey>
+      # - VAPID_SUBJECT=https://your-domain.com
     restart: unless-stopped
 ```
 
