@@ -279,8 +279,9 @@
 
 	<!-- Meal plan: bottom-anchored scroll (same as recipes) -->
 	{#if activeTab === 'mealplan'}
-		<div class="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-4" style="padding-bottom: 5rem">
+		<div class="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-4">
 			<MealPlanner {recipes} />
+			<div class="flex-shrink-0" style="height: 5rem"></div>
 		</div>
 
 	<!-- Recipes: bottom-anchored scroll (list builds upward), top-anchored when searching -->
@@ -291,7 +292,7 @@
 		{#each pendingShares as share (share.id)}
 			<div class="mb-3 rounded-2xl px-4 py-3 flex items-center gap-3"
 			     style="background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-card));">
-				<div class="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden"
+				<div class="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden"
 				     style="background-color: var(--color-surface-high)">
 					{#if share.recipeImageUrl}
 						<img src={share.recipeImageUrl} alt="" class="w-full h-full object-cover" />
@@ -374,27 +375,32 @@
 						</div>
 
 						<!-- Card (nicht navigierbar im Sort-Modus) -->
-						<div class="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl"
-						     style="background-color: var(--color-surface-card)">
+						<div class="flex-1 flex items-center gap-3 px-4 rounded-2xl"
+						     style="background-color: var(--color-surface-card); min-height: 3.75rem; padding-top: 0.875rem; padding-bottom: 0.875rem">
 							<!-- Thumbnail -->
-							<div class="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden"
-							     style="background-color: var(--color-surface-container)">
+							<div class="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+							     style="background-color: {recipe.imageUrl ? 'var(--color-surface-container)' : 'transparent'}">
 								{#if recipe.imageUrl}
 									<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
 								{:else}
-									<div class="w-full h-full flex items-center justify-center font-bold text-base"
-									     style="color: var(--color-primary); font-family: 'Plus Jakarta Sans', sans-serif">
-										{recipe.title[0]?.toUpperCase() ?? '?'}
-									</div>
+									<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M8 2v4a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2"/>
+										<line x1="10" y1="8" x2="10" y2="22"/>
+										<line x1="7" y1="2" x2="7" y2="6"/>
+										<line x1="13" y1="2" x2="13" y2="6"/>
+										<path d="M17 2c0 0 2 1.5 2 5s-2 5-2 5v10"/>
+									</svg>
 								{/if}
 							</div>
 
 							<!-- Info -->
-							<div class="flex-1 min-w-0">
+							<div class="flex-1 min-w-0 flex flex-col justify-center">
 								<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{recipe.title}</div>
-								<div class="text-xs mt-0.5 truncate" style="color: var(--color-on-surface-variant)">
-									{totalTime(recipe) ?? recipe.description ?? ''}
-								</div>
+								{#if totalTime(recipe) || recipe.description}
+									<div class="text-xs mt-0.5 truncate" style="color: var(--color-on-surface-variant)">
+										{totalTime(recipe) || recipe.description}
+									</div>
+								{/if}
 							</div>
 
 							<!-- Drag indicator -->
@@ -412,28 +418,33 @@
 				{#each filteredRecipes as recipe (recipe.id)}
 					<button
 						onclick={() => goto(`/rezepte/${recipe.id}`)}
-						class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left active:opacity-70 transition-opacity"
-						style="background-color: var(--color-surface-card)"
+						class="w-full flex items-center gap-3 px-4 rounded-2xl text-left active:opacity-70 transition-opacity"
+						style="background-color: var(--color-surface-card); min-height: 3.75rem; padding-top: 0.875rem; padding-bottom: 0.875rem"
 					>
 						<!-- Thumbnail -->
-						<div class="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden"
-						     style="background-color: var(--color-surface-container)">
+						<div class="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+						     style="background-color: {recipe.imageUrl ? 'var(--color-surface-container)' : 'transparent'}">
 							{#if recipe.imageUrl}
 								<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
 							{:else}
-								<div class="w-full h-full flex items-center justify-center font-bold text-base"
-								     style="color: var(--color-primary); font-family: 'Plus Jakarta Sans', sans-serif">
-									{recipe.title[0]?.toUpperCase() ?? '?'}
-								</div>
+								<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M8 2v4a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2"/>
+									<line x1="10" y1="8" x2="10" y2="22"/>
+									<line x1="7" y1="2" x2="7" y2="6"/>
+									<line x1="13" y1="2" x2="13" y2="6"/>
+									<path d="M17 2c0 0 2 1.5 2 5s-2 5-2 5v10"/>
+								</svg>
 							{/if}
 						</div>
 
 						<!-- Info -->
-						<div class="flex-1 min-w-0">
+						<div class="flex-1 min-w-0 flex flex-col justify-center">
 							<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{recipe.title}</div>
-							<div class="text-xs mt-0.5 truncate" style="color: var(--color-on-surface-variant)">
-								{totalTime(recipe) ?? recipe.description ?? ''}
-							</div>
+							{#if totalTime(recipe) || recipe.description}
+								<div class="text-xs mt-0.5 truncate" style="color: var(--color-on-surface-variant)">
+									{totalTime(recipe) || recipe.description}
+								</div>
+							{/if}
 						</div>
 
 						<!-- Servings badge -->

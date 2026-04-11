@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { tick } from 'svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
 
 	type RecipeOption = { id: string; title: string; imageUrl: string | null; servings: number };
@@ -126,6 +127,15 @@
 	let pickerServings = $state(2);
 	let pickerSearch = $state('');
 	let pickerSaving = $state(false);
+	let pickerListEl = $state<HTMLDivElement | null>(null);
+
+	$effect(() => {
+		if (pickerOpen && pickerListEl) {
+			tick().then(() => {
+				if (pickerListEl) pickerListEl.scrollTop = pickerListEl.scrollHeight;
+			});
+		}
+	});
 
 	const pickerFilteredRecipes = $derived(
 		pickerSearch.trim()
@@ -284,6 +294,18 @@
 
 	const hasAnyEntry = $derived(Object.keys(entries).length > 0);
 
+	// --- Eating-out keyword detection ---
+	const EATING_OUT_KEYWORDS = [
+		'eating out', 'eat out', 'restaurant', 'auswärts', 'essen gehen',
+		'außer haus', 'takeaway', 'take away', 'takeout', 'take out',
+		'delivery', 'lieferung', 'lieferdienst', 'bestellen', 'liefern'
+	];
+
+	function isEatingOut(text: string): boolean {
+		const lower = text.toLowerCase();
+		return EATING_OUT_KEYWORDS.some(kw => lower.includes(kw));
+	}
+
 	// --- Swipe navigation ---
 	let swipeStartX = 0;
 	let swipeStartY = 0;
@@ -397,7 +419,7 @@
 		     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 	</div>
 {:else}
-	<div class="space-y-2 pb-4">
+	<div class="space-y-2">
 		{#each weekDays as day, i (toISO(day))}
 			{@const date = toISO(day)}
 			{@const entry = entries[date]}
@@ -421,13 +443,17 @@
 						<div class="flex items-center gap-2.5">
 							{#if entry.recipeId}
 								<!-- Recipe thumbnail -->
-								<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden"
-								     style="background-color: var(--color-surface-container)">
+								<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
+								     style="background-color: {entry.recipeImageUrl ? 'var(--color-surface-container)' : 'transparent'}">
 									{#if entry.recipeImageUrl}
 										<img src={entry.recipeImageUrl} alt="" class="w-full h-full object-cover" />
 									{:else}
-										<div class="w-full h-full flex items-center justify-center text-sm font-bold"
-										     style="color: var(--color-primary)">{entry.recipeTitle?.[0]?.toUpperCase() ?? '?'}</div>
+										<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M4 13 Q4 18 12 18 Q20 18 20 13 Z"/>
+											<line x1="3" y1="13" x2="21" y2="13"/>
+											<path d="M9 10 Q9.5 8 10 10 Q10.5 8 11 10"/>
+											<path d="M13 10 Q13.5 8 14 10 Q14.5 8 15 10"/>
+										</svg>
 									{/if}
 								</div>
 								<div class="flex-1 min-w-0">
@@ -435,11 +461,25 @@
 								</div>
 							{:else}
 								<!-- Free text with icon -->
-								<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
-								     style="background-color: var(--color-surface-container)">
-									<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M4 21H20V17C21 14 23 12 22 9C21 6 19 4 17 4C16 4 15 8 15 8C14 6 13 3 12 3C11 3 10 6 9 8C9 8 8 6 7 4C5 4 3 6 2 9C1 12 3 14 4 17Z"/>
-									</svg>
+								<div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center">
+									{#if isEatingOut(entry.note ?? '')}
+										<!-- Bowl icon for eating-out entries -->
+										<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M4 13 Q4 18 12 18 Q20 18 20 13 Z"/>
+											<line x1="3" y1="13" x2="21" y2="13"/>
+											<path d="M9 10 Q9.5 8 10 10 Q10.5 8 11 10"/>
+											<path d="M13 10 Q13.5 8 14 10 Q14.5 8 15 10"/>
+										</svg>
+									{:else}
+										<!-- Pot icon for generic free-text entries -->
+										<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M6 7h12a1 1 0 0 1 1 1v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V8a1 1 0 0 1 1-1z"/>
+											<path d="M8.5 7V5.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5V7"/>
+											<line x1="2" y1="10" x2="4.5" y2="10"/>
+											<line x1="19.5" y1="10" x2="22" y2="10"/>
+											<path d="M9 13 q1.5 1.5 3 0 q1.5-1.5 3 0"/>
+										</svg>
+									{/if}
 								</div>
 								<div class="flex-1 min-w-0">
 									<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{entry.note}</div>
@@ -531,7 +571,7 @@
 		</div>
 
 		<!-- Recipe list (scrollable) — recipes + free text as last item -->
-		<div class="flex-1 overflow-y-auto px-4 space-y-2 min-h-0 pb-3">
+		<div bind:this={pickerListEl} class="flex-1 overflow-y-auto px-4 space-y-2 min-h-0 pb-3">
 			{#if pickerIsFreeText}
 				<!-- Free text input mode -->
 				<button onclick={() => { pickerIsFreeText = false; pickerRecipeId = null; }}
