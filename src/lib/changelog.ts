@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.3.4',
+		de: [
+			'Zuletzt abgehakte Items: Anzeige von 16 statt 6 Einträgen',
+		],
+		en: [
+			'Recently checked items: now shows 16 instead of 6 entries',
+		]
+	},
+	{
 		version: '0.3.3',
 		de: [
 			'Sicherheit: Rezeptimport prüft nun die tatsächliche IP hinter einem Hostnamen (DNS-Rebinding-Schutz)',

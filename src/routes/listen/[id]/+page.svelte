@@ -55,7 +55,7 @@
 		});
 	});
 	const checkedItems = $derived(
-		items.filter(i => i.isChecked).sort((a, b) => (b.checkedAt ?? 0) - (a.checkedAt ?? 0)).slice(0, 6)
+		items.filter(i => i.isChecked).sort((a, b) => (b.checkedAt ?? 0) - (a.checkedAt ?? 0)).slice(0, 16)
 	);
 	const openCount = $derived(openItems.length);
 	const showSearch = $derived(openItems.length >= 5);
