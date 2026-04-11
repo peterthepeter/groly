@@ -13,19 +13,16 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/lists.png" width="180" alt="Lists overview" />
-  <img src="docs/screenshots/list-grid.png" width="180" alt="Shopping list with category grid" />
-  <img src="docs/screenshots/shortcuts.png" width="180" alt="Quick access shortcuts" />
+  <img src="docs/screenshots/lists.png" width="200" alt="Lists overview" />
+  <img src="docs/screenshots/list-grid.png" width="200" alt="Shopping list with category grid" />
+  <img src="docs/screenshots/shortcuts.png" width="200" alt="Quick access shortcuts" />
+  <img src="docs/screenshots/list-sort.png" width="200" alt="List sort mode" />
 </p>
 <p align="center">
-  <img src="docs/screenshots/list-sort.png" width="180" alt="List sort mode" />
-  <img src="docs/screenshots/category-sorting.png" width="180" alt="Category sorting settings" />
-  <img src="docs/screenshots/recipe-add.png" width="180" alt="Add recipe" />
-</p>
-<p align="center">
-  <img src="docs/screenshots/recipe-detail.png" width="180" alt="Recipe detail view" />
-  <img src="docs/screenshots/meal-plan.png" width="180" alt="Weekly meal planner" />
-  <img src="docs/screenshots/meal-plan-edit.png" width="180" alt="Meal plan edit mode" />
+  <img src="docs/screenshots/category-sorting.png" width="200" alt="Category sorting settings" />
+  <img src="docs/screenshots/recipe-add.png" width="200" alt="Add recipe" />
+  <img src="docs/screenshots/recipe-detail.png" width="200" alt="Recipe detail view" />
+  <img src="docs/screenshots/meal-plan.png" width="200" alt="Weekly meal planner" />
 </p>
 
 ## Features
