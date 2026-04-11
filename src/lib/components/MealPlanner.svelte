@@ -284,6 +284,33 @@
 
 	const hasAnyEntry = $derived(Object.keys(entries).length > 0);
 
+	// --- Swipe navigation ---
+	let swipeStartX = 0;
+	let swipeStartY = 0;
+
+	function handleTouchStart(e: TouchEvent) {
+		const t = e.touches[0];
+		swipeStartX = t.clientX;
+		swipeStartY = t.clientY;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		// Ignore touches that started near the left edge (browser back-swipe zone)
+		if (swipeStartX < 30) return;
+		const t = e.changedTouches[0];
+		const dx = t.clientX - swipeStartX;
+		const dy = t.clientY - swipeStartY;
+		// Only trigger if clearly horizontal (dx dominates) and long enough
+		if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+		if (dx < 0) {
+			// Swipe left → next week
+			weekOffset++;
+		} else {
+			// Swipe right → previous week
+			if (weekOffset > MIN_WEEK_OFFSET) weekOffset--;
+		}
+	}
+
 	function handleDayTap(date: string) {
 		const entry = entries[date];
 		if (!entry) {
@@ -299,6 +326,9 @@
 		// Freitext ohne Rezept im View-Modus → nichts
 	}
 </script>
+
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div ontouchstart={handleTouchStart} ontouchend={handleTouchEnd}>
 
 <!-- Week header -->
 <div class="flex items-center gap-2 px-1 mb-3">
@@ -480,6 +510,8 @@
 		{/each}
 	</div>
 {/if}
+
+</div><!-- end swipe wrapper -->
 
 <!-- Recipe picker bottom sheet -->
 {#if pickerOpen}

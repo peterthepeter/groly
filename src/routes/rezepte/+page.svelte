@@ -38,10 +38,17 @@
 	let menuOpen = $state(false);
 	let addSheetOpen = $state(false);
 	let searchQuery = $state('');
+	let searchOpen = $state(false);
+	let keyboardOpen = $state(false);
 	let sharesLoading = $state<Record<string, boolean>>({});
 	let sortMode = $state(false);
 	let customOrder = $state<string[]>([]);
 	let activeTab = $state<'recipes' | 'mealplan'>($page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
+
+	function closeSearch() {
+		searchOpen = false;
+		searchQuery = '';
+	}
 
 	// Apply custom order to recipes
 	const orderedRecipes = $derived(
@@ -79,6 +86,7 @@
 	}
 
 	function enterSortMode() {
+		closeSearch();
 		customOrder = orderedRecipes.map(r => r.id);
 		sortMode = true;
 	}
@@ -182,6 +190,14 @@
 		loadCustomOrder();
 		loadRecipes();
 		loadShares();
+
+		if (window.visualViewport) {
+			const onViewportResize = () => {
+				keyboardOpen = (window.innerHeight - window.visualViewport!.height) > 100;
+			};
+			window.visualViewport.addEventListener('resize', onViewportResize);
+			return () => window.visualViewport?.removeEventListener('resize', onViewportResize);
+		}
 	});
 </script>
 
@@ -190,6 +206,7 @@
 		title={sortMode ? t.sort_mode_title : activeTab === 'mealplan' ? t.meal_plan_tab : t.recipes_title}
 		subtitle={sortMode ? t.sort_mode_subtitle : activeTab === 'recipes' ? `${recipes.length} / ${limit}` : ''}
 		onMenuOpen={() => { if (!sortMode) menuOpen = true; }}
+		onSearch={recipes.length > 5 && !sortMode && activeTab === 'recipes' && !searchOpen ? () => searchOpen = true : null}
 	>
 		{#snippet actions()}
 			{#if sortMode}
@@ -207,6 +224,37 @@
 	<!-- Spacer that clears the fixed AppHeader (same height calculation as Settings page) -->
 	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.5rem)"></div>
 
+	<!-- Search bar (fixed, below header, only when open) -->
+	{#if searchOpen && activeTab === 'recipes'}
+		<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto px-4 py-2"
+		     style="top: calc(env(safe-area-inset-top) + 5.25rem); background-color: var(--color-bg)">
+			<div class="flex items-center gap-2 px-4 rounded-2xl"
+			     style="background-color: var(--color-surface-container); height: 44px">
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
+					<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+				</svg>
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					type="search"
+					placeholder={t.recipes_search_placeholder}
+					bind:value={searchQuery}
+					onkeydown={(e) => e.key === 'Escape' && closeSearch()}
+					autofocus
+					class="flex-1 bg-transparent outline-none text-sm"
+					style="color: var(--color-on-surface); font-size: 16px"
+				/>
+				<button onclick={closeSearch} class="w-7 h-7 flex items-center justify-center rounded-lg active:opacity-60 flex-shrink-0"
+				        style="background-color: var(--color-surface-high)" aria-label="Suche schließen">
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round">
+						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+			</div>
+		</div>
+		<!-- Extra spacer for the search bar height -->
+		<div class="flex-shrink-0 h-14"></div>
+	{/if}
+
 	<!-- Tab switcher — outside scroll area, always visible -->
 	{#if !sortMode}
 		<div class="flex-shrink-0 px-4 mb-3">
@@ -221,7 +269,7 @@
 					oncontextmenu={(e) => e.preventDefault()}
 				>{t.recipes_title}</button>
 				<button
-					onclick={() => activeTab = 'mealplan'}
+					onclick={() => { activeTab = 'mealplan'; closeSearch(); }}
 					class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all active:opacity-70"
 					style="background-color: {activeTab === 'mealplan' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'mealplan' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
 				>{t.meal_plan_tab}</button>
@@ -229,15 +277,15 @@
 		</div>
 	{/if}
 
-	<!-- Meal plan: simple top-down scroll -->
+	<!-- Meal plan: bottom-anchored scroll (same as recipes) -->
 	{#if activeTab === 'mealplan'}
-		<div class="flex-1 min-h-0 overflow-y-auto px-4" style="padding-bottom: 5rem">
+		<div class="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-4" style="padding-bottom: 5rem">
 			<MealPlanner {recipes} />
 		</div>
 
-	<!-- Recipes: bottom-anchored scroll (list builds upward) -->
+	<!-- Recipes: bottom-anchored scroll (list builds upward), top-anchored when searching -->
 	{:else}
-		<div class="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-4" style="padding-bottom: 5rem">
+		<div class="flex-1 min-h-0 flex flex-col overflow-y-auto px-4" class:justify-end={!searchQuery.trim() || !keyboardOpen} style="padding-bottom: 5rem">
 
 		<!-- Pending Shares -->
 		{#each pendingShares as share (share.id)}
@@ -274,22 +322,6 @@
 		{/each}
 
 		<!-- Search (shows when >5 recipes and not in sort mode) -->
-		{#if recipes.length > 5 && !sortMode}
-			<div class="mb-4 flex items-center gap-2 px-4 rounded-xl"
-			     style="background-color: var(--color-surface-container); height: 44px">
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-					<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-				</svg>
-				<input
-					type="search"
-					placeholder={t.recipes_search_placeholder}
-					bind:value={searchQuery}
-					class="flex-1 bg-transparent outline-none"
-					style="color: var(--color-on-surface); font-size: 16px"
-				/>
-			</div>
-		{/if}
-
 		{#if loading}
 			<div class="flex justify-center py-12">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"

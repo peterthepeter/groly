@@ -35,6 +35,7 @@
 	let userPermission = $state<'owner' | 'write' | 'read'>('write');
 	let searchQuery = $state('');
 	let searchOpen = $state(false);
+	let keyboardOpen = $state(false);
 	let scrollContainer = $state<HTMLDivElement | null>(null);
 	let autoScannerOnOpen = $state(false);
 	let itemsLoadVersion = 0;
@@ -247,6 +248,16 @@
 			showLocationHint = true;
 		}
 
+		if (window.visualViewport) {
+			const onViewportResize = () => {
+				keyboardOpen = (window.innerHeight - window.visualViewport!.height) > 100;
+			};
+			window.visualViewport.addEventListener('resize', onViewportResize);
+			const removeViewport = () => window.visualViewport?.removeEventListener('resize', onViewportResize);
+			const removeOnline = () => window.removeEventListener('online', handleOnline);
+			return () => { removeOnline(); removeViewport(); };
+		}
+
 		return () => window.removeEventListener('online', handleOnline);
 	});
 
@@ -395,7 +406,7 @@
 	<!-- Bottom-Anchored Content -->
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
 	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'} + {showLocationHint ? '3.5rem' : '0px'}); padding-bottom: 5rem">
-		<div class="min-h-full flex flex-col justify-end">
+		<div class="min-h-full flex flex-col" class:justify-end={!searchQuery.trim() || !keyboardOpen}>
 		{#if loading}
 			<div class="flex justify-center py-8">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"

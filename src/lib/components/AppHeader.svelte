@@ -62,8 +62,8 @@
 					class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
 					aria-label="Suchen"
 				>
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-					     stroke="var(--color-on-surface)" stroke-width="2"
+					<svg width="23" height="23" viewBox="0 0 24 24" fill="none"
+					     stroke="var(--color-on-surface)" stroke-width="2.2"
 					     stroke-linecap="round" stroke-linejoin="round">
 						<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
 					</svg>
