@@ -1,8 +1,18 @@
 import webpush from 'web-push';
 import { db } from '$lib/db';
-import { pushSubscriptions, listMembers, listNotificationPrefs, lists } from '$lib/db/schema';
+import { pushSubscriptions, listMembers, listNotificationPrefs, lists, users } from '$lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
+
+type Lang = 'de' | 'en';
+type PayloadFn = (lang: Lang) => { title: string; body: string; url?: string };
+
+function getUserLang(settings: string | null): Lang {
+	try {
+		if (settings && JSON.parse(settings)?.lang === 'en') return 'en';
+	} catch { /* use default */ }
+	return 'de';
+}
 
 let initialized = false;
 
@@ -30,7 +40,7 @@ function isNotificationsEnabled(listId: string, userId: string): boolean {
 export async function sendPushToListMembers(
 	listId: string,
 	excludeUserId: string,
-	payload: { title: string; body: string; url?: string }
+	payloadFn: PayloadFn
 ) {
 	init();
 	if (!initialized) return;
@@ -64,22 +74,23 @@ export async function sendPushToListMembers(
 	if (recipientIds.length === 0) return;
 
 	const subs = db
-		.select()
+		.select({ sub: pushSubscriptions, settings: users.settings })
 		.from(pushSubscriptions)
+		.innerJoin(users, eq(pushSubscriptions.userId, users.id))
 		.where(inArray(pushSubscriptions.userId, recipientIds))
 		.all();
 
 	if (subs.length === 0) return;
 
-	const payloadStr = JSON.stringify(payload);
 	const staleEndpoints: string[] = [];
 
 	await Promise.allSettled(
-		subs.map(async (sub) => {
+		subs.map(async ({ sub, settings }) => {
+			const lang = getUserLang(settings);
 			try {
 				await webpush.sendNotification(
 					{ endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
-					payloadStr
+					JSON.stringify(payloadFn(lang))
 				);
 			} catch (err: unknown) {
 				const status = (err as { statusCode?: number })?.statusCode;

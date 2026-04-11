@@ -3,10 +3,10 @@ import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
 import { runMigrations, db } from '$lib/db';
-import { appMeta, barcodeCache, items, itemHistory, sessions } from '$lib/db/schema';
+import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users } from '$lib/db/schema';
 import { eq, lt, and, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
-import { sendPushToAllSubscribers } from '$lib/server/pushNotifications';
+import { sendPushToUser } from '$lib/server/pushNotifications';
 import { subsSize } from '$lib/server/userEvents';
 import { attemptsSize } from '$lib/server/loginRateLimit';
 
@@ -73,11 +73,29 @@ async function notifyOnNewVersion() {
 	const row = db.select().from(appMeta).where(eq(appMeta.key, 'last_push_version')).get();
 	if (row?.value === currentVersion) return;
 
-	const body = LATEST_CHANGES.de.join(' · ');
-	await sendPushToAllSubscribers({
-		title: `Groly ${currentVersion} ist da!`,
-		body: body.length > 120 ? body.slice(0, 117) + '…' : body
-	});
+	const makePayload = (lang: 'de' | 'en') => {
+		const changes = lang === 'en' ? LATEST_CHANGES.en : LATEST_CHANGES.de;
+		const title = lang === 'en' ? `Groly ${currentVersion} is here!` : `Groly ${currentVersion} ist da!`;
+		const body = changes.join(' · ');
+		return { title, body: body.length > 120 ? body.slice(0, 117) + '…' : body };
+	};
+
+	// Get distinct users with push subscriptions + their stored language preference
+	const usersWithSubs = db
+		.selectDistinct({ userId: pushSubscriptions.userId, settings: users.settings })
+		.from(pushSubscriptions)
+		.innerJoin(users, eq(pushSubscriptions.userId, users.id))
+		.all();
+
+	await Promise.allSettled(
+		usersWithSubs.map(({ userId, settings }) => {
+			let lang: 'de' | 'en' = 'de';
+			try {
+				if (settings && JSON.parse(settings)?.lang === 'en') lang = 'en';
+			} catch { /* use default */ }
+			return sendPushToUser(userId, makePayload(lang));
+		})
+	);
 
 	db.insert(appMeta)
 		.values({ key: 'last_push_version', value: currentVersion })

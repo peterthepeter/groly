@@ -48,19 +48,25 @@ async function firePush(listId: string) {
 	const adders = [...adderUserIds];
 
 	let title: string;
-	let body: string;
 	let excludeUserId: string;
 
 	if (items.length === 1) {
 		title = `Groly – ${items[0].username}`;
-		body = `${items[0].name} zur Liste ${listName} hinzugefügt`;
 		excludeUserId = adders[0];
 	} else {
 		const uniqueUsers = [...new Set(items.map((i) => i.username))];
 		title = uniqueUsers.length === 1 ? `Groly – ${uniqueUsers[0]}` : 'Groly';
-		body = `${items.length} neue Artikel zur Liste ${listName} hinzugefügt`;
 		excludeUserId = adders.length === 1 ? adders[0] : '';
 	}
 
-	await sendPushToListMembers(listId, excludeUserId, { title, body, url });
+	await sendPushToListMembers(listId, excludeUserId, (lang) => {
+		const body = items.length === 1
+			? lang === 'en'
+				? `${items[0].name} added to ${listName}`
+				: `${items[0].name} zur Liste ${listName} hinzugefügt`
+			: lang === 'en'
+				? `${items.length} new items added to ${listName}`
+				: `${items.length} neue Artikel zur Liste ${listName} hinzugefügt`;
+		return { title, body, url };
+	});
 }
