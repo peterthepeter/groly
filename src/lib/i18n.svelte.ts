@@ -60,6 +60,9 @@ class TranslationProxy {
 	// items
 	get items_checked_label() { void _lang; return m.items_checked_label(); }
 	get items_empty() { void _lang; return m.items_empty(); }
+	// checked items
+	get settings_show_all_checked_section() { void _lang; return m.settings_show_all_checked_section(); }
+	get settings_show_all_checked_desc() { void _lang; return m.settings_show_all_checked_desc(); }
 	// layout
 	get settings_layout_section() { void _lang; return m.settings_layout_section(); }
 	get settings_layout_list_view() { void _lang; return m.settings_layout_list_view(); }

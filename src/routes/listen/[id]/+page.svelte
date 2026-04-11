@@ -54,9 +54,10 @@
 			return bi - ai;
 		});
 	});
-	const checkedItems = $derived(
-		items.filter(i => i.isChecked).sort((a, b) => (b.checkedAt ?? 0) - (a.checkedAt ?? 0)).slice(0, 16)
-	);
+	const checkedItems = $derived.by(() => {
+		const sorted = items.filter(i => i.isChecked).sort((a, b) => (b.checkedAt ?? 0) - (a.checkedAt ?? 0));
+		return userSettings.showAllCheckedItems ? sorted : sorted.slice(0, 16);
+	});
 	const openCount = $derived(openItems.length);
 	const showSearch = $derived(openItems.length >= 5);
 	const displayItems = $derived(

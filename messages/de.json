@@ -19,6 +19,8 @@
   "list_cancel": "Abbrechen",
   "list_delete": "Liste löschen",
   "items_checked_label": "Erledigt",
+  "settings_show_all_checked_section": "Alle erledigten Items",
+  "settings_show_all_checked_desc": "Standardmäßig werden nur die letzten 16 erledigten Items angezeigt. Mit dieser Option werden alle angezeigt.",
   "settings_layout_section": "Listen-Ansicht",
   "settings_layout_list_view": "Listen-Ansicht",
   "settings_layout_list_view_desc": "Items als kompakte Zeilen statt Kacheln anzeigen. Besonders praktisch auf kleinen Bildschirmen – der Name wird nie abgeschnitten. Tippen zum Abhaken, langes Drücken zum Bearbeiten funktionieren wie gewohnt.",

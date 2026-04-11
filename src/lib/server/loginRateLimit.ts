@@ -4,6 +4,16 @@ export function attemptsSize(): number {
 	return attempts.size;
 }
 
+function pruneExpired() {
+	const now = Date.now();
+	for (const [ip, entry] of attempts) {
+		if (now > entry.resetAt) attempts.delete(ip);
+	}
+}
+
+// Abgelaufene Einträge stündlich bereinigen
+setInterval(pruneExpired, 60 * 60 * 1000);
+
 export function checkRateLimit(ip: string): boolean {
 	const now = Date.now();
 	const entry = attempts.get(ip);

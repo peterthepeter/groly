@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.3.5',
+		de: [
+			'Einstellungen: Übersichtlichere Gruppierung in Darstellung, Benachrichtigungen & Standort und Konto',
+			'Neuer Toggle: Alle erledigten Items anzeigen (statt nur die letzten 16)',
+			'Admin: Benutzerverwaltung kompakter und übersichtlicher',
+		],
+		en: [
+			'Settings: cleaner grouping into Display, Notifications & Location, and Account sections',
+			'New toggle: show all checked items instead of just the last 16',
+			'Admin: user management UI more compact and easier to read',
+		]
+	},
+	{
 		version: '0.3.4',
 		de: [
 			'Zuletzt abgehakte Items: Anzeige von 16 statt 6 Einträgen',

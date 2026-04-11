@@ -73,6 +73,7 @@ let _shortcuts = $state<Shortcut[]>(cache.shortcuts ?? []);
 let _locationNavEnabled = $state<boolean>(cache.locationNavEnabled ?? false);
 let _listLocationDisabled = $state<string[]>(cache.listLocationDisabled ?? []);
 let _itemLayout = $state<'grid' | 'list'>(cache.itemLayout ?? 'grid');
+let _showAllCheckedItems = $state<boolean>(cache.showAllCheckedItems ?? false);
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -87,7 +88,8 @@ function scheduleSave() {
 			shortcuts: _shortcuts,
 			locationNavEnabled: _locationNavEnabled,
 			listLocationDisabled: _listLocationDisabled,
-			itemLayout: _itemLayout
+			itemLayout: _itemLayout,
+			showAllCheckedItems: _showAllCheckedItems
 		};
 		saveCache(settings);
 		try {
@@ -176,6 +178,10 @@ export const userSettings = {
 	get itemLayout() { return _itemLayout; },
 	set itemLayout(v: 'grid' | 'list') { _itemLayout = v; scheduleSave(); },
 
+	// Show all checked items (default: false = limit to 16)
+	get showAllCheckedItems() { return _showAllCheckedItems; },
+	set showAllCheckedItems(v: boolean) { _showAllCheckedItems = v; scheduleSave(); },
+
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
 	addShortcut(s: Shortcut) {
@@ -208,6 +214,7 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_locationNavEnabled = settings.locationNavEnabled ?? false;
 		_listLocationDisabled = settings.listLocationDisabled ?? [];
 		_itemLayout = settings.itemLayout ?? 'grid';
+		_showAllCheckedItems = settings.showAllCheckedItems ?? false;
 		saveCache(settings);
 		return settings;
 	} catch { return null; }

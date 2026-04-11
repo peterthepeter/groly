@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { validatePassword, PASSWORD_HINT } from '$lib/password';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import { validatePassword, getPasswordHint } from '$lib/password';
 
 	let { data } = $props();
 
@@ -208,30 +208,30 @@
 
 		<!-- Credentials card after successful creation -->
 		{#if createdCredentials}
-			<div class="rounded-2xl p-5 space-y-4" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl px-4 py-4 space-y-3" style="background-color: var(--color-surface-card)">
 				<div class="flex items-center gap-2">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
 						<polyline points="22 4 12 14.01 9 11.01"/>
 					</svg>
-					<span class="text-sm font-semibold" style="color: var(--color-primary)">{t.admin_user_created}</span>
+					<span class="text-xs font-semibold" style="color: var(--color-primary)">{t.admin_user_created}</span>
 				</div>
 
 				<!-- Credentials display -->
-				<div class="rounded-xl p-4 space-y-2" style="background-color: var(--color-surface-container)">
+				<div class="rounded-lg px-3 py-2.5 space-y-2" style="background-color: var(--color-surface-container)">
 					<div class="flex items-center justify-between gap-2">
 						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.admin_username_label}</span>
-						<span class="text-sm font-mono font-semibold" style="color: var(--color-on-surface)">{createdCredentials.username}</span>
+						<span class="text-xs font-mono font-semibold" style="color: var(--color-on-surface)">{createdCredentials.username}</span>
 					</div>
 					<div class="h-px" style="background-color: var(--color-outline-variant)"></div>
 					<div class="flex items-center justify-between gap-2">
 						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.admin_password_label}</span>
-						<span class="text-sm font-mono font-semibold tracking-wider" style="color: var(--color-on-surface)">{createdCredentials.password}</span>
+						<span class="text-xs font-mono font-semibold tracking-wider" style="color: var(--color-on-surface)">{createdCredentials.password}</span>
 					</div>
 				</div>
 
 				<!-- Must change hint -->
-				<p class="text-xs px-1" style="color: var(--color-on-surface-variant)">
+				<p class="text-[10px] px-1" style="color: var(--color-on-surface-variant)">
 					⚠ {t.admin_must_change_hint}
 				</p>
 
@@ -239,16 +239,16 @@
 				<div class="flex gap-2">
 					<button
 						onclick={copyCredentials}
-						class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold transition-colors"
+						class="flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-xs font-semibold transition-colors"
 						style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
 					>
 						{#if copyFeedback}
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 								<polyline points="20 6 9 17 4 12"/>
 							</svg>
 							{t.admin_copied}
 						{:else}
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
 								<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
 							</svg>
@@ -256,35 +256,35 @@
 						{/if}
 					</button>
 				</div>
-			<div class="flex gap-2">
-				<button
-					onclick={shareMessage1}
-					class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold"
-					style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-						<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-					</svg>
-					{t.admin_share_msg1}
-				</button>
-				<button
-					onclick={shareMessage2}
-					class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold"
-					style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-						<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-					</svg>
-					{t.admin_share_msg2}
-				</button>
-			</div>
+				<div class="flex gap-2">
+					<button
+						onclick={shareMessage1}
+						class="flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-xs font-semibold"
+						style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+					>
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+							<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+						</svg>
+						{t.admin_share_msg1}
+					</button>
+					<button
+						onclick={shareMessage2}
+						class="flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-xs font-semibold"
+						style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+					>
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+							<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+						</svg>
+						{t.admin_share_msg2}
+					</button>
+				</div>
 
 				<!-- Create another -->
 				<button
 					onclick={() => { createdCredentials = null; newPassword = generatePassword(); showCreateForm = true; }}
-					class="w-full py-3 rounded-full text-sm font-semibold"
+					class="w-full py-2 rounded-full text-xs font-semibold"
 					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
 				>
 					{t.admin_create_another}
@@ -308,50 +308,50 @@
 				<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.admin_add_user}</span>
 			</button>
 		{:else if showCreateForm}
-			<div class="rounded-2xl p-5" style="background-color: var(--color-surface-card)">
-				<h3 class="text-sm font-bold mb-4" style="color: var(--color-on-surface)">{t.admin_add_user}</h3>
-				<form onsubmit={createUser} class="space-y-3">
+			<div class="rounded-2xl px-4 py-4" style="background-color: var(--color-surface-card)">
+				<h3 class="text-xs font-semibold mb-3" style="color: var(--color-on-surface-variant)">{t.admin_add_user}</h3>
+				<form onsubmit={createUser} class="space-y-2">
 					{#if error}
-						<div class="rounded-xl px-4 py-3 text-sm"
+						<div class="rounded-lg px-3 py-2 text-xs"
 						     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
 							{error}
 						</div>
 					{/if}
-					<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
+					<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
 						<input type="text" placeholder={t.admin_username_label} bind:value={newUsername} required
-						       class="w-full bg-transparent outline-none text-base" style="color: var(--color-on-surface)" />
+						       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface)" />
 					</div>
 					<div>
-						<div class="rounded-xl px-4 py-3.5 flex items-center gap-2" style="background-color: var(--color-surface-container)">
+						<div class="rounded-lg px-3 py-2.5 flex items-center gap-2" style="background-color: var(--color-surface-container)">
 							<input type="text" placeholder={t.admin_password_label} bind:value={newPassword} required
-							       class="flex-1 bg-transparent outline-none text-base font-mono" style="color: var(--color-on-surface)" />
+							       class="flex-1 bg-transparent outline-none text-xs font-mono" style="color: var(--color-on-surface)" />
 							<button type="button" onclick={() => newPassword = generatePassword()}
-							        class="flex-shrink-0 p-1.5 rounded-lg active:opacity-60"
+							        class="flex-shrink-0 p-1 rounded-lg active:opacity-60"
 							        style="color: var(--color-on-surface-variant)"
 							        title="Neues Passwort generieren">
-								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<polyline points="23 4 23 10 17 10"/>
 									<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
 								</svg>
 							</button>
 						</div>
-						<p class="text-[11px] mt-1.5 px-1" style="color: var(--color-on-surface-variant)">{PASSWORD_HINT}</p>
+						<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
 					</div>
-					<div class="rounded-xl px-4 py-3.5 flex items-center gap-3" style="background-color: var(--color-surface-container)">
-						<span class="text-sm" style="color: var(--color-on-surface-variant)">{t.admin_role_label}:</span>
-						<select bind:value={newRole} class="flex-1 bg-transparent outline-none text-base" style="color: var(--color-on-surface)">
+					<div class="rounded-lg px-3 py-2.5 flex items-center gap-3" style="background-color: var(--color-surface-container)">
+						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.admin_role_label}:</span>
+						<select bind:value={newRole} class="flex-1 bg-transparent outline-none text-xs" style="color: var(--color-on-surface)">
 							<option value="user">{t.admin_role_user}</option>
 							<option value="admin">{t.admin_role_admin}</option>
 						</select>
 					</div>
-					<div class="flex gap-3 pt-1">
+					<div class="flex gap-2 pt-1">
 						<button type="button" onclick={() => showCreateForm = false}
-						        class="flex-1 py-3.5 rounded-full text-sm font-semibold"
+						        class="flex-1 py-2 rounded-full text-xs font-semibold"
 						        style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)">
 							{t.list_cancel}
 						</button>
 						<button type="submit"
-						        class="flex-1 py-3.5 rounded-full text-sm font-semibold"
+						        class="flex-1 py-2 rounded-full text-xs font-semibold"
 						        style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)">
 							{t.create}
 						</button>
@@ -388,13 +388,13 @@
 		</div>
 
 		{#if editError}
-			<div class="rounded-xl px-4 py-3 text-sm mb-3"
+			<div class="rounded-lg px-3 py-2 text-xs mb-2"
 			     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
 				{editError}
 			</div>
 		{/if}
 		{#if editSuccess}
-			<div class="rounded-xl px-4 py-3 text-sm mb-3"
+			<div class="rounded-lg px-3 py-2 text-xs mb-2"
 			     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
 				{editSuccess}
 			</div>
@@ -402,23 +402,23 @@
 
 		<!-- Password change -->
 		<div class="mb-3">
-			<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
+			<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
 				<input
 					type="password"
 					placeholder={t.admin_new_password_label}
 					bind:value={editPassword}
-					class="w-full bg-transparent outline-none text-base"
+					class="w-full bg-transparent outline-none text-xs"
 					style="color: var(--color-on-surface)"
 				/>
 			</div>
-			<p class="text-[11px] mt-1.5 px-1" style="color: var(--color-on-surface-variant)">{PASSWORD_HINT}</p>
+			<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
 		</div>
 
-		<div class="flex gap-3">
+		<div class="flex gap-2">
 			{#if canDelete(editUser)}
 				<button
 					onclick={deleteUser}
-					class="px-4 py-3.5 rounded-full text-sm font-semibold"
+					class="px-3 py-2 rounded-full text-xs font-semibold"
 					style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)"
 				>
 					{t.admin_delete_user}
@@ -426,7 +426,7 @@
 			{/if}
 			<button
 				onclick={() => editUser = null}
-				class="flex-1 py-3.5 rounded-full text-sm font-semibold"
+				class="flex-1 py-2 rounded-full text-xs font-semibold"
 				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
 			>
 				{t.list_cancel}
@@ -434,7 +434,7 @@
 			<button
 				onclick={savePassword}
 				disabled={!!validatePassword(editPassword)}
-				class="flex-1 py-3.5 rounded-full text-sm font-semibold disabled:opacity-40"
+				class="flex-1 py-2 rounded-full text-xs font-semibold disabled:opacity-40"
 				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 			>
 				{t.list_save}

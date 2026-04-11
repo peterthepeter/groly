@@ -19,6 +19,8 @@
   "list_cancel": "Cancel",
   "list_delete": "Delete list",
   "items_checked_label": "Done",
+  "settings_show_all_checked_section": "All checked items",
+  "settings_show_all_checked_desc": "By default, only the last 16 checked items are shown. Enable this to show all of them.",
   "settings_layout_section": "List view",
   "settings_layout_list_view": "List view",
   "settings_layout_list_view_desc": "Show items as compact rows instead of tiles. Especially useful on small screens – item names are never cut off. Tap to check off, long-press to edit works as usual.",

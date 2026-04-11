@@ -25,6 +25,7 @@ export type UserSettings = {
 	locationNavEnabled?: boolean;
 	listLocationDisabled?: string[];
 	itemLayout?: 'grid' | 'list';
+	showAllCheckedItems?: boolean;
 };
 
 export const DEFAULT_SETTINGS = {
