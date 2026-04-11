@@ -114,6 +114,7 @@
     margin: 0;
     padding: 0;
     overscroll-behavior: none;
+    touch-action: pan-x pan-y;
     background-color: var(--color-bg);
     color: var(--color-on-surface);
   }

@@ -204,16 +204,21 @@
 		{/snippet}
 	</AppHeader>
 
-	<div class="flex-1 flex flex-col overflow-y-auto px-4 min-h-0"
-	     style="justify-content: {activeTab === 'mealplan' ? 'flex-start' : 'flex-end'}; padding-top: calc(env(safe-area-inset-top) + 4rem); padding-bottom: 5rem">
+	<!-- Spacer that clears the fixed AppHeader (same height calculation as Settings page) -->
+	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.5rem)"></div>
 
-		<!-- Segment switcher -->
-		{#if !sortMode}
-			<div class="flex gap-1 p-1 rounded-2xl mb-4 flex-shrink-0" style="background-color: var(--color-surface-container)">
+	<!-- Tab switcher — outside scroll area, always visible -->
+	{#if !sortMode}
+		<div class="flex-shrink-0 px-4 mb-3">
+			<div class="flex gap-1 p-1 rounded-2xl" style="background-color: var(--color-surface-container)">
 				<button
 					onclick={() => activeTab = 'recipes'}
 					class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all active:opacity-70"
 					style="background-color: {activeTab === 'recipes' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'recipes' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+					onpointerdown={handleRecipesTabPointerDown}
+					onpointerup={handleRecipesTabPointerUp}
+					onpointercancel={handleRecipesTabPointerUp}
+					oncontextmenu={(e) => e.preventDefault()}
 				>{t.recipes_title}</button>
 				<button
 					onclick={() => activeTab = 'mealplan'}
@@ -221,12 +226,18 @@
 					style="background-color: {activeTab === 'mealplan' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'mealplan' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
 				>{t.meal_plan_tab}</button>
 			</div>
-		{/if}
+		</div>
+	{/if}
 
-		<!-- Meal planner tab -->
-		{#if activeTab === 'mealplan'}
+	<!-- Meal plan: simple top-down scroll -->
+	{#if activeTab === 'mealplan'}
+		<div class="flex-1 min-h-0 overflow-y-auto px-4" style="padding-bottom: 5rem">
 			<MealPlanner {recipes} />
-		{:else}
+		</div>
+
+	<!-- Recipes: bottom-anchored scroll (list builds upward) -->
+	{:else}
+		<div class="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-4" style="padding-bottom: 5rem">
 
 		<!-- Pending Shares -->
 		{#each pendingShares as share (share.id)}
@@ -410,8 +421,8 @@
 			</div>
 		{/if}
 
-		{/if}<!-- end recipes tab -->
-	</div>
+		</div><!-- end recipes scroll -->
+	{/if}<!-- end tab switch -->
 
 	<!-- Bottom Nav -->
 	<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto flex justify-center px-6 pointer-events-none"

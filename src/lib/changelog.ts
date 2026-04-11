@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.4.2',
+		de: [
+			'Wochenplan: Scroll-Fehler auf kleinen Bildschirmen und iOS behoben',
+			'Pinch-to-Zoom in allen Browsern (inkl. Firefox iOS) deaktiviert',
+		],
+		en: [
+			'Meal plan: fixed scrolling on small screens and iOS',
+			'Pinch-to-zoom disabled across all browsers (including Firefox iOS)',
+		]
+	},
+	{
 		version: '0.4.1',
 		de: [
 			'Wochenplan: Scroll-Problem auf kleinen Bildschirmen behoben',
