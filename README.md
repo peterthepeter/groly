@@ -44,6 +44,18 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Smart suggestions** – When adding items, previously used item names are suggested. Suggestions are tracked per user in a dedicated history table and ranked by usage frequency. Checked-off items older than 60 days are automatically removed from the database; suggestion history is retained for 6 months after last use.
 - **i18n** – German and English.
 
+## User Management
+
+Groly does not have open registration — the admin creates accounts manually. This is by design for self-hosted instances where you control who has access.
+
+**Adding users:**
+1. Log in as admin
+2. Open the menu (☰, top right)
+3. Go to **Users**
+4. Tap **Add User**
+
+Only admin accounts can create users, reset passwords, and manage list sharing invitations. A newly created user is prompted to change their password on first login.
+
 ## HTTPS
 
 **HTTPS is required.** Without it, the following features will not work:
