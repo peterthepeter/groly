@@ -84,6 +84,12 @@
 			link: { href: '/einstellungen#kategorien-sortieren', label: 'Category sorting in Settings' },
 			svg: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`
 		},
+		{
+			title: 'Favourites',
+			text: 'Long-press an item, then tap the star next to the quantity field to save it as a favourite. Favourited items show a small green dot on their tile (can be turned off in Settings → Display). Tap + → Favourites to open your favourites panel — items are sorted by category — and quickly add them to the list. Long-press a favourite card to remove it.',
+			link: { href: '/einstellungen', label: 'Toggle dot indicator in Settings' },
+			svg: `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+		},
 
 		{ section: 'Recipes' },
 		{
@@ -170,6 +176,12 @@
 			text: 'Items werden automatisch kategorisiert. Langer Druck auf ein Item → Kategorie manuell überschreiben. Die globale Kategoriesortierung lässt sich in den Einstellungen aktivieren und umsortieren. Für listenspezifische Einstellungen: langer Druck auf den Listennamen → Bearbeiten → „Kategorien sortieren".',
 			link: { href: '/einstellungen#kategorien-sortieren', label: 'Kategoriesortierung in den Einstellungen' },
 			svg: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`
+		},
+		{
+			title: 'Favoriten',
+			text: 'Langes Drücken auf ein Item, dann den Stern neben dem Mengenfeld antippen, um es als Favorit zu speichern. Favorisierte Items zeigen einen kleinen grünen Punkt auf der Kachel (abschaltbar unter Einstellungen → Darstellung). Tippe + → Favoriten, um das Favoriten-Panel zu öffnen — Items sind nach Kategorie sortiert — und Items schnell zur Liste hinzuzufügen. Langer Druck auf eine Favoritenkachel entfernt den Favoriten.',
+			link: { href: '/einstellungen', label: 'Punkt-Indikator in den Einstellungen umschalten' },
+			svg: `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
 		},
 
 		{ section: 'Rezepte' },

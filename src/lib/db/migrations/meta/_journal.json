@@ -134,6 +134,13 @@
       "when": 1775910228041,
       "tag": "0018_wise_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1776008730264,
+      "tag": "0019_eager_spot",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.4.5',
+		de: [
+			'Favoriten: Häufig gekaufte Items per langem Druck → Stern als Favorit speichern',
+			'Favoriten-Panel über + → Favoriten öffnen und Items schnell zur Liste hinzufügen',
+			'Favorisierte Items erkennt man am grünen Punkt auf der Kachel',
+		],
+		en: [
+			'Favourites: long-press an item → tap the star to save it as a favourite',
+			'Open the favourites panel via + → Favourites to quickly re-add items to your list',
+			'Favourited items are marked with a small green dot on their tile',
+		]
+	},
+	{
 		version: '0.4.2',
 		de: [
 			'Wochenplan: Scroll-Fehler auf kleinen Bildschirmen und iOS behoben',

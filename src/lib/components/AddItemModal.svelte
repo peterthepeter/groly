@@ -3,11 +3,17 @@
 	import { CATEGORIES, CATEGORY_LABELS, getCategoryForItem } from '$lib/categories';
 	import { userSettings } from '$lib/userSettings.svelte';
 
-	let { item = null, onSave, onClose }: {
+	let { item = null, onSave, onClose, isFavorite = false, onToggleFavorite = null }: {
 		item?: { name: string; quantityInfo: string | null; categoryOverride?: string | null } | null;
 		onSave: (name: string, quantityInfo: string, categoryOverride: string | null) => void;
 		onClose: () => void;
+		isFavorite?: boolean;
+		onToggleFavorite?: ((name: string, isFav: boolean) => void) | null;
 	} = $props();
+
+	// svelte-ignore state_referenced_locally
+	let favState = $state(isFavorite);
+	$effect(() => { favState = isFavorite; });
 
 	// svelte-ignore state_referenced_locally
 	let name = $state(item?.name ?? '');
@@ -136,27 +142,48 @@
 			/>
 		</div>
 
-		<div class="rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
-			<div class="flex items-center gap-2">
-				<input
-					type="text"
-					placeholder={t.item_quantity_placeholder}
-					bind:value={quantityInfo}
-					class="flex-1 bg-transparent outline-none text-base min-w-0"
-					style="color: var(--color-on-surface)"
-				/>
+		<div class="flex items-stretch gap-2">
+			{#if onToggleFavorite}
 				<button
-					onclick={decrement}
-					disabled={!isNumeric || quantityInfo.trim() === ''}
-					class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
-					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-				>−</button>
-				<button
-					onclick={increment}
-					disabled={!isNumeric}
-					class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
-					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-				>+</button>
+					type="button"
+					onpointerdown={(e) => e.preventDefault()}
+					onclick={() => { favState = !favState; onToggleFavorite!(name.trim() || item?.name || '', favState); }}
+					class="rounded-xl px-4 flex items-center justify-center flex-shrink-0 transition-colors"
+					style="background-color: {favState ? 'color-mix(in srgb, var(--color-primary) 18%, transparent)' : 'var(--color-surface-container)'};
+					       color: {favState ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'};
+					       box-shadow: {favState ? 'inset 0 0 0 1.5px var(--color-primary)' : 'none'}"
+					aria-label={favState ? t.favorites_remove : t.favorites_add}
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24"
+					     fill={favState ? 'currentColor' : 'none'}
+					     stroke="currentColor" stroke-width="1.8"
+					     stroke-linecap="round" stroke-linejoin="round">
+						<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+					</svg>
+				</button>
+			{/if}
+			<div class="flex-1 rounded-xl px-4 py-3.5" style="background-color: var(--color-surface-container)">
+				<div class="flex items-center gap-2">
+					<input
+						type="text"
+						placeholder={t.item_quantity_placeholder}
+						bind:value={quantityInfo}
+						class="flex-1 bg-transparent outline-none text-base min-w-0"
+						style="color: var(--color-on-surface)"
+					/>
+					<button
+						onclick={decrement}
+						disabled={!isNumeric || quantityInfo.trim() === ''}
+						class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+						style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+					>−</button>
+					<button
+						onclick={increment}
+						disabled={!isNumeric}
+						class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+						style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+					>+</button>
+				</div>
 			</div>
 		</div>
 	</div>

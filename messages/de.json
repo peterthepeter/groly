@@ -178,5 +178,13 @@
   "meal_plan_servings": "Portionen",
   "meal_plan_no_recipe": "Kein Rezept verlinkt",
   "meal_plan_search_placeholder": "Rezept suchen …",
-  "meal_plan_no_results": "Keine Rezepte gefunden"
+  "meal_plan_no_results": "Keine Rezepte gefunden",
+  "favorites_panel_toggle": "Favoriten",
+  "favorites_add": "Als Favorit speichern",
+  "favorites_remove": "Aus Favoriten entfernen",
+  "favorites_empty": "Noch keine Favoriten. Langes Drücken auf ein Item zum Speichern.",
+  "favorites_indicator": "Favorit",
+  "favorites_new": "Favorit hinzufügen",
+  "settings_favorite_indicator": "Favoriten-Punkt",
+  "settings_favorite_indicator_desc": "Zeigt einen kleinen grünen Punkt auf Items, die als Favorit gespeichert sind."
 }

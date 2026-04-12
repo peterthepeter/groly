@@ -178,5 +178,13 @@
   "meal_plan_servings": "Servings",
   "meal_plan_no_recipe": "No recipe linked",
   "meal_plan_search_placeholder": "Search recipe …",
-  "meal_plan_no_results": "No recipes found"
+  "meal_plan_no_results": "No recipes found",
+  "favorites_panel_toggle": "Favourites",
+  "favorites_add": "Add to favourites",
+  "favorites_remove": "Remove from favourites",
+  "favorites_empty": "No favourites yet. Long-press an item to save it.",
+  "favorites_indicator": "Favourite",
+  "favorites_new": "Add favourite",
+  "settings_favorite_indicator": "Favourite indicator",
+  "settings_favorite_indicator_desc": "Show a small green dot on items that are saved as favourites."
 }

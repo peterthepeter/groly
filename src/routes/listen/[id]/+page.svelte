@@ -25,8 +25,12 @@
 
 	type Item = { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number };
 
+	type Favorite = { name: string; quantityInfo: string | null; categoryOverride: string | null };
+
 	let listName = $state('');
 	let items = $state<Item[]>([]);
+	let favorites = $state<Favorite[]>([]);
+	const favoriteNames = $derived(new Set(favorites.map(f => f.name.toLowerCase())));
 	let menuOpen = $state(false);
 	let addModalOpen = $state(false);
 	let loading = $state(true);
@@ -95,10 +99,11 @@
 		}
 
 		try {
-			const [listRes, itemsRes, suggestRes] = await Promise.all([
+			const [listRes, itemsRes, suggestRes, favsRes] = await Promise.all([
 				fetch(`/api/lists/${targetListId}`),
 				fetch(`/api/lists/${targetListId}/items`),
-				fetch('/api/suggestions')
+				fetch('/api/suggestions'),
+				fetch('/api/favorites')
 			]);
 			if (!listRes.ok || !itemsRes.ok) throw new Error();
 			const listData = await listRes.json();
@@ -107,6 +112,7 @@
 			userPermission = listData.userPermission ?? 'write';
 			const newItems: Item[] = await itemsRes.json();
 			if (suggestRes.ok) suggestions = await suggestRes.json();
+			if (favsRes.ok) favorites = await favsRes.json();
 			// Cache als plain objects (vor State-Zuweisung)
 			void cacheItemsData(newItems);
 			items = newItems;
@@ -198,6 +204,38 @@
 				void deleteOfflineItem(id);
 			}
 		);
+	}
+
+	async function addFavorite(name: string, quantityInfo: string) {
+		if (!favorites.some(f => f.name === name)) {
+			favorites = [...favorites, { name, quantityInfo: quantityInfo || null, categoryOverride: null }];
+		}
+		await fetch('/api/favorites', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name, quantityInfo: quantityInfo || null, categoryOverride: null })
+		});
+	}
+
+	async function toggleFavorite(name: string, makeFavorite: boolean) {
+		const item = items.find(i => i.name === name);
+		if (makeFavorite) {
+			if (!favorites.some(f => f.name === name)) {
+				favorites = [...favorites, { name, quantityInfo: item?.quantityInfo ?? null, categoryOverride: item?.categoryOverride ?? null }];
+			}
+			await fetch('/api/favorites', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name, quantityInfo: item?.quantityInfo ?? null, categoryOverride: item?.categoryOverride ?? null })
+			});
+		} else {
+			favorites = favorites.filter(f => f.name !== name);
+			await fetch('/api/favorites', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name })
+			});
+		}
 	}
 
 	afterNavigate(({ to, from }) => {
@@ -439,6 +477,7 @@
 									onLongPress={userPermission !== 'read' ? () => { editItem = item; addModalOpen = true; } : () => {}}
 									createdByUsername={item.createdByUsername}
 									currentUsername={data.user?.username ?? null}
+									isFavorite={favoriteNames.has(item.name.toLowerCase())}
 								/>
 							</div>
 						{/each}
@@ -458,6 +497,7 @@
 							onLongPress={userPermission !== 'read' ? () => { editItem = item; addModalOpen = true; } : () => {}}
 							createdByUsername={item.createdByUsername}
 							currentUsername={data.user?.username ?? null}
+							isFavorite={favoriteNames.has(item.name.toLowerCase())}
 						/>
 					{/each}
 					{#if !userSettings.categorySortEnabled}
@@ -486,6 +526,9 @@
 		onClose={() => { addModalOpen = false; autoScannerOnOpen = false; }}
 		{suggestions}
 		autoOpenScanner={autoScannerOnOpen}
+		{favorites}
+		onRemoveFavorite={(name) => toggleFavorite(name, false)}
+		onAddFavorite={addFavorite}
 	/>
 {/if}
 
@@ -495,5 +538,7 @@
 		item={editItem}
 		onSave={saveEditItem}
 		onClose={() => { addModalOpen = false; editItem = null; }}
+		isFavorite={favoriteNames.has((editItem?.name ?? '').toLowerCase())}
+		onToggleFavorite={toggleFavorite}
 	/>
 {/if}

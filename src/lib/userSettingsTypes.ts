@@ -27,6 +27,7 @@ export type UserSettings = {
 	listLocationDisabled?: string[];
 	itemLayout?: 'grid' | 'list';
 	showAllCheckedItems?: boolean;
+	showFavoriteIndicator?: boolean;
 };
 
 export const DEFAULT_SETTINGS = {

@@ -27,6 +27,7 @@
 	let categorySortOpen = $state(false);
 	let layoutOpen = $state(false);
 	let checkedItemsOpen = $state(false);
+	let favIndicatorOpen = $state(false);
 	let pushOpen = $state(false);
 	let sharedListsOpen = $state(false);
 	let showPushPrompt = $state(false);
@@ -371,6 +372,46 @@
 				{#if layoutOpen}
 					<div class="px-5 pb-5">
 						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_layout_list_view_desc}</p>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Favoriten-Punkt -->
+			<div style="border-top: 1px solid var(--color-outline-variant)">
+				<button
+					onclick={() => favIndicatorOpen = !favIndicatorOpen}
+					class="w-full flex items-center justify-between px-5 py-5"
+				>
+					<div class="flex items-center gap-3">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+						</svg>
+						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_favorite_indicator}</span>
+					</div>
+					<div class="flex items-center gap-3">
+						<div
+							role="switch"
+							aria-checked={userSettings.showFavoriteIndicator}
+							onclick={(e) => { e.stopPropagation(); userSettings.showFavoriteIndicator = !userSettings.showFavoriteIndicator; }}
+							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.showFavoriteIndicator = !userSettings.showFavoriteIndicator; } }}
+							tabindex="0"
+							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+							style="background-color: {userSettings.showFavoriteIndicator ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+						>
+							{#if userSettings.showFavoriteIndicator}
+								<span class="absolute top-0.5 h-4 w-4 rounded-full"
+								      style="background-color: white; transform: translateX(1.25rem)"></span>
+							{/if}
+						</div>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						     style="transform: rotate({favIndicatorOpen ? 90 : 0}deg); transition: transform 0.2s">
+							<polyline points="9 18 15 12 9 6"/>
+						</svg>
+					</div>
+				</button>
+				{#if favIndicatorOpen}
+					<div class="px-5 pb-5">
+						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_favorite_indicator_desc}</p>
 					</div>
 				{/if}
 			</div>

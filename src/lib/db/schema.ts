@@ -128,6 +128,14 @@ export const recipeIngredientExclusions = sqliteTable('recipe_ingredient_exclusi
 	ingredientId: text('ingredient_id').notNull().references(() => recipeIngredients.id, { onDelete: 'cascade' })
 }, (t) => [primaryKey({ columns: [t.userId, t.ingredientId] })]);
 
+export const favorites = sqliteTable('favorites', {
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	quantityInfo: text('quantity_info'),
+	categoryOverride: text('category_override'),
+	createdAt: integer('created_at').notNull()
+}, (t) => [primaryKey({ columns: [t.userId, t.name] })]);
+
 export const appMeta = sqliteTable('app_meta', {
 	key: text('key').primaryKey(),
 	value: text('value').notNull()
@@ -171,3 +179,4 @@ export type BarcodeCache = typeof barcodeCache.$inferSelect;
 export type RecipeIngredientExclusion = typeof recipeIngredientExclusions.$inferSelect;
 export type ItemHistory = typeof itemHistory.$inferSelect;
 export type MealPlanEntry = typeof mealPlanEntries.$inferSelect;
+export type Favorite = typeof favorites.$inferSelect;

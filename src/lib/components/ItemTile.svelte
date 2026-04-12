@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { getCategoryForItem } from '$lib/categories';
 	import { onMount } from 'svelte';
+	import { userSettings } from '$lib/userSettings.svelte';
 
-	let { item, onTap, onLongPress, createdByUsername = null, currentUsername = null }: {
+	let { item, onTap, onLongPress, createdByUsername = null, currentUsername = null, isFavorite = false }: {
 		item: { id: string; name: string; quantityInfo: string | null; categoryOverride?: string | null };
 		onTap: () => void;
 		onLongPress: () => void;
 		createdByUsername?: string | null;
 		currentUsername?: string | null;
+		isFavorite?: boolean;
 	} = $props();
 
 	const showCreator = $derived(!!createdByUsername && createdByUsername !== currentUsername);
@@ -103,6 +105,12 @@
 		class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
 		style="background-color: var(--color-surface-card); touch-action: pan-y;"
 	>
+		<!-- Favorite dot — top left -->
+		{#if isFavorite && userSettings.showFavoriteIndicator}
+			<span class="absolute top-3 left-3 w-2 h-2 rounded-full z-10"
+			      style="background-color: var(--color-primary)" aria-hidden="true"></span>
+		{/if}
+
 		<!-- Creator — top right -->
 		<span class="absolute top-2.5 right-2.5 text-[10px] font-semibold leading-none"
 		      style="color: var(--color-on-surface-variant); visibility: {showCreator ? 'visible' : 'hidden'}">

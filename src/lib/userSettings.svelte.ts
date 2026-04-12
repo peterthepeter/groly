@@ -74,6 +74,7 @@ let _locationNavEnabled = $state<boolean>(cache.locationNavEnabled ?? false);
 let _listLocationDisabled = $state<string[]>(cache.listLocationDisabled ?? []);
 let _itemLayout = $state<'grid' | 'list'>(cache.itemLayout ?? 'grid');
 let _showAllCheckedItems = $state<boolean>(cache.showAllCheckedItems ?? false);
+let _showFavoriteIndicator = $state<boolean>(cache.showFavoriteIndicator ?? true);
 let _theme = $state<'system' | 'light' | 'dark'>(cache.theme ?? 'system');
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -91,7 +92,8 @@ function scheduleSave() {
 			locationNavEnabled: _locationNavEnabled,
 			listLocationDisabled: _listLocationDisabled,
 			itemLayout: _itemLayout,
-			showAllCheckedItems: _showAllCheckedItems
+			showAllCheckedItems: _showAllCheckedItems,
+			showFavoriteIndicator: _showFavoriteIndicator
 		};
 		saveCache(settings);
 		try {
@@ -184,6 +186,10 @@ export const userSettings = {
 	get showAllCheckedItems() { return _showAllCheckedItems; },
 	set showAllCheckedItems(v: boolean) { _showAllCheckedItems = v; scheduleSave(); },
 
+	// Show favourite indicator dot on tiles/rows (default: true)
+	get showFavoriteIndicator() { return _showFavoriteIndicator; },
+	set showFavoriteIndicator(v: boolean) { _showFavoriteIndicator = v; scheduleSave(); },
+
 	// Theme
 	get theme() { return _theme; },
 	set theme(v: 'system' | 'light' | 'dark') { _theme = v; scheduleSave(); },
@@ -221,6 +227,7 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_listLocationDisabled = settings.listLocationDisabled ?? [];
 		_itemLayout = settings.itemLayout ?? 'grid';
 		_showAllCheckedItems = settings.showAllCheckedItems ?? false;
+		_showFavoriteIndicator = settings.showFavoriteIndicator ?? true;
 		_theme = settings.theme ?? 'system';
 		saveCache(settings);
 		return settings;

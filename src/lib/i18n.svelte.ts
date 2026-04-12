@@ -208,6 +208,15 @@ class TranslationProxy {
 	get barcode_added() { void _lang; return m.barcode_added(); }
 	get barcode_unsupported() { void _lang; return m.barcode_unsupported(); }
 	get barcode_offline() { void _lang; return m.barcode_offline(); }
+	// favorites
+	get favorites_panel_toggle() { void _lang; return m.favorites_panel_toggle(); }
+	get favorites_add()           { void _lang; return m.favorites_add(); }
+	get favorites_remove()        { void _lang; return m.favorites_remove(); }
+	get favorites_empty()         { void _lang; return m.favorites_empty(); }
+	get favorites_indicator()     { void _lang; return m.favorites_indicator(); }
+	get favorites_new()           { void _lang; return m.favorites_new(); }
+	get settings_favorite_indicator()      { void _lang; return m.settings_favorite_indicator(); }
+	get settings_favorite_indicator_desc() { void _lang; return m.settings_favorite_indicator_desc(); }
 	// meal plan
 	get meal_plan_tab() { void _lang; return m.meal_plan_tab(); }
 	get meal_plan_edit() { void _lang; return m.meal_plan_edit(); }

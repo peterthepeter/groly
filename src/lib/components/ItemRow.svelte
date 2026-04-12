@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { getCategoryForItem } from '$lib/categories';
+	import { userSettings } from '$lib/userSettings.svelte';
 
-	let { item, onTap, onLongPress, createdByUsername = null, currentUsername = null }: {
+	let { item, onTap, onLongPress, createdByUsername = null, currentUsername = null, isFavorite = false }: {
 		item: { id: string; name: string; quantityInfo: string | null; categoryOverride?: string | null };
 		onTap: () => void;
 		onLongPress: () => void;
 		createdByUsername?: string | null;
 		currentUsername?: string | null;
+		isFavorite?: boolean;
 	} = $props();
 
 	const category = $derived(getCategoryForItem(item.name, item.categoryOverride));
@@ -44,12 +46,17 @@
 	style="background-color: var(--color-surface-card); touch-action: pan-y;"
 >
 	<!-- Category icon — no background, same as tile -->
-	<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-	     stroke={category.color} stroke-width="1.3"
-	     stroke-linecap="round" stroke-linejoin="round"
-	     class="flex-shrink-0">
-		{@html category.svgContent}
-	</svg>
+	<div class="relative flex-shrink-0">
+		<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+		     stroke={category.color} stroke-width="1.3"
+		     stroke-linecap="round" stroke-linejoin="round">
+			{@html category.svgContent}
+		</svg>
+		{#if isFavorite && userSettings.showFavoriteIndicator}
+			<span class="absolute -top-0.5 -left-0.5 w-2 h-2 rounded-full"
+			      style="background-color: var(--color-primary)" aria-hidden="true"></span>
+		{/if}
+	</div>
 
 	<!-- Name + quantity -->
 	<div class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
