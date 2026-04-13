@@ -43,6 +43,7 @@
 	let keyboardOpen = $state(false);
 	let scrollContainer = $state<HTMLDivElement | null>(null);
 	let autoScannerOnOpen = $state(false);
+	let autoFavoritesOnOpen = $state(false);
 	let itemsLoadVersion = 0;
 
 	const listId = $derived($page.params.id);
@@ -514,7 +515,10 @@
 	</div>
 
 	{#if !addModalOpen && userPermission !== 'read'}
-		<BottomNav onAdd={() => { editItem = null; addModalOpen = true; }} />
+		<BottomNav
+			onAdd={() => { editItem = null; autoFavoritesOnOpen = false; addModalOpen = true; }}
+			onFavorites={() => { editItem = null; autoFavoritesOnOpen = true; addModalOpen = true; }}
+		/>
 	{/if}
 </div>
 
@@ -524,9 +528,10 @@
 {#if addModalOpen && !editItem}
 	<AddItemBar
 		onAdd={addItem}
-		onClose={() => { addModalOpen = false; autoScannerOnOpen = false; }}
+		onClose={() => { addModalOpen = false; autoScannerOnOpen = false; autoFavoritesOnOpen = false; }}
 		{suggestions}
 		autoOpenScanner={autoScannerOnOpen}
+		autoOpenFavorites={autoFavoritesOnOpen}
 		{favorites}
 		{activeItemNames}
 		onRemoveFavorite={(name) => toggleFavorite(name, false)}
