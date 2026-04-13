@@ -5,11 +5,12 @@
 	import { getCategoryForItem, getCategoryKey, CATEGORIES } from '$lib/categories';
 	import BarcodeScanner from './BarcodeScanner.svelte';
 
-	let { onAdd, onClose, suggestions = [], autoOpenScanner = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null }: {
+	let { onAdd, onClose, suggestions = [], autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null }: {
 		onAdd: (name: string, quantityInfo: string) => Promise<void>;
 		onClose: () => void;
 		suggestions?: string[];
 		autoOpenScanner?: boolean;
+		autoOpenFavorites?: boolean;
 		favorites?: Array<{ name: string; quantityInfo: string | null; categoryOverride: string | null }>;
 		activeItemNames?: Set<string>;
 		onRemoveFavorite?: ((name: string) => void) | null;
@@ -76,6 +77,8 @@
 	onMount(() => {
 		if (autoOpenScanner) {
 			scannerOpen = true;
+		} else if (autoOpenFavorites) {
+			favoritesOpen = true;
 		} else {
 			nameInput?.focus();
 		}
