@@ -13,29 +13,10 @@
 </script>
 
 <div class="mb-3">
-	<!-- Header Toggle -->
-	<button
-		onclick={() => expanded = !expanded}
-		class="w-full flex items-center justify-between px-4 py-3 rounded-2xl"
-		style="background-color: var(--color-surface-container)"
-	>
-		<div class="flex items-center gap-2">
-			<span class="text-xs font-bold tracking-widest uppercase" style="color: var(--color-primary)">{t.items_checked_label}</span>
-		</div>
-		<svg
-			width="16" height="16" viewBox="0 0 24 24" fill="none"
-			stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-			class="transition-transform duration-200"
-			style="transform: rotate({expanded ? '180deg' : '0deg'})"
-		>
-			<polyline points="6 9 12 15 18 9"/>
-		</svg>
-	</button>
-
 	{#if expanded}
 		{#if layout === 'list'}
 			<!-- List-Modus: gleiche Zeilenstruktur wie offene Items, gedimmt + durchgestrichen -->
-			<div class="mt-1">
+			<div class="mb-1">
 				{#each checkedItems as item (item.id)}
 					{@const category = getCategoryForItem(item.name, item.categoryOverride)}
 					<button
@@ -62,7 +43,7 @@
 			</div>
 		{:else}
 			<!-- Grid-Modus: Kacheln wie bisher -->
-			<div class="grid grid-cols-3 gap-3 mt-3">
+			<div class="grid grid-cols-3 gap-3 mb-3">
 				{#each checkedItems as item (item.id)}
 					{@const category = getCategoryForItem(item.name, item.categoryOverride)}
 					<button
@@ -90,4 +71,23 @@
 			</div>
 		{/if}
 	{/if}
+
+	<!-- Header Toggle -->
+	<button
+		onclick={() => expanded = !expanded}
+		class="w-full flex items-center justify-between px-4 py-3 rounded-2xl"
+		style="background-color: var(--color-surface-container)"
+	>
+		<div class="flex items-center gap-2">
+			<span class="text-xs font-bold tracking-widest uppercase" style="color: var(--color-primary)">{t.items_checked_label}</span>
+		</div>
+		<svg
+			width="16" height="16" viewBox="0 0 24 24" fill="none"
+			stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+			class="transition-transform duration-200"
+			style="transform: rotate({expanded ? '180deg' : '-90deg'})"
+		>
+			<polyline points="6 9 12 15 18 9"/>
+		</svg>
+	</button>
 </div>

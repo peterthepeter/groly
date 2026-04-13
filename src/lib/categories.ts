@@ -244,8 +244,8 @@ export const CATEGORIES: CategoryDef[] = [
 			'instant soup', 'canned soup', 'soup mix', 'ready meal', 'ready sauce'
 		],
 		category: {
-			color: '#78716C',
-			svgContent: `<ellipse cx="12" cy="7" rx="8" ry="3"/><path d="M4 7v10c0 1.66 3.58 3 8 3s8-1.34 8-3V7"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>`
+			color: '#2DD4BF',
+			svgContent: `<g transform="translate(12,12) scale(1.18) translate(-12,-12)"><ellipse cx="12" cy="6.5" rx="6" ry="2.2"/><path d="M6 6.5v11c0 1.2 2.7 2.2 6 2.2s6-1 6-2.2v-11"/></g>`
 		}
 	},
 	{

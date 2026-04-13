@@ -470,7 +470,7 @@
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.lists_empty}</p>
 			</div>
 		{:else}
-			<div class="space-y-3">
+			<div class="space-y-2">
 				{#if sortMode}
 					{#each displayedLists as list, i (list.id)}
 						<div class="flex items-center gap-2">
