@@ -214,10 +214,12 @@
 				<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
 					{currentLang() === 'en' ? 'Share after creating' : 'Nach Erstellen teilen'}
 				</span>
-				<div class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
+				<div class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 				     style="background-color: {shareAfterCreate ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
-					<div class="absolute top-0.5 w-5 h-5 rounded-full transition-transform shadow-sm"
-					     style="background-color: white; left: {shareAfterCreate ? '1.25rem' : '0.125rem'}"></div>
+					{#if shareAfterCreate}
+						<span class="absolute top-0.5 h-4 w-4 rounded-full"
+						      style="background-color: white; transform: translateX(1.25rem)"></span>
+					{/if}
 				</div>
 			</button>
 		{/if}
@@ -250,8 +252,8 @@
 			</button>
 		{/if}
 
-		<!-- Standorterkennung (nur beim Bearbeiten) -->
-		{#if list && userSettings.locationNavEnabled}
+		<!-- Standorterkennung -->
+		{#if userSettings.locationNavEnabled}
 			<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
 				<!-- Header -->
 				<button
@@ -391,8 +393,8 @@
 							</div>
 						{/if}
 
-						<!-- Auto-open toggle (only when coords set) -->
-						{#if locationLat !== null}
+						<!-- Auto-open toggle (only when coords set and editing existing list) -->
+						{#if locationLat !== null && list}
 							<button
 								type="button"
 								onclick={toggleListLocationDisabled}

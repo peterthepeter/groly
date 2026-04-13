@@ -31,6 +31,7 @@
 	let items = $state<Item[]>([]);
 	let favorites = $state<Favorite[]>([]);
 	const favoriteNames = $derived(new Set(favorites.map(f => f.name.toLowerCase())));
+	const activeItemNames = $derived(new Set(items.filter(i => !i.isChecked).map(i => i.name.toLowerCase())));
 	let menuOpen = $state(false);
 	let addModalOpen = $state(false);
 	let loading = $state(true);
@@ -527,6 +528,7 @@
 		{suggestions}
 		autoOpenScanner={autoScannerOnOpen}
 		{favorites}
+		{activeItemNames}
 		onRemoveFavorite={(name) => toggleFavorite(name, false)}
 		onAddFavorite={addFavorite}
 	/>

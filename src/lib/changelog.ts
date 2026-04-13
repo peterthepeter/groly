@@ -2,6 +2,25 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.4.6',
+		de: [
+			'Eingabebereich: Favoriten- und Barcode-Button als kompakte Icon-Buttons – eine Zeile gespart',
+			'Eingabefelder getauscht: Menge oben, Artikelname unten',
+			'Favoriten-Panel: Items, die bereits unabgehakt in der Liste sind, zeigen einen grünen Punkt',
+			'Changelog: Link zu GitHub Issues direkt im Changelog-Dialog',
+			'Neue Liste: Standort kann jetzt auch beim Erstellen direkt gesetzt werden',
+			'Toggle "Nach Erstellen teilen" optisch an den App-Standard angepasst',
+		],
+		en: [
+			'Add item bar: favourites and barcode buttons are now compact icon buttons – one row saved',
+			'Input fields swapped: quantity on top, item name below',
+			'Favourites panel: items already in the list (unchecked) show a green dot on their tile',
+			'Changelog: link to GitHub Issues added directly in the changelog dialog',
+			'New list: location can now be set when creating a list, not just when editing',
+			'Toggle "Share after creating" now matches the app\'s standard toggle style',
+		]
+	},
+	{
 		version: '0.4.5',
 		de: [
 			'Favoriten: Häufig gekaufte Items per langem Druck → Stern als Favorit speichern',

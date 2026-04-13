@@ -5,12 +5,13 @@
 	import { getCategoryForItem, getCategoryKey, CATEGORIES } from '$lib/categories';
 	import BarcodeScanner from './BarcodeScanner.svelte';
 
-	let { onAdd, onClose, suggestions = [], autoOpenScanner = false, favorites = [], onRemoveFavorite = null, onAddFavorite = null }: {
+	let { onAdd, onClose, suggestions = [], autoOpenScanner = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null }: {
 		onAdd: (name: string, quantityInfo: string) => Promise<void>;
 		onClose: () => void;
 		suggestions?: string[];
 		autoOpenScanner?: boolean;
 		favorites?: Array<{ name: string; quantityInfo: string | null; categoryOverride: string | null }>;
+		activeItemNames?: Set<string>;
 		onRemoveFavorite?: ((name: string) => void) | null;
 		onAddFavorite?: ((name: string, quantityInfo: string) => void) | null;
 	} = $props();
@@ -198,6 +199,10 @@
 									class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
 									style="background-color: var(--color-surface-card); touch-action: pan-y;"
 								>
+									{#if activeItemNames.has(fav.name.toLowerCase())}
+										<span class="absolute top-2.5 left-2.5 w-2 h-2 rounded-full z-10"
+										      style="background-color: var(--color-primary)" aria-hidden="true"></span>
+									{/if}
 									<div class="absolute inset-0 flex items-start justify-center pt-[30px] max-[374px]:pt-[22px]">
 										<svg class="w-11 h-11 max-[374px]:w-9 max-[374px]:h-9" viewBox="0 0 24 24" fill="none"
 										     stroke={cat.color} stroke-width="1.3"
@@ -366,37 +371,9 @@
 
 			<!-- Eingabefelder -->
 			<div class="space-y-2 mb-3">
-				<!-- svelte-ignore a11y_autofocus -->
-				<input
-					bind:this={nameInput}
-					type="text"
-					placeholder={t.item_name_label}
-					bind:value={name}
-					oninput={() => showSuggestions = true}
-					onkeydown={handleKeydown}
-					autofocus={!autoOpenScanner}
-					autocomplete="off"
-					class="w-full rounded-xl px-4 py-3 text-base font-medium outline-none"
-					style="background-color: var(--color-surface-card); color: var(--color-on-surface)"
-				/>
-
-				<!-- Multi-item preview chips -->
-				{#if isMultiItem && parsedItems.length > 0}
-					<div class="flex gap-1.5 flex-wrap px-1">
-						{#each parsedItems as item}
-							{#if item.name}
-								<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
-								      style="background-color: color-mix(in srgb, var(--color-primary) 13%, transparent); color: var(--color-primary)">
-									{#if item.quantityInfo}<span class="font-bold">{item.quantityInfo}</span><span style="opacity:0.5">·</span>{/if}{item.name}
-								</span>
-							{/if}
-						{/each}
-					</div>
-				{/if}
-
 				{#if !isMultiItem}
-					<div class="flex items-center gap-2 rounded-xl px-4 py-3"
-					     style="background-color: var(--color-surface-card)">
+					<div class="flex items-center gap-2 rounded-xl px-4"
+					     style="background-color: var(--color-surface-card); height: 52px">
 						<input
 							type="text"
 							placeholder={t.item_quantity_placeholder}
@@ -424,48 +401,68 @@
 						>+</button>
 					</div>
 				{/if}
+
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					bind:this={nameInput}
+					type="text"
+					placeholder={t.item_name_label}
+					bind:value={name}
+					oninput={() => showSuggestions = true}
+					onkeydown={handleKeydown}
+					autofocus={!autoOpenScanner}
+					autocomplete="off"
+					class="w-full rounded-xl px-4 text-base font-medium outline-none"
+					style="background-color: var(--color-surface-card); color: var(--color-on-surface); height: 52px"
+				/>
+
+				<!-- Multi-item preview chips -->
+				{#if isMultiItem && parsedItems.length > 0}
+					<div class="flex gap-1.5 flex-wrap px-1">
+						{#each parsedItems as item}
+							{#if item.name}
+								<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+								      style="background-color: color-mix(in srgb, var(--color-primary) 13%, transparent); color: var(--color-primary)">
+									{#if item.quantityInfo}<span class="font-bold">{item.quantityInfo}</span><span style="opacity:0.5">·</span>{/if}{item.name}
+								</span>
+							{/if}
+						{/each}
+					</div>
+				{/if}
 			</div>
 
-			<!-- Favoriten + Barcode-Zeile -->
-			<div class="flex gap-2 mb-2">
+			<!-- Aktionen: Icon-Buttons + Schließen + Hinzufügen -->
+			<div class="flex gap-2">
 				<button
 					type="button"
 					onpointerdown={(e) => e.preventDefault()}
 					onclick={() => { (document.activeElement as HTMLElement)?.blur(); favoritesOpen = true; }}
-					class="flex-1 h-11 rounded-full flex items-center justify-center gap-1.5 text-sm font-medium"
+					class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
 					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
 					aria-label={t.favorites_panel_toggle}
 				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">
 						<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
 					</svg>
-					{t.favorites_panel_toggle}
 				</button>
 				<button
 					type="button"
 					onpointerdown={(e) => e.preventDefault()}
 					onclick={() => { (document.activeElement as HTMLElement)?.blur(); scannerOpen = true; }}
-					class="flex-1 h-11 rounded-full flex items-center justify-center gap-1.5 text-sm font-medium"
+					class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
 					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
 					aria-label={t.barcode_scan}
 				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">
 						<path d="M3 9V6a2 2 0 0 1 2-2h2"/>
 						<path d="M3 15v3a2 2 0 0 0 2 2h2"/>
 						<path d="M21 9V6a2 2 0 0 0-2-2h-2"/>
 						<path d="M21 15v3a2 2 0 0 1-2 2h-2"/>
-						<line x1="7" y1="12" x2="7" y2="12"/>
 						<line x1="10" y1="9" x2="10" y2="15"/>
 						<line x1="13" y1="9" x2="13" y2="15"/>
 						<line x1="16" y1="9" x2="16" y2="15"/>
-						<line x1="19" y1="12" x2="19" y2="12"/>
 					</svg>
-					{t.barcode_scan}
 				</button>
-			</div>
-
-			<!-- Schließen links, Hinzufügen rechts -->
-			<div class="flex gap-2">
 				<button
 					onclick={onClose}
 					class="flex-1 h-12 rounded-full text-sm font-semibold"
@@ -477,8 +474,8 @@
 					onpointerdown={(e) => e.preventDefault()}
 					onclick={handleAdd}
 					disabled={!name.trim() || adding}
-					class="flex-1 h-12 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
-					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+					class="h-12 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
+					style="flex: 2; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 				>
 					{#if isMultiItem && parsedItems.filter(i => i.name).length > 1}
 						{parsedItems.filter(i => i.name).length}× {t.add}
