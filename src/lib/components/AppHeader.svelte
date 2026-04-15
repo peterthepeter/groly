@@ -26,7 +26,6 @@
 			<button
 				onclick={onMenuOpen}
 				class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60 transition-opacity"
-				style="background-color: var(--color-surface-high)"
 				aria-label={t.menu_open}
 			>
 				<svg width="16" height="14" viewBox="0 0 16 14" fill="none">

@@ -53,7 +53,7 @@
 			{@html category.svgContent}
 		</svg>
 		{#if isFavorite && userSettings.showFavoriteIndicator}
-			<span class="absolute -top-0.5 -left-0.5 w-2 h-2 rounded-full"
+			<span class="absolute -top-1 -left-1 w-1.5 h-1.5 rounded-full"
 			      style="background-color: var(--color-primary)" aria-hidden="true"></span>
 		{/if}
 	</div>

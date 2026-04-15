@@ -84,19 +84,32 @@
 			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_lists}</span>
 		</button>
 
-		<button
-			onclick={() => navigate('/rezepte')}
-			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
-			style="background-color: {$page.url.pathname.startsWith('/rezepte') ? 'var(--color-surface-container)' : 'transparent'}"
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/>
-				<line x1="12" y1="2" x2="12" y2="5"/>
-				<line x1="9" y1="17" x2="15" y2="17"/>
-				<line x1="9" y1="20" x2="15" y2="20"/>
-			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_recipes}</span>
-		</button>
+		{#if userSettings.showSupplementTracker}
+			<button
+				onclick={() => navigate('/supplements')}
+				class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+				style="background-color: {$page.url.pathname.startsWith('/supplements') ? 'var(--color-surface-container)' : 'transparent'}"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
+					<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
+				</svg>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_supplements}</span>
+			</button>
+		{/if}
+
+		{#if userSettings.showRecipes}
+			<button
+				onclick={() => navigate('/rezepte')}
+				class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+				style="background-color: {$page.url.pathname.startsWith('/rezepte') ? 'var(--color-surface-container)' : 'transparent'}"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+				</svg>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_recipes}</span>
+			</button>
+		{/if}
 
 		{#if user?.role === 'admin'}
 			<button

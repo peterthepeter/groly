@@ -16,6 +16,7 @@
 	import { env as publicEnv } from '$env/dynamic/public';
 	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
 	import FabWithShortcuts from '$lib/components/FabWithShortcuts.svelte';
+	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
@@ -36,6 +37,7 @@
 	let loading = $state(true);
 	let sortMode = $state(false);
 	let customOrder = $state<string[]>([]);
+	let dragId = $state<string | null>(null);
 	let showPushPrompt = $state(false);
 	let pushPromptLoading = $state(false);
 	let showInstallBanner = $state(false);
@@ -161,6 +163,31 @@
 		const next = [...customOrder];
 		[next[index], next[index + 1]] = [next[index + 1], next[index]];
 		customOrder = next;
+	}
+
+	function startDrag(e: PointerEvent, id: string) {
+		e.preventDefault();
+		(e.target as HTMLElement).setPointerCapture(e.pointerId);
+		dragId = id;
+		let lastY = e.clientY;
+
+		const onMove = (ev: PointerEvent) => {
+			const delta = ev.clientY - lastY;
+			if (Math.abs(delta) >= 34) {
+				const idx = customOrder.indexOf(id);
+				if (delta < 0 && idx > 0) { moveUp(idx); lastY = ev.clientY; }
+				else if (delta > 0 && idx < customOrder.length - 1) { moveDown(idx); lastY = ev.clientY; }
+			}
+		};
+		const onEnd = () => {
+			dragId = null;
+			document.removeEventListener('pointermove', onMove);
+			document.removeEventListener('pointerup', onEnd);
+			document.removeEventListener('pointercancel', onEnd);
+		};
+		document.addEventListener('pointermove', onMove);
+		document.addEventListener('pointerup', onEnd);
+		document.addEventListener('pointercancel', onEnd);
 	}
 
 	async function loadLists() {
@@ -405,6 +432,18 @@
 				>
 					{t.sort_mode_done}
 				</button>
+			{:else}
+				<button
+					onclick={enterSortMode}
+					class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
+					aria-label={t.sort_mode_title}
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="3" y1="6" x2="21" y2="6"/>
+						<line x1="3" y1="12" x2="15" y2="12"/>
+						<line x1="3" y1="18" x2="9" y2="18"/>
+					</svg>
+				</button>
 			{/if}
 		{/snippet}
 	</AppHeader>
@@ -470,10 +509,10 @@
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.lists_empty}</p>
 			</div>
 		{:else}
-			<div class="space-y-2">
+			<div class="space-y-2" style="touch-action: pan-y">
 				{#if sortMode}
 					{#each displayedLists as list, i (list.id)}
-						<div class="flex items-center gap-2">
+						<div class="flex items-center gap-2 transition-opacity" style="user-select: none; -webkit-user-select: none; {dragId === list.id ? 'opacity: 0.45' : ''}">
 							<!-- Sort controls -->
 							<div class="flex flex-col gap-0.5 flex-shrink-0">
 								<button
@@ -501,8 +540,8 @@
 							</div>
 
 							<!-- Card (nicht navigierbar im Sort-Modus) -->
-							<div class="flex-1 flex items-center gap-4 px-4 py-4 rounded-2xl"
-							     style="background-color: var(--color-surface-card)">
+							<div class="flex-1 min-w-0 flex items-center gap-4 px-4 py-4 rounded-2xl transition-all"
+							     style="background-color: var(--color-surface-card); {dragId === list.id ? 'box-shadow: 0 6px 20px rgba(0,0,0,0.25)' : ''}">
 								{#if getListIcon(list.iconId)}
 									{@const icon = getListIcon(list.iconId)!}
 									<svg class="flex-shrink-0" width="28" height="28" viewBox="0 0 24 24" fill="none"
@@ -521,11 +560,20 @@
 										<div class="text-xs truncate mt-0.5" style="color: var(--color-on-surface-variant)">{list.description}</div>
 									{/if}
 								</div>
-								<!-- Drag indicator -->
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-									<line x1="3" y1="8" x2="21" y2="8"/>
-									<line x1="3" y1="16" x2="21" y2="16"/>
-								</svg>
+								<!-- Drag handle -->
+								<div
+									onpointerdown={(e) => startDrag(e, list.id)}
+									class="flex-shrink-0 flex items-center justify-center w-8 h-8 -mr-1 rounded-lg"
+									style="touch-action: none; cursor: grab"
+									role="button"
+									tabindex="-1"
+									aria-label="Verschieben"
+								>
+									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<line x1="3" y1="8" x2="21" y2="8"/>
+										<line x1="3" y1="16" x2="21" y2="16"/>
+									</svg>
+								</div>
 							</div>
 						</div>
 					{/each}
@@ -551,44 +599,11 @@
 		{/if}
 	</div>
 
-	<!-- Bottom Nav mit Rezepte-Tab -->
-	<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto flex justify-center px-6 pointer-events-none"
-	     style="bottom: calc(-1 * env(safe-area-inset-bottom, 0px)); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); background: linear-gradient(to top, var(--color-bg) 40%, transparent)">
-		<div class="flex items-center gap-3 pointer-events-auto">
-			<!-- Listen Tab (active) -->
-			<button
-				onclick={handleListsTabClick}
-				onpointerdown={handleListsTabPointerDown}
-				onpointerup={handleListsTabPointerUp}
-				onpointercancel={handleListsTabPointerUp}
-				oncontextmenu={(e) => e.preventDefault()}
-				class="flex items-center gap-2 px-6 h-14 rounded-full glass active:opacity-70 transition-opacity select-none"
-				style="background-color: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface-container)); outline: 1.5px solid color-mix(in srgb, var(--color-primary) 40%, transparent)"
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-					<line x1="3" y1="6" x2="21" y2="6"/>
-					<path d="M16 10a4 4 0 0 1-8 0"/>
-				</svg>
-				<span class="text-xs font-semibold tracking-widest uppercase" style="color: var(--color-primary)">{t.nav_lists}</span>
-			</button>
-
-			<!-- FAB Add Button -->
-			<FabWithShortcuts onTap={() => { if (!sortMode) addModalOpen = true; }} label={t.add} />
-
-			<!-- Rezepte Tab -->
-			<button
-				onclick={() => goto('/rezepte')}
-				class="flex items-center gap-2 px-6 h-14 rounded-full glass active:opacity-70 transition-opacity select-none"
-				style="background-color: color-mix(in srgb, var(--color-surface-container) 85%, transparent)"
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
-				</svg>
-				<span class="text-xs font-semibold tracking-widest uppercase" style="color: var(--color-on-surface-variant)">{t.nav_recipes}</span>
-			</button>
-		</div>
-	</div>
+	<AppBottomNav
+		activeTab="lists"
+		onFabTap={() => { if (!sortMode) addModalOpen = true; }}
+		fabLabel={t.add}
+	/>
 </div>
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} {installPrompt} />

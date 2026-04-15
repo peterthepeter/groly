@@ -165,6 +165,41 @@ export const mealPlanEntries = sqliteTable('meal_plan_entries', {
 	updatedAt: integer('updated_at').notNull()
 }, (t) => [index('meal_plan_entries_user_date_idx').on(t.userId, t.date)]);
 
+export const supplements = sqliteTable('supplements', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	unit: text('unit').notNull(), // z.B. "Kapsel", "g", "ml"
+	brand: text('brand'),         // Hersteller, optional
+	info: text('info'),           // Zusatzinfo, optional
+	notes: text('notes'),
+	active: integer('active', { mode: 'boolean' }).notNull().default(true),
+	reminderTime: text('reminder_time'), // "HH:MM" – für Reminder-Feature v2 vorbereitet
+	stockQuantity: real('stock_quantity'), // aktueller Vorrat in der Einheit (null = kein Tracking)
+	defaultAmount: real('default_amount').notNull().default(1), // vorausgefüllte Menge im Quick-Log
+	sortOrder: integer('sort_order').notNull().default(0),
+	createdAt: integer('created_at').notNull(),
+	updatedAt: integer('updated_at').notNull()
+}, (t) => [index('supplements_user_id_idx').on(t.userId)]);
+
+export const supplementNutrients = sqliteTable('supplement_nutrients', {
+	id: text('id').primaryKey(),
+	supplementId: text('supplement_id').notNull().references(() => supplements.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(), // z.B. "Magnesium", "EPA", "Kreatin"
+	amountPerUnit: real('amount_per_unit').notNull(), // z.B. 200
+	unit: text('unit').notNull(), // z.B. "mg", "µg", "g", "IU"
+	sortOrder: integer('sort_order').notNull().default(0)
+}, (t) => [index('supplement_nutrients_supplement_id_idx').on(t.supplementId)]);
+
+export const supplementLogs = sqliteTable('supplement_logs', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	supplementId: text('supplement_id').notNull().references(() => supplements.id, { onDelete: 'cascade' }),
+	amount: real('amount').notNull(), // z.B. 2.0 = 2 Kapseln
+	loggedAt: integer('logged_at').notNull(), // Unix ms inkl. Uhrzeit
+	createdAt: integer('created_at').notNull()
+}, (t) => [index('supplement_logs_user_id_idx').on(t.userId), index('supplement_logs_logged_at_idx').on(t.loggedAt)]);
+
 export type User = typeof users.$inferSelect;
 export type List = typeof lists.$inferSelect;
 export type Item = typeof items.$inferSelect;
@@ -180,3 +215,16 @@ export type RecipeIngredientExclusion = typeof recipeIngredientExclusions.$infer
 export type ItemHistory = typeof itemHistory.$inferSelect;
 export type MealPlanEntry = typeof mealPlanEntries.$inferSelect;
 export type Favorite = typeof favorites.$inferSelect;
+export const supplementReminderSchedules = sqliteTable('supplement_reminder_schedules', {
+	id: text('id').primaryKey(),
+	supplementId: text('supplement_id').notNull().references(() => supplements.id, { onDelete: 'cascade' }),
+	days: text('days').notNull(), // JSON-Array, z.B. "[1,2,3,4,5]" (0=So, 1=Mo, ..., 6=Sa)
+	time: text('time').notNull(), // "HH:MM"
+	active: integer('active', { mode: 'boolean' }).notNull().default(true),
+	createdAt: integer('created_at').notNull()
+}, (t) => [index('supplement_reminder_schedules_supplement_id_idx').on(t.supplementId)]);
+
+export type Supplement = typeof supplements.$inferSelect;
+export type SupplementNutrient = typeof supplementNutrients.$inferSelect;
+export type SupplementLog = typeof supplementLogs.$inferSelect;
+export type SupplementReminderSchedule = typeof supplementReminderSchedules.$inferSelect;

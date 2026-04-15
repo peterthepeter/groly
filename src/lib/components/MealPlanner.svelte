@@ -16,7 +16,7 @@
 	};
 	type ListEntry = { id: string; name: string; iconId: string | null };
 
-	let { recipes }: { recipes: RecipeOption[] } = $props();
+	let { recipes, editMode = $bindable(false) }: { recipes: RecipeOption[]; editMode?: boolean } = $props();
 
 	// --- Week state ---
 	const today = new Date();
@@ -113,9 +113,6 @@
 		const _w = weekDays;
 		loadWeek();
 	});
-
-	// --- Edit mode ---
-	let editMode = $state(false);
 
 	// --- Picker sheet ---
 	let pickerOpen = $state(false);
@@ -394,22 +391,6 @@
 		</button>
 	{/if}
 
-	<button
-		onclick={() => editMode = !editMode}
-		class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 active:opacity-60 transition-opacity"
-		style="background-color: {editMode ? 'color-mix(in srgb, var(--color-primary) 20%, var(--color-surface-container))' : 'var(--color-surface-container)'}; outline: {editMode ? '1.5px solid color-mix(in srgb, var(--color-primary) 40%, transparent)' : 'none'}"
-	>
-		{#if editMode}
-			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="20 6 9 17 4 12"/>
-			</svg>
-		{:else}
-			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-			</svg>
-		{/if}
-	</button>
 </div>
 
 <!-- Day cards -->

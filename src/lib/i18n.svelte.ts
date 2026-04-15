@@ -217,6 +217,88 @@ class TranslationProxy {
 	get favorites_new()           { void _lang; return m.favorites_new(); }
 	get settings_favorite_indicator()      { void _lang; return m.settings_favorite_indicator(); }
 	get settings_favorite_indicator_desc() { void _lang; return m.settings_favorite_indicator_desc(); }
+	// supplements
+	get nav_supplements() { void _lang; return m.nav_supplements(); }
+	get supplement_title() { void _lang; return m.supplement_title(); }
+	get supplement_tab_today() { void _lang; return m.supplement_tab_today(); }
+	get supplement_tab_history() { void _lang; return m.supplement_tab_history(); }
+	get supplement_add() { void _lang; return m.supplement_add(); }
+	get supplement_name_label() { void _lang; return m.supplement_name_label(); }
+	get supplement_name_placeholder() { void _lang; return m.supplement_name_placeholder(); }
+	get supplement_unit_label() { void _lang; return m.supplement_unit_label(); }
+	get supplement_unit_placeholder() { void _lang; return m.supplement_unit_placeholder(); }
+	get supplement_brand_label() { void _lang; return m.supplement_brand_label(); }
+	get supplement_brand_placeholder() { void _lang; return m.supplement_brand_placeholder(); }
+	get supplement_info_label() { void _lang; return m.supplement_info_label(); }
+	get supplement_info_placeholder() { void _lang; return m.supplement_info_placeholder(); }
+	get supplement_add_to_list() { void _lang; return m.supplement_add_to_list(); }
+	get supplement_notes_label() { void _lang; return m.supplement_notes_label(); }
+	get supplement_active_label() { void _lang; return m.supplement_active_label(); }
+	get supplement_active_desc() { void _lang; return m.supplement_active_desc(); }
+	get supplement_nutrients_label() { void _lang; return m.supplement_nutrients_label(); }
+	get supplement_nutrient_name() { void _lang; return m.supplement_nutrient_name(); }
+	get supplement_nutrients_plural() { void _lang; return m.supplement_nutrients_plural(); }
+	get supplement_nutrient_name_placeholder() { void _lang; return m.supplement_nutrient_name_placeholder(); }
+	get supplement_nutrient_amount() { void _lang; return m.supplement_nutrient_amount(); }
+	get supplement_nutrient_unit() { void _lang; return m.supplement_nutrient_unit(); }
+	get supplement_nutrient_unit_placeholder() { void _lang; return m.supplement_nutrient_unit_placeholder(); }
+	get supplement_nutrient_add() { void _lang; return m.supplement_nutrient_add(); }
+	get supplement_nutrient_remove() { void _lang; return m.supplement_nutrient_remove(); }
+	get supplement_log_amount() { void _lang; return m.supplement_log_amount(); }
+	get supplement_log_time() { void _lang; return m.supplement_log_time(); }
+	get supplement_log_save() { void _lang; return m.supplement_log_save(); }
+	get supplement_log_delete() { void _lang; return m.supplement_log_delete(); }
+	get supplement_manage() { void _lang; return m.supplement_manage(); }
+	get supplement_empty() { void _lang; return m.supplement_empty(); }
+	get supplement_empty_hint() { void _lang; return m.supplement_empty_hint(); }
+	get supplement_empty_hint_add() { void _lang; return m.supplement_empty_hint_add(); }
+	get supplement_today_empty() { void _lang; return m.supplement_today_empty(); }
+	get supplement_today_none_active() { void _lang; return m.supplement_today_none_active(); }
+	get supplement_stats_day() { void _lang; return m.supplement_stats_day(); }
+	get supplement_stats_week() { void _lang; return m.supplement_stats_week(); }
+	get supplement_stats_month() { void _lang; return m.supplement_stats_month(); }
+	get supplement_stats_empty() { void _lang; return m.supplement_stats_empty(); }
+	get supplement_stats_nutrients() { void _lang; return m.supplement_stats_nutrients(); }
+	get supplement_stats_show_less() { void _lang; return _lang === 'en' ? 'Show less' : 'Weniger anzeigen'; }
+	get supplement_save() { void _lang; return m.supplement_save(); }
+	get supplement_delete() { void _lang; return m.supplement_delete(); }
+	get supplement_confirm_delete() { void _lang; return m.supplement_confirm_delete(); }
+	get supplement_edit_title() { void _lang; return m.supplement_edit_title(); }
+	get supplement_new_title() { void _lang; return m.supplement_new_title(); }
+	get supplement_stock_label() { void _lang; return m.supplement_stock_label(); }
+	get supplement_stock_placeholder() { void _lang; return m.supplement_stock_placeholder(); }
+	get supplement_stock_left() { void _lang; return m.supplement_stock_left(); }
+	get supplement_default_amount_label() { void _lang; return m.supplement_default_amount_label(); }
+	get supplement_default_amount_desc() { void _lang; return m.supplement_default_amount_desc(); }
+	get supplement_taken_today() { void _lang; return m.supplement_taken_today(); }
+	get supplement_log_at() { void _lang; return m.supplement_log_at(); }
+	get settings_supplement_section() { void _lang; return m.settings_supplement_section(); }
+	get settings_supplement_tab_label() { void _lang; return m.settings_supplement_tab_label(); }
+	get settings_supplement_tab_desc() { void _lang; return m.settings_supplement_tab_desc(); }
+	get settings_recipes_section() { void _lang; return m.settings_recipes_section(); }
+	get settings_recipes_tab_label() { void _lang; return m.settings_recipes_tab_label(); }
+	get settings_recipes_tab_desc() { void _lang; return m.settings_recipes_tab_desc(); }
+	get disable_hint_supplements() { void _lang; return m.disable_hint_supplements(); }
+	get disable_hint_recipes() { void _lang; return m.disable_hint_recipes(); }
+	// supplement reminders
+	get supplement_reminders_title() { void _lang; return m.supplement_reminders_title(); }
+	get supplement_reminders_add() { void _lang; return m.supplement_reminders_add(); }
+	get supplement_reminders_empty() { void _lang; return m.supplement_reminders_empty(); }
+	get supplement_reminders_save() { void _lang; return m.supplement_reminders_save(); }
+	get supplement_reminders_delete() { void _lang; return m.supplement_reminders_delete(); }
+	get supplement_reminders_days_label() { void _lang; return m.supplement_reminders_days_label(); }
+	get supplement_reminders_time_label() { void _lang; return m.supplement_reminders_time_label(); }
+	get supplement_reminders_edit() { void _lang; return m.supplement_reminders_edit(); }
+	get supplement_reminders_after_create() { void _lang; return m.supplement_reminders_after_create(); }
+	get supplement_reminders_deactivated() { void _lang; return m.supplement_reminders_deactivated(); }
+	get supplement_day_mo() { void _lang; return m.supplement_day_mo(); }
+	get supplement_day_di() { void _lang; return m.supplement_day_di(); }
+	get supplement_day_mi() { void _lang; return m.supplement_day_mi(); }
+	get supplement_day_do() { void _lang; return m.supplement_day_do(); }
+	get supplement_day_fr() { void _lang; return m.supplement_day_fr(); }
+	get supplement_day_sa() { void _lang; return m.supplement_day_sa(); }
+	get supplement_day_so() { void _lang; return m.supplement_day_so(); }
+	get supplement_log_edit_title() { void _lang; return m.supplement_log_edit_title(); }
 	// meal plan
 	get meal_plan_tab() { void _lang; return m.meal_plan_tab(); }
 	get meal_plan_edit() { void _lang; return m.meal_plan_edit(); }
@@ -258,4 +340,21 @@ export function sync_pending(count: number): string {
 	void _lang;
 	if (_lang === 'en') return `${count} pending sync`;
 	return `${count} Sync offen`;
+}
+export function reminders_deactivated_for(name: string): string {
+	void _lang;
+	if (_lang === 'en') return `Reminders for "${name}" have been deactivated`;
+	return `Erinnerungen für „${name}" wurden deaktiviert`;
+}
+
+export function nutrients_show_more(count: number): string {
+	void _lang;
+	if (_lang === 'en') return `Show ${count} more`;
+	return `${count} weitere anzeigen`;
+}
+
+export function today_reminders_label(count: number): string {
+	void _lang;
+	if (_lang === 'en') return count === 1 ? '1 reminder today' : `${count} reminders today`;
+	return count === 1 ? 'heute 1 Erinnerung' : `heute ${count} Erinnerungen`;
 }

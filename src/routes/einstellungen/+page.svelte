@@ -4,6 +4,7 @@
 	import { env as publicEnv } from '$env/dynamic/public';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
+	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import { t, currentLang, setLang } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { CATEGORY_LABELS } from '$lib/categories';
@@ -28,6 +29,8 @@
 	let layoutOpen = $state(false);
 	let checkedItemsOpen = $state(false);
 	let favIndicatorOpen = $state(false);
+	let supplementTabOpen = $state(false);
+	let recipesTabOpen = $state(false);
 	let pushOpen = $state(false);
 	let sharedListsOpen = $state(false);
 	let showPushPrompt = $state(false);
@@ -36,6 +39,41 @@
 	let pushSupported = $state(false);
 	let pushPermission = $state<NotificationPermission>('default');
 	let pushSubscribed = $state(false);
+	let testNotifCooldown = $state(0); // seconds remaining
+	let testNotifLoading = $state(false);
+	let testNotifError = $state('');
+	let cooldownInterval: ReturnType<typeof setInterval> | null = null;
+
+	function startCooldownTimer(seconds: number) {
+		testNotifCooldown = seconds;
+		if (cooldownInterval) clearInterval(cooldownInterval);
+		cooldownInterval = setInterval(() => {
+			testNotifCooldown = Math.max(0, testNotifCooldown - 1);
+			if (testNotifCooldown === 0 && cooldownInterval) {
+				clearInterval(cooldownInterval);
+				cooldownInterval = null;
+			}
+		}, 1000);
+	}
+
+	async function sendTestNotification() {
+		if (testNotifCooldown > 0 || testNotifLoading) return;
+		testNotifLoading = true;
+		testNotifError = '';
+		try {
+			const res = await fetch('/api/push-test', { method: 'POST' });
+			const data = await res.json();
+			if (res.status === 429) {
+				startCooldownTimer(data.remaining ?? 60);
+			} else if (!res.ok) {
+				testNotifError = currentLang() === 'en' ? 'Failed to send.' : 'Senden fehlgeschlagen.';
+			} else {
+				startCooldownTimer(60);
+			}
+		} finally {
+			testNotifLoading = false;
+		}
+	}
 	let pushLoading = $state(false);
 	let pushError = $state('');
 
@@ -289,9 +327,65 @@
 </script>
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
-	<AppHeader title={t.settings_title} onMenuOpen={() => menuOpen = true} />
+	<AppHeader title={mustChange ? t.settings_change_password : t.settings_title} onMenuOpen={() => { if (!mustChange) menuOpen = true; }} />
 
-	<div class="flex-1 overflow-y-auto pb-8 px-4" style="padding-top: calc(env(safe-area-inset-top) + 6rem)">
+	<div class="flex-1 overflow-y-auto px-4" style="padding-top: calc(env(safe-area-inset-top) + 6rem); padding-bottom: calc(env(safe-area-inset-bottom) + 6rem)">
+
+	{#if mustChange}
+		<!-- ── Fokus-Modus: Nur Passwort ändern ───────────────────────── -->
+		<div class="rounded-2xl overflow-hidden mb-4" style="background-color: var(--color-surface-card)">
+			<div class="px-5 pb-5 pt-4">
+				<div class="rounded-lg px-3 py-2 mb-4 text-xs"
+				     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
+					{t.must_change_password}
+				</div>
+				<form onsubmit={changePassword} class="space-y-2">
+					{#if error}
+						<div class="rounded-lg px-3 py-2 text-xs"
+						     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
+							{error}
+						</div>
+					{/if}
+					{#if success}
+						<div class="rounded-lg px-3 py-2 text-xs"
+						     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
+							{success}
+						</div>
+					{/if}
+					<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
+						<input type="password" placeholder={t.settings_current_password} bind:value={currentPassword} required
+						       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface); font-size: 16px" />
+					</div>
+					<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
+						<input type="password" placeholder={t.settings_new_password} bind:value={newPassword} required
+						       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface); font-size: 16px" />
+					</div>
+					<div>
+						<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
+							<input type="password" placeholder={t.settings_confirm_password} bind:value={confirmPassword} required
+							       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface); font-size: 16px" />
+						</div>
+						<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
+					</div>
+					<button
+						type="submit"
+						disabled={loading}
+						class="w-full py-2.5 rounded-full text-xs font-semibold mt-1 disabled:opacity-50"
+						style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+					>
+						{loading ? '...' : t.settings_save_password}
+					</button>
+				</form>
+			</div>
+		</div>
+		<div class="text-center mt-6">
+			<button
+				onclick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); goto('/login'); }}
+				class="text-xs active:opacity-60 transition-opacity"
+				style="color: var(--color-on-surface-variant)"
+			>{t.nav_logout}</button>
+		</div>
+	{:else}
 
 		<!-- ── Gruppe: Darstellung ───────────────────────────────────────── -->
 		<p class="text-xs font-semibold tracking-widest uppercase px-2 mb-2"
@@ -412,6 +506,87 @@
 				{#if favIndicatorOpen}
 					<div class="px-5 pb-5">
 						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_favorite_indicator_desc}</p>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Nahrungsergänzung Tab -->
+			<div style="border-top: 1px solid var(--color-outline-variant)">
+				<button
+					onclick={() => supplementTabOpen = !supplementTabOpen}
+					class="w-full flex items-center justify-between px-5 py-5"
+				>
+					<div class="flex items-center gap-3">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
+							<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
+						</svg>
+						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_supplement_section}</span>
+					</div>
+					<div class="flex items-center gap-3">
+						<div
+							role="switch"
+							aria-checked={userSettings.showSupplementTracker}
+							onclick={(e) => { e.stopPropagation(); userSettings.showSupplementTracker = !userSettings.showSupplementTracker; }}
+							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.showSupplementTracker = !userSettings.showSupplementTracker; } }}
+							tabindex="0"
+							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+							style="background-color: {userSettings.showSupplementTracker ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+						>
+							{#if userSettings.showSupplementTracker}
+								<span class="absolute top-0.5 h-4 w-4 rounded-full"
+								      style="background-color: white; transform: translateX(1.25rem)"></span>
+							{/if}
+						</div>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						     style="transform: rotate({supplementTabOpen ? 90 : 0}deg); transition: transform 0.2s">
+							<polyline points="9 18 15 12 9 6"/>
+						</svg>
+					</div>
+				</button>
+				{#if supplementTabOpen}
+					<div class="px-5 pb-5">
+						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_supplement_tab_desc}</p>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Rezepte Tab -->
+			<div style="border-top: 1px solid var(--color-outline-variant)">
+				<button
+					onclick={() => recipesTabOpen = !recipesTabOpen}
+					class="w-full flex items-center justify-between px-5 py-5"
+				>
+					<div class="flex items-center gap-3">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+						</svg>
+						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_recipes_section}</span>
+					</div>
+					<div class="flex items-center gap-3">
+						<div
+							role="switch"
+							aria-checked={userSettings.showRecipes}
+							onclick={(e) => { e.stopPropagation(); userSettings.showRecipes = !userSettings.showRecipes; }}
+							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.showRecipes = !userSettings.showRecipes; } }}
+							tabindex="0"
+							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+							style="background-color: {userSettings.showRecipes ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+						>
+							{#if userSettings.showRecipes}
+								<span class="absolute top-0.5 h-4 w-4 rounded-full"
+								      style="background-color: white; transform: translateX(1.25rem)"></span>
+							{/if}
+						</div>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						     style="transform: rotate({recipesTabOpen ? 90 : 0}deg); transition: transform 0.2s">
+							<polyline points="9 18 15 12 9 6"/>
+						</svg>
+					</div>
+				</button>
+				{#if recipesTabOpen}
+					<div class="px-5 pb-5">
+						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_recipes_tab_desc}</p>
 					</div>
 				{/if}
 			</div>
@@ -776,14 +951,36 @@
 						</div>
 					</button>
 					{#if pushOpen}
-						<div class="px-5 pb-5">
+						<div class="px-5 pb-5 space-y-3">
 							<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">
 								{currentLang() === 'en'
 									? 'Receive notifications when other users add or change items in a shared list.'
 									: 'Erhalte Benachrichtigungen, wenn andere Nutzer Items in einer geteilten Liste hinzufügen oder ändern.'}
 							</p>
+							{#if pushSubscribed}
+								<button
+									onclick={sendTestNotification}
+									disabled={testNotifCooldown > 0 || testNotifLoading}
+									class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium active:opacity-70 disabled:opacity-40 transition-opacity"
+									style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+								>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+									</svg>
+									{#if testNotifLoading}
+										{currentLang() === 'en' ? 'Sending…' : 'Wird gesendet…'}
+									{:else if testNotifCooldown > 0}
+										{currentLang() === 'en' ? `Wait ${testNotifCooldown}s` : `Warten (${testNotifCooldown}s)`}
+									{:else}
+										{currentLang() === 'en' ? 'Send test notification' : 'Test-Benachrichtigung senden'}
+									{/if}
+								</button>
+							{/if}
 							{#if pushError}
-								<p class="text-xs mt-3" style="color: var(--color-error)">{pushError}</p>
+								<p class="text-xs" style="color: var(--color-error)">{pushError}</p>
+							{/if}
+							{#if testNotifError}
+								<p class="text-xs" style="color: var(--color-error)">{testNotifError}</p>
 							{/if}
 						</div>
 					{/if}
@@ -1017,6 +1214,8 @@
 			</div>
 		{/if}
 
+	{/if}<!-- end mustChange else -->
+
 	</div>
 </div>
 
@@ -1066,5 +1265,7 @@
 		</div>
 	</div>
 {/if}
+
+<AppBottomNav activeTab="none" />
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />

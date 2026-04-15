@@ -75,6 +75,8 @@ let _listLocationDisabled = $state<string[]>(cache.listLocationDisabled ?? []);
 let _itemLayout = $state<'grid' | 'list'>(cache.itemLayout ?? 'grid');
 let _showAllCheckedItems = $state<boolean>(cache.showAllCheckedItems ?? false);
 let _showFavoriteIndicator = $state<boolean>(cache.showFavoriteIndicator ?? true);
+let _showSupplementTracker = $state<boolean>(cache.showSupplementTracker ?? true);
+let _showRecipes = $state<boolean>(cache.showRecipes ?? true);
 let _theme = $state<'system' | 'light' | 'dark'>(cache.theme ?? 'system');
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -93,7 +95,9 @@ function scheduleSave() {
 			listLocationDisabled: _listLocationDisabled,
 			itemLayout: _itemLayout,
 			showAllCheckedItems: _showAllCheckedItems,
-			showFavoriteIndicator: _showFavoriteIndicator
+			showFavoriteIndicator: _showFavoriteIndicator,
+			showSupplementTracker: _showSupplementTracker,
+			showRecipes: _showRecipes
 		};
 		saveCache(settings);
 		try {
@@ -190,6 +194,14 @@ export const userSettings = {
 	get showFavoriteIndicator() { return _showFavoriteIndicator; },
 	set showFavoriteIndicator(v: boolean) { _showFavoriteIndicator = v; scheduleSave(); },
 
+	// Show supplement tracker tab in navigation (default: true)
+	get showSupplementTracker() { return _showSupplementTracker; },
+	set showSupplementTracker(v: boolean) { _showSupplementTracker = v; scheduleSave(); },
+
+	// Show recipes tab in navigation (default: true)
+	get showRecipes() { return _showRecipes; },
+	set showRecipes(v: boolean) { _showRecipes = v; scheduleSave(); },
+
 	// Theme
 	get theme() { return _theme; },
 	set theme(v: 'system' | 'light' | 'dark') { _theme = v; scheduleSave(); },
@@ -228,6 +240,8 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_itemLayout = settings.itemLayout ?? 'grid';
 		_showAllCheckedItems = settings.showAllCheckedItems ?? false;
 		_showFavoriteIndicator = settings.showFavoriteIndicator ?? true;
+		_showSupplementTracker = settings.showSupplementTracker ?? true;
+		_showRecipes = settings.showRecipes ?? true;
 		_theme = settings.theme ?? 'system';
 		saveCache(settings);
 		return settings;

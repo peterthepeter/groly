@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { shortcuts, shortcutMenu } from '$lib/shortcuts.svelte';
 
-	let { onTap, label = 'Hinzufügen', size = 14 }: { onTap: () => void; label?: string; size?: number } = $props();
+	let { onTap, label = 'Hinzufügen', size = 12 }: { onTap: () => void; label?: string; size?: number } = $props();
 
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let longFired = false;

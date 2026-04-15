@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import FabWithShortcuts from '$lib/components/FabWithShortcuts.svelte';
+	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import MealPlanner from '$lib/components/MealPlanner.svelte';
 	import { t } from '$lib/i18n.svelte';
 
@@ -43,7 +44,9 @@
 	let sharesLoading = $state<Record<string, boolean>>({});
 	let sortMode = $state(false);
 	let customOrder = $state<string[]>([]);
-	let activeTab = $state<'recipes' | 'mealplan'>($page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
+	let dragId = $state<string | null>(null);
+	const activeTab = $derived($page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
+	let mealPlanEditMode = $state(false);
 
 	function closeSearch() {
 		searchOpen = false;
@@ -110,24 +113,29 @@
 		customOrder = next;
 	}
 
-	// Long-press auf Rezepte-Tab → Sortier-Modus
-	let recipesTabPressTimer: ReturnType<typeof setTimeout> | null = null;
-	let recipesTabLongFired = false;
+	function startDrag(e: PointerEvent, id: string) {
+		e.preventDefault();
+		(e.target as HTMLElement).setPointerCapture(e.pointerId);
+		dragId = id;
+		let lastY = e.clientY;
 
-	function handleRecipesTabPointerDown() {
-		recipesTabLongFired = false;
-		recipesTabPressTimer = setTimeout(() => {
-			recipesTabLongFired = true;
-			recipesTabPressTimer = null;
-			if (sortMode) exitSortMode(); else enterSortMode();
-		}, 500);
-	}
-	function handleRecipesTabPointerUp() {
-		if (recipesTabPressTimer) { clearTimeout(recipesTabPressTimer); recipesTabPressTimer = null; }
-	}
-	function handleRecipesTabClick() {
-		if (recipesTabLongFired) { recipesTabLongFired = false; return; }
-		// short tap: already on recipes page
+		const onMove = (ev: PointerEvent) => {
+			const delta = ev.clientY - lastY;
+			if (Math.abs(delta) >= 34) {
+				const idx = customOrder.indexOf(id);
+				if (delta < 0 && idx > 0) { moveUp(idx); lastY = ev.clientY; }
+				else if (delta > 0 && idx < customOrder.length - 1) { moveDown(idx); lastY = ev.clientY; }
+			}
+		};
+		const onEnd = () => {
+			dragId = null;
+			document.removeEventListener('pointermove', onMove);
+			document.removeEventListener('pointerup', onEnd);
+			document.removeEventListener('pointercancel', onEnd);
+		};
+		document.addEventListener('pointermove', onMove);
+		document.addEventListener('pointerup', onEnd);
+		document.addEventListener('pointercancel', onEnd);
 	}
 
 	async function loadRecipes() {
@@ -186,6 +194,16 @@
 		}
 	}
 
+	beforeNavigate(({ type, cancel }) => {
+		if (type === 'popstate') {
+			if (searchOpen) { closeSearch(); cancel(); return; }
+			if (addSheetOpen) { addSheetOpen = false; cancel(); return; }
+		} else {
+			addSheetOpen = false;
+			closeSearch();
+		}
+	});
+
 	onMount(() => {
 		loadCustomOrder();
 		loadRecipes();
@@ -206,7 +224,7 @@
 		title={sortMode ? t.sort_mode_title : activeTab === 'mealplan' ? t.meal_plan_tab : t.recipes_title}
 		subtitle={sortMode ? t.sort_mode_subtitle : activeTab === 'recipes' ? `${recipes.length} / ${limit}` : ''}
 		onMenuOpen={() => { if (!sortMode) menuOpen = true; }}
-		onSearch={recipes.length > 5 && !sortMode && activeTab === 'recipes' && !searchOpen ? () => searchOpen = true : null}
+		onSearch={!sortMode && activeTab === 'recipes' && !searchOpen ? () => searchOpen = true : null}
 	>
 		{#snippet actions()}
 			{#if sortMode}
@@ -216,6 +234,18 @@
 					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 				>
 					{t.sort_mode_done}
+				</button>
+			{:else if activeTab === 'recipes'}
+				<button
+					onclick={enterSortMode}
+					class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
+					aria-label={t.sort_mode_title}
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="3" y1="6" x2="21" y2="6"/>
+						<line x1="3" y1="12" x2="15" y2="12"/>
+						<line x1="3" y1="18" x2="9" y2="18"/>
+					</svg>
 				</button>
 			{/if}
 		{/snippet}
@@ -260,16 +290,12 @@
 		<div class="flex-shrink-0 px-4 mb-3">
 			<div class="flex gap-1 p-1 rounded-2xl" style="background-color: var(--color-surface-container)">
 				<button
-					onclick={() => activeTab = 'recipes'}
+					onclick={() => goto($page.url.pathname, { noScroll: true, keepFocus: true })}
 					class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all active:opacity-70"
 					style="background-color: {activeTab === 'recipes' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'recipes' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
-					onpointerdown={handleRecipesTabPointerDown}
-					onpointerup={handleRecipesTabPointerUp}
-					onpointercancel={handleRecipesTabPointerUp}
-					oncontextmenu={(e) => e.preventDefault()}
 				>{t.recipes_title}</button>
 				<button
-					onclick={() => { activeTab = 'mealplan'; closeSearch(); }}
+					onclick={() => { goto(`${$page.url.pathname}?tab=mealplan`, { noScroll: true, keepFocus: true }); closeSearch(); }}
 					class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all active:opacity-70"
 					style="background-color: {activeTab === 'mealplan' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'mealplan' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
 				>{t.meal_plan_tab}</button>
@@ -280,7 +306,7 @@
 	<!-- Meal plan: bottom-anchored scroll (same as recipes) -->
 	{#if activeTab === 'mealplan'}
 		<div class="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-4">
-			<MealPlanner {recipes} />
+			<MealPlanner {recipes} bind:editMode={mealPlanEditMode} />
 			<div class="flex-shrink-0" style="height: 5rem"></div>
 		</div>
 
@@ -340,14 +366,19 @@
 					<p class="text-sm font-medium" style="color: var(--color-on-surface)">{t.recipes_no_results} „{searchQuery}"</p>
 				{:else}
 					<p class="text-sm font-semibold mb-1" style="color: var(--color-on-surface)">{t.recipes_empty}</p>
-					<p class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipes_empty_hint}</p>
+					<p class="text-xs mb-3" style="color: var(--color-on-surface-variant)">{t.recipes_empty_hint}</p>
+					<button
+						onclick={() => goto('/einstellungen')}
+						class="text-xs active:opacity-60 transition-opacity"
+						style="color: var(--color-primary)"
+					>{t.disable_hint_recipes}</button>
 				{/if}
 			</div>
 		{:else if sortMode}
 			<!-- Sort Mode -->
-			<div class="space-y-2">
+			<div class="space-y-2" style="touch-action: pan-y">
 				{#each filteredRecipes as recipe, i (recipe.id)}
-					<div class="flex items-center gap-2">
+					<div class="flex items-center gap-2 transition-opacity" style="user-select: none; -webkit-user-select: none; {dragId === recipe.id ? 'opacity: 0.45' : ''}">
 						<!-- Sort controls -->
 						<div class="flex flex-col gap-0.5 flex-shrink-0">
 							<button
@@ -375,8 +406,8 @@
 						</div>
 
 						<!-- Card (nicht navigierbar im Sort-Modus) -->
-						<div class="flex-1 flex items-center gap-3 px-4 rounded-2xl"
-						     style="background-color: var(--color-surface-card); min-height: 3.75rem; padding-top: 0.875rem; padding-bottom: 0.875rem">
+						<div class="flex-1 min-w-0 flex items-center gap-3 px-4 rounded-2xl transition-all"
+						     style="background-color: var(--color-surface-card); min-height: 3.75rem; padding-top: 0.875rem; padding-bottom: 0.875rem; {dragId === recipe.id ? 'box-shadow: 0 6px 20px rgba(0,0,0,0.25)' : ''}">
 							<!-- Thumbnail -->
 							<div class="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
 							     style="background-color: {recipe.imageUrl ? 'var(--color-surface-container)' : 'transparent'}">
@@ -403,11 +434,20 @@
 								{/if}
 							</div>
 
-							<!-- Drag indicator -->
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-								<line x1="3" y1="8" x2="21" y2="8"/>
-								<line x1="3" y1="16" x2="21" y2="16"/>
-							</svg>
+							<!-- Drag handle -->
+							<div
+								onpointerdown={(e) => startDrag(e, recipe.id)}
+								class="flex-shrink-0 flex items-center justify-center w-8 h-8 -mr-1 rounded-lg"
+								style="touch-action: none; cursor: grab"
+								role="button"
+								tabindex="-1"
+								aria-label="Verschieben"
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<line x1="3" y1="8" x2="21" y2="8"/>
+									<line x1="3" y1="16" x2="21" y2="16"/>
+								</svg>
+							</div>
 						</div>
 					</div>
 				{/each}
@@ -467,46 +507,13 @@
 		</div><!-- end recipes scroll -->
 	{/if}<!-- end tab switch -->
 
-	<!-- Bottom Nav -->
-	<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto flex justify-center px-6 pointer-events-none"
-	     style="bottom: calc(-1 * env(safe-area-inset-bottom, 0px)); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); background: linear-gradient(to top, var(--color-bg) 40%, transparent)">
-		<div class="flex items-center gap-3 pointer-events-auto">
-			<!-- Listen Tab -->
-			<button
-				onclick={() => goto('/')}
-				class="flex items-center gap-2 px-6 h-14 rounded-full glass active:opacity-70 transition-opacity select-none"
-				style="background-color: color-mix(in srgb, var(--color-surface-container) 85%, transparent)"
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-					<line x1="3" y1="6" x2="21" y2="6"/>
-					<path d="M16 10a4 4 0 0 1-8 0"/>
-				</svg>
-				<span class="text-xs font-semibold tracking-widest uppercase" style="color: var(--color-on-surface-variant)">{t.nav_lists}</span>
-			</button>
-
-			<!-- FAB (nur im Rezepte-Tab) -->
-			{#if activeTab === 'recipes'}
-				<FabWithShortcuts onTap={() => { if (!sortMode) addSheetOpen = true; }} label={t.recipe_add} />
-			{/if}
-
-			<!-- Rezepte Tab (active) mit Long-Press -->
-			<button
-				onclick={handleRecipesTabClick}
-				onpointerdown={handleRecipesTabPointerDown}
-				onpointerup={handleRecipesTabPointerUp}
-				onpointercancel={handleRecipesTabPointerUp}
-				oncontextmenu={(e) => e.preventDefault()}
-				class="flex items-center gap-2 px-6 h-14 rounded-full glass select-none"
-				style="background-color: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface-container)); outline: 1.5px solid color-mix(in srgb, var(--color-primary) 40%, transparent)"
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
-				</svg>
-				<span class="text-xs font-semibold tracking-widest uppercase" style="color: var(--color-primary)">{t.nav_recipes}</span>
-			</button>
-		</div>
-	</div>
+	<AppBottomNav
+		activeTab="recipes"
+		onFabTap={activeTab === 'mealplan' ? () => { mealPlanEditMode = !mealPlanEditMode; } : (activeTab === 'recipes' && !sortMode ? () => addSheetOpen = true : null)}
+		showFab={activeTab === 'mealplan' || (activeTab === 'recipes' && !sortMode)}
+		fabLabel={activeTab === 'mealplan' ? t.meal_plan_edit : t.recipe_add}
+		fabVariant={activeTab === 'mealplan' ? 'edit' : 'add'}
+	/>
 </div>
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />

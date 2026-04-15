@@ -2,6 +2,25 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.5.0',
+		de: [
+			'Supplement Tracker: Nahrungsergänzungsmittel erfassen, Nährstoffe aufsummieren, Lagerbestand tracken',
+			'Verlauf: Tages-, Wochen- und Monatsansicht mit vollständiger Nährstoffaufschlüsselung',
+			'Push-Erinnerungen: einstellbare Uhrzeiten pro Supplement',
+			'Einstellungen: Supplements und Rezepte können jetzt pro Nutzer deaktiviert werden',
+			'Navigation: überarbeitete untere Navigationsleiste mit klarerem aktivem Zustand',
+			'Diverse Bugfixes',
+		],
+		en: [
+			'Supplement Tracker: log supplements, auto-sum nutrients, track stock levels',
+			'History: daily, weekly, and monthly view with full nutrient breakdown',
+			'Push reminders: configurable daily reminders per supplement',
+			'Settings: Supplements and Recipes can now be disabled per user',
+			'Navigation: redesigned bottom navigation with clearer active state',
+			'Various bug fixes',
+		]
+	},
+	{
 		version: '0.4.6',
 		de: [
 			'Eingabebereich: Favoriten- und Barcode-Button als kompakte Icon-Buttons – eine Zeile gespart',

@@ -4,30 +4,21 @@
   <img src="static/icons/icon.svg" width="96" alt="Groly" />
 </p>
 
-A grocery list app built **mobile-first from the ground up** — designed for your phone, not adapted to it. Every interaction is touch-optimized: bottom navigation, large tap targets, swipe gestures, and offline support so it works without signal in the store. Also fully usable in a desktop browser.
+A mobile-first **grocery list, supplement tracker, and meal planner** built for self-hosting — designed for your phone, not adapted to it. Every interaction is touch-optimized: bottom navigation, large tap targets, swipe gestures, and offline support so it works without signal in the store. Also fully usable in a desktop browser.
 
 Groly is a **PWA (Progressive Web App)**. Install it to your home screen on iOS or Android to unlock the full experience: offline mode, push notifications, barcode scanner, and location-based list opening all require the installed PWA.
 
 Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and any other Docker-based home server setup. Designed for families and small teams — no open registration, users are invited by the admin.
 
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/lists.png" width="200" alt="Lists overview" />
-  <img src="docs/screenshots/list-grid.png" width="200" alt="Shopping list with category grid" />
-  <img src="docs/screenshots/shortcuts.png" width="200" alt="Quick access shortcuts" />
-  <img src="docs/screenshots/list-sort.png" width="200" alt="List sort mode" />
-</p>
-<p align="center">
-  <img src="docs/screenshots/category-sorting.png" width="200" alt="Category sorting settings" />
-  <img src="docs/screenshots/recipe-add.png" width="200" alt="Add recipe" />
-  <img src="docs/screenshots/recipe-detail.png" width="200" alt="Recipe detail view" />
-  <img src="docs/screenshots/meal-plan.png" width="200" alt="Weekly meal planner" />
-</p>
-
 ## Features
 
 ### Shopping Lists
+
+<p align="center">
+  <img src="docs/screenshots/Shopping List overview.png" width="180" alt="Lists overview" />
+  <img src="docs/screenshots/Shopping List.png" width="180" alt="Shopping list" />
+  <img src="docs/screenshots/Shopping List Favorites.png" width="180" alt="Favourites panel" />
+</p>
 
 - **Shared lists** – Share lists with other users; changes sync in real time via Server-Sent Events.
 - **Offline-first** – Add, check off, edit, and delete items without internet. Changes sync automatically when back online.
@@ -37,14 +28,50 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Swipe to peek** – Swipe left or right on any item tile whose name is truncated to reveal the full name in an overlay, without accidentally checking it off.
 - **Favourites** – Long-press an item and tap the star next to the quantity field to save it as a favourite. Favourited items are marked with a small green dot on their tile (can be turned off in Settings → Display). Open the favourites panel via + → Favourites to quickly re-add them to any list, sorted by category. Long-press a favourite card to remove it.
 
+### Supplement Tracker
+
+<p align="center">
+  <img src="docs/screenshots/Supplement Today.png" width="180" alt="Supplement tracker – today" />
+  <img src="docs/screenshots/Add Supplement.png" width="180" alt="Quick log sheet" />
+  <img src="docs/screenshots/Supplement History.png" width="180" alt="Supplement history" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/Manage Supplement.png" width="180" alt="Manage supplements" />
+  <img src="docs/screenshots/Edit Supplement.png" width="180" alt="Edit supplement" />
+</p>
+
+- **Log supplements** – Track daily intake with a quick-log sheet. Adjust amounts, set the time, and confirm with one tap.
+- **Nutrient tracking** – Define nutrients per unit for each supplement (e.g. 500 mcg Vitamin B12 per capsule). Groly automatically sums up your total daily nutrient intake across all supplements.
+- **Stock tracking** – Track stock levels per supplement. Reorder directly via the built-in shopping cart button, which adds the supplement to any of your lists.
+- **Push reminders** – Set configurable daily reminder times per supplement. Delivered via push notification to your phone.
+- **History** – Day, week, and month views for both supplements taken and nutrients consumed. Navigate back in time to review any period.
+- **Active/inactive toggle** – Temporarily disable a supplement without deleting it or its history.
+- **Brand & info** – Optionally store brand and additional information per supplement.
+
 ### Recipes & Meal Planning
+
+<p align="center">
+  <img src="docs/screenshots/Recipes.png" width="180" alt="Recipes" />
+  <img src="docs/screenshots/Meal Planner.png" width="180" alt="Weekly meal planner" />
+</p>
 
 - **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list. Import recipes from popular recipe websites by URL.
 - **Weekly meal planner** – Plan meals for every day of the week. Assign recipes or free-text entries per day, adjust servings, and add ingredients from individual days or the entire week directly to a shopping list. Navigate forwards and backwards by week. Configurable as a quick access shortcut.
 
+### Settings & Customization
+
+<p align="center">
+  <img src="docs/screenshots/Settings Page.png" width="180" alt="Settings" />
+</p>
+
+- **Feature flags** – Supplements and Recipes can be independently enabled or disabled per user in Settings → Display. Hide sections you don't use — they disappear from the navigation entirely.
+- **Category sorting** – Customize the display order of categories globally or per list, to match your supermarket layout.
+- **Quick access shortcuts** – Configure up to 4 shortcuts accessible by long-pressing the + button.
+- **Favourite indicator** – The green dot on favourited items can be turned off per user.
+
 ### Notifications & Location
 
-- **Push notifications** – Get notified when someone adds an item to a shared list, and when a new app version is available. Works on iOS (16.4+) and Android.
+- **Push notifications** – Get notified when someone adds an item to a shared list, when a new app version is available, and for supplement reminders. Works on iOS (16.4+) and Android.
 - **Location-based list opening** – Assign a location to any list (e.g. your supermarket). When you arrive within 100 meters, Groly automatically opens that list — no tapping required. Opt-in per user in Settings.
 
 ### Quick Access
@@ -52,6 +79,10 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Quick access shortcuts** – Long-press the + button to reveal up to 4 configurable shortcuts. Slide your finger to the desired shortcut and release to navigate — or release over empty space to cancel. Each shortcut can open a list, open a list with the add-item dialog, or jump straight into the barcode scanner. Configurable per user in Settings and synced across devices.
 
 ### App & Platform
+
+<p align="center">
+  <img src="docs/screenshots/Options Menu.png" width="180" alt="Navigation menu" />
+</p>
 
 - **PWA** – Installable on iOS and Android, works like a native app.
 - **Light & Dark mode** – Follows system preference automatically.
@@ -200,7 +231,7 @@ Groly performs automatic cleanup daily — no manual intervention required:
 | Expired sessions | Deleted daily |
 | Stale push subscriptions | Removed automatically on failed delivery (HTTP 410/404) |
 
-Active data (lists, unchecked items, recipes, list members) is only removed by user action. For a typical self-hosted instance, the SQLite database stays well under 100 MB indefinitely.
+Active data (lists, unchecked items, recipes, supplements, list members) is only removed by user action. For a typical self-hosted instance, the SQLite database stays well under 100 MB indefinitely.
 
 ## Tech Stack
 
@@ -217,4 +248,3 @@ Active data (lists, unchecked items, recipes, list members) is only removed by u
 | CSS | Tailwind CSS v4 |
 | i18n | Paraglide-SvelteKit |
 | Deployment | Docker (Node.js adapter), linux/amd64 |
-

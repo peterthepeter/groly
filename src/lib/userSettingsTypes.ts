@@ -28,6 +28,8 @@ export type UserSettings = {
 	itemLayout?: 'grid' | 'list';
 	showAllCheckedItems?: boolean;
 	showFavoriteIndicator?: boolean;
+	showSupplementTracker?: boolean;
+	showRecipes?: boolean;
 };
 
 export const DEFAULT_SETTINGS = {
