@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.5.1',
+		de: [
+			'Supplement-Erinnerungen: pünktlichere Zustellung, offene Alarme im Badge, vergangene durchgestrichen',
+			'Push-Nachricht: Supplement-Name als Titel statt abgeschnittener langer Text',
+			'Schnell-Log: Schließen- und Verwalten-Button unten',
+			'Android: bessere Tastatur-Erkennung bei aktivem Passwortmanager',
+		],
+		en: [
+			'Supplement reminders: more punctual delivery, pending count in badge, past reminders struck through',
+			'Push notification: supplement name as title instead of truncated long text',
+			'Quick log: close and manage buttons at the bottom',
+			'Android: improved keyboard detection when a password manager toolbar is active',
+		]
+	},
+	{
 		version: '0.5.0',
 		de: [
 			'Supplement Tracker: Nahrungsergänzungsmittel erfassen, Nährstoffe aufsummieren, Lagerbestand tracken',

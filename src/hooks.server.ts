@@ -110,10 +110,9 @@ async function checkSupplementReminders() {
 			const nameList = list.length === 1
 				? list[0]
 				: `${list.slice(0, -1).join(', ')} & ${list[list.length - 1]}`;
-			const title = lang === 'en'
-				? `Time to take ${nameList}!`
-				: `Zeit für die Einnahme von ${nameList}!`;
-			return sendPushToUser(userId, { title, body: '', url: '/supplements' });
+			const title = nameList;
+			const body = lang === 'en' ? 'Time to take your supplement' : 'Zeit für deine Einnahme';
+			return sendPushToUser(userId, { title, body, url: '/supplements' });
 		})
 	);
 }
@@ -128,7 +127,11 @@ async function init() {
 	cleanupOldData();
 	setInterval(cleanupBarcodeCache, 24 * 60 * 60 * 1000);
 	setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
-	setInterval(() => { checkSupplementReminders().catch(console.error); }, 60 * 1000);
+	const msUntilNextMinute = 60_000 - (Date.now() % 60_000);
+	setTimeout(() => {
+		checkSupplementReminders().catch(console.error);
+		setInterval(() => { checkSupplementReminders().catch(console.error); }, 60_000);
+	}, msUntilNextMinute);
 	logMemoryUsage();
 	setInterval(logMemoryUsage, 60 * 60 * 1000); // stündlich
 	initialized = true;

@@ -54,6 +54,13 @@
 	type TodayReminder = { time: string; names: string[] };
 	let todayReminders = $state<TodayReminder[]>([]);
 	let remindersExpanded = $state(false);
+	let now = $state(new Date());
+
+	function currentTimeStr(): string {
+		return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+	}
+
+	const pendingReminders = $derived(todayReminders.filter(r => r.time > currentTimeStr()));
 
 	async function loadTodayReminders() {
 		const res = await fetch('/api/supplement-reminders?today=1');
@@ -210,6 +217,8 @@
 	onMount(async () => {
 		await Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders()]);
 		loading = false;
+		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
+		return () => clearInterval(clockInterval);
 	});
 
 	function navigateHistory(dir: -1 | 1) {
@@ -305,7 +314,7 @@
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
 							</svg>
-							{today_reminders_label(todayReminders.length)}
+							{today_reminders_label(pendingReminders.length)}
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 							     style="transform: rotate({remindersExpanded ? 90 : 0}deg); transition: transform 0.2s; color: var(--color-on-surface-variant)">
 								<polyline points="9 18 15 12 9 6"/>
@@ -317,9 +326,12 @@
 				{#if remindersExpanded && todayReminders.length > 0}
 					<div class="px-5 pt-3 pb-3 space-y-1.5" style="border-top: 1px solid var(--color-outline-variant)">
 						{#each todayReminders as reminder}
-							<div class="flex items-baseline gap-3">
-								<span class="text-sm font-semibold tabular-nums shrink-0" style="color: var(--color-primary)">{reminder.time}</span>
-								<span class="text-sm" style="color: var(--color-on-surface)">{reminder.names.join(' · ')}</span>
+							{@const isPast = reminder.time <= currentTimeStr()}
+							<div class="flex items-baseline gap-3" style={isPast ? 'opacity: 0.5' : ''}>
+								<span class="text-sm font-semibold tabular-nums shrink-0"
+								      style="color: {isPast ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}; {isPast ? 'text-decoration: line-through' : ''}"
+								>{reminder.time}</span>
+								<span class="text-sm" style="color: {isPast ? 'var(--color-on-surface-variant)' : 'var(--color-on-surface)'}; {isPast ? 'text-decoration: line-through' : ''}">{reminder.names.join(' · ')}</span>
 							</div>
 						{/each}
 					</div>

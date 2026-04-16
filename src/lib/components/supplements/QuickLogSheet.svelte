@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n.svelte';
+	import { goto } from '$app/navigation';
 
 	type Supplement = {
 		id: string; name: string; unit: string;
@@ -83,7 +84,7 @@
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => open = false}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl overflow-y-auto"
 	     style="background-color: var(--color-surface-low); max-height: 85vh">
-		<div class="px-5 pt-4 pb-10">
+		<div class="px-5 pt-4 pb-6">
 			<!-- Handle -->
 			<div class="flex justify-center mb-4">
 				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
@@ -141,6 +142,20 @@
 						</button>
 					</div>
 				{/each}
+			</div>
+
+			<!-- Bottom actions -->
+			<div class="flex gap-2 mt-4">
+				<button
+					onclick={() => open = false}
+					class="flex-1 py-3.5 rounded-full text-sm font-semibold active:opacity-80 transition-opacity"
+					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+				>{t.close}</button>
+				<button
+					onclick={() => { open = false; goto('/supplements/verwalten'); }}
+					class="flex-1 py-3.5 rounded-full text-sm font-semibold active:opacity-80 transition-opacity"
+					style="background-color: var(--color-surface-container); color: var(--color-primary)"
+				>{t.supplement_manage}</button>
 			</div>
 		</div>
 	</div>
