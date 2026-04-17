@@ -91,6 +91,17 @@
 				const reg = await navigator.serviceWorker.ready;
 				const sub = await reg.pushManager.getSubscription();
 				pushSubscribed = !!sub;
+				// Re-register subscription silently — server record may have been deleted
+				if (sub) {
+					const json = sub.toJSON();
+					const reRegister = () => fetch('/api/push/subscribe', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys })
+					}).catch(() => {/* best-effort, ignore errors */});
+					reRegister();
+					window.addEventListener('online', reRegister, { once: true });
+				}
 			} catch { /* ignore on init */ }
 		}
 	}
