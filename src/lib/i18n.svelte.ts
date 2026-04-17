@@ -106,6 +106,9 @@ class TranslationProxy {
 	get admin_delete_user() { void _lang; return m.admin_delete_user(); }
 	get admin_new_password_label() { void _lang; return m.admin_new_password_label(); }
 	get admin_password_changed() { void _lang; return m.admin_password_changed(); }
+	get admin_make_admin() { void _lang; return m.admin_make_admin(); }
+	get admin_make_user() { void _lang; return m.admin_make_user(); }
+	get admin_role_changed() { void _lang; return m.admin_role_changed(); }
 	get admin_confirm_delete_user() { void _lang; return m.admin_confirm_delete_user(); }
 	get admin_cannot_delete_self() { void _lang; return m.admin_cannot_delete_self(); }
 	get admin_cannot_delete_last_admin() { void _lang; return m.admin_cannot_delete_last_admin(); }

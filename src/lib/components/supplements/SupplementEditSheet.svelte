@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { displayUnit, SUPPLEMENT_UNITS } from '$lib/units';
 
@@ -123,20 +124,20 @@
 		newMode = 'form';
 	}
 
-	// Reset to search step whenever the sheet opens for a new supplement
-	let _wasOpen = $state(false);
+	// Reset to search step whenever a new supplement sheet opens.
+	// We track only the object reference (not deep properties) so field mutations
+	// inside the form don't re-trigger this. untrack() prevents the writes to
+	// newMode/catalogQuery from causing a second effect run.
 	$effect(() => {
-		if (editSheet && !_wasOpen) {
-			_wasOpen = true;
-			if (!editSheet.id) {
+		const sheet = editSheet;
+		untrack(() => {
+			if (sheet !== null && sheet.id === null) {
 				newMode = 'search';
 				catalogQuery = '';
 				catalogResults = [];
 				catalogSearched = false;
 			}
-		} else if (!editSheet) {
-			_wasOpen = false;
-		}
+		});
 	});
 </script>
 

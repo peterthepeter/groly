@@ -8,18 +8,39 @@ import { hashPassword, now } from '$lib/auth';
 import { validatePassword } from '$lib/password';
 
 export const PATCH: RequestHandler = async (event) => {
-	const { error } = adminGuard(event);
+	const { error, user: actingUser } = adminGuard(event);
 	if (error) return error;
 
-	const { password } = await event.request.json();
-	const pwError = validatePassword(password ?? '');
-	if (pwError) return json({ error: pwError }, { status: 400 });
+	const targetId = event.params.id;
+	const body = await event.request.json();
+	const { password, role } = body;
 
-	const user = db.select().from(users).where(eq(users.id, event.params.id)).get();
-	if (!user) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	const target = db.select().from(users).where(eq(users.id, targetId)).get();
+	if (!target) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
-	const passwordHash = hashPassword(password);
-	db.update(users).set({ passwordHash, mustChangePassword: true, updatedAt: now() }).where(eq(users.id, user.id)).run();
+	const firstUser = db.select().from(users).orderBy(asc(users.createdAt)).limit(1).get();
+	const isBootstrap = firstUser?.id === targetId;
+
+	// Password reset
+	if (password !== undefined) {
+		const pwError = validatePassword(password ?? '');
+		if (pwError) return json({ error: pwError }, { status: 400 });
+		const passwordHash = hashPassword(password.trim());
+		db.update(users).set({ passwordHash, mustChangePassword: true, updatedAt: now() }).where(eq(users.id, targetId)).run();
+	}
+
+	// Role change
+	if (role !== undefined) {
+		if (role !== 'admin' && role !== 'user') return json({ error: 'Ungültige Rolle' }, { status: 400 });
+		if (isBootstrap) return json({ error: 'Bootstrap-Admin kann nicht degradiert werden' }, { status: 403 });
+		if (actingUser!.id === targetId) return json({ error: 'Du kannst deine eigene Rolle nicht ändern' }, { status: 403 });
+		if (role === 'user' && target.role === 'admin') {
+			const adminCount = db.select({ cnt: count(users.id) }).from(users).where(eq(users.role, 'admin')).get();
+			if ((adminCount?.cnt ?? 0) <= 1) return json({ error: 'Der letzte Admin kann nicht degradiert werden' }, { status: 403 });
+		}
+		db.update(users).set({ role, updatedAt: now() }).where(eq(users.id, targetId)).run();
+	}
+
 	return json({ ok: true });
 };
 

@@ -4,13 +4,14 @@ import { login } from '$lib/auth';
 import { checkRateLimit } from '$lib/server/loginRateLimit';
 
 export const POST: RequestHandler = async (event) => {
-	if (!checkRateLimit(event.getClientAddress())) {
-		return json({ error: 'Zu viele Versuche. Bitte warte 15 Minuten.' }, { status: 429 });
-	}
-
 	const { username, password } = await event.request.json();
 	if (!username || !password) {
 		return json({ error: 'Benutzername und Passwort erforderlich' }, { status: 400 });
+	}
+
+	// Rate-limit per IP+username so failed attempts on one account don't block others
+	if (!checkRateLimit(`${event.getClientAddress()}:${String(username).toLowerCase()}`)) {
+		return json({ error: 'Zu viele Versuche. Bitte warte 15 Minuten.' }, { status: 429 });
 	}
 
 	const result = await login(username, password);

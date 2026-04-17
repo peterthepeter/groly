@@ -50,9 +50,9 @@ export async function login(
 	username: string,
 	password: string
 ): Promise<{ sessionId: string; mustChangePassword: boolean } | null> {
-	const user = db.select().from(users).where(eq(users.username, username)).get();
+	const user = db.select().from(users).where(eq(users.username, username.trim())).get();
 	if (!user) return null;
-	if (!verifyPassword(password, user.passwordHash)) return null;
+	if (!verifyPassword(password.trim(), user.passwordHash)) return null;
 
 	const sessionId = generateId(32);
 	const ts = now();
@@ -84,7 +84,7 @@ export function logout(sessionId: string) {
 
 export function changePassword(userId: string, newPassword: string) {
 	db.update(users)
-		.set({ passwordHash: hashPassword(newPassword), mustChangePassword: false, updatedAt: now() })
+		.set({ passwordHash: hashPassword(newPassword.trim()), mustChangePassword: false, updatedAt: now() })
 		.where(eq(users.id, userId))
 		.run();
 }

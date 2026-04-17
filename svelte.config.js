@@ -6,7 +6,8 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter({
-			out: 'build'
+			out: 'build',
+			trustProxy: true
 		})
 	},
 	vitePlugin: {

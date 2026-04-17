@@ -45,6 +45,32 @@
 		return true;
 	}
 
+	function canChangeRole(user: UserEntry): boolean {
+		if (user.id === data.user?.id) return false;
+		if (user.id === bootstrapId) return false;
+		if (user.role === 'admin' && adminCount <= 1) return false;
+		return true;
+	}
+
+	async function changeRole() {
+		if (!editUser) return;
+		editError = '';
+		const newRole = editUser.role === 'admin' ? 'user' : 'admin';
+		const res = await fetch(`/api/users/${editUser.id}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ role: newRole })
+		});
+		if (res.ok) {
+			editSuccess = t.admin_role_changed;
+			editUser = { ...editUser, role: newRole };
+			await loadUsers();
+		} else {
+			const d = await res.json();
+			editError = d.error ?? 'Fehler';
+		}
+	}
+
 	function generatePassword(): string {
 		const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
 		return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -749,6 +775,21 @@
 			</div>
 			<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
 		</div>
+		{#if canChangeRole(editUser)}
+			<button
+				onclick={changeRole}
+				class="w-full mb-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+				style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
+			>
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+					<circle cx="9" cy="7" r="4"/>
+					<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+					<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+				</svg>
+				{editUser.role === 'admin' ? t.admin_make_user : t.admin_make_admin}
+			</button>
+		{/if}
 		<div class="flex gap-2">
 			{#if canDelete(editUser)}
 				<button
