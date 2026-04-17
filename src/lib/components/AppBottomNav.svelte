@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { t } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import FabWithShortcuts from './FabWithShortcuts.svelte';
@@ -52,7 +53,14 @@
 			<!-- Supplements -->
 			{#if userSettings.showSupplementTracker}
 				<button
-					onclick={() => goto('/supplements')}
+					onclick={() => {
+					if (activeTab === 'supplements') {
+						const isHistory = $page.url.searchParams.get('tab') === 'history';
+						goto(isHistory ? '/supplements' : '/supplements?tab=history', { noScroll: true, keepFocus: true });
+					} else {
+						goto('/supplements');
+					}
+				}}
 					class="flex items-center rounded-full transition-all duration-200 active:opacity-70 select-none {activeTab === 'supplements' ? 'gap-2 px-4 h-full' : 'h-11 w-11 justify-center'}"
 					style="background-color: transparent; {activeTab === 'supplements' ? `outline: ${activeOut}` : ''}"
 					aria-label={t.nav_supplements}
@@ -73,7 +81,14 @@
 			<!-- Recipes -->
 			{#if userSettings.showRecipes}
 				<button
-					onclick={() => goto('/rezepte')}
+					onclick={() => {
+					if (activeTab === 'recipes') {
+						const isMealplan = $page.url.searchParams.get('tab') === 'mealplan';
+						goto(isMealplan ? '/rezepte' : '/rezepte?tab=mealplan', { noScroll: true, keepFocus: true });
+					} else {
+						goto('/rezepte');
+					}
+				}}
 					class="flex items-center rounded-full transition-all duration-200 active:opacity-70 select-none {activeTab === 'recipes' ? 'gap-2 px-4 h-full' : 'h-11 w-11 justify-center'}"
 					style="background-color: transparent; {activeTab === 'recipes' ? `outline: ${activeOut}` : ''}"
 					aria-label={t.nav_recipes}

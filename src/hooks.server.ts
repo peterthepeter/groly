@@ -112,7 +112,7 @@ async function checkSupplementReminders() {
 				: `${list.slice(0, -1).join(', ')} & ${list[list.length - 1]}`;
 			const title = nameList;
 			const body = lang === 'en' ? 'Time to take your supplement' : 'Zeit für deine Einnahme';
-			return sendPushToUser(userId, { title, body, url: '/supplements' });
+			return sendPushToUser(userId, { title, body, url: '/supplements', tag: 'supplement-reminder' });
 		})
 	);
 }

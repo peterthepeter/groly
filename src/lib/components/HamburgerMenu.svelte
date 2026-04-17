@@ -6,6 +6,7 @@
 	import InfoModal from '$lib/components/InfoModal.svelte';
 	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import AboutModal from '$lib/components/AboutModal.svelte';
 	import { CHANGELOG } from '$lib/changelog';
 
 	let { open = $bindable(false), user, installPrompt = null }: {
@@ -17,6 +18,7 @@
 	let infoOpen = $state(false);
 	let pwaOpen = $state(false);
 	let changelogOpen = $state(false);
+	let aboutOpen = $state(false);
 
 	function close() { open = false; }
 
@@ -180,6 +182,18 @@
 		</button>
 
 		<button
+			onclick={() => { close(); aboutOpen = true; }}
+			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+		>
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="12" cy="12" r="10"/>
+				<line x1="12" y1="8" x2="12" y2="8"/>
+				<path d="M11 12h1v4h1"/>
+			</svg>
+			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'About' : 'Über Groly'}</span>
+		</button>
+
+		<button
 			onclick={logout}
 			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
 		>
@@ -210,4 +224,8 @@
 		lang={currentLang()}
 		onClose={() => changelogOpen = false}
 	/>
+{/if}
+
+{#if aboutOpen}
+	<AboutModal onClose={() => aboutOpen = false} />
 {/if}

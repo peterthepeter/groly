@@ -186,6 +186,7 @@ class TranslationProxy {
 	get recipe_accept() { void _lang; return m.recipe_accept(); }
 	get recipe_decline() { void _lang; return m.recipe_decline(); }
 	get recipe_no_ingredients() { void _lang; return m.recipe_no_ingredients(); }
+	get recipe_not_needed() { void _lang; return m.recipe_not_needed(); }
 	get recipe_no_steps() { void _lang; return m.recipe_no_steps(); }
 	get recipe_minutes() { void _lang; return m.recipe_minutes(); }
 	get recipe_prep_min_placeholder() { void _lang; return m.recipe_prep_min_placeholder(); }
@@ -227,6 +228,8 @@ class TranslationProxy {
 	get supplement_name_placeholder() { void _lang; return m.supplement_name_placeholder(); }
 	get supplement_unit_label() { void _lang; return m.supplement_unit_label(); }
 	get supplement_unit_placeholder() { void _lang; return m.supplement_unit_placeholder(); }
+	get supplement_unit_pick_title() { void _lang; return m.supplement_unit_pick_title(); }
+	get supplement_unit_manual() { void _lang; return m.supplement_unit_manual(); }
 	get supplement_brand_label() { void _lang; return m.supplement_brand_label(); }
 	get supplement_brand_placeholder() { void _lang; return m.supplement_brand_placeholder(); }
 	get supplement_info_label() { void _lang; return m.supplement_info_label(); }
@@ -305,6 +308,7 @@ class TranslationProxy {
 	get meal_plan_done() { void _lang; return m.meal_plan_done(); }
 	get meal_plan_empty_day() { void _lang; return m.meal_plan_empty_day(); }
 	get meal_plan_add_title() { void _lang; return m.meal_plan_add_title(); }
+	get meal_plan_add_another_title() { void _lang; return m.meal_plan_add_another_title(); }
 	get meal_plan_free_text() { void _lang; return m.meal_plan_free_text(); }
 	get meal_plan_free_text_placeholder() { void _lang; return m.meal_plan_free_text_placeholder(); }
 	get meal_plan_also_on() { void _lang; return m.meal_plan_also_on(); }

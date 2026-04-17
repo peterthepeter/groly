@@ -60,7 +60,23 @@
 		return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 	}
 
-	const pendingReminders = $derived(todayReminders.filter(r => r.time > currentTimeStr()));
+	function todayAtTime(timeStr: string): number {
+		const [h, m] = timeStr.split(':').map(Number);
+		const d = new Date();
+		d.setHours(h, m, 0, 0);
+		return d.getTime();
+	}
+
+	function reminderIsDone(reminder: TodayReminder): boolean {
+		const reminderTs = todayAtTime(reminder.time);
+		return reminder.names.every(name => {
+			const supp = supplements.find(s => s.name === name);
+			if (!supp) return false;
+			return todayLogs.some(l => l.supplementId === supp.id && l.loggedAt >= reminderTs);
+		});
+	}
+
+	const pendingReminders = $derived(todayReminders.filter(r => !reminderIsDone(r)));
 
 	async function loadTodayReminders() {
 		const res = await fetch('/api/supplement-reminders?today=1');
@@ -214,11 +230,22 @@
 		}
 	});
 
-	onMount(async () => {
-		await Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders()]);
-		loading = false;
+	onMount(() => {
+		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders()]).then(() => { loading = false; });
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
-		return () => clearInterval(clockInterval);
+
+		function onVisibilityChange() {
+			if (document.visibilityState === 'visible') {
+				now = new Date();
+				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders()]);
+			}
+		}
+		document.addEventListener('visibilitychange', onVisibilityChange);
+
+		return () => {
+			clearInterval(clockInterval);
+			document.removeEventListener('visibilitychange', onVisibilityChange);
+		};
 	});
 
 	function navigateHistory(dir: -1 | 1) {
@@ -251,12 +278,19 @@
 	let supplementsCardExpanded = $state(true);
 	let nutrientsCardExpanded = $state(true);
 
+	function toMcg(total: number, unit: string): number {
+		const u = unit.toLowerCase();
+		if (u === 'g') return total * 1_000_000;
+		if (u === 'mg') return total * 1_000;
+		return total; // mcg or unknown
+	}
+
 	const nutrientEntries = $derived(
 		Object.entries(historyNutrients).map(([, val]) => ({
 			name: val.name,
 			unit: val.unit,
 			total: val.total
-		})).sort((a, b) => b.total - a.total)
+		})).sort((a, b) => toMcg(b.total, b.unit) - toMcg(a.total, a.unit))
 	);
 
 	const nutrientEntriesVisible = $derived(nutrientEntries.slice(0, NUTRIENTS_VISIBLE));
@@ -326,12 +360,12 @@
 				{#if remindersExpanded && todayReminders.length > 0}
 					<div class="px-5 pt-3 pb-3 space-y-1.5" style="border-top: 1px solid var(--color-outline-variant)">
 						{#each todayReminders as reminder}
-							{@const isPast = reminder.time <= currentTimeStr()}
-							<div class="flex items-baseline gap-3" style={isPast ? 'opacity: 0.5' : ''}>
+							{@const isDone = reminderIsDone(reminder)}
+							<div class="flex items-baseline gap-3" style={isDone ? 'opacity: 0.5' : ''}>
 								<span class="text-sm font-semibold tabular-nums shrink-0"
-								      style="color: {isPast ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}; {isPast ? 'text-decoration: line-through' : ''}"
+								      style="color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}; {isDone ? 'text-decoration: line-through' : ''}"
 								>{reminder.time}</span>
-								<span class="text-sm" style="color: {isPast ? 'var(--color-on-surface-variant)' : 'var(--color-on-surface)'}; {isPast ? 'text-decoration: line-through' : ''}">{reminder.names.join(' · ')}</span>
+								<span class="text-sm" style="color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-on-surface)'}; {isDone ? 'text-decoration: line-through' : ''}">{reminder.names.join(' · ')}</span>
 							</div>
 						{/each}
 					</div>

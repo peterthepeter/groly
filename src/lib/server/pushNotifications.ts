@@ -139,7 +139,7 @@ export async function sendPushToAllSubscribers(payload: { title: string; body: s
 
 export async function sendPushToUser(
 	userId: string,
-	payload: { title: string; body: string; url?: string }
+	payload: { title: string; body: string; url?: string; tag?: string }
 ) {
 	init();
 	if (!initialized) return;

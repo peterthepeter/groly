@@ -45,9 +45,8 @@ export const GET: RequestHandler = async (event) => {
 	return json(entries);
 };
 
-// PUT /api/meal-plan — upsert or delete a single entry
+// PUT /api/meal-plan — create a new entry for a date
 // Body: { date, recipeId?, note?, servings? }
-// If recipeId and note are both absent/null, the entry is deleted
 export const PUT: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error) return error;
@@ -59,46 +58,21 @@ export const PUT: RequestHandler = async (event) => {
 		if (!date || typeof date !== 'string') return json({ error: 'date required' }, { status: 400 });
 
 		const hasContent = recipeId || (note && note.trim());
-
-		if (!hasContent) {
-			db.delete(mealPlanEntries)
-				.where(and(eq(mealPlanEntries.userId, user!.id), eq(mealPlanEntries.date, date)))
-				.run();
-			return json({ deleted: true });
-		}
+		if (!hasContent) return json({ error: 'content required' }, { status: 400 });
 
 		const ts = dbNow();
-		const existing = db
-			.select({ id: mealPlanEntries.id })
-			.from(mealPlanEntries)
-			.where(and(eq(mealPlanEntries.userId, user!.id), eq(mealPlanEntries.date, date)))
-			.get();
-
-		if (existing) {
-			db.update(mealPlanEntries)
-				.set({
-					recipeId: recipeId ?? null,
-					note: note?.trim() ?? null,
-					servings: servings ?? null,
-					updatedAt: ts
-				})
-				.where(eq(mealPlanEntries.id, existing.id))
-				.run();
-			return json({ id: existing.id });
-		} else {
-			const id = randomUUID();
-			db.insert(mealPlanEntries).values({
-				id,
-				userId: user!.id,
-				date,
-				recipeId: recipeId ?? null,
-				note: note?.trim() ?? null,
-				servings: servings ?? null,
-				createdAt: ts,
-				updatedAt: ts
-			}).run();
-			return json({ id });
-		}
+		const id = randomUUID();
+		db.insert(mealPlanEntries).values({
+			id,
+			userId: user!.id,
+			date,
+			recipeId: recipeId ?? null,
+			note: note?.trim() ?? null,
+			servings: servings ?? null,
+			createdAt: ts,
+			updatedAt: ts
+		}).run();
+		return json({ id });
 	} catch (e) {
 		console.error('PUT /api/meal-plan error:', e);
 		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });

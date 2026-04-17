@@ -36,6 +36,53 @@
 		if (!editSheet) return;
 		editSheet.nutrients = editSheet.nutrients.filter((_, i) => i !== index);
 	}
+
+	// Unit picker
+	const SUPPLEMENT_UNITS = ['Stück', 'g', 'ml', 'Tablette', 'Kapsel'];
+	const NUTRIENT_UNITS = ['%', 'IU', 'g', 'mcg', 'mg'];
+
+	type PickerTarget = { type: 'supplement' } | { type: 'nutrient'; index: number };
+
+	let pickerTarget = $state<PickerTarget | null>(null);
+	let pickerManual = $state(false);
+	let pickerManualValue = $state('');
+
+	function openPicker(target: PickerTarget) {
+		pickerTarget = target;
+		pickerManual = false;
+		pickerManualValue = '';
+	}
+
+	function closePicker() {
+		pickerTarget = null;
+		pickerManual = false;
+		pickerManualValue = '';
+	}
+
+	function selectUnit(value: string) {
+		if (!editSheet || !pickerTarget) return;
+		if (pickerTarget.type === 'supplement') {
+			editSheet.unit = value;
+		} else {
+			editSheet.nutrients[pickerTarget.index].unit = value;
+		}
+		closePicker();
+	}
+
+	function confirmManual() {
+		const val = pickerManualValue.trim();
+		if (val) selectUnit(val);
+	}
+
+	function currentPickerUnits(): string[] {
+		return pickerTarget?.type === 'nutrient' ? NUTRIENT_UNITS : SUPPLEMENT_UNITS;
+	}
+
+	function currentPickerValue(): string {
+		if (!editSheet || !pickerTarget) return '';
+		if (pickerTarget.type === 'supplement') return editSheet.unit;
+		return editSheet.nutrients[pickerTarget.index]?.unit ?? '';
+	}
 </script>
 
 {#if editSheet}
@@ -73,13 +120,16 @@
 					<label class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">
 						{t.supplement_unit_label}<span style="color: var(--color-error)"> *</span>
 					</label>
-					<input
-						type="text"
-						bind:value={editSheet.unit}
-						placeholder={t.supplement_unit_placeholder}
-						class="w-full px-3 py-3 rounded-xl border-0 outline-none"
-						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
-					/>
+					<button
+						onclick={() => openPicker({ type: 'supplement' })}
+						class="w-full px-3 py-3 rounded-xl border-0 text-left flex items-center justify-between gap-1"
+						style="background-color: var(--color-surface-container); font-size: 16px; color: {editSheet.unit ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}; min-height: 50px"
+					>
+						<span class="truncate">{editSheet.unit || '–'}</span>
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+							<polyline points="6 9 12 15 18 9"/>
+						</svg>
+					</button>
 				</div>
 			</div>
 
@@ -208,13 +258,16 @@
 								class="w-16 px-3 py-2.5 rounded-xl border-0 outline-none text-sm"
 								style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
 							/>
-							<input
-								type="text"
-								bind:value={nutrient.unit}
-								placeholder=""
-								class="w-14 px-3 py-2.5 rounded-xl border-0 outline-none text-sm"
-								style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
-							/>
+							<button
+								onclick={() => openPicker({ type: 'nutrient', index: i })}
+								class="w-14 px-2 py-2.5 rounded-xl border-0 text-left flex items-center justify-between gap-0.5"
+								style="background-color: var(--color-surface-container); font-size: 14px; color: {nutrient.unit ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}; min-height: 44px"
+							>
+								<span class="truncate">{nutrient.unit || '–'}</span>
+								<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+									<polyline points="6 9 12 15 18 9"/>
+								</svg>
+							</button>
 							<button
 								onclick={() => removeNutrient(i)}
 								class="shrink-0 p-2 rounded-lg active:opacity-60"
@@ -261,6 +314,80 @@
 			>
 				{saving ? '…' : t.supplement_save}
 			</button>
+		</div>
+
+	</div>
+{/if}
+
+<!-- Unit picker bottom sheet -->
+{#if pickerTarget}
+	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-60" style="background-color: rgba(0,0,0,0.4)" onclick={closePicker}></div>
+	<div class="fixed bottom-0 left-0 right-0 z-60 max-w-[430px] mx-auto rounded-t-3xl"
+	     style="background-color: var(--color-surface-low)">
+
+		<div class="px-6 pt-5 pb-2 shrink-0">
+			<div class="flex justify-center mb-3">
+				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
+			</div>
+			<p class="font-semibold text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_unit_pick_title}</p>
+		</div>
+
+		<div class="px-4 pb-6">
+			<!-- Predefined options -->
+			{#each currentPickerUnits() as unit}
+				{@const selected = currentPickerValue() === unit}
+				<button
+					onclick={() => selectUnit(unit)}
+					class="w-full flex items-center justify-between px-4 py-3.5 rounded-xl mb-1 active:opacity-70 text-left"
+					style="background-color: {selected ? 'var(--color-primary-container)' : 'var(--color-surface-container)'}; color: {selected ? 'var(--color-primary)' : 'var(--color-on-surface)'}"
+				>
+					<span class="text-base font-medium">{unit}</span>
+					{#if selected}
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<polyline points="20 6 9 17 4 12"/>
+						</svg>
+					{/if}
+				</button>
+			{/each}
+
+			<!-- Divider -->
+			<div class="my-2" style="border-top: 1px solid var(--color-outline-variant)"></div>
+
+			<!-- Manual entry -->
+			{#if !pickerManual}
+				<button
+					onclick={() => { pickerManual = true; pickerManualValue = currentPickerValue(); }}
+					class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl active:opacity-70 text-left"
+					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+				>
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+					</svg>
+					<span class="text-base">{t.supplement_unit_manual}</span>
+				</button>
+			{:else}
+				<div class="flex gap-2 items-center px-1">
+					<input
+						type="text"
+						bind:value={pickerManualValue}
+						placeholder={t.supplement_unit_manual}
+						autofocus
+						onkeydown={(e) => { if (e.key === 'Enter') confirmManual(); }}
+						class="flex-1 px-4 py-3 rounded-xl border-0 outline-none"
+						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
+					/>
+					<button
+						onclick={confirmManual}
+						disabled={!pickerManualValue.trim()}
+						class="px-5 py-3 rounded-xl text-sm font-semibold active:opacity-70 disabled:opacity-40"
+						style="background-color: var(--color-primary); color: var(--color-on-primary)"
+					>
+						OK
+					</button>
+				</div>
+			{/if}
 		</div>
 
 	</div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { tick } from 'svelte';
+	import { tick, onMount } from 'svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
 
 	type RecipeOption = { id: string; title: string; imageUrl: string | null; servings: number };
@@ -88,9 +88,10 @@
 		return `${d.getDate()}. ${months[d.getMonth()]}`;
 	}
 
-	// --- Plan entries ---
-	let entries = $state<Record<string, PlanEntry>>({}); // keyed by date
+	// --- Plan entries (multiple per day) ---
+	let entries = $state<Record<string, PlanEntry[]>>({}); // keyed by date, array of entries
 	let loading = $state(false);
+	let initialLoadDone = $state(false);
 
 	async function loadWeek() {
 		loading = true;
@@ -100,16 +101,34 @@
 			const res = await fetch(`/api/meal-plan?from=${from}&to=${to}`);
 			if (!res.ok) return;
 			const data: PlanEntry[] = await res.json();
-			const map: Record<string, PlanEntry> = {};
-			for (const e of data) map[e.date] = e;
+			const map: Record<string, PlanEntry[]> = {};
+			for (const e of data) {
+				if (!map[e.date]) map[e.date] = [];
+				map[e.date].push(e);
+			}
+			// Sort each day's entries by... createdAt isn't returned, so order by id (UUIDs are sequential)
 			entries = map;
+			if (!initialLoadDone && weekOffset === 0) {
+				initialLoadDone = true;
+				await tick();
+				scrollToToday();
+			}
 		} finally {
 			loading = false;
 		}
 	}
 
+	let weekListEl = $state<HTMLElement | null>(null);
+
+	function scrollToToday() {
+		const todayEl = document.getElementById('meal-plan-today');
+		if (!todayEl || !weekListEl) return;
+		// Only scroll if the whole week doesn't fit
+		if (weekListEl.scrollHeight <= weekListEl.clientHeight) return;
+		todayEl.scrollIntoView({ behavior: 'instant', block: 'start' });
+	}
+
 	$effect(() => {
-		// Re-load when week changes — access weekDays to track it
 		const _w = weekDays;
 		loadWeek();
 	});
@@ -117,6 +136,7 @@
 	// --- Picker sheet ---
 	let pickerOpen = $state(false);
 	let pickerTargetDate = $state('');
+	let pickerEntryId = $state<string | null>(null); // set when editing existing
 	let pickerSelectedDays = $state<Set<string>>(new Set());
 	let pickerRecipeId = $state<string | null>(null);
 	let pickerFreeText = $state('');
@@ -140,7 +160,6 @@
 			: recipes
 	);
 
-	// For multi-day selection: days before the anchor date wrap to next week
 	const pickerSmartDays = $derived.by(() => {
 		return weekDays.map(day => {
 			const iso = toISO(day);
@@ -153,13 +172,14 @@
 		});
 	});
 
-	function openPicker(date: string) {
+	function openPicker(date: string, entry?: PlanEntry) {
 		pickerTargetDate = date;
+		pickerEntryId = entry?.id ?? null;
 		pickerSelectedDays = new Set([date]);
-		pickerRecipeId = null;
-		pickerFreeText = '';
-		pickerIsFreeText = false;
-		pickerServings = 2;
+		pickerRecipeId = entry?.recipeId ?? null;
+		pickerFreeText = entry?.note ?? '';
+		pickerIsFreeText = entry ? !entry.recipeId : false;
+		pickerServings = entry?.servings ?? 2;
 		pickerSearch = '';
 		pickerSaving = false;
 		pickerOpen = true;
@@ -177,19 +197,33 @@
 		if (pickerIsFreeText && !pickerFreeText.trim()) return;
 		pickerSaving = true;
 		try {
-			const dates = [...pickerSelectedDays];
-			await Promise.all(dates.map(date =>
-				fetch('/api/meal-plan', {
-					method: 'PUT',
+			if (pickerEntryId) {
+				// Edit existing entry
+				await fetch(`/api/meal-plan/${pickerEntryId}`, {
+					method: 'PATCH',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
-						date,
 						recipeId: pickerIsFreeText ? null : pickerRecipeId,
 						note: pickerIsFreeText ? pickerFreeText.trim() : null,
 						servings: pickerServings
 					})
-				})
-			));
+				});
+			} else {
+				// Create new entries for all selected days
+				const dates = [...pickerSelectedDays];
+				await Promise.all(dates.map(date =>
+					fetch('/api/meal-plan', {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							date,
+							recipeId: pickerIsFreeText ? null : pickerRecipeId,
+							note: pickerIsFreeText ? pickerFreeText.trim() : null,
+							servings: pickerServings
+						})
+					})
+				));
+			}
 			await loadWeek();
 			pickerOpen = false;
 		} finally {
@@ -197,32 +231,36 @@
 		}
 	}
 
-	async function deleteEntry(date: string) {
-		await fetch('/api/meal-plan', {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ date })
-		});
-		const next = { ...entries };
-		delete next[date];
+	async function deleteEntry(id: string) {
+		await fetch(`/api/meal-plan/${id}`, { method: 'DELETE' });
+		const next: Record<string, PlanEntry[]> = {};
+		for (const [date, arr] of Object.entries(entries)) {
+			const filtered = arr.filter(e => e.id !== id);
+			if (filtered.length > 0) next[date] = filtered;
+		}
 		entries = next;
 	}
 
-	async function updateServings(date: string, delta: number) {
-		const entry = entries[date];
-		if (!entry) return;
+	async function updateServings(entry: PlanEntry, delta: number) {
 		const newServings = Math.max(1, (entry.servings ?? 1) + delta);
-		entries = { ...entries, [date]: { ...entry, servings: newServings } };
-		await fetch('/api/meal-plan', {
-			method: 'PUT',
+		// Optimistic update
+		entries = {
+			...entries,
+			[entry.date]: entries[entry.date].map(e => e.id === entry.id ? { ...e, servings: newServings } : e)
+		};
+		await fetch(`/api/meal-plan/${entry.id}`, {
+			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				date,
-				recipeId: entry.recipeId,
-				note: entry.note,
-				servings: newServings
-			})
+			body: JSON.stringify({ servings: newServings })
 		});
+	}
+
+	function handleMealTap(entry: PlanEntry) {
+		if (editMode) {
+			openPicker(entry.date, entry);
+		} else if (entry.recipeId) {
+			goto(`/rezepte/${entry.recipeId}`);
+		}
 	}
 
 	// --- List selector sheet ---
@@ -289,7 +327,7 @@
 		}
 	}
 
-	const hasAnyEntry = $derived(Object.keys(entries).length > 0);
+	const hasAnyEntry = $derived(Object.values(entries).some(arr => arr.length > 0));
 
 	// --- Eating-out keyword detection ---
 	const EATING_OUT_KEYWORDS = [
@@ -314,36 +352,21 @@
 	}
 
 	function handleTouchEnd(e: TouchEvent) {
-		// Ignore touches that started near the left edge (browser back-swipe zone)
 		if (swipeStartX < 30) return;
 		const t = e.changedTouches[0];
 		const dx = t.clientX - swipeStartX;
 		const dy = t.clientY - swipeStartY;
-		// Only trigger if clearly horizontal (dx dominates) and long enough
 		if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
 		if (dx < 0) {
-			// Swipe left → next week
 			weekOffset++;
 		} else {
-			// Swipe right → previous week
 			if (weekOffset > MIN_WEEK_OFFSET) weekOffset--;
 		}
 	}
 
-	function handleDayTap(date: string) {
-		const entry = entries[date];
-		if (!entry) {
-			// Leerer Tag → immer Picker öffnen, kein Edit-Modus nötig
-			openPicker(date);
-		} else if (editMode) {
-			// Gefüllter Tag im Edit-Modus → Picker zum Überschreiben
-			openPicker(date);
-		} else if (entry.recipeId) {
-			// Gefüllter Tag mit Rezept → zum Rezept navigieren
-			goto(`/rezepte/${entry.recipeId}`);
-		}
-		// Freitext ohne Rezept im View-Modus → nichts
-	}
+	onMount(() => {
+		// Initial scroll to today happens inside loadWeek after first load
+	});
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -378,7 +401,7 @@
 
 	{#if hasAnyEntry && !editMode}
 		<button
-			onclick={() => openListSheet(weekDays.map(d => toISO(d)).filter(d => !!entries[d]))}
+			onclick={() => openListSheet(weekDays.map(d => toISO(d)).filter(d => (entries[d]?.length ?? 0) > 0))}
 			aria-label={t.meal_plan_add_week_to_list}
 			class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 active:opacity-60 transition-opacity"
 			style="background-color: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface-container)); outline: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)"
@@ -400,133 +423,140 @@
 		     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 	</div>
 {:else}
-	<div class="space-y-2">
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="space-y-2" bind:this={weekListEl}>
 		{#each weekDays as day, i (toISO(day))}
 			{@const date = toISO(day)}
-			{@const entry = entries[date]}
-			{@const isToday = toISO(day) === toISO(today)}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			{@const dayEntries = entries[date] ?? []}
+			{@const isToday = date === toISO(today)}
 			<div
-				onclick={() => handleDayTap(date)}
-				class="flex items-center gap-3 px-4 py-3 rounded-2xl transition-opacity active:opacity-70"
-				style="background-color: var(--color-surface-card); cursor: pointer"
+				id={isToday ? 'meal-plan-today' : undefined}
+				class="flex gap-3 px-4 py-3 rounded-2xl"
+				style="background-color: var(--color-surface-card)"
 			>
-				<!-- Day label -->
-				<div class="flex-shrink-0 w-10 text-center">
-					<div class="text-xs font-semibold uppercase tracking-wide" style="color: {isToday ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">{dayLabels[i]}</div>
+				<!-- Date column — tap to add another meal -->
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<button
+					onclick={() => openPicker(date)}
+					class="relative flex-shrink-0 w-10 text-center flex flex-col items-center justify-start pt-0.5 active:opacity-60 rounded-lg"
+					aria-label={currentLang() === 'en' ? 'Add meal' : 'Mahlzeit hinzufügen'}
+				>
+					<div class="flex items-center justify-center gap-0.5">
+						<span class="font-bold leading-none" style="font-size: 16px; color: var(--color-primary); opacity: 0.55">+</span>
+						<span class="text-xs font-semibold uppercase tracking-wide" style="color: {isToday ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">{dayLabels[i]}</span>
+					</div>
 					<div class="text-[11px] mt-0.5" style="color: {isToday ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}; opacity: {isToday ? 1 : 0.7}">{formatDayDate(day)}</div>
-				</div>
+				</button>
 
-				<!-- Content -->
-				<div class="flex-1 min-w-0">
-					{#if entry}
-						<div class="flex items-center gap-2.5">
-							{#if entry.recipeId}
-								<!-- Recipe thumbnail -->
-								<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
-								     style="background-color: {entry.recipeImageUrl ? 'var(--color-surface-container)' : 'transparent'}">
-									{#if entry.recipeImageUrl}
-										<img src={entry.recipeImageUrl} alt="" class="w-full h-full object-cover" />
-									{:else}
-										<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-											<path d="M4 13 Q4 18 12 18 Q20 18 20 13 Z"/>
-											<line x1="3" y1="13" x2="21" y2="13"/>
-											<path d="M9 10 Q9.5 8 10 10 Q10.5 8 11 10"/>
-											<path d="M13 10 Q13.5 8 14 10 Q14.5 8 15 10"/>
-										</svg>
-									{/if}
-								</div>
-								<div class="flex-1 min-w-0">
-									<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{entry.recipeTitle}</div>
-								</div>
-							{:else}
-								<!-- Free text with icon -->
-								<div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center">
-									{#if isEatingOut(entry.note ?? '')}
-										<!-- Bowl icon for eating-out entries -->
-										<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-											<path d="M4 13 Q4 18 12 18 Q20 18 20 13 Z"/>
-											<line x1="3" y1="13" x2="21" y2="13"/>
-											<path d="M9 10 Q9.5 8 10 10 Q10.5 8 11 10"/>
-											<path d="M13 10 Q13.5 8 14 10 Q14.5 8 15 10"/>
-										</svg>
-									{:else}
-										<!-- Pot icon for generic free-text entries -->
-										<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-											<path d="M6 7h12a1 1 0 0 1 1 1v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V8a1 1 0 0 1 1-1z"/>
-											<path d="M8.5 7V5.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5V7"/>
-											<line x1="2" y1="10" x2="4.5" y2="10"/>
-											<line x1="19.5" y1="10" x2="22" y2="10"/>
-											<path d="M9 13 q1.5 1.5 3 0 q1.5-1.5 3 0"/>
-										</svg>
-									{/if}
-								</div>
-								<div class="flex-1 min-w-0">
-									<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{entry.note}</div>
-								</div>
-							{/if}
+				<!-- Meals column -->
+				<div class="flex-1 min-w-0 flex flex-col gap-2">
+					{#if dayEntries.length === 0}
+						<!-- Empty day -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<div
+							onclick={() => openPicker(date)}
+							class="flex items-center py-0.5 cursor-pointer active:opacity-60"
+						>
+							<span class="text-sm" style="color: var(--color-primary); opacity: 0.65">{t.meal_plan_empty_day}</span>
 						</div>
 					{:else}
-						<!-- Empty -->
-						<div class="text-sm" style="color: var(--color-primary); opacity: 0.65">{t.meal_plan_empty_day}</div>
+						{#each dayEntries as entry (entry.id)}
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<div
+								onclick={() => handleMealTap(entry)}
+								class="flex items-center gap-2.5 cursor-pointer active:opacity-70"
+							>
+								<!-- Thumbnail / icon -->
+								{#if entry.recipeId}
+									<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
+									     style="background-color: {entry.recipeImageUrl ? 'var(--color-surface-container)' : 'transparent'}">
+										{#if entry.recipeImageUrl}
+											<img src={entry.recipeImageUrl} alt="" class="w-full h-full object-cover" />
+										{:else}
+											<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M4 13 Q4 18 12 18 Q20 18 20 13 Z"/>
+												<line x1="3" y1="13" x2="21" y2="13"/>
+												<path d="M9 10 Q9.5 8 10 10 Q10.5 8 11 10"/>
+												<path d="M13 10 Q13.5 8 14 10 Q14.5 8 15 10"/>
+											</svg>
+										{/if}
+									</div>
+									<div class="flex-1 min-w-0">
+										<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{entry.recipeTitle}</div>
+									</div>
+								{:else}
+									<div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center">
+										{#if isEatingOut(entry.note ?? '')}
+											<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M4 13 Q4 18 12 18 Q20 18 20 13 Z"/>
+												<line x1="3" y1="13" x2="21" y2="13"/>
+												<path d="M9 10 Q9.5 8 10 10 Q10.5 8 11 10"/>
+												<path d="M13 10 Q13.5 8 14 10 Q14.5 8 15 10"/>
+											</svg>
+										{:else}
+											<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M6 7h12a1 1 0 0 1 1 1v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V8a1 1 0 0 1 1-1z"/>
+												<path d="M8.5 7V5.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5V7"/>
+												<line x1="2" y1="10" x2="4.5" y2="10"/>
+												<line x1="19.5" y1="10" x2="22" y2="10"/>
+												<path d="M9 13 q1.5 1.5 3 0 q1.5-1.5 3 0"/>
+											</svg>
+										{/if}
+									</div>
+									<div class="flex-1 min-w-0">
+										<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{entry.note}</div>
+									</div>
+								{/if}
+
+								<!-- Right side: servings + actions -->
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<div class="flex items-center gap-1.5 flex-shrink-0" onclick={(e) => e.stopPropagation()}>
+									{#if editMode}
+										<button
+											onclick={() => updateServings(entry, -1)}
+											aria-label="Portionen verringern"
+											class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60"
+											style="background-color: var(--color-surface-container)"
+										>
+											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+										</button>
+										<span class="text-xs font-semibold w-4 text-center" style="color: var(--color-on-surface)">{entry.servings ?? (entry.recipeServings ?? 2)}</span>
+										<button
+											onclick={() => updateServings(entry, 1)}
+											aria-label="Portionen erhöhen"
+											class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60"
+											style="background-color: var(--color-surface-container)"
+										>
+											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+										</button>
+										<button
+											onclick={() => deleteEntry(entry.id)}
+											aria-label={t.meal_plan_remove}
+											class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60 ml-1"
+											style="background-color: color-mix(in srgb, #ef4444 15%, var(--color-surface-container))"
+										>
+											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+										</button>
+									{:else}
+										<span class="text-xs font-semibold px-1.5" style="color: var(--color-on-surface-variant)">{entry.servings ?? (entry.recipeServings ?? 2)}P</span>
+										<button
+											onclick={() => openListSheet([entry.date])}
+											aria-label={t.meal_plan_add_to_list}
+											class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60 ml-1"
+											style="background-color: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface-container))"
+										>
+											<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+												<line x1="3" y1="6" x2="21" y2="6"/>
+												<path d="M16 10a4 4 0 0 1-8 0"/>
+											</svg>
+										</button>
+									{/if}
+								</div>
+							</div>
+						{/each}
 					{/if}
 				</div>
-
-				<!-- Right side: servings stepper + actions -->
-				{#if entry}
-					<div class="flex items-center gap-1.5 flex-shrink-0" onclick={(e) => e.stopPropagation()}>
-						{#if editMode}
-						<!-- Servings stepper (nur im Edit-Modus) -->
-						<button
-							onclick={() => updateServings(date, -1)}
-							aria-label="Portionen verringern"
-							class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60"
-							style="background-color: var(--color-surface-container)"
-						>
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-						</button>
-						<span class="text-xs font-semibold w-4 text-center" style="color: var(--color-on-surface)">{entry.servings ?? (entry.recipeServings ?? 2)}</span>
-						<button
-							onclick={() => updateServings(date, 1)}
-							aria-label="Portionen erhöhen"
-							class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60"
-							style="background-color: var(--color-surface-container)"
-						>
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-						</button>
-						{:else}
-						<!-- Portionen-Anzeige (nur lesen, im View-Modus) -->
-						<span class="text-xs font-semibold px-1.5" style="color: var(--color-on-surface-variant)">{entry.servings ?? (entry.recipeServings ?? 2)}P</span>
-						{/if}
-
-						{#if editMode}
-							<!-- Delete -->
-							<button
-								onclick={() => deleteEntry(date)}
-								aria-label={t.meal_plan_remove}
-								class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60 ml-1"
-								style="background-color: color-mix(in srgb, #ef4444 15%, var(--color-surface-container))"
-							>
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-							</button>
-						{:else}
-							<!-- Cart icon -->
-							<button
-								onclick={() => openListSheet([date])}
-								aria-label={t.meal_plan_add_to_list}
-								class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60 ml-1"
-								style="background-color: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface-container))"
-							>
-								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-									<line x1="3" y1="6" x2="21" y2="6"/>
-									<path d="M16 10a4 4 0 0 1-8 0"/>
-								</svg>
-							</button>
-						{/if}
-					</div>
-				{/if}
 			</div>
 		{/each}
 	</div>
@@ -547,14 +577,12 @@
 
 		<div class="px-4 mb-3 flex-shrink-0">
 			<h2 class="text-base font-bold" style="color: var(--color-on-surface)">
-				{t.meal_plan_add_title} {dayLabels[weekDays.findIndex(d => toISO(d) === pickerTargetDate)]} · {formatDayDate(weekDays[weekDays.findIndex(d => toISO(d) === pickerTargetDate)])}
+				{(!pickerEntryId && (entries[pickerTargetDate]?.length ?? 0) > 0) ? t.meal_plan_add_another_title : t.meal_plan_add_title} {dayLabels[weekDays.findIndex(d => toISO(d) === pickerTargetDate)]} · {formatDayDate(weekDays[weekDays.findIndex(d => toISO(d) === pickerTargetDate)])}
 			</h2>
 		</div>
 
-		<!-- Recipe list (scrollable) — recipes + free text as last item -->
 		<div bind:this={pickerListEl} class="flex-1 overflow-y-auto px-4 space-y-2 min-h-0 pb-3">
 			{#if pickerIsFreeText}
-				<!-- Free text input mode -->
 				<button onclick={() => { pickerIsFreeText = false; pickerRecipeId = null; }}
 				        class="w-full text-left px-1 py-1 text-xs font-medium active:opacity-60"
 				        style="color: var(--color-primary)">← {currentLang() === 'en' ? 'Back to recipes' : 'Zurück zu Rezepten'}</button>
@@ -590,7 +618,6 @@
 						</button>
 					{/each}
 				{/if}
-				<!-- Free text as last item in list -->
 				<button
 					onclick={() => { pickerIsFreeText = true; pickerRecipeId = null; pickerServings = 2; }}
 					class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl active:opacity-70 transition-opacity"
@@ -607,30 +634,29 @@
 			{/if}
 		</div>
 
-		<!-- Fixed bottom: (if selected) multi-day + servings + add, then search -->
 		<div class="flex-shrink-0 px-4 pt-3 pb-6 space-y-3">
-		<!-- Multi-day + servings + save -->
 		{#if pickerRecipeId || pickerIsFreeText}
 			<div class="space-y-3">
-				<!-- Multi-day selector -->
-				<div>
-					<p class="text-xs font-semibold mb-2 uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.meal_plan_also_on}</p>
-					<div class="flex gap-2 flex-wrap">
-						{#each pickerSmartDays as d, i (d)}
-							<button
-								onclick={() => {
-									const s = new Set(pickerSelectedDays);
-									if (s.has(d)) { if (s.size > 1) s.delete(d); } else s.add(d);
-									pickerSelectedDays = s;
-								}}
-								class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:opacity-60"
-								style="background-color: {pickerSelectedDays.has(d) ? 'color-mix(in srgb, var(--color-primary) 20%, var(--color-surface-container))' : 'var(--color-surface-container)'}; color: {pickerSelectedDays.has(d) ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}; outline: {pickerSelectedDays.has(d) ? '1px solid color-mix(in srgb, var(--color-primary) 40%, transparent)' : 'none'}"
-							>{dayLabels[i]}</button>
-						{/each}
+				{#if !pickerEntryId}
+					<!-- Multi-day selector only when creating new -->
+					<div>
+						<p class="text-xs font-semibold mb-2 uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.meal_plan_also_on}</p>
+						<div class="flex gap-2 flex-wrap">
+							{#each pickerSmartDays as d, i (d)}
+								<button
+									onclick={() => {
+										const s = new Set(pickerSelectedDays);
+										if (s.has(d)) { if (s.size > 1) s.delete(d); } else s.add(d);
+										pickerSelectedDays = s;
+									}}
+									class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:opacity-60"
+									style="background-color: {pickerSelectedDays.has(d) ? 'color-mix(in srgb, var(--color-primary) 20%, var(--color-surface-container))' : 'var(--color-surface-container)'}; color: {pickerSelectedDays.has(d) ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}; outline: {pickerSelectedDays.has(d) ? '1px solid color-mix(in srgb, var(--color-primary) 40%, transparent)' : 'none'}"
+								>{dayLabels[i]}</button>
+							{/each}
+						</div>
 					</div>
-				</div>
+				{/if}
 
-				<!-- Servings + Add -->
 				<div class="flex items-center gap-3">
 					<div class="flex items-center gap-2 px-3 py-2 rounded-xl" style="background-color: var(--color-surface-container)">
 						<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.meal_plan_servings}</span>
@@ -665,7 +691,6 @@
 				</div>
 			</div>
 		{/if}
-			<!-- Search bar always at the very bottom -->
 			{#if !pickerIsFreeText}
 				<div class="flex items-center gap-2 px-3 rounded-xl" style="background-color: var(--color-surface-container); height: 44px">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -702,7 +727,6 @@
 					     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 				</div>
 			{:else}
-				<!-- Neue Liste anlegen -->
 				{#if listSheetNewMode}
 					<div class="flex items-center gap-2 px-4 py-3 rounded-2xl"
 					     style="background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-container))">

@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.5.2',
+		de: [
+			'Mehrere Rezepte pro Tag im Wochenplan möglich',
+			'Supplements: voreingestellte Einheiten pro Supplement wählbar',
+			'Nochmal auf den Supplements- oder Rezepte-Button in der Navigation tippen wechselt zwischen den Tabs (Today/History bzw. Rezepte/Wochenplan)',
+			'Neuer „Über Groly"-Eintrag im Menü mit Version, GitHub-Links und Feedback-Möglichkeit',
+		],
+		en: [
+			'Multiple recipes per day in the meal planner',
+			'Supplements: set a default unit per supplement',
+			'Tap the active Supplements or Recipes button in the navigation bar again to toggle between tabs (Today/History or Recipes/Meal Plan)',
+			'New "About" entry in the menu showing version, GitHub link, bug reports and feedback',
+		],
+	},
+	{
 		version: '0.5.1',
 		de: [
 			'Supplement-Erinnerungen: pünktlichere Zustellung, offene Alarme im Badge, vergangene durchgestrichen',

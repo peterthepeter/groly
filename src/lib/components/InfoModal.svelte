@@ -139,7 +139,7 @@
 				},
 				{
 					title: 'Meal Plan',
-					text: 'Switch to the "Meal Plan" tab on the Recipes page to plan your meals for the week. Tap any day to assign a recipe or enter a free-text note (e.g. "Leftovers"). Adjust serving counts with the stepper on each day. Tap the cart icon on a day to add its ingredients to a shopping list, or use "Shop entire week" to add all planned meals at once.',
+					text: 'Switch to the "Meal Plan" tab on the Recipes page to plan your meals for the week. Tap the date column on the left to add a meal — multiple meals per day are supported. Tap a meal to open the recipe or edit it in edit mode. Adjust serving counts with the stepper. Tap the cart icon to add a meal\'s ingredients to a shopping list, or use "Shop entire week" for all planned meals at once.',
 					svg: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`
 				}
 			]
@@ -275,7 +275,7 @@
 				},
 				{
 					title: 'Wochenplan',
-					text: 'Wechsle auf den Tab „Wochenplan" auf der Rezepte-Seite, um deine Mahlzeiten für die Woche zu planen. Tippe auf einen Tag, um ein Rezept zuzuweisen oder einen Freitext einzutragen. Mit dem Stepper passt du die Portionenzahl an. Tippe das Warenkorb-Icon eines Tages, um die Zutaten in eine Einkaufsliste zu übertragen, oder nutze „Ganze Woche einkaufen".',
+					text: 'Wechsle auf den Tab „Wochenplan" auf der Rezepte-Seite, um deine Mahlzeiten für die Woche zu planen. Tippe auf die Datumsspalte links, um eine Mahlzeit hinzuzufügen – pro Tag sind mehrere Mahlzeiten möglich. Tippe auf eine Mahlzeit, um das Rezept zu öffnen oder es im Bearbeitungsmodus zu ändern. Mit dem Stepper passt du die Portionenzahl an. Tippe das Warenkorb-Icon, um die Zutaten in eine Einkaufsliste zu übertragen, oder nutze „Ganze Woche einkaufen".',
 					svg: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`
 				}
 			]
