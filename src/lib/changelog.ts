@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.5.5',
+		de: [
+			'Push-Benachrichtigungen: Erinnerungen kommen jetzt zuverlässig zur richtigen Uhrzeit',
+			'Wenn Push-Benachrichtigungen nicht funktionieren, erscheint jetzt ein hilfreicher Hinweis',
+		],
+		en: [
+			'Push notifications: reminders now arrive reliably at the correct time',
+			'If push notifications stop working, a helpful message now guides you to fix it',
+		],
+	},
+	{
 		version: '0.5.3',
 		de: [
 			'Supplement-Katalog: Admin-Bereich mit Katalog-Verwaltung (Nährstoffe, Einheit, Packungsgröße)',
