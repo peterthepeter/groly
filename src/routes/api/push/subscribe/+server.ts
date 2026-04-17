@@ -18,12 +18,12 @@ export const POST: RequestHandler = async (event) => {
 	const id = randomBytes(12).toString('base64url');
 	const ts = Math.floor(Date.now() / 1000);
 
+	// Remove all previous subscriptions for this user to prevent duplicate notifications
+	// when the same user has both a browser tab and installed PWA registered
+	db.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, user!.id)).run();
+
 	db.insert(pushSubscriptions)
 		.values({ id, userId: user!.id, endpoint, auth: keys.auth, p256dh: keys.p256dh, createdAt: ts })
-		.onConflictDoUpdate({
-			target: pushSubscriptions.endpoint,
-			set: { userId: user!.id, auth: keys.auth, p256dh: keys.p256dh, createdAt: ts }
-		})
 		.run();
 
 	return json({ ok: true }, { status: 201 });

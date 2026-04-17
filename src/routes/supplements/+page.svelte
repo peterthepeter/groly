@@ -4,7 +4,8 @@
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import { t, nutrients_show_more, today_reminders_label } from '$lib/i18n.svelte';
+	import { t, currentLang, nutrients_show_more, today_reminders_label } from '$lib/i18n.svelte';
+	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
@@ -393,6 +394,7 @@
 			<div class="flex items-center justify-between">
 				<button
 					onclick={() => navigateHistory(-1)}
+					aria-label="Vorheriger Zeitraum"
 					class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
 					style="background-color: var(--color-surface-container)"
 				>
@@ -403,6 +405,7 @@
 				<span class="text-sm font-semibold" style="color: var(--color-on-surface)">{formatPeriodLabel()}</span>
 				<button
 					onclick={() => navigateHistory(1)}
+					aria-label="Nächster Zeitraum"
 					class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
 					style="background-color: var(--color-surface-container)"
 				>
@@ -492,7 +495,7 @@
 											onpointercancel={cancelPress}
 											class="flex-1 text-left py-0.5 active:opacity-60"
 											style="color: var(--color-on-surface-variant)"
-										><span style="color: var(--color-primary)">{log.amount} {supplement.unit}</span> {t.supplement_log_at} {formatTime(log.loggedAt)}</button>
+										><span style="color: var(--color-primary)">{log.amount} {displayUnit(supplement.unit, currentLang())}</span> {t.supplement_log_at} {formatTime(log.loggedAt)}</button>
 										<button
 											onclick={() => openEditLog(log, supplement)}
 											class="p-1 rounded active:opacity-50 shrink-0"
@@ -545,7 +548,7 @@
 								</div>
 								{#if total > 0}
 									<p class="text-xs mt-0.5" style="color: var(--color-primary)">
-										{total} {supplement.unit} {t.supplement_taken_today}{logTimes ? ` ${logTimes}` : ''}
+										{total} {displayUnit(supplement.unit, currentLang())} {t.supplement_taken_today}{logTimes ? ` ${logTimes}` : ''}
 									</p>
 								{/if}
 							</button>
@@ -598,7 +601,7 @@
 								{#each supplementStatEntries as sup}
 									<div class="flex justify-between items-center text-sm">
 										<span style="color: var(--color-on-surface)">{sup.name}</span>
-										<span class="font-semibold" style="color: var(--color-primary)">{sup.total} {sup.unit}</span>
+										<span class="font-semibold" style="color: var(--color-primary)">{sup.total} {displayUnit(sup.unit, currentLang())}</span>
 									</div>
 								{/each}
 							</div>

@@ -169,6 +169,20 @@
       "when": 1776181648723,
       "tag": "0023_wonderful_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1776418406748,
+      "tag": "0024_wandering_frightful_four",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1776419600000,
+      "tag": "0025_supplement_catalog_package_size",
+      "breakpoints": true
     }
   ]
 }

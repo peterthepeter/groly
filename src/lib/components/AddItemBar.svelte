@@ -20,7 +20,7 @@
 	let name = $state('');
 	let quantityInfo = $state('');
 	let adding = $state(false);
-	let nameInput: HTMLInputElement;
+	let nameInput = $state<HTMLInputElement | undefined>(undefined);
 	let showSuggestions = $state(false);
 	let bottomOffset = $state(0);
 	let scannerOpen = $state(false);

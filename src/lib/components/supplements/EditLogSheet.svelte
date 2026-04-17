@@ -53,7 +53,8 @@
 </script>
 
 {#if sheet}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => sheet = null}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl"
 	     style="background-color: var(--color-surface-low)">
@@ -69,6 +70,7 @@
 			<div class="flex gap-2">
 				<!-- Amount -->
 				<div class="flex-1">
+					<!-- svelte-ignore a11y_label_has_associated_control -->
 					<label class="text-xs font-medium mb-1.5 block" style="color: var(--color-on-surface-variant)">{t.supplement_log_amount}</label>
 					<div class="flex items-center gap-0 rounded-xl overflow-hidden h-10" style="background-color: var(--color-surface-container)">
 						<button
@@ -88,8 +90,9 @@
 				</div>
 				<!-- Time -->
 				<div class="shrink-0">
-					<label class="text-xs font-medium mb-1.5 block" style="color: var(--color-on-surface-variant)">{t.supplement_log_time}</label>
+					<label for="edit-log-time" class="text-xs font-medium mb-1.5 block" style="color: var(--color-on-surface-variant)">{t.supplement_log_time}</label>
 					<input
+						id="edit-log-time"
 						type="time"
 						bind:value={sheet.time}
 						class="w-28 px-3 rounded-xl border-0 outline-none"

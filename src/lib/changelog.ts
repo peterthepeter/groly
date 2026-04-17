@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.5.3',
+		de: [
+			'Supplement-Katalog: Admin-Bereich mit Katalog-Verwaltung (Nährstoffe, Einheit, Packungsgröße)',
+			'Supplement-Katalog: Produktseite einfügen → Felder werden automatisch ausgefüllt',
+			'Neues Supplement erstellen: Katalog-Suche mit Nährstoffübernahme',
+		],
+		en: [
+			'Supplement catalog: admin section to manage catalog entries (nutrients, unit, package size)',
+			'Supplement catalog: paste a product page URL to auto-fill catalog fields',
+			'New supplement: search the catalog and import nutrients automatically',
+		],
+	},
+	{
 		version: '0.5.2',
 		de: [
 			'Mehrere Rezepte pro Tag im Wochenplan möglich',

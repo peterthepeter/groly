@@ -116,6 +116,32 @@ class TranslationProxy {
 	get admin_must_change_hint() { void _lang; return m.admin_must_change_hint(); }
 	get admin_copied() { void _lang; return m.admin_copied(); }
 	get admin_create_another() { void _lang; return m.admin_create_another(); }
+	get admin_page_title() { void _lang; return m.admin_page_title(); }
+	get admin_section_users() { void _lang; return m.admin_section_users(); }
+	get admin_section_supplements() { void _lang; return m.admin_section_supplements(); }
+	get admin_catalog_add() { void _lang; return m.admin_catalog_add(); }
+	get admin_catalog_edit_title() { void _lang; return m.admin_catalog_edit_title(); }
+	get admin_catalog_new_title() { void _lang; return m.admin_catalog_new_title(); }
+	get admin_catalog_delete() { void _lang; return m.admin_catalog_delete(); }
+	get admin_catalog_confirm_delete() { void _lang; return m.admin_catalog_confirm_delete(); }
+	get admin_catalog_empty() { void _lang; return m.admin_catalog_empty(); }
+	get admin_catalog_nutrients_label() { void _lang; return m.admin_catalog_nutrients_label(); }
+	get admin_catalog_nutrients_placeholder() { void _lang; return m.admin_catalog_nutrients_placeholder(); }
+	get admin_catalog_duplicate_warning() { void _lang; return m.admin_catalog_duplicate_warning(); }
+	get admin_catalog_package_size_label() { void _lang; return m.admin_catalog_package_size_label(); }
+	get admin_catalog_package_size_placeholder() { void _lang; return m.admin_catalog_package_size_placeholder(); }
+	get admin_catalog_saved() { void _lang; return m.admin_catalog_saved(); }
+	get admin_catalog_nutrient_count() { void _lang; return m.admin_catalog_nutrient_count(); }
+	get admin_nav_label() { void _lang; return m.admin_nav_label(); }
+	get supplement_catalog_search_placeholder() { void _lang; return m.supplement_catalog_search_placeholder(); }
+	get supplement_catalog_from_catalog() { void _lang; return m.supplement_catalog_from_catalog(); }
+	get supplement_catalog_no_results() { void _lang; return m.supplement_catalog_no_results(); }
+	get supplement_catalog_applied() { void _lang; return m.supplement_catalog_applied(); }
+	get supplement_enter_manually() { void _lang; return m.supplement_enter_manually(); }
+	get admin_catalog_header_label() { void _lang; return m.admin_catalog_header_label(); }
+	get admin_catalog_parse_placeholder() { void _lang; return m.admin_catalog_parse_placeholder(); }
+	get admin_catalog_parse_button() { void _lang; return m.admin_catalog_parse_button(); }
+	get admin_catalog_parse_error() { void _lang; return m.admin_catalog_parse_error(); }
 	get push_prompt_title() { void _lang; return m.push_prompt_title(); }
 	get push_prompt_body() { void _lang; return m.push_prompt_body(); }
 	get push_prompt_accept() { void _lang; return m.push_prompt_accept(); }

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import { displayUnit } from '$lib/units';
 	import { goto } from '$app/navigation';
 
 	type Supplement = {
@@ -66,6 +67,7 @@
 	}
 
 	function abbreviateUnit(unit: string): string {
+		const translated = displayUnit(unit, currentLang());
 		const map: Record<string, string> = {
 			'kapsel': 'Kap', 'kapseln': 'Kap',
 			'capsule': 'Cap', 'capsules': 'Cap',
@@ -75,12 +77,13 @@
 			'tropfen': 'Trpf', 'drop': 'dr', 'drops': 'dr',
 			'teelöffel': 'TL', 'esslöffel': 'EL',
 		};
-		return map[unit.toLowerCase().trim()] ?? (unit.length > 5 ? unit.slice(0, 4) : unit);
+		return map[translated.toLowerCase().trim()] ?? (translated.length > 5 ? translated.slice(0, 4) : translated);
 	}
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => open = false}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl overflow-y-auto"
 	     style="background-color: var(--color-surface-low); max-height: 85vh">

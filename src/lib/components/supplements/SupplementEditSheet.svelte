@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import { displayUnit, SUPPLEMENT_UNITS } from '$lib/units';
 
 	type Nutrient = { id?: string; name: string; amountPerUnit: number | string; unit: string; sortOrder: number };
 	type EditSheetType = {
@@ -38,7 +39,6 @@
 	}
 
 	// Unit picker
-	const SUPPLEMENT_UNITS = ['Stück', 'g', 'ml', 'Tablette', 'Kapsel'];
 	const NUTRIENT_UNITS = ['%', 'IU', 'g', 'mcg', 'mg'];
 
 	type PickerTarget = { type: 'supplement' } | { type: 'nutrient'; index: number };
@@ -83,10 +83,66 @@
 		if (pickerTarget.type === 'supplement') return editSheet.unit;
 		return editSheet.nutrients[pickerTarget.index]?.unit ?? '';
 	}
+
+	// Catalog search
+	type CatalogEntry = { id: string; name: string; unit: string; brand: string | null; info: string | null; packageSize: number | null; nutrients: { name: string; amountPerUnit: number; unit: string; sortOrder: number }[] };
+
+	// 'search' = initial state (only for new), 'form' = show all fields
+	let newMode = $state<'search' | 'form'>('search');
+
+	let catalogQuery = $state('');
+	let catalogResults = $state<CatalogEntry[]>([]);
+	let catalogSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+	let catalogSearched = $state(false);
+
+	function onCatalogQueryInput() {
+		if (catalogSearchTimeout) clearTimeout(catalogSearchTimeout);
+		if (!catalogQuery.trim()) { catalogResults = []; catalogSearched = false; return; }
+		catalogSearchTimeout = setTimeout(async () => {
+			const res = await fetch(`/api/supplement-catalog?q=${encodeURIComponent(catalogQuery.trim())}`);
+			if (res.ok) catalogResults = await res.json();
+			catalogSearched = true;
+		}, 300);
+	}
+
+	function applyCatalogEntry(entry: CatalogEntry) {
+		if (!editSheet) return;
+		editSheet.name = entry.name;
+		editSheet.unit = entry.unit;
+		editSheet.brand = entry.brand ?? '';
+		editSheet.info = entry.info ?? '';
+		editSheet.stockQuantity = entry.packageSize ?? '';
+		editSheet.nutrients = entry.nutrients.map((n, i) => ({ name: n.name, amountPerUnit: n.amountPerUnit, unit: n.unit, sortOrder: i }));
+		catalogQuery = '';
+		catalogResults = [];
+		catalogSearched = false;
+		newMode = 'form';
+	}
+
+	function enterManual() {
+		newMode = 'form';
+	}
+
+	// Reset to search step whenever the sheet opens for a new supplement
+	let _wasOpen = $state(false);
+	$effect(() => {
+		if (editSheet && !_wasOpen) {
+			_wasOpen = true;
+			if (!editSheet.id) {
+				newMode = 'search';
+				catalogQuery = '';
+				catalogResults = [];
+				catalogSearched = false;
+			}
+		} else if (!editSheet) {
+			_wasOpen = false;
+		}
+	});
 </script>
 
 {#if editSheet}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={onclose}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl flex flex-col"
 	     style="background-color: var(--color-surface-low); max-height: 90vh">
@@ -102,13 +158,92 @@
 		</div>
 
 		<!-- Scrollable content -->
-		<div class="flex-1 overflow-y-auto px-6 space-y-3 pb-2">
+		<div class="flex-1 overflow-y-auto px-6 pb-2" style="space-y: 0">
+
+			<!-- Search step (only for new supplements in search mode) -->
+			{#if !editSheet.id && newMode === 'search'}
+				<div class="space-y-3 pt-1">
+					<!-- Catalog search -->
+					<input
+						type="text"
+						bind:value={catalogQuery}
+						oninput={onCatalogQueryInput}
+						placeholder={t.supplement_catalog_search_placeholder}
+						class="w-full px-4 py-3 rounded-xl border-0 outline-none"
+						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
+					/>
+
+					{#if catalogResults.length > 0}
+						<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+							{#each catalogResults as entry, i}
+								<button
+									type="button"
+									onclick={() => applyCatalogEntry(entry)}
+									class="w-full flex items-center gap-3 px-4 py-3 text-left active:opacity-70 {i > 0 ? 'border-t' : ''}"
+									style="border-color: var(--color-outline-variant)"
+								>
+									<div class="flex-1 min-w-0">
+										<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{entry.name}</div>
+										{#if entry.brand}
+											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{entry.brand} · {displayUnit(entry.unit, currentLang())}</div>
+										{:else}
+											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{displayUnit(entry.unit, currentLang())}</div>
+										{/if}
+									</div>
+									{#if entry.nutrients.length > 0}
+										<span class="text-[10px] px-2 py-0.5 rounded-full shrink-0"
+										      style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)">
+											{entry.nutrients.length}
+										</span>
+									{/if}
+								</button>
+							{/each}
+						</div>
+					{:else if catalogSearched && catalogQuery.trim()}
+						<p class="text-xs px-1" style="color: var(--color-on-surface-variant)">{t.supplement_catalog_no_results}</p>
+					{/if}
+
+					<!-- Manual entry option -->
+					<button
+						type="button"
+						onclick={enterManual}
+						class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl active:opacity-70 text-left"
+						style="background-color: var(--color-surface-container)"
+					>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+						</svg>
+						<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.supplement_enter_manually}</span>
+					</button>
+				</div>
+			{/if}
+
+			<!-- Form fields (edit mode OR after mode selection) -->
+			{#if editSheet.id || newMode === 'form'}
+			<div class="space-y-3 pt-1">
+
+			<!-- Catalog tag (only when prefilled from catalog) -->
+			{#if !editSheet.id && editSheet.name}
+				<div class="flex items-center gap-2 px-1">
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="20 6 9 17 4 12"/>
+					</svg>
+					<span class="text-xs" style="color: var(--color-primary)">{t.supplement_catalog_applied}</span>
+					<button type="button" onclick={() => { newMode = 'search'; catalogQuery = ''; catalogResults = []; catalogSearched = false; }}
+					        class="ml-auto text-xs px-2 py-0.5 rounded-full active:opacity-60"
+					        style="color: var(--color-on-surface-variant); background-color: var(--color-surface-container)">
+						↩
+					</button>
+				</div>
+			{/if}
 
 			<!-- Name + Unit (75% / 25%) -->
 			<div class="flex gap-2">
 				<div style="flex: 3">
-					<label class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_name_label}<span style="color: var(--color-error)"> *</span></label>
+					<label for="supp-edit-name" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_name_label}<span style="color: var(--color-error)"> *</span></label>
 					<input
+						id="supp-edit-name"
 						type="text"
 						bind:value={editSheet.name}
 						placeholder={t.supplement_name_placeholder}
@@ -117,6 +252,7 @@
 					/>
 				</div>
 				<div style="flex: 1">
+					<!-- svelte-ignore a11y_label_has_associated_control -->
 					<label class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">
 						{t.supplement_unit_label}<span style="color: var(--color-error)"> *</span>
 					</label>
@@ -125,7 +261,7 @@
 						class="w-full px-3 py-3 rounded-xl border-0 text-left flex items-center justify-between gap-1"
 						style="background-color: var(--color-surface-container); font-size: 16px; color: {editSheet.unit ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}; min-height: 50px"
 					>
-						<span class="truncate">{editSheet.unit || '–'}</span>
+						<span class="truncate">{editSheet.unit ? displayUnit(editSheet.unit, currentLang()) : '–'}</span>
 						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
 							<polyline points="6 9 12 15 18 9"/>
 						</svg>
@@ -136,8 +272,9 @@
 			<!-- Brand + Info (compact 2-col) -->
 			<div class="grid grid-cols-2 gap-2">
 				<div>
-					<label class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_brand_label}</label>
+					<label for="supp-edit-brand" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_brand_label}</label>
 					<input
+						id="supp-edit-brand"
 						type="text"
 						bind:value={editSheet.brand}
 						placeholder={t.supplement_brand_placeholder}
@@ -146,8 +283,9 @@
 					/>
 				</div>
 				<div>
-					<label class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_info_label}</label>
+					<label for="supp-edit-info" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_info_label}</label>
 					<input
+						id="supp-edit-info"
 						type="text"
 						bind:value={editSheet.info}
 						placeholder={t.supplement_info_placeholder}
@@ -160,8 +298,9 @@
 			<!-- Stock + Default Amount (compact 2-col) -->
 			<div class="grid grid-cols-2 gap-2">
 				<div>
-					<label class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_stock_label}</label>
+					<label for="supp-edit-stock" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_stock_label}</label>
 					<input
+						id="supp-edit-stock"
 						type="number"
 						inputmode="decimal"
 						bind:value={editSheet.stockQuantity}
@@ -171,8 +310,9 @@
 					/>
 				</div>
 				<div>
-					<label class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_default_amount_label}</label>
+					<label for="supp-edit-default" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">{t.supplement_default_amount_label}</label>
 					<input
+						id="supp-edit-default"
 						type="number"
 						inputmode="decimal"
 						bind:value={editSheet.defaultAmount}
@@ -293,9 +433,13 @@
 				</button>
 			</div>
 
+		</div><!-- end form fields -->
+		{/if}
+
 		</div><!-- end scrollable -->
 
-		<!-- Anchored save + delete -->
+		<!-- Anchored save + delete (only in form mode) -->
+		{#if editSheet.id || newMode === 'form'}
 		<div class="px-6 pt-3 pb-6 shrink-0 flex gap-2" style="border-top: 1px solid var(--color-surface-high)">
 			{#if editSheet.id}
 				<button
@@ -315,13 +459,15 @@
 				{saving ? '…' : t.supplement_save}
 			</button>
 		</div>
+		{/if}
 
 	</div>
 {/if}
 
 <!-- Unit picker bottom sheet -->
 {#if pickerTarget}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-60" style="background-color: rgba(0,0,0,0.4)" onclick={closePicker}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-60 max-w-[430px] mx-auto rounded-t-3xl"
 	     style="background-color: var(--color-surface-low)">
@@ -342,7 +488,7 @@
 					class="w-full flex items-center justify-between px-4 py-3.5 rounded-xl mb-1 active:opacity-70 text-left"
 					style="background-color: {selected ? 'var(--color-primary-container)' : 'var(--color-surface-container)'}; color: {selected ? 'var(--color-primary)' : 'var(--color-on-surface)'}"
 				>
-					<span class="text-base font-medium">{unit}</span>
+					<span class="text-base font-medium">{displayUnit(unit, currentLang())}</span>
 					{#if selected}
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 							<polyline points="20 6 9 17 4 12"/>
@@ -369,6 +515,7 @@
 				</button>
 			{:else}
 				<div class="flex gap-2 items-center px-1">
+					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						type="text"
 						bind:value={pickerManualValue}

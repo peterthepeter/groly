@@ -4,7 +4,8 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import { t, reminders_deactivated_for } from '$lib/i18n.svelte';
+	import { t, currentLang, reminders_deactivated_for } from '$lib/i18n.svelte';
+	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import SupplementEditSheet from '$lib/components/supplements/SupplementEditSheet.svelte';
 	import SupplementReminderSheet from '$lib/components/supplements/SupplementReminderSheet.svelte';
@@ -331,7 +332,7 @@
 					<div class="flex-1 min-w-0" onclick={() => openEdit(supplement)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && openEdit(supplement)}>
 						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{supplement.name}</p>
 						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">
-							{#if supplement.stockQuantity != null}<span style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-primary)'}">({supplement.stockQuantity} {supplement.unit} {t.supplement_stock_left})</span>{#if supplement.nutrients.length > 0} · {/if}{:else}{supplement.unit}{#if supplement.nutrients.length > 0} · {/if}{/if}{#if supplement.nutrients.length > 0}{supplement.nutrients.length} {supplement.nutrients.length === 1 ? t.supplement_nutrient_name : t.supplement_nutrients_plural}{/if}
+							{#if supplement.stockQuantity != null}<span style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-primary)'}">({supplement.stockQuantity} {displayUnit(supplement.unit, currentLang())} {t.supplement_stock_left})</span>{#if supplement.nutrients.length > 0} · {/if}{:else}{displayUnit(supplement.unit, currentLang())}{#if supplement.nutrients.length > 0} · {/if}{/if}{#if supplement.nutrients.length > 0}{supplement.nutrients.length} {supplement.nutrients.length === 1 ? t.supplement_nutrient_name : t.supplement_nutrients_plural}{/if}
 						</p>
 					</div>
 
@@ -365,6 +366,7 @@
 					<!-- Edit button -->
 					<button
 						onclick={() => openEdit(supplement)}
+						aria-label="Supplement bearbeiten"
 						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
 						style="color: var(--color-on-surface-variant)"
 					>
@@ -405,9 +407,10 @@
 
 <!-- Delete confirmation -->
 {#if confirmDeleteId}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-50 flex items-end justify-center" style="background-color: rgba(0,0,0,0.5)" onclick={() => confirmDeleteId = null}>
-		<div class="w-full max-w-[430px] rounded-t-3xl p-6 space-y-4" style="background-color: var(--color-surface-low)" onclick={(e) => e.stopPropagation()} role="dialog">
+		<div class="w-full max-w-[430px] rounded-t-3xl p-6 space-y-4" style="background-color: var(--color-surface-low)" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1">
 			<p class="font-semibold text-base" style="color: var(--color-on-surface)">{t.supplement_confirm_delete}</p>
 			<div class="flex gap-2">
 				<button onclick={() => confirmDeleteId = null}

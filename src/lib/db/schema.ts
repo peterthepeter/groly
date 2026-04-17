@@ -224,7 +224,30 @@ export const supplementReminderSchedules = sqliteTable('supplement_reminder_sche
 	createdAt: integer('created_at').notNull()
 }, (t) => [index('supplement_reminder_schedules_supplement_id_idx').on(t.supplementId)]);
 
+export const supplementCatalog = sqliteTable('supplement_catalog', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	unit: text('unit').notNull(),
+	brand: text('brand'),
+	info: text('info'),
+	packageSize: real('package_size'), // Packungsinhalt, z.B. 120 (Kapseln)
+	createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+	createdAt: integer('created_at').notNull(),
+	updatedAt: integer('updated_at').notNull()
+});
+
+export const supplementCatalogNutrients = sqliteTable('supplement_catalog_nutrients', {
+	id: text('id').primaryKey(),
+	catalogId: text('catalog_id').notNull().references(() => supplementCatalog.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	amountPerUnit: real('amount_per_unit').notNull(),
+	unit: text('unit').notNull(),
+	sortOrder: integer('sort_order').notNull().default(0)
+}, (t) => [index('supplement_catalog_nutrients_catalog_id_idx').on(t.catalogId)]);
+
 export type Supplement = typeof supplements.$inferSelect;
 export type SupplementNutrient = typeof supplementNutrients.$inferSelect;
 export type SupplementLog = typeof supplementLogs.$inferSelect;
 export type SupplementReminderSchedule = typeof supplementReminderSchedules.$inferSelect;
+export type SupplementCatalog = typeof supplementCatalog.$inferSelect;
+export type SupplementCatalogNutrient = typeof supplementCatalogNutrients.$inferSelect;
