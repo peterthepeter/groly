@@ -27,12 +27,16 @@ export const POST: RequestHandler = async (event) => {
 		if (settings && JSON.parse(settings)?.lang === 'en') lang = 'en';
 	} catch { /* use default */ }
 
-	await sendPushToUser(userId, {
+	const result = await sendPushToUser(userId, {
 		title: lang === 'en' ? '🔔 Test Notification' : '🔔 Test-Benachrichtigung',
 		body: lang === 'en' ? 'Push notifications are working!' : 'Push-Notifications funktionieren!',
 		url: '/einstellungen'
 	});
 
+	if (result === 'no_subscription') {
+		return json({ error: 'no_subscription' }, { status: 404 });
+	}
+
 	lastTestTime.set(userId, now);
-	return json({ ok: true });
+	return json({ ok: true, delivered: result === 'sent' });
 };

@@ -65,6 +65,10 @@
 			const data = await res.json();
 			if (res.status === 429) {
 				startCooldownTimer(data.remaining ?? 60);
+			} else if (res.status === 404 && data.error === 'no_subscription') {
+				testNotifError = currentLang() === 'en'
+					? 'No active subscription. Please disable and re-enable push notifications.'
+					: 'Keine aktive Subscription. Bitte Benachrichtigungen aus- und wieder einschalten.';
 			} else if (!res.ok) {
 				testNotifError = currentLang() === 'en' ? 'Failed to send.' : 'Senden fehlgeschlagen.';
 			} else {

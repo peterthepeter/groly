@@ -140,9 +140,9 @@ export async function sendPushToAllSubscribers(payload: { title: string; body: s
 export async function sendPushToUser(
 	userId: string,
 	payload: { title: string; body: string; url?: string; tag?: string }
-) {
+): Promise<'sent' | 'no_subscription' | 'failed'> {
 	init();
-	if (!initialized) return;
+	if (!initialized) return 'failed';
 
 	const subs = db
 		.select()
@@ -150,10 +150,11 @@ export async function sendPushToUser(
 		.where(eq(pushSubscriptions.userId, userId))
 		.all();
 
-	if (subs.length === 0) return;
+	if (subs.length === 0) return 'no_subscription';
 
 	const payloadStr = JSON.stringify(payload);
 	const staleEndpoints: string[] = [];
+	let anySuccess = false;
 
 	await Promise.allSettled(
 		subs.map(async (sub) => {
@@ -162,6 +163,7 @@ export async function sendPushToUser(
 					{ endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
 					payloadStr
 				);
+				anySuccess = true;
 			} catch (err: unknown) {
 				const status = (err as { statusCode?: number })?.statusCode;
 				if (status === 410 || status === 404) {
@@ -174,4 +176,6 @@ export async function sendPushToUser(
 	for (const endpoint of staleEndpoints) {
 		db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint)).run();
 	}
+
+	return anySuccess ? 'sent' : 'failed';
 }

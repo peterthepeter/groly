@@ -142,11 +142,14 @@ async function init() {
 	cleanupOldData();
 	setInterval(cleanupBarcodeCache, 24 * 60 * 60 * 1000);
 	setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
-	const msUntilNextMinute = 60_000 - (Date.now() % 60_000);
-	setTimeout(() => {
-		checkSupplementReminders().catch(console.error);
-		setInterval(() => { checkSupplementReminders().catch(console.error); }, 60_000);
-	}, msUntilNextMinute);
+	function scheduleNextReminderCheck() {
+		const msUntilNextMinute = 60_000 - (Date.now() % 60_000);
+		setTimeout(async () => {
+			await checkSupplementReminders().catch(console.error);
+			scheduleNextReminderCheck();
+		}, msUntilNextMinute);
+	}
+	scheduleNextReminderCheck();
 	logMemoryUsage();
 	setInterval(logMemoryUsage, 60 * 60 * 1000); // stündlich
 	initialized = true;
