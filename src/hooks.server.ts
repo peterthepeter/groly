@@ -117,10 +117,25 @@ async function checkSupplementReminders() {
 	);
 }
 
+function deduplicatePushSubscriptions() {
+	// Keep only the most recent subscription per user, delete the rest
+	db.run(sql`
+		DELETE FROM push_subscriptions
+		WHERE id NOT IN (
+			SELECT id FROM push_subscriptions p
+			WHERE p.created_at = (
+				SELECT MAX(created_at) FROM push_subscriptions p2
+				WHERE p2.user_id = p.user_id
+			)
+		)
+	`);
+}
+
 async function init() {
 	if (initialized) return;
 	runMigrations();
 	bootstrapAdmin();
+	deduplicatePushSubscriptions();
 	migrateItemHistory();
 	await notifyOnNewVersion();
 	cleanupBarcodeCache();
