@@ -37,6 +37,10 @@
 	}
 
 	function handleTouchEnd(e: TouchEvent) {
+		// Prevent the browser from firing a synthesized pointer-path click after touchend.
+		// With touch-action: manipulation, this click fires immediately (no 300ms delay)
+		// and can land on sheet buttons that appear synchronously inside onTap().
+		e.preventDefault();
 		cancelPress();
 		if (longFired) {
 			longFired = false;
