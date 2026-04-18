@@ -295,7 +295,9 @@
   "supplement_day_sa": "Sat",
   "supplement_day_so": "Sun",
   "supplement_log_edit_title": "Edit log entry",
-  "admin_catalog_header_label": "Product info",
+  "admin_catalog_header_label": "Product data",
+  "admin_catalog_text_hint": "Paste a product URL above to auto-fill – or type / paste the data directly here.",
+  "admin_catalog_text_placeholder": "Manufacturer\nProduct name\n120 Capsules\n\nNutrient 1, 100, mg\nNutrient 2, 50, µg",
   "admin_catalog_parse_placeholder": "Paste product URL to pre-fill…",
   "admin_catalog_parse_button": "Parse",
   "admin_catalog_parse_error": "Could not parse URL"

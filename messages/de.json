@@ -295,7 +295,9 @@
   "supplement_day_sa": "Sa",
   "supplement_day_so": "So",
   "supplement_log_edit_title": "Eintrag bearbeiten",
-  "admin_catalog_header_label": "Produktinfos",
+  "admin_catalog_header_label": "Produktdaten",
+  "admin_catalog_text_hint": "URL oben einfügen zum automatischen Befüllen – oder Daten direkt hier eintippen bzw. einfügen.",
+  "admin_catalog_text_placeholder": "Hersteller\nProduktname\n120 Kapseln\n\nNährstoff 1, 100, mg\nNährstoff 2, 50, µg",
   "admin_catalog_parse_placeholder": "Produkt-URL einfügen zum Vorausfüllen…",
   "admin_catalog_parse_button": "Parsen",
   "admin_catalog_parse_error": "URL konnte nicht geparst werden"

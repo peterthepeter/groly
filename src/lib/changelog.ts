@@ -2,6 +2,27 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.5.7',
+		de: [
+			'Einkaufsliste: Automatische Synchronisation beim Zurückkehren aus dem Hintergrund',
+			'Erledigtliste: Suche durchsucht jetzt auch erledigte Items',
+			'Erledigtliste: Gleiche Produkte werden zusammengefasst',
+			'Rezept-Ansicht: Portionen ändern skaliert die Zutaten jetzt dauerhaft korrekt',
+			'Rezept-Ansicht: Navigationsleiste unten jetzt auch in der Rezept-Detailansicht sichtbar',
+			'Push-Benachrichtigungen: Jedes Gerät hat jetzt eine eigene Verbindung — alle Geräte werden benachrichtigt, ohne dass ein Gerät dieselbe Nachricht mehrfach erhält',
+			'Verschiedene Kleinigkeiten und Fehlerbehebungen',
+		],
+		en: [
+			'Shopping list: automatically refreshes when you return from background',
+			'Done list: search now also finds checked-off items',
+			'Done list: duplicate products are now grouped',
+			'Recipe view: changing servings now correctly scales and saves ingredients permanently',
+			'Recipe view: bottom navigation bar now visible on the recipe detail page',
+			'Push notifications: each device now has its own subscription — all devices receive notifications without duplicates on any single device',
+			'Various minor improvements and fixes',
+		],
+	},
+	{
 		version: '0.5.6',
 		de: ['Technische Verbesserungen und Fehlerbehebungen'],
 		en: ['Technical bugfix'],

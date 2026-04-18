@@ -1,23 +1,50 @@
 <script lang="ts">
-	import { t, items_checked_count } from '$lib/i18n.svelte';
+	import { tick } from 'svelte';
+	import { t } from '$lib/i18n.svelte';
 	import { getCategoryForItem } from '$lib/categories';
 
+	type Item = { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number };
+
 	let { checkedItems, totalChecked, onUncheck, layout = 'grid' }: {
-		checkedItems: Array<{ id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number }>;
+		checkedItems: Item[];
 		totalChecked: number;
-		onUncheck: (item: { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number }) => void;
+		onUncheck: (item: Item) => void;
 		layout?: 'grid' | 'list';
 	} = $props();
 
 	let expanded = $state(false);
+	let toggleBtn = $state<HTMLButtonElement | null>(null);
+
+	// Deduplicate by name+quantity — keep most recent (first, sorted desc) as representative
+	const dedupedItems = $derived.by(() => {
+		const map = new Map<string, { item: Item; count: number }>();
+		for (const item of checkedItems) {
+			const key = item.name.toLowerCase() + '|' + (item.quantityInfo ?? '');
+			if (!map.has(key)) {
+				map.set(key, { item, count: 1 });
+			} else {
+				map.get(key)!.count++;
+			}
+		}
+		return [...map.values()];
+	});
+	// checkedItems is sorted newest-first → dedupedItems is newest-first
+	// flex-wrap-reverse fills rows from bottom: newest item → bottom-left, empty slots → top-right
+
+	async function toggle() {
+		expanded = !expanded;
+		if (expanded) {
+			await tick();
+			toggleBtn?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+		}
+	}
 </script>
 
 <div class="mb-3">
 	{#if expanded}
 		{#if layout === 'list'}
-			<!-- List-Modus: gleiche Zeilenstruktur wie offene Items, gedimmt + durchgestrichen -->
 			<div class="mb-1">
-				{#each checkedItems as item (item.id)}
+				{#each dedupedItems as { item } (item.id)}
 					{@const category = getCategoryForItem(item.name, item.categoryOverride)}
 					<button
 						onclick={() => onUncheck(item)}
@@ -42,14 +69,20 @@
 				{/each}
 			</div>
 		{:else}
-			<!-- Grid-Modus: Kacheln wie bisher -->
-			<div class="grid grid-cols-3 gap-3 mb-3">
-				{#each checkedItems as item (item.id)}
+			<!--
+				flex-wrap: wrap-reverse → rows stack bottom-up.
+				Newest item (index 0) → bottom-left.
+				Each new item pushes existing ones right/up.
+				Empty slots always end up at top-right.
+				Item width: (100% - 2 gaps) / 3 columns.
+			-->
+			<div class="mb-3" style="display: flex; flex-wrap: wrap-reverse; gap: 0.75rem;">
+				{#each dedupedItems as { item } (item.id)}
 					{@const category = getCategoryForItem(item.name, item.categoryOverride)}
 					<button
 						onclick={() => onUncheck(item)}
-						class="w-full aspect-square rounded-3xl relative overflow-hidden opacity-40 active:opacity-25 transition-opacity"
-						style="background-color: var(--color-surface-card)"
+						class="rounded-3xl relative overflow-hidden opacity-40 active:opacity-25 transition-opacity flex-shrink-0"
+						style="width: calc((100% - 1.5rem) / 3); aspect-ratio: 1 / 1; background-color: var(--color-surface-card)"
 					>
 						<div class="absolute inset-0 flex items-start justify-center pt-[30px]">
 							<svg width="44" height="44" viewBox="0 0 24 24" fill="none"
@@ -72,15 +105,13 @@
 		{/if}
 	{/if}
 
-	<!-- Header Toggle -->
 	<button
-		onclick={() => expanded = !expanded}
+		bind:this={toggleBtn}
+		onclick={toggle}
 		class="w-full flex items-center justify-between px-4 py-3 rounded-2xl"
 		style="background-color: var(--color-surface-container)"
 	>
-		<div class="flex items-center gap-2">
-			<span class="text-xs font-bold tracking-widest uppercase" style="color: var(--color-primary)">{t.items_checked_label}</span>
-		</div>
+		<span class="text-xs font-bold tracking-widest uppercase" style="color: var(--color-primary)">{t.items_checked_label}</span>
 		<svg
 			width="16" height="16" viewBox="0 0 24 24" fill="none"
 			stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"

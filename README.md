@@ -153,7 +153,7 @@ services:
       - ADMIN_USERNAME=your-username
       - ADMIN_PASSWORD=secure-password
       - ORIGIN=https://your-domain.com
-      - ADDRESS_HEADER=X-Forwarded-For  # required when running behind a reverse proxy
+      # - ADDRESS_HEADER=X-Forwarded-For  # only set this when running behind a reverse proxy (Caddy, Nginx, Traefik)
       # Optional: push notifications (see Push Notifications section below)
       # - VAPID_PUBLIC_KEY=<publicKey>
       # - VAPID_PRIVATE_KEY=<privateKey>
@@ -195,7 +195,7 @@ The volume `/app/data` contains the SQLite database. An admin user is created on
 | `VAPID_PRIVATE_KEY` | Optional | VAPID private key for push notifications |
 | `PUBLIC_VAPID_PUBLIC_KEY` | Optional | Same value as `VAPID_PUBLIC_KEY` |
 | `VAPID_SUBJECT` | Optional | `https://` URL or `mailto:` address for VAPID |
-| `ADDRESS_HEADER` | Behind proxy | Set to `X-Forwarded-For` when running behind a reverse proxy (Caddy, Nginx, Traefik). Required for login rate limiting to work per client IP instead of per proxy IP. |
+| `ADDRESS_HEADER` | Optional | Set to `X-Forwarded-For` **only** when running behind a reverse proxy (Caddy, Nginx, Traefik). **Do not set this if you're accessing Groly directly** — it will cause login failures. Enables accurate per-client IP rate limiting. |
 
 ### Push Notifications (optional)
 

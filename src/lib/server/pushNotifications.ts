@@ -106,37 +106,6 @@ export async function sendPushToListMembers(
 	}
 }
 
-export async function sendPushToAllSubscribers(payload: { title: string; body: string; url?: string }) {
-	init();
-	if (!initialized) return;
-
-	const subs = db.select().from(pushSubscriptions).all();
-	if (subs.length === 0) return;
-
-	const payloadStr = JSON.stringify(payload);
-	const staleEndpoints: string[] = [];
-
-	await Promise.allSettled(
-		subs.map(async (sub) => {
-			try {
-				await webpush.sendNotification(
-					{ endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
-					payloadStr
-				);
-			} catch (err: unknown) {
-				const status = (err as { statusCode?: number })?.statusCode;
-				if (status === 410 || status === 404) {
-					staleEndpoints.push(sub.endpoint);
-				}
-			}
-		})
-	);
-
-	for (const endpoint of staleEndpoints) {
-		db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint)).run();
-	}
-}
-
 export async function sendPushToUser(
 	userId: string,
 	payload: { title: string; body: string; url?: string; tag?: string }

@@ -5,7 +5,7 @@
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import { t, currentLang, reminders_deactivated_for } from '$lib/i18n.svelte';
-	import { displayUnit } from '$lib/units';
+	import { displayUnit, shortUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import SupplementEditSheet from '$lib/components/supplements/SupplementEditSheet.svelte';
 	import SupplementReminderSheet from '$lib/components/supplements/SupplementReminderSheet.svelte';
@@ -331,8 +331,8 @@
 
 					<div class="flex-1 min-w-0" onclick={() => openEdit(supplement)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && openEdit(supplement)}>
 						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{supplement.name}</p>
-						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">
-							{#if supplement.stockQuantity != null}<span style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-primary)'}">({supplement.stockQuantity} {displayUnit(supplement.unit, currentLang())} {t.supplement_stock_left})</span>{#if supplement.nutrients.length > 0} · {/if}{:else}{displayUnit(supplement.unit, currentLang())}{#if supplement.nutrients.length > 0} · {/if}{/if}{#if supplement.nutrients.length > 0}{supplement.nutrients.length} {supplement.nutrients.length === 1 ? t.supplement_nutrient_name : t.supplement_nutrients_plural}{/if}
+						<p class="text-xs leading-snug flex items-center gap-1 min-w-0" style="color: var(--color-on-surface-variant)">
+							{#if supplement.brand}<span class="truncate min-w-0">{supplement.brand}</span>{/if}{#if supplement.stockQuantity != null}<span class="shrink-0" style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-primary)'}">{supplement.brand ? '· ' : ''}({supplement.stockQuantity} {shortUnit(supplement.unit, currentLang())} {t.supplement_stock_left})</span>{:else if !supplement.brand}<span class="shrink-0">{shortUnit(supplement.unit, currentLang())}</span>{/if}
 						</p>
 					</div>
 

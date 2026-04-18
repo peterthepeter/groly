@@ -54,7 +54,7 @@
 			{#if userSettings.showSupplementTracker}
 				<button
 					onclick={() => {
-					if (activeTab === 'supplements') {
+					if (activeTab === 'supplements' && $page.url.pathname === '/supplements') {
 						const isHistory = $page.url.searchParams.get('tab') === 'history';
 						goto(isHistory ? '/supplements' : '/supplements?tab=history', { noScroll: true, keepFocus: true });
 					} else {
@@ -82,7 +82,7 @@
 			{#if userSettings.showRecipes}
 				<button
 					onclick={() => {
-					if (activeTab === 'recipes') {
+					if (activeTab === 'recipes' && $page.url.pathname === '/rezepte') {
 						const isMealplan = $page.url.searchParams.get('tab') === 'mealplan';
 						goto(isMealplan ? '/rezepte' : '/rezepte?tab=mealplan', { noScroll: true, keepFocus: true });
 					} else {

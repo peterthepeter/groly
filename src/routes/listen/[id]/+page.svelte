@@ -66,17 +66,24 @@
 		return userSettings.showAllCheckedItems ? sorted : sorted.slice(0, 16);
 	});
 	const openCount = $derived(openItems.length);
-	const showSearch = $derived(openItems.length >= 5);
+	const showSearch = $derived(openItems.length >= 5 || items.some(i => i.isChecked));
 	const displayItems = $derived(
 		searchQuery.trim()
 			? openItems.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()))
 			: openItems
 	);
+	const displayCheckedItems = $derived(
+		searchQuery.trim()
+			? items.filter(i => i.isChecked).sort((a, b) => (b.checkedAt ?? 0) - (a.checkedAt ?? 0))
+			       .filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()))
+			: checkedItems
+	);
 	// Empty prefix slots so the grid fills bottom-up (empty slots at top-left)
 	const gridPrefix = $derived(displayItems.length % 3 === 0 ? 0 : 3 - (displayItems.length % 3));
+	const totalSearchResults = $derived(displayItems.length + (searchQuery.trim() ? displayCheckedItems.length : 0));
 	const headerSubtitle = $derived(
 		searchQuery.trim()
-			? `${displayItems.length} Ergebnis${displayItems.length !== 1 ? 'se' : ''}`
+			? `${totalSearchResults} Ergebnis${totalSearchResults !== 1 ? 'se' : ''}`
 			: list_items_open(openCount)
 	);
 
@@ -269,7 +276,9 @@
 	onMount(() => {
 		void loadItems();
 		const handleOnline = () => void loadItems();
+		const handleVisibility = () => { if (document.visibilityState === 'visible') void loadItems(); };
 		window.addEventListener('online', handleOnline);
+		document.addEventListener('visibilitychange', handleVisibility);
 
 		// Hinweis-Banner für kleine Bildschirme (< 374px), einmalig pro Gerät
 		if (
@@ -295,10 +304,12 @@
 			window.visualViewport.addEventListener('resize', onViewportResize);
 			const removeViewport = () => window.visualViewport?.removeEventListener('resize', onViewportResize);
 			const removeOnline = () => window.removeEventListener('online', handleOnline);
-			return () => { removeOnline(); removeViewport(); };
+			const removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
+			return () => { removeOnline(); removeViewport(); removeVisibility(); };
 		}
 
-		return () => window.removeEventListener('online', handleOnline);
+		const removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
+		return () => { window.removeEventListener('online', handleOnline); removeVisibility(); };
 	});
 
 	function dismissListViewHint(navigate = false) {
@@ -455,7 +466,7 @@
 		{:else}
 			<!-- CheckedDrawer – direkt über den offenen Items -->
 			{#if checkedItems.length > 0}
-				<CheckedDrawer {checkedItems} totalChecked={items.filter(i => i.isChecked).length} onUncheck={toggleItem} layout={userSettings.itemLayout} />
+				<CheckedDrawer checkedItems={displayCheckedItems} totalChecked={items.filter(i => i.isChecked).length} onUncheck={toggleItem} layout={userSettings.itemLayout} />
 			{/if}
 
 			{#if openItems.length === 0 && checkedItems.length === 0}

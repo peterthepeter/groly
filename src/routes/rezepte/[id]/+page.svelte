@@ -6,6 +6,7 @@
 	import { scaleAmount, type Recipe } from '$lib/recipeUtils';
 	import RecipeShareModal from '$lib/components/recipe/RecipeShareModal.svelte';
 	import RecipeAddToListModal from '$lib/components/recipe/RecipeAddToListModal.svelte';
+	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 
 	let recipe = $state<Recipe | null>(null);
 	let loading = $state(true);
@@ -82,6 +83,12 @@
 	async function saveServings(servings: number) {
 		if (!recipe) return;
 		try {
+			const scaledIngredients = recipe.ingredients.map(i => ({
+				id: i.id,
+				amount: scaleAmount(i.amount, servings, originalServings) ?? i.amount,
+				unit: i.unit,
+				name: i.name
+			}));
 			const res = await fetch(`/api/recipes/${recipeId}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -93,13 +100,17 @@
 					servings,
 					prepTime: recipe.prepTime,
 					cookTime: recipe.cookTime,
-					ingredients: recipe.ingredients.map(i => ({ id: i.id, amount: i.amount, unit: i.unit, name: i.name })),
+					ingredients: scaledIngredients,
 					steps: recipe.steps.map(s => ({ text: s.text }))
 				})
 			});
 			if (res.ok) {
+				recipe = {
+					...recipe,
+					servings,
+					ingredients: recipe.ingredients.map((i, idx) => ({ ...i, amount: scaledIngredients[idx].amount }))
+				};
 				originalServings = servings;
-				recipe = { ...recipe, servings };
 				servingsSaved = true;
 				setTimeout(() => servingsSaved = false, 1500);
 			}
@@ -152,7 +163,7 @@
 
 <div class="h-[100dvh] flex flex-col overflow-hidden max-w-[430px] mx-auto" style="background-color: var(--color-bg)">
 
-	<div class="flex-1 overflow-y-auto min-h-0" style="padding-bottom: calc(env(safe-area-inset-bottom) + 2rem)">
+	<div class="flex-1 overflow-y-auto min-h-0" style="padding-bottom: calc(env(safe-area-inset-bottom) + 6rem)">
 		{#if loading}
 			<div class="flex justify-center py-16">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"
@@ -426,6 +437,8 @@
 		{/if}
 	</div>
 </div>
+
+<AppBottomNav activeTab="recipes" showFab={false} />
 
 {#if recipe}
 	<RecipeShareModal recipeId={recipeId} open={shareModalOpen} onClose={() => shareModalOpen = false} />

@@ -142,6 +142,8 @@ class TranslationProxy {
 	get supplement_catalog_applied() { void _lang; return m.supplement_catalog_applied(); }
 	get supplement_enter_manually() { void _lang; return m.supplement_enter_manually(); }
 	get admin_catalog_header_label() { void _lang; return m.admin_catalog_header_label(); }
+	get admin_catalog_text_hint() { void _lang; return m.admin_catalog_text_hint(); }
+	get admin_catalog_text_placeholder() { void _lang; return m.admin_catalog_text_placeholder(); }
 	get admin_catalog_parse_placeholder() { void _lang; return m.admin_catalog_parse_placeholder(); }
 	get admin_catalog_parse_button() { void _lang; return m.admin_catalog_parse_button(); }
 	get admin_catalog_parse_error() { void _lang; return m.admin_catalog_parse_error(); }

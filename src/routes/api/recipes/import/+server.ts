@@ -102,6 +102,19 @@ function parseInstructions(instructions: SchemaRecipe['recipeInstructions']): st
 	return [];
 }
 
+function cleanDescription(desc: string | null | undefined): string | null {
+	if (!desc) return null;
+	const clean = desc
+		// "Über 496 Bewertungen und für köstlich befunden."
+		.replace(/\s*Über\s+\d[\d.,]*\s+Bewertungen[^.!?]*[.!?]?/gi, '')
+		// "Mit ► Portionsrechner ► ..." and everything that follows
+		.replace(/\s*Mit\s+►[\s\S]*/i, '')
+		// Any remaining sentence containing a ► symbol
+		.replace(/[^.!?]*►[^.!?]*[.!?]?/g, '')
+		.trim();
+	return clean || null;
+}
+
 function parseServings(yieldValue: string | number | undefined): number {
 	if (!yieldValue) return 4;
 	if (typeof yieldValue === 'number') return yieldValue;
@@ -214,7 +227,7 @@ export const POST: RequestHandler = async (event) => {
 
 	return json({
 		title: schemaRecipe.name ?? '',
-		description: schemaRecipe.description ?? null,
+		description: cleanDescription(schemaRecipe.description),
 		imageUrl: extractImageUrl(schemaRecipe.image),
 		sourceUrl: url,
 		servings: parseServings(schemaRecipe.recipeYield),

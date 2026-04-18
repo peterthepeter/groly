@@ -270,12 +270,47 @@
 	}
 
 	let catalog = $state<CatalogEntry[]>([]);
+	let openBrands = $state<Set<string>>(new Set());
+
+	const catalogGrouped = $derived(
+		(() => {
+			const groups = new Map<string, CatalogEntry[]>();
+			for (const entry of catalog) {
+				const brand = entry.brand ?? '—';
+				if (!groups.has(brand)) groups.set(brand, []);
+				groups.get(brand)!.push(entry);
+			}
+			return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+		})()
+	);
+
+	function toggleBrand(brand: string) {
+		const next = new Set(openBrands);
+		if (next.has(brand)) next.delete(brand);
+		else next.add(brand);
+		openBrands = next;
+	}
+
 	let catalogForm = $state<{
-		id: string | null; headerText: string; nutrientsText: string;
+		id: string | null; text: string;
 	} | null>(null);
+
+	function entryToText(entry: CatalogEntry): string {
+		const header = productHeaderToText(entry);
+		const nutrients = nutrientsToText(entry.nutrients);
+		return nutrients ? `${header}\n\n${nutrients}` : header;
+	}
+
+	function parseCombinedText(text: string): { header: ReturnType<typeof parseProductHeader>; nutrients: CatalogNutrient[] } {
+		const blankLine = text.search(/\n\s*\n/);
+		const headerText = blankLine >= 0 ? text.slice(0, blankLine) : text;
+		const nutrientsText = blankLine >= 0 ? text.slice(blankLine).trim() : '';
+		return { header: parseProductHeader(headerText), nutrients: parseNutrients(nutrientsText) };
+	}
 	let catalogError = $state('');
 	let catalogSuccess = $state('');
 	let catalogSaving = $state(false);
+	let catalogSaveOk = $state(false);
 	let parseUrl = $state('');
 	let parsing = $state(false);
 	let parseNote = $state('');
@@ -298,8 +333,9 @@
 				const displayU = UNIT_DISPLAY[data.unit as string] ?? (data.unit as string);
 				lines.push(`${data.packageSize} ${displayU}`);
 			}
-			catalogForm.headerText = lines.join('\n');
-			catalogForm.nutrientsText = (data.nutrientsText as string) ?? '';
+			const headerPart = lines.join('\n');
+			const nutrientsPart = (data.nutrientsText as string) ?? '';
+			catalogForm.text = nutrientsPart ? `${headerPart}\n\n${nutrientsPart}` : headerPart;
 			if (data.servingNote) parseNote = data.servingNote as string;
 		} catch {
 			parseNote = t.admin_catalog_parse_error;
@@ -329,17 +365,13 @@
 	}
 
 	function openCatalogNew() {
-		catalogForm = { id: null, headerText: '', nutrientsText: '' };
+		catalogForm = { id: null, text: '' };
 		catalogError = '';
 		catalogSuccess = '';
 	}
 
 	function openCatalogEdit(entry: CatalogEntry) {
-		catalogForm = {
-			id: entry.id,
-			headerText: productHeaderToText(entry),
-			nutrientsText: nutrientsToText(entry.nutrients)
-		};
+		catalogForm = { id: entry.id, text: entryToText(entry) };
 		catalogError = '';
 		catalogSuccess = '';
 	}
@@ -354,7 +386,7 @@
 
 	async function saveCatalog() {
 		if (!catalogForm) return;
-		const parsed = parseProductHeader(catalogForm.headerText);
+		const { header: parsed, nutrients } = parseCombinedText(catalogForm.text);
 		if (!parsed.name.trim()) { catalogError = 'Name erforderlich'; return; }
 		if (!parsed.unit.trim()) { catalogError = 'Einheit erforderlich'; return; }
 
@@ -369,7 +401,7 @@
 				brand: parsed.brand || null,
 				info: null,
 				packageSize: parsed.packageSize,
-				nutrients: parseNutrients(catalogForm.nutrientsText)
+				nutrients
 			};
 
 			const isNew = !catalogForm.id;
@@ -391,9 +423,16 @@
 				catalogError = errMsg;
 				return;
 			}
-			catalogSuccess = t.admin_catalog_saved;
 			await loadCatalog();
-			setTimeout(() => { closeCatalogForm(); }, 1200);
+			if (isNew) {
+				catalogForm = { id: null, text: '' };
+				parseUrl = '';
+				parseNote = '';
+				catalogSaveOk = true;
+				setTimeout(() => { catalogSaveOk = false; }, 2000);
+			} else {
+				closeCatalogForm();
+			}
 		} catch (e) {
 			catalogError = e instanceof Error ? e.message : 'Unbekannter Fehler';
 		} finally {
@@ -430,19 +469,15 @@
 				onclick={() => usersOpen = !usersOpen}
 				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
 			>
-				<div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-				     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent)">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-						<circle cx="9" cy="7" r="4"/>
-						<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-						<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-					</svg>
-				</div>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+					<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+					<circle cx="9" cy="7" r="4"/>
+					<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+					<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+				</svg>
 				<span class="flex-1 font-semibold text-sm" style="color: var(--color-on-surface)">{t.admin_section_users}</span>
 				{#if users.length > 0}
-					<span class="text-xs px-2 py-0.5 rounded-full font-medium"
-					      style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)">
+					<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">
 						{users.length}
 					</span>
 				{/if}
@@ -573,12 +608,9 @@
 							class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left active:opacity-70"
 							style="background-color: var(--color-surface-container)"
 						>
-							<div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-							     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent)">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round">
-									<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-								</svg>
-							</div>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" class="shrink-0">
+								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+							</svg>
 							<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.admin_add_user}</span>
 						</button>
 					{:else if showCreateForm}
@@ -598,7 +630,7 @@
 								<div>
 									<div class="rounded-lg px-3 py-2.5 flex items-center gap-2" style="background-color: var(--color-surface-low)">
 										<input type="text" placeholder={t.admin_password_label} bind:value={newPassword} required
-										       class="flex-1 bg-transparent outline-none text-xs font-mono" style="color: var(--color-on-surface); font-size: 16px" />
+										       class="flex-1 bg-transparent outline-none" style="color: var(--color-on-surface); font-size: 16px" />
 										<button type="button" onclick={() => newPassword = generatePassword()}
 										        aria-label="Passwort generieren"
 										        class="flex-shrink-0 p-1 rounded-lg active:opacity-60"
@@ -612,8 +644,8 @@
 									<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
 								</div>
 								<div class="rounded-lg px-3 py-2.5 flex items-center gap-3" style="background-color: var(--color-surface-low)">
-									<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.admin_role_label}:</span>
-									<select bind:value={newRole} class="flex-1 bg-transparent outline-none text-xs" style="color: var(--color-on-surface); font-size: 16px">
+									<span style="color: var(--color-on-surface-variant); font-size: 16px">{t.admin_role_label}:</span>
+									<select bind:value={newRole} class="flex-1 bg-transparent outline-none" style="color: var(--color-on-surface); font-size: 16px">
 										<option value="user">{t.admin_role_user}</option>
 										<option value="admin">{t.admin_role_admin}</option>
 									</select>
@@ -644,17 +676,13 @@
 				onclick={() => { catalogOpen = !catalogOpen; if (catalogOpen) loadCatalog(); }}
 				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
 			>
-				<div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-				     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent)">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
-						<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
-					</svg>
-				</div>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+					<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
+					<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
+				</svg>
 				<span class="flex-1 font-semibold text-sm" style="color: var(--color-on-surface)">{t.admin_section_supplements}</span>
 				{#if catalog.length > 0}
-					<span class="text-xs px-2 py-0.5 rounded-full font-medium"
-					      style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)">
+					<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">
 						{catalog.length}
 					</span>
 				{/if}
@@ -673,39 +701,6 @@
 				<div class="px-3 pb-3 space-y-2">
 					<div class="h-px mb-1" style="background-color: var(--color-outline-variant)"></div>
 
-					<!-- Catalog list -->
-					{#if catalog.length === 0}
-						<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_empty}</p>
-					{:else}
-						<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
-							{#each catalog as entry, i (entry.id)}
-								<button
-									onclick={() => openCatalogEdit(entry)}
-									class="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity {i > 0 ? 'border-t' : ''}"
-									style="border-color: var(--color-outline-variant)"
-								>
-									<div class="flex-1 min-w-0">
-										<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{entry.name}</div>
-										{#if entry.brand}
-											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{entry.brand} · {entry.unit}</div>
-										{:else}
-											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{entry.unit}</div>
-										{/if}
-									</div>
-									{#if entry.nutrients.length > 0}
-										<span class="text-[10px] px-2 py-0.5 rounded-full shrink-0"
-										      style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)">
-											{entry.nutrients.length} {t.admin_catalog_nutrient_count}
-										</span>
-									{/if}
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<polyline points="9 18 15 12 9 6"/>
-									</svg>
-								</button>
-							{/each}
-						</div>
-					{/if}
-
 					<!-- Add button -->
 					{#if !catalogForm}
 						<button
@@ -713,15 +708,66 @@
 							class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left active:opacity-70"
 							style="background-color: var(--color-surface-container)"
 						>
-							<div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-							     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent)">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round">
-									<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-								</svg>
-							</div>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" class="shrink-0">
+								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+							</svg>
 							<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.admin_catalog_add}</span>
 						</button>
 					{/if}
+
+					<!-- Catalog list grouped by brand -->
+					{#if catalog.length === 0}
+						<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_empty}</p>
+					{:else}
+						<div class="space-y-1.5">
+							{#each catalogGrouped as [brand, entries] (brand)}
+								{@const isOpen = openBrands.has(brand)}
+								<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+									<!-- Brand header -->
+									<button
+										onclick={() => toggleBrand(brand)}
+										class="w-full flex items-center gap-3 px-4 py-3 text-left active:opacity-70 transition-opacity"
+									>
+										<span class="flex-1 text-xs font-bold uppercase tracking-wide truncate" style="color: var(--color-on-surface-variant)">{brand}</span>
+										<span class="text-xs font-medium shrink-0" style="color: var(--color-on-surface-variant)">
+											{entries.length}
+										</span>
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+										     stroke="var(--color-on-surface-variant)" stroke-width="2"
+										     stroke-linecap="round" stroke-linejoin="round"
+										     style="transform: rotate({isOpen ? '180deg' : '0deg'}); transition: transform 0.2s ease; flex-shrink: 0">
+											<polyline points="6 9 12 15 18 9"/>
+										</svg>
+									</button>
+									<!-- Brand entries -->
+									{#if isOpen}
+										{#each entries as entry, i (entry.id)}
+											<button
+												onclick={() => openCatalogEdit(entry)}
+												class="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity border-t"
+												style="border-color: var(--color-outline-variant)"
+											>
+												<div class="flex-1 min-w-0">
+													<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{entry.name}</div>
+													<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{entry.unit}</div>
+												</div>
+												{#if entry.nutrients.length > 0}
+													<span class="text-[10px] px-2 py-0.5 rounded-full shrink-0"
+													      style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)">
+														{entry.nutrients.length} {t.admin_catalog_nutrient_count}
+													</span>
+												{/if}
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+													<polyline points="9 18 15 12 9 6"/>
+												</svg>
+											</button>
+										{/each}
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{/if}
+
 				</div>
 			{/if}
 		</div>
@@ -881,21 +927,22 @@
 				</div>
 			{/if}
 
-			<!-- Header textarea -->
+			<!-- Combined textarea -->
 			<div>
-				<label for="catalog-header" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">
+				<label for="catalog-text" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">
 					{t.admin_catalog_header_label}
 				</label>
+				<p class="text-[11px] mb-2 leading-relaxed" style="color: var(--color-on-surface-variant); opacity: 0.7">{t.admin_catalog_text_hint}</p>
 				<textarea
-					id="catalog-header"
-					bind:value={catalogForm.headerText}
-					placeholder={"NATURTREU\nGlanzleistung: Coenzym Q10\n90 Kapseln"}
-					rows={3}
+					id="catalog-text"
+					bind:value={catalogForm.text}
+					placeholder={t.admin_catalog_text_placeholder}
+					rows={10}
 					class="w-full px-4 py-3 rounded-xl border-0 outline-none resize-none leading-relaxed"
-					style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
+					style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; font-family: monospace"
 				></textarea>
-				{#if catalogForm.headerText.trim()}
-					{@const preview = parseProductHeader(catalogForm.headerText)}
+				{#if catalogForm.text.trim()}
+					{@const preview = parseCombinedText(catalogForm.text).header}
 					<div class="mt-1.5 px-1 flex flex-wrap gap-x-3 gap-y-0.5">
 						{#if preview.name}
 							<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
@@ -921,21 +968,6 @@
 				{/if}
 			</div>
 
-			<!-- Nutrients textarea -->
-			<div>
-				<label for="catalog-nutrients" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">
-					{t.admin_catalog_nutrients_label}
-				</label>
-				<textarea
-					id="catalog-nutrients"
-					bind:value={catalogForm.nutrientsText}
-					placeholder={t.admin_catalog_nutrients_placeholder}
-					rows={5}
-					class="w-full px-4 py-3 rounded-xl border-0 outline-none resize-none leading-relaxed"
-					style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; font-family: monospace"
-				></textarea>
-			</div>
-
 		</div><!-- end scrollable -->
 
 		<!-- Action buttons -->
@@ -954,15 +986,21 @@
 				class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
 				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
 			>
-				{t.list_cancel}
+				{catalogForm.id ? t.list_cancel : t.close}
 			</button>
 			<button
 				onclick={saveCatalog}
-				disabled={catalogSaving || !catalogForm.headerText.trim()}
-				class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50"
+				disabled={catalogSaving || !catalogForm.text.trim()}
+				class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"
 				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 			>
-				{catalogSaving ? '…' : t.supplement_save}
+				{#if catalogSaving}
+					…
+				{:else if catalogSaveOk}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+				{:else}
+					{t.supplement_save}
+				{/if}
 			</button>
 		</div>
 
