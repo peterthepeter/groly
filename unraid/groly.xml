@@ -38,9 +38,9 @@
     Description="Password for the initial admin account. Only used on first start. You will be prompted to change it on first login."
     Type="Variable" Display="always" Required="true" Mask="true"></Config>
 
-  <Config Name="ADDRESS_HEADER" Target="ADDRESS_HEADER" Default="X-Forwarded-For" Mode=""
-    Description="Set to X-Forwarded-For when running behind a reverse proxy (Nginx Proxy Manager, Caddy, Traefik). Required for login rate limiting to work correctly per client IP."
-    Type="Variable" Display="always" Required="false" Mask="false">X-Forwarded-For</Config>
+  <Config Name="ADDRESS_HEADER" Target="ADDRESS_HEADER" Default="" Mode=""
+    Description="Only fill this in if Groly is running behind a reverse proxy (Nginx Proxy Manager, Caddy, Traefik) — set it to X-Forwarded-For. Leave empty if you access Groly directly. Setting this without a reverse proxy will cause login to fail."
+    Type="Variable" Display="always" Required="false" Mask="false"></Config>
 
   <Config Name="VAPID_PUBLIC_KEY" Target="VAPID_PUBLIC_KEY" Default="" Mode=""
     Description="VAPID public key for push notifications (optional). Generate a key pair once with: node -e &quot;const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(JSON.stringify(k,null,2))&quot;"
