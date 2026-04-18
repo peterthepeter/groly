@@ -2,6 +2,11 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.5.6',
+		de: ['Technische Verbesserungen und Fehlerbehebungen'],
+		en: ['Technical bugfix'],
+	},
+	{
 		version: '0.5.5',
 		de: [
 			'Push-Benachrichtigungen: Erinnerungen kommen jetzt zuverlässig zur richtigen Uhrzeit',

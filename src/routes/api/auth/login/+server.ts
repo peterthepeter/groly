@@ -24,7 +24,7 @@ export const POST: RequestHandler = async (event) => {
 		httpOnly: true,
 		sameSite: 'lax',
 		maxAge: 60 * 60 * 24 * 30,
-		secure: process.env.NODE_ENV === 'production'
+		secure: process.env.ORIGIN?.startsWith('https://') ?? false
 	});
 
 	return json({ ok: true, mustChangePassword: result.mustChangePassword });
