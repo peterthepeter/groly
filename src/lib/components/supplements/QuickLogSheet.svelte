@@ -5,6 +5,7 @@
 
 	type Supplement = {
 		id: string; name: string; unit: string;
+		brand: string | null;
 		active: boolean; defaultAmount: number;
 		nutrients: unknown[];
 	};
@@ -99,8 +100,13 @@
 					{@const isSaving = saving[s.id] ?? false}
 					{@const isDone = done[s.id] ?? false}
 					<div class="flex items-center gap-1.5 rounded-2xl px-2 py-2.5" style="background-color: var(--color-surface-container)">
-						<!-- Name -->
-						<span class="flex-1 min-w-0 truncate text-sm font-semibold" style="color: var(--color-primary)">{s.name}</span>
+						<!-- Name + Brand -->
+						<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
+							<span class="truncate text-sm font-semibold" style="color: var(--color-primary)">{s.name}</span>
+							{#if s.brand}
+								<span class="truncate text-[10px]" style="color: var(--color-on-surface-variant); opacity: 0.7">{s.brand}</span>
+							{/if}
+						</div>
 						<!-- Tight −/amount/+ group -->
 						<div class="shrink-0 flex items-center gap-0 rounded-lg overflow-hidden" style="background-color: var(--color-surface-high)">
 							<button

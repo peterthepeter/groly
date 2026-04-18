@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.5.9',
+		de: [
+			'Supplements: Hersteller wird in der Tagesansicht und im Log-Sheet angezeigt',
+			'Supplements: Karten in der Tagesansicht etwas kompakter',
+			'Neues Supplement: Close-Button beim Erstellen hinzugefügt',
+		],
+		en: [
+			'Supplements: Brand is now shown in the daily view and log sheet',
+			'Supplements: Cards in daily view are slightly more compact',
+			'New supplement: Close button added when creating a supplement',
+		],
+	},
+	{
 		version: '0.5.7',
 		de: [
 			'Einkaufsliste: Automatische Synchronisation beim Zurückkehren aus dem Hintergrund',

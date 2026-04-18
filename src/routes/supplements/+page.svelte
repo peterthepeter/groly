@@ -16,6 +16,7 @@
 	type Nutrient = { id: string; name: string; amountPerUnit: number; unit: string; sortOrder: number };
 	type Supplement = {
 		id: string; name: string; unit: string; notes: string | null;
+		brand: string | null;
 		active: boolean; sortOrder: number;
 		stockQuantity: number | null; defaultAmount: number;
 		nutrients: Nutrient[];
@@ -481,7 +482,7 @@
 					{@const total = totalTodayAmount(supplement.id)}
 					{@const expanded = expandedIds.has(supplement.id)}
 					{@const logTimes = allLogTimes(supplement.id)}
-					<div class="rounded-2xl px-4 pt-3 pb-4 flex flex-col min-h-[72px] justify-center select-none" style="background-color: var(--color-surface-card)">
+					<div class="rounded-2xl px-4 py-3 flex flex-col min-h-[64px] justify-center select-none" style="background-color: var(--color-surface-card)">
 
 						<!-- Expanded content FIRST in DOM → expands upward visually -->
 						{#if expanded}
@@ -546,6 +547,9 @@
 										<span class="text-xs font-medium" style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-on-surface-variant)'}">({supplement.stockQuantity} {t.supplement_stock_left})</span>
 									{/if}
 								</div>
+								{#if supplement.brand}
+									<p class="text-[10px] leading-none" style="color: var(--color-on-surface-variant); opacity: 0.6">{supplement.brand}</p>
+								{/if}
 								{#if total > 0}
 									<p class="text-xs mt-0.5" style="color: var(--color-primary)">
 										{total} {displayUnit(supplement.unit, currentLang())} {t.supplement_taken_today}{logTimes ? ` ${logTimes}` : ''}

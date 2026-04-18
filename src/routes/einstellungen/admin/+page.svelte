@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
+	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { validatePassword, getPasswordHint } from '$lib/password';
 
@@ -239,16 +240,14 @@
 		let packageSize: number | null = null;
 		let unit = '';
 		for (const line of lines) {
-			if (isAllCaps(line)) {
+			const pkg = parsePackageLine(line);
+			if (pkg) {
+				packageSize = pkg.packageSize;
+				unit = pkg.unit;
+			} else if (!brand) {
 				brand = line;
 			} else {
-				const pkg = parsePackageLine(line);
-				if (pkg) {
-					packageSize = pkg.packageSize;
-					unit = pkg.unit;
-				} else {
-					name = name ? `${name} ${line}` : line;
-				}
+				name = name ? `${name} ${line}` : line;
 			}
 		}
 		return { name, brand, packageSize, unit };
@@ -271,11 +270,20 @@
 
 	let catalog = $state<CatalogEntry[]>([]);
 	let openBrands = $state<Set<string>>(new Set());
+	let catalogSearch = $state('');
+	let openBrandsBeforeSearch = $state<Set<string> | null>(null);
 
 	const catalogGrouped = $derived(
 		(() => {
+			const q = catalogSearch.trim().toLowerCase();
+			const filtered = q
+				? catalog.filter(e =>
+						e.name.toLowerCase().includes(q) ||
+						(e.brand ?? '').toLowerCase().includes(q)
+					)
+				: catalog;
 			const groups = new Map<string, CatalogEntry[]>();
-			for (const entry of catalog) {
+			for (const entry of filtered) {
 				const brand = entry.brand ?? '—';
 				if (!groups.has(brand)) groups.set(brand, []);
 				groups.get(brand)!.push(entry);
@@ -283,6 +291,21 @@
 			return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
 		})()
 	);
+
+	function onCatalogSearchInput(value: string) {
+		const wasEmpty = catalogSearch.trim() === '';
+		const isNowEmpty = value.trim() === '';
+		catalogSearch = value;
+		if (wasEmpty && !isNowEmpty) {
+			openBrandsBeforeSearch = new Set(openBrands);
+			openBrands = new Set(catalog.map(e => e.brand ?? '—'));
+		} else if (!wasEmpty && isNowEmpty) {
+			if (openBrandsBeforeSearch !== null) {
+				openBrands = openBrandsBeforeSearch;
+				openBrandsBeforeSearch = null;
+			}
+		}
+	}
 
 	function toggleBrand(brand: string) {
 		const next = new Set(openBrands);
@@ -715,9 +738,30 @@
 						</button>
 					{/if}
 
+					<!-- Catalog search -->
+					{#if catalog.length > 0}
+						<div class="relative">
+							<svg class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+							</svg>
+							<input
+								type="search"
+								value={catalogSearch}
+								oninput={(e) => onCatalogSearchInput((e.currentTarget as HTMLInputElement).value)}
+								placeholder={t.admin_catalog_search_placeholder}
+								class="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm outline-none"
+								style="background-color: var(--color-surface-container); color: var(--color-on-surface); border: 1.5px solid transparent;"
+								onfocus={(e) => (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--color-primary)'}
+								onblur={(e) => (e.currentTarget as HTMLInputElement).style.borderColor = 'transparent'}
+							/>
+						</div>
+					{/if}
+
 					<!-- Catalog list grouped by brand -->
 					{#if catalog.length === 0}
 						<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_empty}</p>
+					{:else if catalogGrouped.length === 0}
+						<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_no_results}</p>
 					{:else}
 						<div class="space-y-1.5">
 							{#each catalogGrouped as [brand, entries] (brand)}
@@ -776,6 +820,7 @@
 </div>
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />
+<AppBottomNav activeTab="none" />
 
 <!-- ── Edit User Bottom Sheet ──────────────────────────────────────────────── -->
 {#if editUser}

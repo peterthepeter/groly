@@ -450,6 +450,14 @@
 				>
 					{t.item_delete}
 				</button>
+			{:else}
+				<button
+					onclick={onclose}
+					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
+					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+				>
+					{t.close}
+				</button>
 			{/if}
 			<button
 				onclick={onsave}

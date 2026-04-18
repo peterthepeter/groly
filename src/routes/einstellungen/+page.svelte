@@ -1206,28 +1206,6 @@
 
 		</div>
 
-		<!-- ── Gruppe: Admin ─────────────────────────────────────────────── -->
-		{#if data.user?.role === 'admin'}
-			<p class="text-xs font-semibold tracking-widest uppercase px-2 mb-2"
-			   style="color: var(--color-on-surface-variant); opacity: 0.5">
-				Admin
-			</p>
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
-				<a href="/einstellungen/admin"
-				   class="flex items-center gap-4 px-5 py-5 transition-colors active:opacity-70">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-						<circle cx="9" cy="7" r="4"/>
-						<line x1="23" y1="11" x2="17" y2="11"/>
-						<line x1="20" y1="8" x2="20" y2="14"/>
-					</svg>
-					<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.admin_users_title}</span>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-auto">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</a>
-			</div>
-		{/if}
 
 	{/if}<!-- end mustChange else -->
 

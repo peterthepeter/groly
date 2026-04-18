@@ -50,6 +50,8 @@
   "admin_catalog_delete": "Remove from catalog",
   "admin_catalog_confirm_delete": "Remove supplement from catalog?",
   "admin_catalog_empty": "No supplements in catalog yet",
+  "admin_catalog_search_placeholder": "Search supplement or brand…",
+  "admin_catalog_no_results": "No results",
   "admin_catalog_nutrients_label": "Nutrients (one per line: Name, Amount, Unit)",
   "admin_catalog_nutrients_placeholder": "Magnesium, 150, mg\nVitamin B6, 0.7, mg\nZinc, 10, mg",
   "admin_catalog_duplicate_warning": "A supplement with this name and brand already exists.",
