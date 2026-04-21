@@ -7,6 +7,7 @@
 	import RecipeShareModal from '$lib/components/recipe/RecipeShareModal.svelte';
 	import RecipeAddToListModal from '$lib/components/recipe/RecipeAddToListModal.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
+	import { cacheRecipeDetail, getOfflineRecipeDetail } from '$lib/sync/manager';
 
 	let recipe = $state<Recipe | null>(null);
 	let loading = $state(true);
@@ -16,6 +17,7 @@
 
 	let shareModalOpen = $state(false);
 	let listModalOpen = $state(false);
+	let isOfflineFallback = $state(false);
 
 	let excludedIngredients = $state(new Set<string>());
 
@@ -61,9 +63,19 @@
 			recipe = data;
 			currentServings = data.servings;
 			originalServings = data.servings;
+			cacheRecipeDetail(data).catch(() => {});
 			await loadExclusions();
 		} catch {
-			goto('/rezepte');
+			const cached = await getOfflineRecipeDetail(recipeId);
+			if (cached) {
+				recipe = cached as Recipe;
+				currentServings = cached.servings;
+				originalServings = cached.servings;
+				isOfflineFallback = true;
+			} else {
+				goto('/rezepte');
+				return;
+			}
 		}
 		loading = false;
 	}
@@ -289,8 +301,9 @@
 						<div class="flex items-center gap-1 ml-2 pl-2" style="border-left: 1.5px solid var(--color-outline-variant)">
 							<button
 								onclick={deleteRecipe}
+								disabled={isOfflineFallback}
 								aria-label="Rezept löschen"
-								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
 								style="background-color: var(--color-surface-high)"
 							>
 								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -299,8 +312,9 @@
 							</button>
 							<button
 								onclick={() => shareModalOpen = true}
+								disabled={isOfflineFallback}
 								aria-label="Teilen"
-								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
 								style="background-color: var(--color-surface-high)"
 							>
 								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -309,9 +323,10 @@
 								</svg>
 							</button>
 							<button
-								onclick={() => goto(`/rezepte/${recipeId}/bearbeiten`)}
+								onclick={() => !isOfflineFallback && goto(`/rezepte/${recipeId}/bearbeiten`)}
+								disabled={isOfflineFallback}
 								aria-label="Bearbeiten"
-								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
 								style="background-color: var(--color-surface-high)"
 							>
 								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

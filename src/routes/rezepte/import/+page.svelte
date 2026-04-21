@@ -22,6 +22,14 @@
 	let parsed = $state<ParsedRecipe | null>(null);
 	let saving = $state(false);
 
+	function translateImportError(code: string): string {
+		const map: Record<string, () => string> = {
+			NO_RECIPE_FOUND: () => t.recipe_import_no_recipe,
+			PAGE_LOAD_FAILED: () => t.recipe_import_page_load_failed,
+		};
+		return map[code]?.() ?? t.recipe_import_failed;
+	}
+
 	async function importUrl() {
 		const trimmed = url.trim();
 		if (!trimmed) return;
@@ -36,12 +44,12 @@
 			});
 			const data = await res.json();
 			if (!res.ok) {
-				error = data.error ?? 'Fehler beim Importieren';
+				error = translateImportError(data.error);
 			} else {
 				parsed = data;
 			}
 		} catch {
-			error = 'Verbindungsfehler. Bitte prüfe deine Internetverbindung.';
+			error = t.recipe_import_connection_error;
 		}
 		loading = false;
 	}
@@ -59,12 +67,11 @@
 				const data = await res.json();
 				goto(`/rezepte/${data.id}`);
 			} else {
-				const data = await res.json();
-				error = data.error ?? 'Fehler beim Speichern';
+				error = t.recipe_import_save_failed;
 				saving = false;
 			}
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Netzwerkfehler beim Speichern';
+		} catch {
+			error = t.recipe_import_save_network_error;
 			saving = false;
 		}
 	}

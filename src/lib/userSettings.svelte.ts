@@ -78,6 +78,10 @@ let _showFavoriteIndicator = $state<boolean>(cache.showFavoriteIndicator ?? true
 let _showSupplementTracker = $state<boolean>(cache.showSupplementTracker ?? true);
 let _showRecipes = $state<boolean>(cache.showRecipes ?? true);
 let _theme = $state<'system' | 'light' | 'dark'>(cache.theme ?? 'system');
+let _supplementSortOrder = $state<'az' | 'za' | 'freq'>(cache.supplementSortOrder ?? 'az');
+let _waterTrackerEnabled = $state<boolean>(cache.waterTrackerEnabled ?? false);
+let _waterGoalMl = $state<number>(cache.waterGoalMl ?? 2000);
+let _waterPresets = $state<[number, number]>(cache.waterPresets ?? [100, 200]);
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -97,7 +101,11 @@ function scheduleSave() {
 			showAllCheckedItems: _showAllCheckedItems,
 			showFavoriteIndicator: _showFavoriteIndicator,
 			showSupplementTracker: _showSupplementTracker,
-			showRecipes: _showRecipes
+			showRecipes: _showRecipes,
+			supplementSortOrder: _supplementSortOrder,
+			waterTrackerEnabled: _waterTrackerEnabled,
+			waterGoalMl: _waterGoalMl,
+			waterPresets: _waterPresets
 		};
 		saveCache(settings);
 		try {
@@ -206,6 +214,18 @@ export const userSettings = {
 	get theme() { return _theme; },
 	set theme(v: 'system' | 'light' | 'dark') { _theme = v; scheduleSave(); },
 
+	// Supplement sort order
+	get supplementSortOrder() { return _supplementSortOrder; },
+	set supplementSortOrder(v: 'az' | 'za' | 'freq') { _supplementSortOrder = v; scheduleSave(); },
+
+	// Water tracker
+	get waterTrackerEnabled() { return _waterTrackerEnabled; },
+	set waterTrackerEnabled(v: boolean) { _waterTrackerEnabled = v; scheduleSave(); },
+	get waterGoalMl() { return _waterGoalMl; },
+	set waterGoalMl(v: number) { _waterGoalMl = v; scheduleSave(); },
+	get waterPresets() { return _waterPresets; },
+	set waterPresets(v: [number, number]) { _waterPresets = v; scheduleSave(); },
+
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
 	addShortcut(s: Shortcut) {
@@ -243,6 +263,10 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_showSupplementTracker = settings.showSupplementTracker ?? true;
 		_showRecipes = settings.showRecipes ?? true;
 		_theme = settings.theme ?? 'system';
+		_supplementSortOrder = settings.supplementSortOrder ?? 'az';
+		_waterTrackerEnabled = settings.waterTrackerEnabled ?? false;
+		_waterGoalMl = settings.waterGoalMl ?? 2000;
+		_waterPresets = settings.waterPresets ?? [100, 200];
 		saveCache(settings);
 		return settings;
 	} catch { return null; }

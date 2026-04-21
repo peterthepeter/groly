@@ -70,7 +70,7 @@
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
 		<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{list.name}</div>
-		<div class="text-xs truncate mt-0.5" style="color: var(--color-on-surface-variant)">
+		<div class="text-xs truncate mt-0.5" style="color: var(--color-primary)">
 			{list.description ? `${list.description} · ` : ''}{list_items_open(list.openCount)}
 		</div>
 	</div>

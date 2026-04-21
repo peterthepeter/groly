@@ -5,11 +5,14 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang, nutrients_show_more, today_reminders_label } from '$lib/i18n.svelte';
+	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
 	import EditLogSheet from '$lib/components/supplements/EditLogSheet.svelte';
+	import WaterTrackerCard from '$lib/components/supplements/WaterTrackerCard.svelte';
+	import type { WaterLog } from '$lib/db/schema';
 
 	let { data } = $props();
 
@@ -28,6 +31,8 @@
 	let menuOpen = $state(false);
 	let supplements = $state<Supplement[]>([]);
 	let todayLogs = $state<Log[]>([]);
+	let waterLogsToday = $state<WaterLog[]>([]);
+	let waterHasReminderToday = $state(false);
 	let loading = $state(true);
 	const activeTab = $derived($page.url.searchParams.get('tab') === 'history' ? 'history' : 'today');
 
@@ -138,37 +143,100 @@
 	}
 
 	async function loadSupplements() {
-		const res = await fetch('/api/supplements');
-		if (res.ok) {
+		try {
+			const res = await fetch('/api/supplements');
+			if (!res.ok) throw new Error();
 			const data = await res.json();
 			supplements = data.supplements;
+			cacheSupplements(data.supplements).catch(() => {});
+		} catch {
+			supplements = (await getOfflineSupplements()) as Supplement[];
 		}
 	}
 
 	async function loadTodayLogs() {
-		const from = todayStart();
-		const to = todayEnd();
-		const res = await fetch(`/api/supplement-logs?from=${from}&to=${to}`);
-		if (res.ok) {
+		try {
+			const from = todayStart();
+			const to = todayEnd();
+			const res = await fetch(`/api/supplement-logs?from=${from}&to=${to}`);
+			if (!res.ok) throw new Error();
 			const data = await res.json();
 			todayLogs = data.logs;
+			cacheTodayLogs(data.logs).catch(() => {});
+		} catch {
+			todayLogs = await getOfflineTodayLogs();
 		}
 	}
 
 	async function loadHistory() {
 		historyLoading = true;
-		const res = await fetch(`/api/supplement-stats?period=${historyPeriod}&date=${historyDate}`);
-		if (res.ok) {
-			const data = await res.json();
+		const [statsRes] = await Promise.all([
+			fetch(`/api/supplement-stats?period=${historyPeriod}&date=${historyDate}`),
+			loadHistoryWater()
+		]);
+		if (statsRes.ok) {
+			const data = await statsRes.json();
 			historyNutrients = data.nutrients ?? {};
 			historySupplements = data.supplements ?? {};
 		}
 		historyLoading = false;
 	}
 
+	async function loadHistoryWater() {
+		if (!userSettings.waterTrackerEnabled || historyPeriod !== 'day') {
+			historyWaterLogs = [];
+			return;
+		}
+		const d = new Date(historyDate + 'T00:00:00');
+		const from = d.getTime();
+		const to = from + 86_400_000 - 1;
+		try {
+			const res = await fetch(`/api/water-logs?from=${from}&to=${to}`);
+			if (res.ok) {
+				const data = await res.json();
+				historyWaterLogs = data.logs ?? [];
+			}
+		} catch { historyWaterLogs = []; }
+	}
+
 	async function deleteLog(logId: string) {
-		const res = await fetch(`/api/supplement-logs/${logId}`, { method: 'DELETE' });
-		if (res.ok) await Promise.all([loadTodayLogs(), loadSupplements()]);
+		try {
+			const res = await fetch(`/api/supplement-logs/${logId}`, { method: 'DELETE' });
+			if (res.ok) await Promise.all([loadTodayLogs(), loadSupplements()]);
+		} catch {}
+	}
+
+	async function loadWaterReminders() {
+		if (!userSettings.waterTrackerEnabled) return;
+		try {
+			const res = await fetch('/api/water-reminders');
+			if (res.ok) {
+				const data = await res.json();
+				const today = new Date().getDay();
+				waterHasReminderToday = (data.schedules ?? []).some((s: { days: string }) => {
+					try { return (JSON.parse(s.days) as number[]).includes(today); }
+					catch { return false; }
+				});
+			}
+		} catch {}
+	}
+
+	async function loadWaterLogs() {
+		if (!userSettings.waterTrackerEnabled) return;
+		try {
+			const res = await fetch(`/api/water-logs?from=${todayStart()}&to=${todayEnd()}`);
+			if (res.ok) {
+				const data = await res.json();
+				waterLogsToday = data.logs;
+			}
+		} catch {}
+	}
+
+	async function deleteWaterLog(id: string) {
+		try {
+			const res = await fetch(`/api/water-logs/${id}`, { method: 'DELETE' });
+			if (res.ok) await loadWaterLogs();
+		} catch {}
 	}
 
 	// ─── Edit log sheet ─────────────────────────────────────────────────────────
@@ -233,13 +301,13 @@
 	});
 
 	onMount(() => {
-		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders()]).then(() => { loading = false; });
+		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs()]).then(() => { loading = false; });
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
 
 		function onVisibilityChange() {
 			if (document.visibilityState === 'visible') {
 				now = new Date();
-				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders()]);
+				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs()]);
 			}
 		}
 		document.addEventListener('visibilitychange', onVisibilityChange);
@@ -279,6 +347,9 @@
 	let nutrientsExpanded = $state(false);
 	let supplementsCardExpanded = $state(true);
 	let nutrientsCardExpanded = $state(true);
+	let waterHistoryCardExpanded = $state(false);
+	let historyWaterLogs = $state<{ id: string; amountMl: number; loggedAt: number }[]>([]);
+	const historyWaterTotal = $derived(historyWaterLogs.reduce((s, l) => s + l.amountMl, 0));
 
 	function toMcg(total: number, unit: string): number {
 		const u = unit.toLowerCase();
@@ -574,6 +645,16 @@
 				{/each}
 			</div>
 		{/if}
+		{#if userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday)}
+			<div class="px-4 pt-3">
+				<WaterTrackerCard
+					logs={waterLogsToday}
+					goalMl={userSettings.waterGoalMl ?? 2500}
+					onlogged={loadWaterLogs}
+					ondeleted={deleteWaterLog}
+				/>
+			</div>
+		{/if}
 
 	{:else}
 		<!-- HISTORY TAB -->
@@ -582,7 +663,7 @@
 				<div class="flex justify-center py-8">
 					<div class="w-6 h-6 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
 				</div>
-			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0}
+			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0 && historyWaterTotal === 0}
 				<div class="py-12 text-center">
 					<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_stats_empty}</p>
 				</div>
@@ -655,6 +736,40 @@
 						{/if}
 					</div>
 				{/if}
+
+				<!-- Water -->
+				{#if userSettings.waterTrackerEnabled && historyPeriod === 'day' && historyWaterTotal > 0}
+					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
+						<!-- Header row — always visible -->
+						<button
+							onclick={() => waterHistoryCardExpanded = !waterHistoryCardExpanded}
+							class="w-full flex items-center justify-between active:opacity-60"
+							style="margin-bottom: 0.375rem"
+						>
+							<p class="text-xs font-semibold uppercase tracking-wider" style="color: #60A5FA">{t.water_title}</p>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+							     style="transition: transform 0.2s; transform: rotate({waterHistoryCardExpanded ? '-90' : '90'}deg)">
+								<polyline points="9 6 15 12 9 18"/>
+							</svg>
+						</button>
+						<!-- Summary row — always visible -->
+						<div class="flex justify-between items-center text-sm" style="margin-bottom: {waterHistoryCardExpanded ? '0.75rem' : '0'}">
+							<span style="color: var(--color-on-surface-variant)">{historyDate === toLocalDateStr(new Date()) ? t.supplement_taken_today : historyDate}</span>
+							<span class="font-semibold" style="color: #60A5FA">{historyWaterTotal} / {userSettings.waterGoalMl ?? 2500} ml</span>
+						</div>
+						<!-- Individual entries — only when expanded -->
+						{#if waterHistoryCardExpanded}
+							<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
+								{#each historyWaterLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
+									<div class="flex justify-between items-center text-sm">
+										<span style="color: var(--color-on-surface)">{new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+										<span class="font-semibold" style="color: #60A5FA">{log.amountMl} ml</span>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{/if}
@@ -665,7 +780,10 @@
 <QuickLogSheet
 	bind:open={quickLogOpen}
 	supplements={activeSupplements}
-	onlogged={() => Promise.all([loadTodayLogs(), loadSupplements()])}
+	waterEnabled={userSettings.waterTrackerEnabled}
+	waterGoalMl={userSettings.waterGoalMl ?? 2500}
+	waterTotalMl={waterLogsToday.reduce((s, l) => s + l.amountMl, 0)}
+	onlogged={() => Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs()])}
 />
 
 <AppBottomNav

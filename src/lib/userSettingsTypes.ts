@@ -30,6 +30,10 @@ export type UserSettings = {
 	showFavoriteIndicator?: boolean;
 	showSupplementTracker?: boolean;
 	showRecipes?: boolean;
+	supplementSortOrder?: 'az' | 'za' | 'freq';
+	waterTrackerEnabled?: boolean;
+	waterGoalMl?: number;
+	waterPresets?: [number, number];
 };
 
 export const DEFAULT_SETTINGS = {

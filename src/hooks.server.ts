@@ -3,8 +3,8 @@ import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
 import { runMigrations, db } from '$lib/db';
-import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users, mealPlanEntries, supplementLogs, supplementReminderSchedules, supplements } from '$lib/db/schema';
-import { eq, lt, and, sql } from 'drizzle-orm';
+import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users, mealPlanEntries, supplementLogs, supplementReminderSchedules, supplements, waterReminderSchedules, waterLogs } from '$lib/db/schema';
+import { eq, lt, and, gte, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
 import { sendPushToUser } from '$lib/server/pushNotifications';
 import { subsSize } from '$lib/server/userEvents';
@@ -110,9 +110,91 @@ async function checkSupplementReminders() {
 			const nameList = list.length === 1
 				? list[0]
 				: `${list.slice(0, -1).join(', ')} & ${list[list.length - 1]}`;
-			const title = nameList;
-			const body = lang === 'en' ? 'Time to take your supplement' : 'Zeit für deine Einnahme';
+			const title = lang === 'en' ? 'Supplement Reminder' : 'Supplement-Erinnerung';
+			const body = lang === 'en' ? `Time to take: ${nameList}` : `Zeit für die Einnahme von: ${nameList}`;
 			return sendPushToUser(userId, { title, body, url: '/supplements', tag: 'supplement-reminder' });
+		})
+	);
+}
+
+async function checkWaterReminders() {
+	const now = new Date();
+	const currentDay = now.getDay();
+	const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+
+	const activeSchedules = db
+		.select({
+			days: waterReminderSchedules.days,
+			startTime: waterReminderSchedules.startTime,
+			endTime: waterReminderSchedules.endTime,
+			intervalMinutes: waterReminderSchedules.intervalMinutes,
+			userId: waterReminderSchedules.userId,
+			userSettings: users.settings
+		})
+		.from(waterReminderSchedules)
+		.innerJoin(users, eq(waterReminderSchedules.userId, users.id))
+		.where(eq(waterReminderSchedules.active, true))
+		.all();
+
+	// Collect users whose schedule fires right now
+	const usersToNotify = new Map<string, { intervalMinutes: number; settings: Record<string, unknown> }>();
+
+	for (const s of activeSchedules) {
+		try {
+			const days: number[] = JSON.parse(s.days);
+			if (!days.includes(currentDay)) continue;
+
+			const settings = s.userSettings ? JSON.parse(s.userSettings) : {};
+			if (!settings?.waterTrackerEnabled) continue;
+
+			const [startH, startM] = s.startTime.split(':').map(Number);
+			const [endH, endM] = s.endTime.split(':').map(Number);
+			const startTotal = startH * 60 + startM;
+			const endTotal = endH * 60 + endM;
+
+			if (currentTotalMinutes < startTotal || currentTotalMinutes > endTotal) continue;
+
+			// Only fire at exact interval slots (elapsed since window start)
+			const elapsed = currentTotalMinutes - startTotal;
+			if (elapsed % s.intervalMinutes !== 0) continue;
+
+			// Keep the shortest interval if a user has multiple matching schedules
+			const existing = usersToNotify.get(s.userId);
+			if (!existing || s.intervalMinutes < existing.intervalMinutes) {
+				usersToNotify.set(s.userId, { intervalMinutes: s.intervalMinutes, settings });
+			}
+		} catch { /* skip invalid schedule */ }
+	}
+
+	if (usersToNotify.size === 0) return;
+
+	const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+	await Promise.allSettled(
+		Array.from(usersToNotify.entries()).map(async ([userId, { intervalMinutes, settings }]) => {
+			const goalMl: number = (settings?.waterGoalMl as number) ?? 2000;
+
+			// Skip if daily goal already reached
+			const totalRow = db
+				.select({ total: sql<number>`COALESCE(SUM(amount_ml), 0)` })
+				.from(waterLogs)
+				.where(and(eq(waterLogs.userId, userId), gte(waterLogs.loggedAt, todayStart)))
+				.get();
+			if ((totalRow?.total ?? 0) >= goalMl) return;
+
+			// Skip if logged within the last interval
+			const intervalMs = intervalMinutes * 60 * 1000;
+			const recentLog = db
+				.select({ id: waterLogs.id })
+				.from(waterLogs)
+				.where(and(eq(waterLogs.userId, userId), gte(waterLogs.loggedAt, Date.now() - intervalMs)))
+				.get();
+			if (recentLog) return;
+
+			const lang = settings?.lang === 'en' ? 'en' : 'de';
+			const title = lang === 'en' ? 'Hydration Tracker' : 'Wassertracker';
+			const body = lang === 'en' ? 'Time for a glass of water (250 ml)' : 'Zeit für ein Glas Wasser (250 ml)';
+			return sendPushToUser(userId, { title, body, url: '/supplements', tag: 'water-reminder' });
 		})
 	);
 }
@@ -130,7 +212,10 @@ async function init() {
 	function scheduleNextReminderCheck() {
 		const msUntilNextMinute = 60_000 - (Date.now() % 60_000);
 		setTimeout(async () => {
-			await checkSupplementReminders().catch(console.error);
+			await Promise.allSettled([
+				checkSupplementReminders().catch(console.error),
+				checkWaterReminders().catch(console.error)
+			]);
 			scheduleNextReminderCheck();
 		}, msUntilNextMinute);
 	}

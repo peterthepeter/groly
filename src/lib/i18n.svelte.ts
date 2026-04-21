@@ -149,6 +149,15 @@ class TranslationProxy {
 	get admin_catalog_parse_placeholder() { void _lang; return m.admin_catalog_parse_placeholder(); }
 	get admin_catalog_parse_button() { void _lang; return m.admin_catalog_parse_button(); }
 	get admin_catalog_parse_error() { void _lang; return m.admin_catalog_parse_error(); }
+	get admin_catalog_preview_button() { void _lang; return m.admin_catalog_preview_button(); }
+	get admin_catalog_import_all() { void _lang; return m.admin_catalog_import_all(); }
+	get admin_catalog_back() { void _lang; return m.admin_catalog_back(); }
+	get admin_catalog_sample_single() { void _lang; return m.admin_catalog_sample_single(); }
+	get admin_catalog_sample_multi() { void _lang; return m.admin_catalog_sample_multi(); }
+	get supplement_sort_label() { void _lang; return m.supplement_sort_label(); }
+	get supplement_sort_az() { void _lang; return m.supplement_sort_az(); }
+	get supplement_sort_za() { void _lang; return m.supplement_sort_za(); }
+	get supplement_sort_freq() { void _lang; return m.supplement_sort_freq(); }
 	get push_prompt_title() { void _lang; return m.push_prompt_title(); }
 	get push_prompt_body() { void _lang; return m.push_prompt_body(); }
 	get push_prompt_accept() { void _lang; return m.push_prompt_accept(); }
@@ -157,6 +166,7 @@ class TranslationProxy {
 	get pwa_install_subtitle() { void _lang; return m.pwa_install_subtitle(); }
 	// sync
 	get sync_offline() { void _lang; return m.sync_offline(); }
+	get offline_no_data() { void _lang; return m.offline_no_data(); }
 	get sync_syncing() { void _lang; return m.sync_syncing(); }
 	// misc
 	get close() { void _lang; return m.close(); }
@@ -192,6 +202,12 @@ class TranslationProxy {
 	get recipe_import_loading() { void _lang; return m.recipe_import_loading(); }
 	get recipe_import_paste() { void _lang; return m.recipe_import_paste(); }
 	get recipe_import_supported() { void _lang; return m.recipe_import_supported(); }
+	get recipe_import_no_recipe() { void _lang; return m.recipe_import_no_recipe(); }
+	get recipe_import_page_load_failed() { void _lang; return m.recipe_import_page_load_failed(); }
+	get recipe_import_failed() { void _lang; return m.recipe_import_failed(); }
+	get recipe_import_connection_error() { void _lang; return m.recipe_import_connection_error(); }
+	get recipe_import_save_failed() { void _lang; return m.recipe_import_save_failed(); }
+	get recipe_import_save_network_error() { void _lang; return m.recipe_import_save_network_error(); }
 	get recipe_save() { void _lang; return m.recipe_save(); }
 	get recipe_save_changes() { void _lang; return m.recipe_save_changes(); }
 	get recipe_saving() { void _lang; return m.recipe_saving(); }
@@ -307,6 +323,7 @@ class TranslationProxy {
 	get supplement_default_amount_label() { void _lang; return m.supplement_default_amount_label(); }
 	get supplement_default_amount_desc() { void _lang; return m.supplement_default_amount_desc(); }
 	get supplement_taken_today() { void _lang; return m.supplement_taken_today(); }
+	get supplement_taken() { void _lang; return m.supplement_taken(); }
 	get supplement_log_at() { void _lang; return m.supplement_log_at(); }
 	get settings_supplement_section() { void _lang; return m.settings_supplement_section(); }
 	get settings_supplement_tab_label() { void _lang; return m.settings_supplement_tab_label(); }
@@ -335,6 +352,25 @@ class TranslationProxy {
 	get supplement_day_sa() { void _lang; return m.supplement_day_sa(); }
 	get supplement_day_so() { void _lang; return m.supplement_day_so(); }
 	get supplement_log_edit_title() { void _lang; return m.supplement_log_edit_title(); }
+	// water tracker
+	get water_title() { void _lang; return m.water_title(); }
+	get water_toggle_label() { void _lang; return m.water_toggle_label(); }
+	get water_goal_label() { void _lang; return m.water_goal_label(); }
+	get water_goal_edit() { void _lang; return m.water_goal_edit(); }
+	get water_disabled_hint() { void _lang; return m.water_disabled_hint(); }
+	get water_custom() { void _lang; return m.water_custom(); }
+	get water_custom_placeholder() { void _lang; return m.water_custom_placeholder(); }
+	get water_add() { void _lang; return m.water_add(); }
+	get water_logged() { void _lang; return m.water_logged(); }
+	get water_log_delete() { void _lang; return m.water_log_delete(); }
+	get water_error_offline() { void _lang; return m.water_error_offline(); }
+	get water_collapse() { void _lang; return m.water_collapse(); }
+	get water_expand() { void _lang; return m.water_expand(); }
+	get water_presets_label() { void _lang; return m.water_presets_label(); }
+	get water_edit_title() { void _lang; return m.water_edit_title(); }
+	get water_reminder_from() { void _lang; return m.water_reminder_from(); }
+	get water_reminder_until() { void _lang; return m.water_reminder_until(); }
+	get water_reminder_interval() { void _lang; return m.water_reminder_interval(); }
 	// meal plan
 	get meal_plan_tab() { void _lang; return m.meal_plan_tab(); }
 	get meal_plan_edit() { void _lang; return m.meal_plan_edit(); }
@@ -366,7 +402,7 @@ export function lists_active(count: number): string {
 export function list_items_open(count: number): string {
 	void _lang;
 	if (_lang === 'en') return `${count} ${count === 1 ? 'item' : 'items'}`;
-	return `${count} ${count === 1 ? 'Element' : 'Elemente'}`;
+	return `${count} ${count === 1 ? 'Artikel' : 'Artikel'}`;
 }
 export function items_checked_count(count: number): string {
 	void _lang;

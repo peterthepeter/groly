@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.0',
+		de: [
+			'Trinktracker: Wasseraufnahme täglich erfassen, Tagesziel setzen und Push-Erinnerungen einrichten',
+			'Supplements: Sortierung nach Häufigkeit der Einnahme',
+			'Rezepte: Detailansicht jetzt auch offline verfügbar',
+			'Rezept-Import: Verständlichere Fehlermeldungen',
+		],
+		en: [
+			'Water tracker: log daily water intake, set a daily goal, and configure push reminders',
+			'Supplements: sort by frequency of use',
+			'Recipes: detail view now available offline',
+			'Recipe import: clearer error messages',
+		],
+	},
+	{
 		version: '0.5.9',
 		de: [
 			'Supplements: Hersteller wird in der Tagesansicht und im Log-Sheet angezeigt',

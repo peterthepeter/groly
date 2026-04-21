@@ -1,5 +1,5 @@
 import { offlineDb } from './db';
-import type { OfflineList, OfflineItem } from './db';
+import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail } from './db';
 import { networkStore } from '$lib/stores/online.svelte';
 
 export function generateClientId(): string {
@@ -47,6 +47,12 @@ async function processPendingMutations() {
 				case 'delete_item':
 					await apiFetch(`/api/items/${mutation.payload.id}`, { method: 'DELETE' });
 					break;
+				case 'create_supplement_log':
+					await apiFetch('/api/supplement-logs', { method: 'POST', body: JSON.stringify(mutation.payload) });
+					break;
+				case 'delete_supplement_log':
+					await apiFetch(`/api/supplement-logs/${mutation.payload.id}`, { method: 'DELETE' });
+					break;
 			}
 			await offlineDb.pendingMutations.delete(mutation.id!);
 		} catch (e: unknown) {
@@ -86,7 +92,7 @@ export async function execute<T>(
 	return null;
 }
 
-// ── Offline-Cache-Hilfsfunktionen ──────────────────────────────────────────
+// ── Listen-Cache ───────────────────────────────────────────────────────────────
 
 export async function cacheListsData(lists: OfflineList[]) {
 	await offlineDb.lists.bulkPut(lists);
@@ -124,6 +130,64 @@ export async function updateOfflineList(id: string, changes: Partial<OfflineList
 export async function deleteOfflineList(id: string) {
 	await offlineDb.lists.delete(id);
 }
+
+// ── Supplement-Cache ───────────────────────────────────────────────────────────
+
+export async function cacheSupplements(supplements: OfflineSupplement[]) {
+	await offlineDb.supplements.bulkPut(supplements);
+}
+
+export async function getOfflineSupplements(): Promise<OfflineSupplement[]> {
+	return offlineDb.supplements.toArray();
+}
+
+export async function cacheTodayLogs(logs: OfflineSupplementLog[]) {
+	await offlineDb.supplementLogs.clear();
+	if (logs.length > 0) await offlineDb.supplementLogs.bulkPut(logs);
+}
+
+export async function addOfflineLog(log: OfflineSupplementLog) {
+	await offlineDb.supplementLogs.put(log);
+}
+
+export async function queueOfflineLog(supplementId: string, amount: number, loggedAt: number): Promise<void> {
+	const tempId = generateClientId();
+	await offlineDb.pendingMutations.add({
+		type: 'create_supplement_log',
+		payload: { supplementId, amount, loggedAt },
+		createdAt: Date.now()
+	});
+	await addOfflineLog({ id: tempId, supplementId, amount, loggedAt });
+	networkStore.setPending(await offlineDb.pendingMutations.count());
+}
+
+export async function getOfflineTodayLogs(): Promise<OfflineSupplementLog[]> {
+	const d = new Date();
+	d.setHours(0, 0, 0, 0);
+	const start = d.getTime();
+	const end = start + 86_400_000 - 1;
+	return offlineDb.supplementLogs.where('loggedAt').between(start, end, true, true).toArray();
+}
+
+// ── Rezept-Cache ───────────────────────────────────────────────────────────────
+
+export async function cacheRecipes(recipes: OfflineRecipe[]) {
+	await offlineDb.recipes.bulkPut(recipes);
+}
+
+export async function getOfflineRecipes(): Promise<OfflineRecipe[]> {
+	return offlineDb.recipes.toArray();
+}
+
+export async function cacheRecipeDetail(detail: OfflineRecipeDetail) {
+	await offlineDb.recipeDetails.put(detail);
+}
+
+export async function getOfflineRecipeDetail(id: string): Promise<OfflineRecipeDetail | undefined> {
+	return offlineDb.recipeDetails.get(id);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
 
 export function initSync() {
 	if (typeof window === 'undefined') return;

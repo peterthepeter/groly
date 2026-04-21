@@ -203,7 +203,7 @@ export const POST: RequestHandler = async (event) => {
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		html = await res.text();
 	} catch (e) {
-		return json({ error: 'Seite konnte nicht geladen werden' }, { status: 422 });
+		return json({ error: 'PAGE_LOAD_FAILED' }, { status: 422 });
 	}
 
 	// Extract all JSON-LD blocks
@@ -219,7 +219,7 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	if (!schemaRecipe) {
-		return json({ error: 'Kein Rezept auf dieser Seite gefunden. Die Seite unterstützt leider das Recipe-Schema nicht.' }, { status: 422 });
+		return json({ error: 'NO_RECIPE_FOUND' }, { status: 422 });
 	}
 
 	const ingredients = (schemaRecipe.recipeIngredient ?? []).map(parseIngredient);

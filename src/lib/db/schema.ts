@@ -245,9 +245,33 @@ export const supplementCatalogNutrients = sqliteTable('supplement_catalog_nutrie
 	sortOrder: integer('sort_order').notNull().default(0)
 }, (t) => [index('supplement_catalog_nutrients_catalog_id_idx').on(t.catalogId)]);
 
+export const waterLogs = sqliteTable('water_logs', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	amountMl: integer('amount_ml').notNull(),
+	loggedAt: integer('logged_at').notNull(),
+	createdAt: integer('created_at').notNull()
+}, (t) => [
+	index('water_logs_user_id_idx').on(t.userId),
+	index('water_logs_logged_at_idx').on(t.loggedAt)
+]);
+
+export const waterReminderSchedules = sqliteTable('water_reminder_schedules', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	days: text('days').notNull(), // JSON-Array "[1,2,3,4,5]" (0=So, 1=Mo, ..., 6=Sa)
+	startTime: text('start_time').notNull(), // "HH:MM"
+	endTime: text('end_time').notNull(), // "HH:MM"
+	intervalMinutes: integer('interval_minutes').notNull().default(90),
+	active: integer('active', { mode: 'boolean' }).notNull().default(true),
+	createdAt: integer('created_at').notNull()
+}, (t) => [index('water_reminder_schedules_user_id_idx').on(t.userId)]);
+
 export type Supplement = typeof supplements.$inferSelect;
 export type SupplementNutrient = typeof supplementNutrients.$inferSelect;
 export type SupplementLog = typeof supplementLogs.$inferSelect;
 export type SupplementReminderSchedule = typeof supplementReminderSchedules.$inferSelect;
 export type SupplementCatalog = typeof supplementCatalog.$inferSelect;
 export type SupplementCatalogNutrient = typeof supplementCatalogNutrients.$inferSelect;
+export type WaterLog = typeof waterLogs.$inferSelect;
+export type WaterReminderSchedule = typeof waterReminderSchedules.$inferSelect;

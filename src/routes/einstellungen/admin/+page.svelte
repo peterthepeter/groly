@@ -314,6 +314,16 @@
 		openBrands = next;
 	}
 
+	const SAMPLE_SINGLE = $derived(currentLang() === 'de'
+		? `Muster Marke\nVitamin C Komplex\n60 Kapseln\n\nVitamin C, 500, mg\nHagebutten-Extrakt, 200, mg\nBioflavonoide, 50, mg`
+		: `Sample Brand\nVitamin C Complex\n60 Capsules\n\nVitamin C, 500, mg\nRosehip Extract, 200, mg\nBioflavonoids, 50, mg`
+	);
+
+	const SAMPLE_MULTI = $derived(currentLang() === 'de'
+		? `Muster Marke\nVitamin C Komplex\n60 Kapseln\n\nVitamin C, 500, mg\nHagebutten-Extrakt, 200, mg\nBioflavonoide, 50, mg\n\n-----\n\nMuster Marke\nOmega-3 Premium\n90 Kapseln\n\nEPA, 360, mg\nDHA, 240, mg\n\n-----\n\nMuster Marke\nMagnesium Komplex\n120 Tabletten\n\nMagnesium, 300, mg\nVitamin B6, 0.7, mg\nZink, 5, mg`
+		: `Sample Brand\nVitamin C Complex\n60 Capsules\n\nVitamin C, 500, mg\nRosehip Extract, 200, mg\nBioflavonoids, 50, mg\n\n-----\n\nSample Brand\nOmega-3 Premium\n90 Capsules\n\nEPA, 360, mg\nDHA, 240, mg\n\n-----\n\nSample Brand\nMagnesium Complex\n120 Tablets\n\nMagnesium, 300, mg\nVitamin B6, 0.7, mg\nZinc, 5, mg`
+	);
+
 	let catalogForm = $state<{
 		id: string | null; text: string;
 	} | null>(null);
@@ -337,6 +347,11 @@
 	let parseUrl = $state('');
 	let parsing = $state(false);
 	let parseNote = $state('');
+
+	type BulkPreviewItem = { brand: string; name: string; unit: string; packageSize: string; nutrients: CatalogNutrient[]; nutrientsText: string };
+	let catalogPreview = $state<BulkPreviewItem[] | null>(null);
+	let bulkImporting = $state(false);
+	let expandedItems = $state<Set<number>>(new Set());
 
 	async function parseCatalogUrl() {
 		if (!catalogForm || !parseUrl.trim()) return;
@@ -401,10 +416,55 @@
 
 	function closeCatalogForm() {
 		catalogForm = null;
+		catalogPreview = null;
 		catalogError = '';
 		catalogSuccess = '';
 		parseUrl = '';
 		parseNote = '';
+	}
+
+	function showPreview() {
+		if (!catalogForm) return;
+		const blocks = catalogForm.text.split(/\n-{3,}[ \t]*\n/).map(b => b.trim()).filter(b => b.length > 0);
+		catalogPreview = blocks.map(block => {
+			const { header, nutrients } = parseCombinedText(block);
+			const filtered = nutrients.filter(n => !n.name.trim().toLowerCase().startsWith('davon'));
+			return {
+				brand: header.brand,
+				name: header.name,
+				unit: header.unit,
+				packageSize: header.packageSize != null ? String(header.packageSize) : '',
+				nutrients: filtered,
+				nutrientsText: filtered.map(n => `${n.name}, ${n.amountPerUnit}, ${n.unit}`).join('\n')
+			};
+		}).filter(item => item.name.trim().length > 0);
+		expandedItems = new Set();
+	}
+
+	async function importAll() {
+		if (!catalogPreview) return;
+		bulkImporting = true;
+		try {
+			for (const item of catalogPreview) {
+				if (!item.name.trim() || !item.unit.trim()) continue;
+				await fetch('/api/supplement-catalog', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						name: item.name.trim(),
+						unit: item.unit.trim(),
+						brand: item.brand || null,
+						info: null,
+						packageSize: item.packageSize ? Number(item.packageSize) : null,
+						nutrients: parseNutrients(item.nutrientsText)
+					})
+				});
+			}
+			await loadCatalog();
+			closeCatalogForm();
+		} finally {
+			bulkImporting = false;
+		}
 	}
 
 	async function saveCatalog() {
@@ -924,130 +984,277 @@
 				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 			</div>
 			<p class="font-semibold text-base" style="color: var(--color-on-surface)">
-				{catalogForm.id ? t.admin_catalog_edit_title : t.admin_catalog_new_title}
+				{#if catalogPreview}
+					{t.admin_catalog_preview_button} · {catalogPreview.length}
+				{:else if catalogForm.id}
+					{t.admin_catalog_edit_title}
+				{:else}
+					{t.admin_catalog_new_title}
+				{/if}
 			</p>
 		</div>
 
-		<!-- Scrollable form -->
-		<div class="flex-1 overflow-y-auto px-6 space-y-3 pb-2">
-
-			{#if catalogError}
-				<div class="rounded-lg px-3 py-2 text-xs"
-				     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
-					{catalogError}
-				</div>
-			{/if}
-			{#if catalogSuccess}
-				<div class="rounded-lg px-3 py-2 text-xs"
-				     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
-					{catalogSuccess}
-				</div>
-			{/if}
-
-			<!-- URL parser -->
-			<div class="flex gap-2">
-				<input
-					type="url"
-					bind:value={parseUrl}
-					placeholder={t.admin_catalog_parse_placeholder}
-					onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); parseCatalogUrl(); } }}
-					class="flex-1 px-3 py-2.5 rounded-xl border-0 outline-none min-w-0"
-					style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
-				/>
-				<button
-					type="button"
-					onclick={parseCatalogUrl}
-					disabled={parsing || !parseUrl.trim()}
-					class="px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0 active:opacity-70 disabled:opacity-40"
-					style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)"
-				>
-					{parsing ? '…' : t.admin_catalog_parse_button}
-				</button>
-			</div>
-
-			{#if parseNote}
-				<div class="rounded-lg px-3 py-2 text-xs"
-				     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)">
-					{parseNote}
-				</div>
-			{/if}
-
-			<!-- Combined textarea -->
-			<div>
-				<label for="catalog-text" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">
-					{t.admin_catalog_header_label}
-				</label>
-				<p class="text-[11px] mb-2 leading-relaxed" style="color: var(--color-on-surface-variant); opacity: 0.7">{t.admin_catalog_text_hint}</p>
-				<textarea
-					id="catalog-text"
-					bind:value={catalogForm.text}
-					placeholder={t.admin_catalog_text_placeholder}
-					rows={10}
-					class="w-full px-4 py-3 rounded-xl border-0 outline-none resize-none leading-relaxed"
-					style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; font-family: monospace"
-				></textarea>
-				{#if catalogForm.text.trim()}
-					{@const preview = parseCombinedText(catalogForm.text).header}
-					<div class="mt-1.5 px-1 flex flex-wrap gap-x-3 gap-y-0.5">
-						{#if preview.name}
-							<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
-								<span style="opacity: 0.6">Name:</span> {preview.name}
+		{#if catalogPreview}
+			<!-- ── Preview mode ── -->
+			<div class="flex-1 overflow-y-auto px-4 space-y-3 pb-2">
+				{#each catalogPreview as item, i}
+					<div class="rounded-2xl p-4 space-y-2.5" style="background-color: var(--color-surface-container)">
+						<!-- Header row: index + nutrient toggle -->
+						<div class="flex items-center justify-between">
+							<span class="text-[10px] font-semibold uppercase tracking-wide" style="color: var(--color-on-surface-variant); opacity: 0.6">
+								#{i + 1}
 							</span>
-						{/if}
-						{#if preview.brand}
-							<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
-								<span style="opacity: 0.6">Marke:</span> {preview.brand}
-							</span>
-						{/if}
-						{#if preview.unit}
-							<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
-								<span style="opacity: 0.6">Einheit:</span> {preview.unit}
-							</span>
-						{/if}
-						{#if preview.packageSize != null}
-							<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
-								<span style="opacity: 0.6">Inhalt:</span> {preview.packageSize}
-							</span>
+							<button
+								onclick={() => {
+									const next = new Set(expandedItems);
+									if (next.has(i)) next.delete(i); else next.add(i);
+									expandedItems = next;
+								}}
+								class="flex items-center gap-1 px-2 py-0.5 rounded-full active:opacity-60"
+								style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)"
+							>
+								<span class="text-[10px] font-medium">{item.nutrients.length} {t.admin_catalog_nutrient_count}</span>
+								<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+								     style="transform: rotate({expandedItems.has(i) ? '180deg' : '0deg'}); transition: transform 0.2s ease">
+									<polyline points="6 9 12 15 18 9"/>
+								</svg>
+							</button>
+						</div>
+						<!-- Brand -->
+						<div class="rounded-lg px-3 py-2" style="background-color: var(--color-surface-low)">
+							<p class="text-[10px] mb-0.5" style="color: var(--color-on-surface-variant); opacity: 0.7">Hersteller</p>
+							<input
+								type="text"
+								bind:value={catalogPreview[i].brand}
+								class="w-full bg-transparent outline-none text-sm font-medium"
+								style="color: var(--color-on-surface); font-size: 16px"
+							/>
+						</div>
+						<!-- Name -->
+						<div class="rounded-lg px-3 py-2" style="background-color: var(--color-surface-low)">
+							<p class="text-[10px] mb-0.5" style="color: var(--color-on-surface-variant); opacity: 0.7">Name</p>
+							<input
+								type="text"
+								bind:value={catalogPreview[i].name}
+								class="w-full bg-transparent outline-none text-sm font-medium"
+								style="color: var(--color-on-surface); font-size: 16px"
+							/>
+						</div>
+						<!-- Unit + PackageSize -->
+						<div class="flex gap-2">
+							<div class="flex-1 rounded-lg px-3 py-2" style="background-color: var(--color-surface-low)">
+								<p class="text-[10px] mb-0.5" style="color: var(--color-on-surface-variant); opacity: 0.7">Einheit</p>
+								<input
+									type="text"
+									bind:value={catalogPreview[i].unit}
+									class="w-full bg-transparent outline-none text-sm font-medium"
+									style="color: var(--color-on-surface); font-size: 16px"
+								/>
+							</div>
+							<div class="w-28 rounded-lg px-3 py-2" style="background-color: var(--color-surface-low)">
+								<p class="text-[10px] mb-0.5" style="color: var(--color-on-surface-variant); opacity: 0.7">Packung</p>
+								<input
+									type="number"
+									bind:value={catalogPreview[i].packageSize}
+									class="w-full bg-transparent outline-none text-sm font-medium"
+									style="color: var(--color-on-surface); font-size: 16px"
+								/>
+							</div>
+						</div>
+						<!-- Collapsible nutrients textarea -->
+						{#if expandedItems.has(i)}
+							<div class="rounded-lg px-3 py-2" style="background-color: var(--color-surface-low)">
+								<p class="text-[10px] mb-1" style="color: var(--color-on-surface-variant); opacity: 0.7">{t.admin_catalog_nutrient_count} — Name, Menge, Einheit</p>
+								<textarea
+									bind:value={catalogPreview[i].nutrientsText}
+									rows={Math.min(catalogPreview[i].nutrientsText.split('\n').length + 1, 10)}
+									class="w-full bg-transparent outline-none resize-none leading-relaxed"
+									style="color: var(--color-on-surface); font-size: 14px; font-family: monospace"
+								></textarea>
+							</div>
 						{/if}
 					</div>
-				{/if}
+				{/each}
 			</div>
 
-		</div><!-- end scrollable -->
-
-		<!-- Action buttons -->
-		<div class="px-6 pt-3 pb-6 shrink-0 flex gap-2" style="border-top: 1px solid var(--color-surface-high)">
-			{#if catalogForm.id}
+			<!-- Preview action buttons -->
+			<div class="px-6 pt-3 pb-6 shrink-0 flex gap-2" style="border-top: 1px solid var(--color-surface-high)">
 				<button
-					onclick={deleteCatalogEntry}
-					class="px-3 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-					style="background-color: var(--color-surface-container); color: var(--color-error)"
+					onclick={() => catalogPreview = null}
+					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
+					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
 				>
-					{t.admin_catalog_delete}
+					{t.admin_catalog_back}
 				</button>
-			{/if}
-			<button
-				onclick={closeCatalogForm}
-				class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
-			>
-				{catalogForm.id ? t.list_cancel : t.close}
-			</button>
-			<button
-				onclick={saveCatalog}
-				disabled={catalogSaving || !catalogForm.text.trim()}
-				class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"
-				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-			>
-				{#if catalogSaving}
-					…
-				{:else if catalogSaveOk}
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-				{:else}
-					{t.supplement_save}
+				<button
+					onclick={importAll}
+					disabled={bulkImporting || catalogPreview.length === 0}
+					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"
+					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+				>
+					{#if bulkImporting}
+						…
+					{:else}
+						{t.admin_catalog_import_all}
+					{/if}
+				</button>
+			</div>
+
+		{:else}
+			<!-- ── Textarea / edit mode ── -->
+			<div class="flex-1 overflow-y-auto px-6 space-y-3 pb-2">
+
+				{#if catalogError}
+					<div class="rounded-lg px-3 py-2 text-xs"
+					     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
+						{catalogError}
+					</div>
 				{/if}
-			</button>
-		</div>
+				{#if catalogSuccess}
+					<div class="rounded-lg px-3 py-2 text-xs"
+					     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
+						{catalogSuccess}
+					</div>
+				{/if}
+
+				<!-- URL parser (only for new entries) -->
+				{#if !catalogForm.id}
+					<div class="flex gap-2">
+						<input
+							type="url"
+							bind:value={parseUrl}
+							placeholder={t.admin_catalog_parse_placeholder}
+							onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); parseCatalogUrl(); } }}
+							class="flex-1 px-3 py-2.5 rounded-xl border-0 outline-none min-w-0"
+							style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
+						/>
+						<button
+							type="button"
+							onclick={parseCatalogUrl}
+							disabled={parsing || !parseUrl.trim()}
+							class="px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0 active:opacity-70 disabled:opacity-40"
+							style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)"
+						>
+							{parsing ? '…' : t.admin_catalog_parse_button}
+						</button>
+					</div>
+				{/if}
+
+				{#if parseNote}
+					<div class="rounded-lg px-3 py-2 text-xs"
+					     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)">
+						{parseNote}
+					</div>
+				{/if}
+
+				<!-- Combined textarea -->
+				<div>
+					<label for="catalog-text" class="text-xs font-medium mb-1 block" style="color: var(--color-on-surface-variant)">
+						{t.admin_catalog_header_label}
+					</label>
+					<p class="text-[11px] mb-2 leading-relaxed" style="color: var(--color-on-surface-variant); opacity: 0.7">{t.admin_catalog_text_hint}</p>
+					<div class="flex gap-2 mb-2 flex-wrap">
+						<button
+							type="button"
+							onclick={() => { if (catalogForm) catalogForm.text = SAMPLE_SINGLE; }}
+							class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium active:opacity-60"
+							style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+						>
+							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+							{t.admin_catalog_sample_single}
+						</button>
+						<button
+							type="button"
+							onclick={() => { if (catalogForm) catalogForm.text = SAMPLE_MULTI; }}
+							class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium active:opacity-60"
+							style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+						>
+							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+							{t.admin_catalog_sample_multi}
+						</button>
+					</div>
+					<textarea
+						id="catalog-text"
+						bind:value={catalogForm.text}
+						placeholder={t.admin_catalog_text_placeholder}
+						rows={10}
+						class="w-full px-4 py-3 rounded-xl border-0 outline-none resize-none leading-relaxed"
+						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; font-family: monospace"
+					></textarea>
+					{#if catalogForm.text.trim() && catalogForm.id}
+						{@const preview = parseCombinedText(catalogForm.text).header}
+						<div class="mt-1.5 px-1 flex flex-wrap gap-x-3 gap-y-0.5">
+							{#if preview.name}
+								<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
+									<span style="opacity: 0.6">Name:</span> {preview.name}
+								</span>
+							{/if}
+							{#if preview.brand}
+								<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
+									<span style="opacity: 0.6">Marke:</span> {preview.brand}
+								</span>
+							{/if}
+							{#if preview.unit}
+								<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
+									<span style="opacity: 0.6">Einheit:</span> {preview.unit}
+								</span>
+							{/if}
+							{#if preview.packageSize != null}
+								<span class="text-[11px]" style="color: var(--color-on-surface-variant)">
+									<span style="opacity: 0.6">Inhalt:</span> {preview.packageSize}
+								</span>
+							{/if}
+						</div>
+					{/if}
+				</div>
+
+			</div><!-- end scrollable -->
+
+			<!-- Action buttons -->
+			<div class="px-6 pt-3 pb-6 shrink-0 flex gap-2" style="border-top: 1px solid var(--color-surface-high)">
+				{#if catalogForm.id}
+					<button
+						onclick={deleteCatalogEntry}
+						class="px-3 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
+						style="background-color: var(--color-surface-container); color: var(--color-error)"
+					>
+						{t.admin_catalog_delete}
+					</button>
+				{/if}
+				<button
+					onclick={closeCatalogForm}
+					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
+					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+				>
+					{t.list_cancel}
+				</button>
+				{#if catalogForm.id}
+					<button
+						onclick={saveCatalog}
+						disabled={catalogSaving || !catalogForm.text.trim()}
+						class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"
+						style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+					>
+						{#if catalogSaving}
+							…
+						{:else if catalogSaveOk}
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+						{:else}
+							{t.supplement_save}
+						{/if}
+					</button>
+				{:else}
+					<button
+						onclick={showPreview}
+						disabled={!catalogForm.text.trim()}
+						class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50"
+						style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+					>
+						{t.admin_catalog_preview_button}
+					</button>
+				{/if}
+			</div>
+		{/if}
 
 	</div>
 {/if}

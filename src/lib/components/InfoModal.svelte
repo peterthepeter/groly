@@ -125,6 +125,11 @@
 					title: 'Reminders',
 					text: 'Tap the bell icon next to a supplement in Manage to set up reminders. Choose the days of the week and a time — you\'ll receive a push notification at that time. Multiple supplements due at the same time are combined into one notification. Reminders are automatically deactivated when a supplement is set to inactive, and reactivated when it\'s set to active again.',
 					svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
+				},
+				{
+					title: 'Water Tracker',
+					text: 'Enable the Water Tracker under Manage → Water Tracker toggle. Tap +100, +200, +330 ml or Custom on the card to log your intake. A progress bar shows how close you are to your daily goal (default: 2000 ml). Tap the chevron to expand and delete individual entries. When enabled, the Water Tracker also appears at the top of the quick-log sheet. Edit your daily goal via the pencil icon on the Manage page.',
+					svg: `<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>`
 				}
 			]
 		},
@@ -261,6 +266,11 @@
 					title: 'Erinnerungen',
 					text: 'Tippe auf das Glocken-Icon neben einem Supplement unter „Verwalten", um Erinnerungen einzurichten. Wähle Wochentage und eine Uhrzeit – du erhältst dann eine Push-Benachrichtigung. Mehrere Supplements zur selben Uhrzeit werden in einer einzigen Nachricht zusammengefasst. Erinnerungen werden automatisch deaktiviert, wenn ein Supplement auf inaktiv gesetzt wird, und reaktiviert, wenn es wieder aktiviert wird.',
 					svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
+				},
+				{
+					title: 'Wassertracker',
+					text: 'Aktiviere den Wassertracker unter Verwalten über den Toggle. Tippe auf +100, +200, +330 ml oder „Individuell" auf der Karte, um deine Trinkmenge einzutragen. Ein Fortschrittsbalken zeigt, wie nah du deinem Tagesziel bist (Standard: 2000 ml). Mit dem Chevron-Icon klappst du die Karte auf und kannst einzelne Einträge löschen. Wenn aktiviert, erscheint der Wassertracker auch oben im Quick-Log. Das Tagesziel lässt sich über das Stift-Icon unter Verwalten anpassen.',
+					svg: `<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>`
 				}
 			]
 		},
