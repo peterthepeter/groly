@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.1',
+		de: [
+			'Bugfix: Startfehler bei Neuinstallation behoben — das Datenverzeichnis wurde auf manchen Systemen (z. B. Unraid) nicht korrekt beschreibbar gesetzt',
+		],
+		en: [
+			'Fix: resolved startup crash on fresh installs where the data directory was not writable (e.g. Unraid)',
+		],
+	},
+	{
 		version: '0.6.0',
 		de: [
 			'Trinktracker: Wasseraufnahme täglich erfassen, Tagesziel setzen und Push-Erinnerungen einrichten',
