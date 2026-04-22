@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.2',
+		de: [
+			'Fix: Doppelte Benachrichtigungen bei Supplement- und Wasser-Erinnerungen behoben',
+		],
+		en: [
+			'Fix: duplicate notifications for supplement and water reminders resolved',
+		],
+	},
+	{
 		version: '0.6.1',
 		de: [
 			'Bugfix: Startfehler bei Neuinstallation behoben — das Datenverzeichnis wurde auf manchen Systemen (z. B. Unraid) nicht korrekt beschreibbar gesetzt',

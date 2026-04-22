@@ -201,6 +201,7 @@ async function checkWaterReminders() {
 
 async function init() {
 	if (initialized) return;
+	initialized = true; // set synchronously before any await to prevent concurrent init
 	runMigrations();
 	bootstrapAdmin();
 	migrateItemHistory();
@@ -222,7 +223,6 @@ async function init() {
 	scheduleNextReminderCheck();
 	logMemoryUsage();
 	setInterval(logMemoryUsage, 60 * 60 * 1000); // stündlich
-	initialized = true;
 }
 
 async function notifyOnNewVersion() {
