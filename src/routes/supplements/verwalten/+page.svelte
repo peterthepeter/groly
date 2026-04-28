@@ -12,6 +12,8 @@
 	import SupplementAddToListDialog from '$lib/components/supplements/SupplementAddToListDialog.svelte';
 	import WaterTrackerEditSheet from '$lib/components/supplements/WaterTrackerEditSheet.svelte';
 	import WaterReminderSheet from '$lib/components/supplements/WaterReminderSheet.svelte';
+	import CaffeineTrackerEditSheet from '$lib/components/supplements/CaffeineTrackerEditSheet.svelte';
+	import type { CaffeineDrink } from '$lib/db/schema';
 
 	let { data } = $props();
 
@@ -61,7 +63,9 @@
 	// Water tracker
 	let waterEditOpen = $state(false);
 	let waterReminderOpen = $state(false);
+	let caffeineEditOpen = $state(false);
 	let waterHasReminders = $state(false);
+	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 
 	beforeNavigate(({ type, cancel }) => {
 		if (type === 'popstate') {
@@ -82,10 +86,11 @@
 	}
 
 	async function load() {
-		const [suppRes, remRes, waterRemRes] = await Promise.all([
+		const [suppRes, remRes, waterRemRes, caffeineRes] = await Promise.all([
 			fetch('/api/supplements'),
 			fetch('/api/supplement-reminders'),
-			fetch('/api/water-reminders')
+			fetch('/api/water-reminders'),
+			fetch('/api/caffeine-drinks')
 		]);
 		if (suppRes.ok) {
 			const data = await suppRes.json();
@@ -98,6 +103,10 @@
 		if (waterRemRes.ok) {
 			const data = await waterRemRes.json();
 			waterHasReminders = (data.schedules?.length ?? 0) > 0;
+		}
+		if (caffeineRes.ok) {
+			const caffeineData = await caffeineRes.json();
+			caffeineDrinks = caffeineData.drinks ?? [];
 		}
 		loading = false;
 	}
@@ -303,51 +312,11 @@
 	<div class="flex-1 min-h-0 flex flex-col overflow-y-auto justify-end"
 	     style="padding-bottom: 5rem">
 
-	<!-- Trinktracker oben (deaktiviert) — gleiche Struktur wie Supplement-Zeilen -->
-	{#if !userSettings.waterTrackerEnabled}
-		<div class="px-4 pt-4 pb-2">
-			<div class="rounded-2xl p-4 flex items-center gap-3 opacity-50" style="background-color: var(--color-surface-card)">
-				<button
-					onclick={() => userSettings.waterTrackerEnabled = !userSettings.waterTrackerEnabled}
-					class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-					style="background-color: var(--color-surface-container)"
-					aria-label={t.water_toggle_label}
-				></button>
-				<div class="flex-1 min-w-0">
-					<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.water_title}</p>
-					<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.water_disabled_hint}</p>
-				</div>
-				<button
-					disabled
-					class="shrink-0 p-1.5 rounded-xl opacity-40"
-					style="color: var(--color-on-surface-variant)"
-					aria-label={t.supplement_reminders_title}
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-						<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-					</svg>
-				</button>
-				<button
-					onclick={() => waterEditOpen = true}
-					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-					style="color: var(--color-on-surface-variant)"
-					aria-label={t.water_goal_edit}
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-					</svg>
-				</button>
-			</div>
-		</div>
-	{/if}
-
 	{#if loading}
 		<div class="flex justify-center py-16">
 			<div class="w-8 h-8 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
 		</div>
-	{:else if supplements.length === 0}
+	{:else if supplements.length === 0 && !userSettings.caffeineTrackerEnabled && !userSettings.waterTrackerEnabled}
 		<div class="flex flex-col items-center text-center px-4 py-16">
 			<div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
 			     style="background-color: var(--color-surface-container)">
@@ -365,7 +334,71 @@
 			>{t.disable_hint_supplements}</button>
 		</div>
 	{:else}
-		<div class="px-4 space-y-3">
+		<div class="px-4 py-4 space-y-3">
+			<!-- Koffeintracker (deaktiviert) -->
+			{#if !userSettings.caffeineTrackerEnabled}
+				<div class="rounded-2xl p-4 flex items-center gap-3 opacity-50" style="background-color: var(--color-surface-card)">
+					<button
+						onclick={() => userSettings.caffeineTrackerEnabled = !userSettings.caffeineTrackerEnabled}
+						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+						style="background-color: var(--color-surface-container)"
+						aria-label={t.caffeine_toggle_label}
+					></button>
+					<div class="flex-1 min-w-0">
+						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.caffeine_title}</p>
+						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.caffeine_disabled_hint}</p>
+					</div>
+					<button
+						onclick={() => caffeineEditOpen = true}
+						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+						style="color: var(--color-on-surface-variant)"
+						aria-label={t.caffeine_limit_edit}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+						</svg>
+					</button>
+				</div>
+			{/if}
+
+			<!-- Trinktracker (deaktiviert) -->
+			{#if !userSettings.waterTrackerEnabled}
+				<div class="rounded-2xl p-4 flex items-center gap-3 opacity-50" style="background-color: var(--color-surface-card)">
+					<button
+						onclick={() => userSettings.waterTrackerEnabled = !userSettings.waterTrackerEnabled}
+						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+						style="background-color: var(--color-surface-container)"
+						aria-label={t.water_toggle_label}
+					></button>
+					<div class="flex-1 min-w-0">
+						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.water_title}</p>
+						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.water_disabled_hint}</p>
+					</div>
+					<button
+						disabled
+						class="shrink-0 p-1.5 rounded-xl opacity-40"
+						style="color: var(--color-on-surface-variant)"
+						aria-label={t.supplement_reminders_title}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+							<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+						</svg>
+					</button>
+					<button
+						onclick={() => waterEditOpen = true}
+						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+						style="color: var(--color-on-surface-variant)"
+						aria-label={t.water_goal_edit}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+						</svg>
+					</button>
+				</div>
+			{/if}
 			{#each supplements as supplement (supplement.id)}
 				<div class="rounded-2xl p-4 flex items-center gap-3 {supplement.active ? '' : 'opacity-50'}"
 				     style="background-color: var(--color-surface-card)">
@@ -471,6 +504,34 @@
 				</button>
 			</div>
 		{/if}
+		<!-- Caffeine Tracker row (aktiviert) -->
+		{#if userSettings.caffeineTrackerEnabled}
+			<div class="rounded-2xl p-4 flex items-center gap-3" style="background-color: var(--color-surface-card)">
+				<button
+					onclick={() => userSettings.caffeineTrackerEnabled = !userSettings.caffeineTrackerEnabled}
+					class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+					style="background-color: #C8956C"
+					aria-label={t.caffeine_toggle_label}
+				>
+					<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+				</button>
+				<div class="flex-1 min-w-0">
+					<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.caffeine_title}</p>
+					<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.caffeine_limit_label}: {userSettings.caffeineLimitMg ?? 400} mg</p>
+				</div>
+				<button
+					onclick={() => caffeineEditOpen = true}
+					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+					style="color: var(--color-on-surface-variant)"
+					aria-label={t.caffeine_limit_edit}
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+					</svg>
+				</button>
+			</div>
+		{/if}
 		</div>
 	{/if}
 	</div><!-- end scrollable -->
@@ -527,5 +588,6 @@
 
 <WaterTrackerEditSheet bind:open={waterEditOpen} />
 <WaterReminderSheet bind:open={waterReminderOpen} />
+<CaffeineTrackerEditSheet bind:open={caffeineEditOpen} />
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />

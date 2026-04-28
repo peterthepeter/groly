@@ -11,7 +11,78 @@
 	// ── Accordion state ──────────────────────────────────────────────────────────
 	let usersOpen = $state(false);
 	let catalogOpen = $state(false);
+	let caffeineDrinksOpen = $state(false);
 	let menuOpen = $state(false);
+
+	// ── Caffeine Drinks ──────────────────────────────────────────────────────────
+	type CaffeineDrinkEntry = { id: string; name: string; defaultMl: number; caffeineMg: number; sortOrder: number; createdAt: number };
+	let caffeineDrinks = $state<CaffeineDrinkEntry[]>([]);
+	let caffeineLoading = $state(false);
+	let caffeineEditId = $state<string | null>(null);
+	let caffeineEditName = $state('');
+	let caffeineEditMl = $state('');
+	let caffeineEditMg = $state('');
+	let caffeineAddName = $state('');
+	let caffeineAddMl = $state('');
+	let caffeineAddMg = $state('');
+	let caffeineAddError = $state('');
+	let caffeineAddSaving = $state(false);
+
+	async function loadCaffeineDrinks() {
+		caffeineLoading = true;
+		try {
+			const res = await fetch('/api/caffeine-drinks');
+			if (res.ok) {
+				const data = await res.json();
+				caffeineDrinks = data.drinks ?? [];
+			}
+		} finally {
+			caffeineLoading = false;
+		}
+	}
+
+	async function saveCaffeineDrink(id: string) {
+		const name = caffeineEditName.trim();
+		const ml = Math.round(Number(caffeineEditMl));
+		const mg = Math.round(Number(caffeineEditMg));
+		if (!name || !ml || ml <= 0 || mg < 0) return;
+		await fetch(`/api/caffeine-drinks/${id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name, defaultMl: ml, caffeineMg: mg })
+		});
+		caffeineEditId = null;
+		await loadCaffeineDrinks();
+	}
+
+	async function deleteCaffeineDrink(id: string) {
+		await fetch(`/api/caffeine-drinks/${id}`, { method: 'DELETE' });
+		await loadCaffeineDrinks();
+	}
+
+	async function addCaffeineDrink() {
+		const name = caffeineAddName.trim();
+		const ml = Math.round(Number(caffeineAddMl));
+		const mg = Math.round(Number(caffeineAddMg));
+		if (!name || !ml || ml <= 0 || mg < 0) { caffeineAddError = 'Alle Felder ausfüllen'; return; }
+		caffeineAddSaving = true;
+		caffeineAddError = '';
+		try {
+			const res = await fetch('/api/caffeine-drinks', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name, defaultMl: ml, caffeineMg: mg })
+			});
+			if (!res.ok) throw new Error();
+			caffeineAddName = '';
+			caffeineAddMl = '';
+			caffeineAddMg = '';
+			await loadCaffeineDrinks();
+		} catch {
+			caffeineAddError = 'Fehler beim Speichern';
+		}
+		caffeineAddSaving = false;
+	}
 
 	// ── User management ──────────────────────────────────────────────────────────
 	type UserEntry = {
@@ -1255,6 +1326,168 @@
 				{/if}
 			</div>
 		{/if}
+
+		<!-- ── Caffeine Drinks Accordion ──────────────────────────────────────── -->
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<button
+				onclick={() => { caffeineDrinksOpen = !caffeineDrinksOpen; if (caffeineDrinksOpen) loadCaffeineDrinks(); }}
+				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8956C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+					<path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+					<path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+					<line x1="6" y1="1" x2="6" y2="4"/>
+					<line x1="10" y1="1" x2="10" y2="4"/>
+					<line x1="14" y1="1" x2="14" y2="4"/>
+				</svg>
+				<span class="flex-1 font-semibold text-sm" style="color: var(--color-on-surface)">{t.caffeine_admin_drinks_title}</span>
+				{#if caffeineDrinks.length > 0}
+					<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{caffeineDrinks.length}</span>
+				{/if}
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+				     style="transform: rotate({caffeineDrinksOpen ? '180deg' : '0deg'}); transition: transform 0.2s ease">
+					<polyline points="6 9 12 15 18 9"/>
+				</svg>
+			</button>
+
+			{#if caffeineDrinksOpen}
+				<div class="px-3 pb-3 space-y-2">
+					{#if caffeineLoading}
+						<div class="flex justify-center py-4">
+							<div class="w-5 h-5 rounded-full border-2 animate-spin" style="border-color: #C8956C; border-top-color: transparent"></div>
+						</div>
+					{:else}
+						{#each caffeineDrinks as drink (drink.id)}
+							<div class="rounded-xl px-3 py-2.5" style="background-color: var(--color-surface-container)">
+								{#if caffeineEditId === drink.id}
+									<div class="space-y-2">
+										<input
+											type="text"
+											bind:value={caffeineEditName}
+											placeholder={t.caffeine_drink_name}
+											class="w-full h-9 px-3 rounded-xl border-0 outline-none text-sm"
+											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+										/>
+										<div class="flex gap-2">
+											<div class="flex-1 flex items-center gap-1.5">
+												<input
+													type="number"
+													inputmode="numeric"
+													bind:value={caffeineEditMl}
+													placeholder="ml"
+													class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
+													style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+												/>
+												<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">ml</span>
+											</div>
+											<div class="flex-1 flex items-center gap-1.5">
+												<input
+													type="number"
+													inputmode="numeric"
+													bind:value={caffeineEditMg}
+													placeholder="mg"
+													class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
+													style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+												/>
+												<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">mg</span>
+											</div>
+										</div>
+										<div class="flex gap-2">
+											<button
+												onclick={() => caffeineEditId = null}
+												class="flex-1 py-2 rounded-xl text-xs font-semibold active:opacity-70"
+												style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+											>{t.close}</button>
+											<button
+												onclick={() => saveCaffeineDrink(drink.id)}
+												class="flex-1 py-2 rounded-xl text-xs font-semibold active:opacity-80"
+												style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
+											>{t.supplement_save}</button>
+										</div>
+									</div>
+								{:else}
+									<div class="flex items-center gap-2">
+										<div class="flex-1 min-w-0">
+											<p class="text-sm font-semibold" style="color: var(--color-on-surface)">{drink.name}</p>
+											<p class="text-xs" style="color: var(--color-on-surface-variant)">{drink.defaultMl} ml · {drink.caffeineMg} mg</p>
+										</div>
+										<button
+											onclick={() => { caffeineEditId = drink.id; caffeineEditName = drink.name; caffeineEditMl = String(drink.defaultMl); caffeineEditMg = String(drink.caffeineMg); }}
+											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
+											style="color: var(--color-on-surface-variant)"
+											aria-label="Bearbeiten"
+										>
+											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+												<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+											</svg>
+										</button>
+										<button
+											onclick={() => deleteCaffeineDrink(drink.id)}
+											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
+											style="color: var(--color-error)"
+											aria-label="Löschen"
+										>
+											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<polyline points="3 6 5 6 21 6"/>
+												<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+												<path d="M10 11v6M14 11v6"/>
+												<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+											</svg>
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/each}
+
+						<!-- Add new drink -->
+						<div class="rounded-xl px-3 py-3 space-y-2" style="background-color: var(--color-surface-container)">
+							<p class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.caffeine_add}</p>
+							<input
+								type="text"
+								bind:value={caffeineAddName}
+								placeholder={t.caffeine_drink_name}
+								class="w-full h-9 px-3 rounded-xl border-0 outline-none text-sm"
+								style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+							/>
+							<div class="flex gap-2">
+								<div class="flex-1 flex items-center gap-1.5">
+									<input
+										type="number"
+										inputmode="numeric"
+										bind:value={caffeineAddMl}
+										placeholder="ml"
+										class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
+										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+									/>
+									<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">ml</span>
+								</div>
+								<div class="flex-1 flex items-center gap-1.5">
+									<input
+										type="number"
+										inputmode="numeric"
+										bind:value={caffeineAddMg}
+										placeholder="mg"
+										class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
+										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+									/>
+									<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">mg</span>
+								</div>
+							</div>
+							{#if caffeineAddError}
+								<p class="text-xs" style="color: var(--color-error)">{caffeineAddError}</p>
+							{/if}
+							<button
+								onclick={addCaffeineDrink}
+								disabled={caffeineAddSaving}
+								class="w-full py-2.5 rounded-xl text-sm font-semibold active:opacity-80 disabled:opacity-50"
+								style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
+							>{caffeineAddSaving ? '…' : '+ ' + t.caffeine_title}</button>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</div>
 
 	</div>
 {/if}

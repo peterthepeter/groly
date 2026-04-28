@@ -34,6 +34,10 @@ export type UserSettings = {
 	waterTrackerEnabled?: boolean;
 	waterGoalMl?: number;
 	waterPresets?: [number, number];
+	caffeineTrackerEnabled?: boolean;
+	caffeineLimitMg?: number;
+	caffeineHiddenDrinks?: string[];
+	caffeineCustomAmounts?: Record<string, number>;
 };
 
 export const DEFAULT_SETTINGS = {

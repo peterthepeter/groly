@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.3',
+		de: [
+			'Koffeintracker: täglichen Koffeinkonsum erfassen, Tageslimit setzen und Getränke aus einem Katalog wählen — Standardmengen pro Getränk anpassbar',
+		],
+		en: [
+			'Caffeine tracker: log your daily caffeine intake, set a daily limit, and choose drinks from a built-in catalog — customize default amounts per drink',
+		],
+	},
+	{
 		version: '0.6.2',
 		de: [
 			'Fix: Doppelte Benachrichtigungen bei Supplement- und Wasser-Erinnerungen behoben',
