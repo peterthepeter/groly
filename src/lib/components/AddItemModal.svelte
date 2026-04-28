@@ -3,10 +3,11 @@
 	import { CATEGORIES, CATEGORY_LABELS, getCategoryForItem } from '$lib/categories';
 	import { userSettings } from '$lib/userSettings.svelte';
 
-	let { item = null, onSave, onClose, isFavorite = false, onToggleFavorite = null }: {
+	let { item = null, onSave, onClose, onDelete = null, isFavorite = false, onToggleFavorite = null }: {
 		item?: { name: string; quantityInfo: string | null; categoryOverride?: string | null } | null;
 		onSave: (name: string, quantityInfo: string, categoryOverride: string | null) => void;
 		onClose: () => void;
+		onDelete?: (() => void) | null;
 		isFavorite?: boolean;
 		onToggleFavorite?: ((name: string, isFav: boolean) => void) | null;
 	} = $props();
@@ -58,7 +59,27 @@
 		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 	</div>
 
-	<h2 class="text-lg font-bold mb-5" style="color: var(--color-on-surface)">{item ? t.item_edit_title : t.items_add}</h2>
+	<div class="flex items-center justify-between mb-5">
+		<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{item ? t.item_edit_title : t.items_add}</h2>
+		{#if item && onDelete}
+			<button
+				type="button"
+				onclick={onDelete}
+				class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors active:scale-95"
+				style="color: #ef4444"
+				aria-label="Item löschen"
+			>
+				<svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+				     stroke="currentColor" stroke-width="2"
+				     stroke-linecap="round" stroke-linejoin="round">
+					<polyline points="3 6 5 6 21 6"/>
+					<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+					<path d="M10 11v6M14 11v6"/>
+					<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+				</svg>
+			</button>
+		{/if}
+	</div>
 
 	<div class="space-y-3 mb-6">
 		<!-- Kategorie-Picker -->
@@ -68,9 +89,8 @@
 			style="background-color: var(--color-surface-container)"
 		>
 			<div class="flex items-center gap-2.5 min-w-0">
-				<div class="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
-				     style="background-color: color-mix(in srgb, {effectiveCategory.color} 22%, transparent)">
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+				<div class="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
 					     stroke={effectiveCategory.color} stroke-width="1.8"
 					     stroke-linecap="round" stroke-linejoin="round">
 						{@html effectiveCategory.svgContent}

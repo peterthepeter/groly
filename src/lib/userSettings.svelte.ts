@@ -82,6 +82,10 @@ let _supplementSortOrder = $state<'az' | 'za' | 'freq'>(cache.supplementSortOrde
 let _waterTrackerEnabled = $state<boolean>(cache.waterTrackerEnabled ?? false);
 let _waterGoalMl = $state<number>(cache.waterGoalMl ?? 2000);
 let _waterPresets = $state<[number, number]>(cache.waterPresets ?? [100, 200]);
+let _caffeineTrackerEnabled = $state<boolean>(cache.caffeineTrackerEnabled ?? false);
+let _caffeineLimitMg = $state<number>(cache.caffeineLimitMg ?? 400);
+let _caffeineHiddenDrinks = $state<string[]>(cache.caffeineHiddenDrinks ?? []);
+let _caffeineCustomAmounts = $state<Record<string, number>>(cache.caffeineCustomAmounts ?? {});
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -105,7 +109,11 @@ function scheduleSave() {
 			supplementSortOrder: _supplementSortOrder,
 			waterTrackerEnabled: _waterTrackerEnabled,
 			waterGoalMl: _waterGoalMl,
-			waterPresets: _waterPresets
+			waterPresets: _waterPresets,
+			caffeineTrackerEnabled: _caffeineTrackerEnabled,
+			caffeineLimitMg: _caffeineLimitMg,
+			caffeineHiddenDrinks: _caffeineHiddenDrinks,
+			caffeineCustomAmounts: _caffeineCustomAmounts
 		};
 		saveCache(settings);
 		try {
@@ -226,6 +234,16 @@ export const userSettings = {
 	get waterPresets() { return _waterPresets; },
 	set waterPresets(v: [number, number]) { _waterPresets = v; scheduleSave(); },
 
+	// Caffeine tracker
+	get caffeineTrackerEnabled() { return _caffeineTrackerEnabled; },
+	set caffeineTrackerEnabled(v: boolean) { _caffeineTrackerEnabled = v; scheduleSave(); },
+	get caffeineLimitMg() { return _caffeineLimitMg; },
+	set caffeineLimitMg(v: number) { _caffeineLimitMg = v; scheduleSave(); },
+	get caffeineHiddenDrinks() { return _caffeineHiddenDrinks; },
+	set caffeineHiddenDrinks(v: string[]) { _caffeineHiddenDrinks = v; scheduleSave(); },
+	get caffeineCustomAmounts() { return _caffeineCustomAmounts; },
+	set caffeineCustomAmounts(v: Record<string, number>) { _caffeineCustomAmounts = v; scheduleSave(); },
+
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
 	addShortcut(s: Shortcut) {
@@ -267,6 +285,10 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_waterTrackerEnabled = settings.waterTrackerEnabled ?? false;
 		_waterGoalMl = settings.waterGoalMl ?? 2000;
 		_waterPresets = settings.waterPresets ?? [100, 200];
+		_caffeineTrackerEnabled = settings.caffeineTrackerEnabled ?? false;
+		_caffeineLimitMg = settings.caffeineLimitMg ?? 400;
+		_caffeineHiddenDrinks = settings.caffeineHiddenDrinks ?? [];
+		_caffeineCustomAmounts = settings.caffeineCustomAmounts ?? {};
 		saveCache(settings);
 		return settings;
 	} catch { return null; }

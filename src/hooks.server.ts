@@ -2,7 +2,7 @@ import { type Handle, json } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
-import { runMigrations, db } from '$lib/db';
+import { runMigrations, db, sqlite } from '$lib/db';
 import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users, mealPlanEntries, supplementLogs, supplementReminderSchedules, supplements, waterReminderSchedules, waterLogs } from '$lib/db/schema';
 import { eq, lt, and, gte, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
@@ -34,6 +34,50 @@ function migrateItemHistory() {
 	`);
 
 	db.insert(appMeta).values({ key: 'item_history_migrated', value: '1' }).run();
+}
+
+function bootstrapCaffeineTables() {
+	sqlite.exec(`
+		CREATE TABLE IF NOT EXISTS caffeine_drinks (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			default_ml INTEGER NOT NULL,
+			caffeine_mg INTEGER NOT NULL,
+			sort_order INTEGER NOT NULL DEFAULT 0,
+			created_at INTEGER NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS caffeine_logs (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			drink_name TEXT NOT NULL,
+			amount_ml INTEGER NOT NULL,
+			caffeine_mg INTEGER NOT NULL,
+			logged_at INTEGER NOT NULL,
+			created_at INTEGER NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS caffeine_logs_user_id_idx ON caffeine_logs(user_id);
+		CREATE INDEX IF NOT EXISTS caffeine_logs_logged_at_idx ON caffeine_logs(logged_at);
+		DELETE FROM caffeine_drinks WHERE id IN (
+			'espresso','doppelter-espresso','filterkaffee','cappuccino',
+			'latte-macchiato','cold-brew','schwarztee','gruentee','energy-drink','cola'
+		);
+		UPDATE caffeine_drinks SET default_ml = 35 WHERE id = 'cd-espresso' AND default_ml = 30;
+		UPDATE caffeine_drinks SET name = 'Double Espresso' WHERE id = 'cd-doppelter-espresso' AND name = 'Doppelter Espresso';
+		UPDATE caffeine_drinks SET name = 'Filter Coffee'  WHERE id = 'cd-filterkaffee'       AND name = 'Filterkaffee';
+		UPDATE caffeine_drinks SET name = 'Black Tea'      WHERE id = 'cd-schwarztee'         AND name = 'Schwarztee';
+		UPDATE caffeine_drinks SET name = 'Green Tea'      WHERE id = 'cd-gruentee'           AND (name = 'Grüntee' OR name = 'Gruntee');
+		INSERT OR IGNORE INTO caffeine_drinks (id, name, default_ml, caffeine_mg, sort_order, created_at) VALUES
+			('cd-espresso',           'Espresso',       35,  63, 0, 0),
+			('cd-doppelter-espresso', 'Double Espresso', 60, 126, 1, 0),
+			('cd-filterkaffee',       'Filter Coffee',  200,  90, 2, 0),
+			('cd-cappuccino',         'Cappuccino',     200,  63, 3, 0),
+			('cd-latte-macchiato',    'Latte Macchiato',300,  63, 4, 0),
+			('cd-cold-brew',          'Cold Brew',      250, 200, 5, 0),
+			('cd-schwarztee',         'Black Tea',      200,  45, 6, 0),
+			('cd-gruentee',           'Green Tea',      200,  30, 7, 0),
+			('cd-energy-drink',       'Energy Drink',   250,  80, 8, 0),
+			('cd-cola',               'Cola',           330,  35, 9, 0);
+	`);
 }
 
 function cleanupOldData() {
@@ -205,6 +249,7 @@ async function init() {
 	runMigrations();
 	bootstrapAdmin();
 	migrateItemHistory();
+	bootstrapCaffeineTables();
 	await notifyOnNewVersion();
 	cleanupBarcodeCache();
 	cleanupOldData();

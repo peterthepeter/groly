@@ -204,6 +204,13 @@
       "when": 1776690000000,
       "tag": "0028_water_reminders_interval",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1745750000000,
+      "tag": "0029_caffeine_tracker",
+      "breakpoints": true
     }
   ]
 }

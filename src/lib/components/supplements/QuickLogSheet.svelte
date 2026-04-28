@@ -13,13 +13,19 @@
 		nutrients: unknown[];
 	};
 
+	type CaffeineDrink = { id: string; name: string; defaultMl: number; caffeineMg: number; sortOrder: number };
+
 	let {
 		open = $bindable(false),
 		supplements,
 		onlogged,
 		waterEnabled = false,
 		waterGoalMl = 2500,
-		waterTotalMl = 0
+		waterTotalMl = 0,
+		caffeineEnabled = false,
+		caffeineTotalMg = 0,
+		caffeineLimitMg = 400,
+		caffeineDrinks = []
 	}: {
 		open: boolean;
 		supplements: Supplement[];
@@ -27,6 +33,10 @@
 		waterEnabled?: boolean;
 		waterGoalMl?: number;
 		waterTotalMl?: number;
+		caffeineEnabled?: boolean;
+		caffeineTotalMg?: number;
+		caffeineLimitMg?: number;
+		caffeineDrinks?: CaffeineDrink[];
 	} = $props();
 
 	let amounts = $state<Record<string, number>>({});
@@ -36,6 +46,8 @@
 	let waterError = $state<string | null>(null);
 	let waterShowCustom = $state(false);
 	let waterCustomAmount = $state('');
+	let caffeineSaving = $state<string | null>(null); // drinkId being saved
+	let caffeineDone = $state<string | null>(null);   // drinkId just logged
 	let saving = $state<Record<string, boolean>>({});
 	let done = $state<Record<string, boolean>>({});
 	let logCounts = $state<Record<string, number>>({});
@@ -75,8 +87,29 @@
 		});
 	});
 
+	async function logCaffeine(drink: CaffeineDrink) {
+		if (caffeineSaving) return;
+		caffeineSaving = drink.id;
+		const ml = userSettings.caffeineCustomAmounts?.[drink.id] ?? drink.defaultMl;
+		const mg = Math.round(drink.caffeineMg * ml / drink.defaultMl);
+		try {
+			const res = await fetch('/api/caffeine-logs', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ drinkName: drink.name, amountMl: ml, caffeineMg: mg, loggedAt: Date.now() })
+			});
+			if (!res.ok) throw new Error();
+			caffeineDone = drink.id;
+			setTimeout(() => { caffeineDone = null; }, 2500);
+			onlogged();
+		} catch { /* silently fail */ }
+		caffeineSaving = null;
+	}
+
 	$effect(() => {
 		if (open) {
+			caffeineDone = null;
+			caffeineSaving = null;
 			// Read supplements untracked so updates to the list (e.g. after logging)
 			// don't re-trigger this effect and reset done/saving mid-confirmation.
 			const now = new Date().toTimeString().slice(0, 5);
@@ -221,6 +254,30 @@
 			</div>
 
 			<div class="space-y-2">
+				{#if caffeineEnabled && caffeineDrinks.length > 0}
+					<div class="flex items-center gap-1.5 rounded-2xl px-2 py-2.5" style="background-color: var(--color-surface-container)">
+						<!-- Title + subtitle (left, fixed) -->
+						<div class="flex flex-col justify-center leading-none gap-[3px] shrink-0">
+							<span class="text-sm font-semibold" style="color: #C8956C">{t.caffeine_title}</span>
+							<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{caffeineTotalMg} / {caffeineLimitMg} mg</span>
+						</div>
+						<!-- Scrollable drink buttons (right) -->
+						<div class="flex gap-1 overflow-x-auto flex-1 min-w-0" style="-webkit-overflow-scrolling: touch; scrollbar-width: none">
+							{#each caffeineDrinks as drink (drink.id)}
+								{@const isThisDone = caffeineDone === drink.id}
+								{@const isThisSaving = caffeineSaving === drink.id}
+								<button
+									onclick={() => logCaffeine(drink)}
+									disabled={!!caffeineSaving}
+									class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity shrink-0"
+									style="background-color: {isThisDone ? 'color-mix(in srgb, #C8956C 20%, transparent)' : 'var(--color-surface-high)'}; color: {isThisDone ? '#C8956C' : 'var(--color-on-surface)'}; box-shadow: {isThisDone ? 'inset 0 0 0 1px #C8956C' : 'none'}"
+								>
+									{#if isThisSaving}…{:else if isThisDone}✓ {drink.name}{:else}{drink.name}{/if}
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
 				{#if waterEnabled}
 					<div>
 						<div class="flex items-center gap-1.5 rounded-2xl px-2 py-2.5" style="background-color: var(--color-surface-container)">

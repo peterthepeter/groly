@@ -48,6 +48,8 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **History** – Day, week, and month views for both supplements taken and nutrients consumed. Navigate back in time to review any period.
 - **Active/inactive toggle** – Temporarily disable a supplement without deleting it or its history.
 - **Brand & info** – Optionally store brand and additional information per supplement.
+- **Water tracker** – Log daily water intake with preset quick-add buttons or a custom amount. Set a personal daily goal (ml) and track progress with a fill bar. Configure push reminders at fixed intervals within a time window.
+- **Caffeine tracker** – Log caffeine intake by selecting from a built-in drink catalog (10 pre-seeded drinks: Espresso, Filter Coffee, Cold Brew, and more). Per-drink default amounts are individually adjustable per user. Set a daily limit with a visual fill bar — exceeding the limit is highlighted in red. Hide drinks you don't use from the picker.
 
 ### Recipes & Meal Planning
 

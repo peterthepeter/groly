@@ -371,6 +371,29 @@ class TranslationProxy {
 	get water_reminder_from() { void _lang; return m.water_reminder_from(); }
 	get water_reminder_until() { void _lang; return m.water_reminder_until(); }
 	get water_reminder_interval() { void _lang; return m.water_reminder_interval(); }
+	// caffeine tracker
+	get caffeine_title() { void _lang; return m.caffeine_title(); }
+	get caffeine_toggle_label() { void _lang; return m.caffeine_toggle_label(); }
+	get caffeine_limit_label() { void _lang; return m.caffeine_limit_label(); }
+	get caffeine_limit_edit() { void _lang; return m.caffeine_limit_edit(); }
+	get caffeine_visible_drinks() { void _lang; return m.caffeine_visible_drinks(); }
+	get caffeine_disabled_hint() { void _lang; return m.caffeine_disabled_hint(); }
+	get caffeine_add() { void _lang; return m.caffeine_add(); }
+	get caffeine_logged() { void _lang; return m.caffeine_logged(); }
+	get caffeine_log_delete() { void _lang; return m.caffeine_log_delete(); }
+	get caffeine_error_offline() { void _lang; return m.caffeine_error_offline(); }
+	get caffeine_collapse() { void _lang; return m.caffeine_collapse(); }
+	get caffeine_expand() { void _lang; return m.caffeine_expand(); }
+	get caffeine_edit_title() { void _lang; return m.caffeine_edit_title(); }
+	get caffeine_drink_picker_title() { void _lang; return m.caffeine_drink_picker_title(); }
+	get caffeine_custom_amount() { void _lang; return m.caffeine_custom_amount(); }
+	get caffeine_mg_preview() { void _lang; return m.caffeine_mg_preview(); }
+	get caffeine_admin_drinks_title() { void _lang; return m.caffeine_admin_drinks_title(); }
+	get caffeine_drink_name() { void _lang; return m.caffeine_drink_name(); }
+	get caffeine_drink_default_ml() { void _lang; return m.caffeine_drink_default_ml(); }
+	get caffeine_drink_caffeine_mg() { void _lang; return m.caffeine_drink_caffeine_mg(); }
+	get caffeine_today_ml() { void _lang; return m.caffeine_today_ml(); }
+	get caffeine_limit_exceeded() { void _lang; return m.caffeine_limit_exceeded(); }
 	// meal plan
 	get meal_plan_tab() { void _lang; return m.meal_plan_tab(); }
 	get meal_plan_edit() { void _lang; return m.meal_plan_edit(); }

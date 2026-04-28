@@ -12,7 +12,8 @@
 	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
 	import EditLogSheet from '$lib/components/supplements/EditLogSheet.svelte';
 	import WaterTrackerCard from '$lib/components/supplements/WaterTrackerCard.svelte';
-	import type { WaterLog } from '$lib/db/schema';
+	import CaffeineTrackerCard from '$lib/components/supplements/CaffeineTrackerCard.svelte';
+	import type { WaterLog, CaffeineLog, CaffeineDrink } from '$lib/db/schema';
 
 	let { data } = $props();
 
@@ -33,6 +34,12 @@
 	let todayLogs = $state<Log[]>([]);
 	let waterLogsToday = $state<WaterLog[]>([]);
 	let waterHasReminderToday = $state(false);
+	let caffeineLogsToday = $state<CaffeineLog[]>([]);
+	let caffeineDrinks = $state<CaffeineDrink[]>([]);
+	const visibleCaffeineDrinks = $derived(
+		caffeineDrinks.filter(d => !(userSettings.caffeineHiddenDrinks ?? []).includes(d.id))
+	);
+	let historyCaffeineLogs = $state<CaffeineLog[]>([]);
 	let loading = $state(true);
 	const activeTab = $derived($page.url.searchParams.get('tab') === 'history' ? 'history' : 'today');
 
@@ -172,7 +179,8 @@
 		historyLoading = true;
 		const [statsRes] = await Promise.all([
 			fetch(`/api/supplement-stats?period=${historyPeriod}&date=${historyDate}`),
-			loadHistoryWater()
+			loadHistoryWater(),
+			loadHistoryCaffeine()
 		]);
 		if (statsRes.ok) {
 			const data = await statsRes.json();
@@ -239,6 +247,51 @@
 		} catch {}
 	}
 
+	async function loadCaffeineDrinks() {
+		try {
+			const res = await fetch('/api/caffeine-drinks');
+			if (res.ok) {
+				const data = await res.json();
+				caffeineDrinks = data.drinks ?? [];
+			}
+		} catch {}
+	}
+
+	async function loadCaffeineLogs() {
+		if (!userSettings.caffeineTrackerEnabled) return;
+		try {
+			const res = await fetch(`/api/caffeine-logs?from=${todayStart()}&to=${todayEnd()}`);
+			if (res.ok) {
+				const data = await res.json();
+				caffeineLogsToday = data.logs;
+			}
+		} catch {}
+	}
+
+	async function deleteCaffeineLog(id: string) {
+		try {
+			const res = await fetch(`/api/caffeine-logs/${id}`, { method: 'DELETE' });
+			if (res.ok) await loadCaffeineLogs();
+		} catch {}
+	}
+
+	async function loadHistoryCaffeine() {
+		if (!userSettings.caffeineTrackerEnabled || historyPeriod !== 'day') {
+			historyCaffeineLogs = [];
+			return;
+		}
+		const d = new Date(historyDate + 'T00:00:00');
+		const from = d.getTime();
+		const to = from + 86_400_000 - 1;
+		try {
+			const res = await fetch(`/api/caffeine-logs?from=${from}&to=${to}`);
+			if (res.ok) {
+				const data = await res.json();
+				historyCaffeineLogs = data.logs ?? [];
+			}
+		} catch { historyCaffeineLogs = []; }
+	}
+
 	// ─── Edit log sheet ─────────────────────────────────────────────────────────
 
 	type EditLogSheetType = { id: string; supplementName: string; unit: string; amount: number; time: string };
@@ -301,13 +354,13 @@
 	});
 
 	onMount(() => {
-		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs()]).then(() => { loading = false; });
+		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs()]).then(() => { loading = false; });
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
 
 		function onVisibilityChange() {
 			if (document.visibilityState === 'visible') {
 				now = new Date();
-				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs()]);
+				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs()]);
 			}
 		}
 		document.addEventListener('visibilitychange', onVisibilityChange);
@@ -350,6 +403,9 @@
 	let waterHistoryCardExpanded = $state(false);
 	let historyWaterLogs = $state<{ id: string; amountMl: number; loggedAt: number }[]>([]);
 	const historyWaterTotal = $derived(historyWaterLogs.reduce((s, l) => s + l.amountMl, 0));
+	let caffeineHistoryCardExpanded = $state(false);
+	const historyCaffeineTotalMg = $derived(historyCaffeineLogs.reduce((s, l) => s + l.caffeineMg, 0));
+	const historyCaffeineTotalMl = $derived(historyCaffeineLogs.reduce((s, l) => s + l.amountMl, 0));
 
 	function toMcg(total: number, unit: string): number {
 		const u = unit.toLowerCase();
@@ -655,6 +711,17 @@
 				/>
 			</div>
 		{/if}
+		{#if userSettings.caffeineTrackerEnabled}
+			<div class="px-4 pt-3">
+				<CaffeineTrackerCard
+					logs={caffeineLogsToday}
+					limitMg={userSettings.caffeineLimitMg ?? 400}
+					drinks={visibleCaffeineDrinks}
+					onlogged={loadCaffeineLogs}
+					ondeleted={deleteCaffeineLog}
+				/>
+			</div>
+		{/if}
 
 	{:else}
 		<!-- HISTORY TAB -->
@@ -663,7 +730,7 @@
 				<div class="flex justify-center py-8">
 					<div class="w-6 h-6 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
 				</div>
-			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0 && historyWaterTotal === 0}
+			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0 && historyWaterTotal === 0 && historyCaffeineTotalMg === 0}
 				<div class="py-12 text-center">
 					<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_stats_empty}</p>
 				</div>
@@ -737,6 +804,37 @@
 					</div>
 				{/if}
 
+				<!-- Caffeine -->
+				{#if userSettings.caffeineTrackerEnabled && historyPeriod === 'day' && historyCaffeineTotalMg > 0}
+					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
+						<button
+							onclick={() => caffeineHistoryCardExpanded = !caffeineHistoryCardExpanded}
+							class="w-full flex items-center justify-between active:opacity-60"
+							style="margin-bottom: 0.375rem"
+						>
+							<p class="text-xs font-semibold uppercase tracking-wider" style="color: #C8956C">{t.caffeine_title}</p>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+							     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '-90' : '90'}deg)">
+								<polyline points="9 6 15 12 9 18"/>
+							</svg>
+						</button>
+						<div class="flex justify-between items-center text-sm" style="margin-bottom: {caffeineHistoryCardExpanded ? '0.75rem' : '0'}">
+							<span style="color: var(--color-on-surface-variant)">{historyCaffeineTotalMl} ml</span>
+							<span class="font-semibold" style="color: {historyCaffeineTotalMg > (userSettings.caffeineLimitMg ?? 400) ? '#EF4444' : '#C8956C'}">{historyCaffeineTotalMg} / {userSettings.caffeineLimitMg ?? 400} mg</span>
+						</div>
+						{#if caffeineHistoryCardExpanded}
+							<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
+								{#each historyCaffeineLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
+									<div class="flex justify-between items-center text-sm">
+										<span style="color: var(--color-on-surface)">{log.drinkName} · {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+										<span class="font-semibold" style="color: #C8956C">{log.caffeineMg} mg</span>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
+
 				<!-- Water -->
 				{#if userSettings.waterTrackerEnabled && historyPeriod === 'day' && historyWaterTotal > 0}
 					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
@@ -783,7 +881,11 @@
 	waterEnabled={userSettings.waterTrackerEnabled}
 	waterGoalMl={userSettings.waterGoalMl ?? 2500}
 	waterTotalMl={waterLogsToday.reduce((s, l) => s + l.amountMl, 0)}
-	onlogged={() => Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs()])}
+	caffeineEnabled={userSettings.caffeineTrackerEnabled}
+	caffeineTotalMg={caffeineLogsToday.reduce((s, l) => s + l.caffeineMg, 0)}
+	caffeineLimitMg={userSettings.caffeineLimitMg ?? 400}
+	caffeineDrinks={visibleCaffeineDrinks}
+	onlogged={() => Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs()])}
 />
 
 <AppBottomNav

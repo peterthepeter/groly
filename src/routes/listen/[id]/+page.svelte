@@ -556,6 +556,7 @@
 		item={editItem}
 		onSave={saveEditItem}
 		onClose={() => { addModalOpen = false; editItem = null; }}
+		onDelete={() => { const id = editItem!.id; addModalOpen = false; editItem = null; void deleteItem(id); }}
 		isFavorite={favoriteNames.has((editItem?.name ?? '').toLowerCase())}
 		onToggleFavorite={toggleFavorite}
 	/>
