@@ -46,6 +46,18 @@
 	let autoFavoritesOnOpen = $state(false);
 	let itemsLoadVersion = 0;
 
+	// Pull-to-Refresh
+	const PULL_THRESHOLD = 65;
+	let pullStartY = 0;
+	let pullDistance = $state(0);
+	let isPulling = false;
+	let isRefreshing = $state(false);
+	const pullIndicatorY = $derived(
+		isRefreshing ? 8 : -40 + Math.min(pullDistance, PULL_THRESHOLD) / PULL_THRESHOLD * 48
+	);
+	const pullOpacity = $derived(Math.min(pullDistance / (PULL_THRESHOLD * 0.6), 1));
+	const pullArrowRotation = $derived(Math.min(pullDistance / PULL_THRESHOLD, 1) * 180);
+
 	const listId = $derived($page.params.id);
 	const openItems = $derived.by(() => {
 		const unchecked = items.filter(i => !i.isChecked);
@@ -273,6 +285,39 @@
 		}
 	});
 
+	function handlePullStart(e: TouchEvent) {
+		if (scrollContainer && scrollContainer.scrollTop <= 0) {
+			pullStartY = e.touches[0].clientY;
+			isPulling = true;
+		}
+	}
+
+	function handlePullMove(e: TouchEvent) {
+		if (!isPulling || isRefreshing) return;
+		const dy = e.touches[0].clientY - pullStartY;
+		if (dy > 0) {
+			pullDistance = Math.min(dy, PULL_THRESHOLD + 20);
+		} else {
+			pullDistance = 0;
+			isPulling = false;
+		}
+	}
+
+	function handlePullEnd() {
+		if (!isPulling) return;
+		isPulling = false;
+		if (pullDistance >= PULL_THRESHOLD) {
+			isRefreshing = true;
+			pullDistance = PULL_THRESHOLD;
+			void loadItems().finally(() => {
+				isRefreshing = false;
+				pullDistance = 0;
+			});
+		} else {
+			pullDistance = 0;
+		}
+	}
+
 	onMount(() => {
 		void loadItems();
 		const handleOnline = () => void loadItems();
@@ -297,6 +342,12 @@
 			showLocationHint = true;
 		}
 
+		if (scrollContainer) {
+			scrollContainer.addEventListener('touchstart', handlePullStart, { passive: true });
+			scrollContainer.addEventListener('touchmove', handlePullMove, { passive: true });
+			scrollContainer.addEventListener('touchend', handlePullEnd, { passive: true });
+		}
+
 		if (window.visualViewport) {
 			const onViewportResize = () => {
 				keyboardOpen = (window.innerHeight - window.visualViewport!.height) > 100;
@@ -305,11 +356,21 @@
 			const removeViewport = () => window.visualViewport?.removeEventListener('resize', onViewportResize);
 			const removeOnline = () => window.removeEventListener('online', handleOnline);
 			const removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
-			return () => { removeOnline(); removeViewport(); removeVisibility(); };
+			const removePull = () => {
+				scrollContainer?.removeEventListener('touchstart', handlePullStart);
+				scrollContainer?.removeEventListener('touchmove', handlePullMove);
+				scrollContainer?.removeEventListener('touchend', handlePullEnd);
+			};
+			return () => { removeOnline(); removeViewport(); removeVisibility(); removePull(); };
 		}
 
 		const removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
-		return () => { window.removeEventListener('online', handleOnline); removeVisibility(); };
+		const removePull = () => {
+			scrollContainer?.removeEventListener('touchstart', handlePullStart);
+			scrollContainer?.removeEventListener('touchmove', handlePullMove);
+			scrollContainer?.removeEventListener('touchend', handlePullEnd);
+		};
+		return () => { window.removeEventListener('online', handleOnline); removeVisibility(); removePull(); };
 	});
 
 	function dismissListViewHint(navigate = false) {
@@ -454,9 +515,32 @@
 		</div>
 	{/if}
 
+	<!-- Pull-to-Refresh Indicator -->
+	{#if pullDistance > 2 || isRefreshing}
+		<div
+			class="fixed left-0 right-0 z-30 flex justify-center pointer-events-none max-w-[430px] mx-auto"
+			style="top: calc(env(safe-area-inset-top) + 5.25rem); transform: translateY({pullIndicatorY}px); opacity: {pullOpacity}; transition: {isPulling ? 'none' : 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease'}"
+		>
+			<div class="w-9 h-9 rounded-full flex items-center justify-center shadow-md"
+			     style="background-color: var(--color-surface-elevated); border: 1px solid var(--color-outline-variant)">
+				{#if isRefreshing}
+					<div class="w-[15px] h-[15px] rounded-full border-2 animate-spin"
+					     style="border-color: var(--color-primary); border-top-color: transparent"></div>
+				{:else}
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+					     stroke="var(--color-primary)" stroke-width="2.5"
+					     stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({pullArrowRotation}deg); transition: {isPulling ? 'none' : 'transform 0.2s ease'}">
+						<path d="M12 5v14M5 12l7 7 7-7"/>
+					</svg>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
 	<!-- Bottom-Anchored Content -->
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'} + {showLocationHint ? '3.5rem' : '0px'}); padding-bottom: 5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'} + {showLocationHint ? '3.5rem' : '0px'}); padding-bottom: 5rem; overscroll-behavior: none">
 		<div class="min-h-full flex flex-col" class:justify-end={!searchQuery.trim() || !keyboardOpen}>
 		{#if loading}
 			<div class="flex justify-center py-8">

@@ -36,6 +36,10 @@
 	let waterLogsToday = $state<WaterLog[]>([]);
 	let waterHasReminderToday = $state(false);
 	let caffeineLogsToday = $state<CaffeineLog[]>([]);
+	const hasVisibleTrackerCards = $derived(
+		(userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday)) ||
+		(userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0)
+	);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 	const visibleCaffeineDrinks = $derived(
 		caffeineDrinks.filter(d => !(userSettings.caffeineHiddenDrinks ?? []).includes(d.id))
@@ -405,6 +409,20 @@
 		}
 	});
 
+	// Re-fetch tracker data when settings arrive from server (race condition fix)
+	$effect(() => {
+		if (userSettings.waterTrackerEnabled) {
+			void loadWaterLogs();
+			void loadWaterReminders();
+		} else {
+			waterLogsToday = [];
+		}
+	});
+	$effect(() => {
+		if (userSettings.caffeineTrackerEnabled) void loadCaffeineLogs();
+		else caffeineLogsToday = [];
+	});
+
 	onMount(() => {
 		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs()]).then(() => { loading = false; });
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
@@ -631,7 +649,7 @@
 		</div>
 	{:else if activeTab === 'today'}
 		<!-- TODAY TAB -->
-		{#if supplements.length === 0}
+		{#if supplements.length === 0 && !userSettings.waterTrackerEnabled && !userSettings.caffeineTrackerEnabled}
 			<div class="flex flex-col items-center text-center px-4 py-16">
 				<div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
 				     style="background-color: var(--color-surface-container)">
@@ -649,13 +667,14 @@
 				>
 					{t.supplement_manage}
 				</button>
+				<p class="text-xs mb-3 max-w-[260px]" style="color: var(--color-on-surface-variant)">{t.supplement_empty_tracker_hint}</p>
 				<button
 					onclick={() => goto('/einstellungen')}
 					class="text-xs active:opacity-60 transition-opacity"
 					style="color: var(--color-primary)"
 				>{t.disable_hint_supplements}</button>
 			</div>
-		{:else if activeSupplements.length === 0}
+		{:else if activeSupplements.length === 0 && !userSettings.waterTrackerEnabled && !userSettings.caffeineTrackerEnabled}
 			<div class="flex flex-col items-center text-center px-4 py-16">
 				<div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
 				     style="background-color: var(--color-surface-container)">
@@ -674,7 +693,7 @@
 					{t.supplement_manage}
 				</button>
 			</div>
-		{:else if loggedTodaySupplements.length === 0}
+		{:else if loggedTodaySupplements.length === 0 && !hasVisibleTrackerCards}
 			<div class="px-4 py-16 text-center">
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_today_empty}</p>
 			</div>

@@ -316,23 +316,6 @@
 		<div class="flex justify-center py-16">
 			<div class="w-8 h-8 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
 		</div>
-	{:else if supplements.length === 0 && !userSettings.caffeineTrackerEnabled && !userSettings.waterTrackerEnabled}
-		<div class="flex flex-col items-center text-center px-4 py-16">
-			<div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-			     style="background-color: var(--color-surface-container)">
-				<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
-					<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
-				</svg>
-			</div>
-			<p class="text-sm font-semibold mb-1" style="color: var(--color-on-surface)">{t.supplement_empty}</p>
-			<p class="text-xs mb-3" style="color: var(--color-on-surface-variant)">{t.supplement_empty_hint_add}</p>
-			<button
-				onclick={() => goto('/einstellungen')}
-				class="text-xs active:opacity-60 transition-opacity"
-				style="color: var(--color-primary)"
-			>{t.disable_hint_supplements}</button>
-		</div>
 	{:else}
 		<div class="px-4 py-4 space-y-3">
 			<!-- Koffeintracker (deaktiviert) -->

@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.5',
+		de: [
+			'Pull-to-Refresh in der Einkaufsliste — nach unten ziehen zum manuellen Aktualisieren',
+			'Wasser- und Koffein-Tracker werden jetzt auf allen Geräten korrekt angezeigt',
+		],
+		en: [
+			'Pull-to-refresh on shopping lists — swipe down to manually refresh',
+			'Water and caffeine trackers now display correctly across all devices',
+		],
+	},
+	{
 		version: '0.6.4',
 		de: [
 			'Koffein-History: Woche und Monat zeigen jetzt den Gesamtverbrauch — Wochenansicht aufklappbar mit Übersicht pro Tag',

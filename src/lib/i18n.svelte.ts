@@ -305,6 +305,7 @@ class TranslationProxy {
 	get supplement_empty() { void _lang; return m.supplement_empty(); }
 	get supplement_empty_hint() { void _lang; return m.supplement_empty_hint(); }
 	get supplement_empty_hint_add() { void _lang; return m.supplement_empty_hint_add(); }
+	get supplement_empty_tracker_hint() { void _lang; return m.supplement_empty_tracker_hint(); }
 	get supplement_today_empty() { void _lang; return m.supplement_today_empty(); }
 	get supplement_today_none_active() { void _lang; return m.supplement_today_none_active(); }
 	get supplement_stats_day() { void _lang; return m.supplement_stats_day(); }

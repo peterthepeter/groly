@@ -260,6 +260,7 @@
   "supplement_empty": "Noch keine Nahrungsergänzungsmittel angelegt",
   "supplement_empty_hint": "Tippe auf \"Verwalten\" um Nahrungsergänzungsmittel hinzuzufügen",
   "supplement_empty_hint_add": "Tippe auf + um ein neues Nahrungsergänzungsmittel hinzuzufügen",
+  "supplement_empty_tracker_hint": "Tipp: Du kannst auch Wasser- und Koffeinkonsum tracken – aktiviere die Tracker unter Verwalten.",
   "supplement_today_empty": "Heute noch nichts geloggt",
   "supplement_today_none_active": "Keine aktiven Nahrungsergänzungsmittel. Aktiviere welche unter \"Verwalten\".",
   "supplement_stats_day": "Tag",

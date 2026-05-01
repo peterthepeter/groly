@@ -27,7 +27,7 @@ if (typeof window !== 'undefined') {
 	}, 30_000);
 
 	// Initial check
-	if (isOnline) void pingServer();
+	void pingServer();
 }
 
 export const networkStore = {

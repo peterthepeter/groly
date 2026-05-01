@@ -260,6 +260,7 @@
   "supplement_empty": "No supplements yet",
   "supplement_empty_hint": "Tap \"Manage\" to add supplements",
   "supplement_empty_hint_add": "Tap + to add a new supplement",
+  "supplement_empty_tracker_hint": "Tip: You can also track water and caffeine intake – enable the trackers under Manage.",
   "supplement_today_empty": "Nothing logged today",
   "supplement_today_none_active": "No active supplements. Activate supplements under \"Manage\".",
   "supplement_stats_day": "Day",
