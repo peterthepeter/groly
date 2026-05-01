@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.4',
+		de: [
+			'Koffein-History: Woche und Monat zeigen jetzt den Gesamtverbrauch — Wochenansicht aufklappbar mit Übersicht pro Tag',
+			'Koffein-Log: Uhrzeit direkt beim Einloggen anpassbar',
+			'Supplement-Erinnerungen: 30 Minuten vor dem Reminder eingenommen zählt als erledigt — Reminder lassen sich auch manuell abhaken',
+			'Server offline: roter Punkt im Header wenn der Server nicht erreichbar ist',
+		],
+		en: [
+			'Caffeine history: week and month now show total intake — week view expandable with per-day breakdown',
+			'Caffeine log: time is now adjustable directly when logging a drink',
+			'Supplement reminders: taking a supplement up to 30 min early counts as done — reminders can also be manually checked off',
+			'Server offline: red dot in header when the server is unreachable',
+		],
+	},
+	{
 		version: '0.6.3',
 		de: [
 			'Koffeintracker: täglichen Koffeinkonsum erfassen, Tageslimit setzen und Getränke aus einem Katalog wählen — Standardmengen pro Getränk anpassbar',

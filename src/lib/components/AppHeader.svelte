@@ -41,6 +41,11 @@
 						<span class="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
 						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">{t.sync_offline}</span>
 					</div>
+				{:else if !networkStore.serverReachable}
+					<div class="flex items-center gap-1 mt-0.5">
+						<span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
+						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">{t.sync_server_offline}</span>
+					</div>
 				{:else if networkStore.pendingCount > 0}
 					<div class="flex items-center gap-1 mt-0.5">
 						<span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: var(--color-primary)"></span>

@@ -137,9 +137,25 @@ async function checkSupplementReminders() {
 
 	if (matching.length === 0) return;
 
+	const PRE_WINDOW_MS = 30 * 60 * 1000;
+	const windowStart = now.getTime() - PRE_WINDOW_MS;
+
 	// Group by userId → one push per user containing all due supplements
 	const byUser = new Map<string, { userId: string; names: Set<string>; lang: string }>();
 	for (const m of matching) {
+		// Skip if supplement was already logged within the pre-window
+		const alreadyLogged = db
+			.select({ id: supplementLogs.id })
+			.from(supplementLogs)
+			.innerJoin(supplements, eq(supplementLogs.supplementId, supplements.id))
+			.where(and(
+				eq(supplements.name, m.supplementName),
+				eq(supplementLogs.userId, m.userId),
+				gte(supplementLogs.loggedAt, windowStart)
+			))
+			.get();
+		if (alreadyLogged) continue;
+
 		if (!byUser.has(m.userId)) {
 			let lang = 'de';
 			try { if (m.userSettings && JSON.parse(m.userSettings)?.lang === 'en') lang = 'en'; } catch { /* use default */ }

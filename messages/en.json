@@ -74,6 +74,7 @@
   "admin_role_admin": "Admin",
   "admin_user_created": "User created successfully",
   "sync_offline": "Offline",
+  "sync_server_offline": "Server offline",
   "offline_no_data": "No internet – no cached data",
   "sync_syncing": "Syncing...",
   "must_change_password": "Please change your password on first login",

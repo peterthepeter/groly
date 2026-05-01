@@ -5,6 +5,7 @@
 	import { queueOfflineLog } from '$lib/sync/manager';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { untrack } from 'svelte';
+	import type { CaffeineDrink } from '$lib/db/schema';
 
 	type Supplement = {
 		id: string; name: string; unit: string;
@@ -12,8 +13,6 @@
 		active: boolean; defaultAmount: number;
 		nutrients: unknown[];
 	};
-
-	type CaffeineDrink = { id: string; name: string; defaultMl: number; caffeineMg: number; sortOrder: number };
 
 	let {
 		open = $bindable(false),
@@ -25,7 +24,8 @@
 		caffeineEnabled = false,
 		caffeineTotalMg = 0,
 		caffeineLimitMg = 400,
-		caffeineDrinks = []
+		caffeineDrinks = [],
+		onCaffeineShortcutClick = null
 	}: {
 		open: boolean;
 		supplements: Supplement[];
@@ -37,6 +37,7 @@
 		caffeineTotalMg?: number;
 		caffeineLimitMg?: number;
 		caffeineDrinks?: CaffeineDrink[];
+		onCaffeineShortcutClick?: ((drink: CaffeineDrink) => void) | null;
 	} = $props();
 
 	let amounts = $state<Record<string, number>>({});
@@ -267,7 +268,7 @@
 								{@const isThisDone = caffeineDone === drink.id}
 								{@const isThisSaving = caffeineSaving === drink.id}
 								<button
-									onclick={() => logCaffeine(drink)}
+									onclick={() => onCaffeineShortcutClick ? onCaffeineShortcutClick(drink) : logCaffeine(drink)}
 									disabled={!!caffeineSaving}
 									class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity shrink-0"
 									style="background-color: {isThisDone ? 'color-mix(in srgb, #C8956C 20%, transparent)' : 'var(--color-surface-high)'}; color: {isThisDone ? '#C8956C' : 'var(--color-on-surface)'}; box-shadow: {isThisDone ? 'inset 0 0 0 1px #C8956C' : 'none'}"

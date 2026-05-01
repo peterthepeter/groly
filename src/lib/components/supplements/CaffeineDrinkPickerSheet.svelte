@@ -6,17 +6,32 @@
 	let {
 		open = $bindable<boolean>(false),
 		drinks,
-		onlogged
+		onlogged,
+		preselectedDrink = null
 	}: {
 		open: boolean;
 		drinks: CaffeineDrink[];
 		onlogged: () => void;
+		preselectedDrink?: CaffeineDrink | null;
 	} = $props();
 
 	let selected = $state<CaffeineDrink | null>(null);
 	let amountMl = $state(0);
+	let logTime = $state('');
 	let saving = $state(false);
 	let errorMsg = $state<string | null>(null);
+
+	function currentTimeString() {
+		const now = new Date();
+		return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+	}
+
+	$effect(() => {
+		if (open) {
+			logTime = currentTimeString();
+			if (preselectedDrink) selectDrink(preselectedDrink);
+		}
+	});
 
 	const scaledCaffeine = $derived(
 		selected && amountMl > 0
@@ -37,6 +52,7 @@
 		open = false;
 		selected = null;
 		amountMl = 0;
+		logTime = '';
 		errorMsg = null;
 	}
 
@@ -52,7 +68,12 @@
 					drinkName: selected.name,
 					amountMl,
 					caffeineMg: scaledCaffeine,
-					loggedAt: Date.now()
+					loggedAt: (() => {
+						const [hh, mm] = logTime.split(':').map(Number);
+						const d = new Date();
+						d.setHours(hh, mm, 0, 0);
+						return d.getTime();
+					})()
 				})
 			});
 			if (!res.ok) throw new Error();
@@ -81,51 +102,67 @@
 
 			<p class="font-semibold text-base" style="color: var(--color-on-surface)">{t.caffeine_drink_picker_title}</p>
 
-			<!-- Amount bar — compact, always on top -->
-			<div class="flex items-center gap-3 px-3 rounded-2xl" style="background-color: var(--color-surface-card); height: 3rem">
+			<!-- Amount + Time bar — always visible -->
+			<div class="flex items-center gap-2 px-3 rounded-2xl" style="background-color: var(--color-surface-card); height: 3rem">
+				<!-- − input + -->
+				<button
+					onclick={() => adjustAmount(-10)}
+					disabled={!selected}
+					class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 active:opacity-70 disabled:opacity-30"
+					style="background-color: var(--color-surface-container)"
+					aria-label="Weniger"
+				>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
+						<line x1="5" y1="12" x2="19" y2="12"/>
+					</svg>
+				</button>
+
+				<input
+					type="number"
+					inputmode="numeric"
+					min="10"
+					bind:value={amountMl}
+					disabled={!selected}
+					class="w-12 h-8 text-center rounded-xl border-0 outline-none font-bold shrink-0 disabled:opacity-30"
+					style="background-color: var(--color-surface-container); color: #C8956C; font-size: 16px"
+					aria-label="Menge in ml"
+				/>
+				<span class="text-sm shrink-0" style="color: var(--color-on-surface-variant); opacity: {selected ? 1 : 0.3}">ml</span>
+
+				<button
+					onclick={() => adjustAmount(10)}
+					disabled={!selected}
+					class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 active:opacity-70 disabled:opacity-30"
+					style="background-color: var(--color-surface-container)"
+					aria-label="Mehr"
+				>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
+						<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+					</svg>
+				</button>
+
+				<!-- Divider -->
+				<div class="w-px self-stretch my-2.5 shrink-0" style="background-color: var(--color-surface-high)"></div>
+
+				<!-- Time -->
+				<div class="flex items-center gap-1 shrink-0">
+					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C8956C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+						<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+					</svg>
+					<input
+						type="time"
+						bind:value={logTime}
+						class="border-0 outline-none bg-transparent font-semibold shrink-0"
+						style="color: #C8956C; font-size: 16px; width: 5.5rem"
+					/>
+				</div>
+
+				<!-- mg — only when drink selected -->
 				{#if selected}
-					<!-- − input + grouped tightly -->
-					<div class="flex items-center gap-1 flex-1 justify-center">
-						<button
-							onclick={() => adjustAmount(-10)}
-							class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 active:opacity-70"
-							style="background-color: var(--color-surface-container)"
-							aria-label="Weniger"
-						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
-								<line x1="5" y1="12" x2="19" y2="12"/>
-							</svg>
-						</button>
-
-						<input
-							type="number"
-							inputmode="numeric"
-							min="10"
-							bind:value={amountMl}
-							class="w-14 h-8 text-center rounded-xl border-0 outline-none font-bold"
-							style="background-color: var(--color-surface-container); color: #C8956C; font-size: 16px"
-							aria-label="Menge in ml"
-						/>
-						<span class="text-sm" style="color: var(--color-on-surface-variant)">ml</span>
-
-						<button
-							onclick={() => adjustAmount(10)}
-							class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 active:opacity-70"
-							style="background-color: var(--color-surface-container)"
-							aria-label="Mehr"
-						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
-								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-							</svg>
-						</button>
-					</div>
-
-					<div class="shrink-0 w-16 text-right">
-						<p class="text-sm font-bold leading-tight" style="color: #C8956C">{scaledCaffeine} mg</p>
+					<div class="shrink-0 text-right ml-auto">
+						<p class="text-xs font-bold leading-tight" style="color: #C8956C">{scaledCaffeine} mg</p>
 						<p class="text-[10px]" style="color: var(--color-on-surface-variant)">{t.caffeine_mg_preview}</p>
 					</div>
-				{:else}
-					<p class="flex-1 text-sm text-center opacity-35" style="color: var(--color-on-surface)">Getränk wählen</p>
 				{/if}
 			</div>
 

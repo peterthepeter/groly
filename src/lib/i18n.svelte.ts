@@ -166,6 +166,7 @@ class TranslationProxy {
 	get pwa_install_subtitle() { void _lang; return m.pwa_install_subtitle(); }
 	// sync
 	get sync_offline() { void _lang; return m.sync_offline(); }
+	get sync_server_offline() { void _lang; return m.sync_server_offline(); }
 	get offline_no_data() { void _lang; return m.offline_no_data(); }
 	get sync_syncing() { void _lang; return m.sync_syncing(); }
 	// misc

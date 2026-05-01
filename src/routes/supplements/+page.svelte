@@ -13,6 +13,7 @@
 	import EditLogSheet from '$lib/components/supplements/EditLogSheet.svelte';
 	import WaterTrackerCard from '$lib/components/supplements/WaterTrackerCard.svelte';
 	import CaffeineTrackerCard from '$lib/components/supplements/CaffeineTrackerCard.svelte';
+	import CaffeineDrinkPickerSheet from '$lib/components/supplements/CaffeineDrinkPickerSheet.svelte';
 	import type { WaterLog, CaffeineLog, CaffeineDrink } from '$lib/db/schema';
 
 	let { data } = $props();
@@ -68,7 +69,10 @@
 	type TodayReminder = { time: string; names: string[] };
 	let todayReminders = $state<TodayReminder[]>([]);
 	let remindersExpanded = $state(false);
+	let reminderManualOverrides = $state<Map<string, boolean>>(new Map());
 	let now = $state(new Date());
+
+	const REMINDER_PRE_WINDOW_MS = 30 * 60 * 1000; // 30 Minuten
 
 	function currentTimeStr(): string {
 		return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -81,30 +85,61 @@
 		return d.getTime();
 	}
 
+	// Explizit $derived damit todayLogs + supplements als Dependencies getrackt werden
+	const reminderDoneMap = $derived.by(() => {
+		const map = new Map<string, boolean>();
+		for (const reminder of todayReminders) {
+			if (reminderManualOverrides.has(reminder.time)) {
+				map.set(reminder.time, reminderManualOverrides.get(reminder.time)!);
+				continue;
+			}
+			const reminderTs = todayAtTime(reminder.time);
+			const windowStart = reminderTs - REMINDER_PRE_WINDOW_MS;
+			const autoDone = reminder.names.every(name => {
+				const supp = supplements.find(s => s.name === name);
+				if (!supp) return false;
+				return todayLogs.some(l => l.supplementId === supp.id && l.loggedAt >= windowStart);
+			});
+			map.set(reminder.time, autoDone);
+		}
+		return map;
+	});
+
 	function reminderIsDone(reminder: TodayReminder): boolean {
-		const reminderTs = todayAtTime(reminder.time);
-		return reminder.names.every(name => {
-			const supp = supplements.find(s => s.name === name);
-			if (!supp) return false;
-			return todayLogs.some(l => l.supplementId === supp.id && l.loggedAt >= reminderTs);
-		});
+		return reminderDoneMap.get(reminder.time) ?? false;
 	}
 
-	const pendingReminders = $derived(todayReminders.filter(r => !reminderIsDone(r)));
+	function toggleReminderDone(reminder: TodayReminder) {
+		const current = reminderIsDone(reminder);
+		const newOverrides = new Map(reminderManualOverrides);
+		newOverrides.set(reminder.time, !current);
+		reminderManualOverrides = newOverrides;
+	}
+
+	const pendingReminders = $derived(todayReminders.filter(r => !reminderDoneMap.get(r.time)));
 
 	async function loadTodayReminders() {
 		const res = await fetch('/api/supplement-reminders?today=1');
 		if (res.ok) {
 			const data = await res.json();
 			todayReminders = data.todayReminders ?? [];
+			reminderManualOverrides = new Map(); // reset on fresh load
 		}
 	}
 
 	// Quick-log sheet (opened from FAB)
 	let quickLogOpen = $state(false);
+	let caffeinePickerOpen = $state(false);
+	let caffeinePickerPreselect = $state<CaffeineDrink | null>(null);
 
 	function openQuickLog() {
 		quickLogOpen = true;
+	}
+
+	function handleCaffeineShortcut(drink: CaffeineDrink) {
+		quickLogOpen = false;
+		caffeinePickerPreselect = drink;
+		caffeinePickerOpen = true;
 	}
 
 	function allLogTimes(supplementId: string): string {
@@ -276,13 +311,30 @@
 	}
 
 	async function loadHistoryCaffeine() {
-		if (!userSettings.caffeineTrackerEnabled || historyPeriod !== 'day') {
+		if (!userSettings.caffeineTrackerEnabled) {
 			historyCaffeineLogs = [];
 			return;
 		}
 		const d = new Date(historyDate + 'T00:00:00');
-		const from = d.getTime();
-		const to = from + 86_400_000 - 1;
+		let from: number;
+		let to: number;
+		if (historyPeriod === 'day') {
+			from = d.getTime();
+			to = from + 86_400_000 - 1;
+		} else if (historyPeriod === 'week') {
+			const day = d.getDay();
+			const diffToMonday = day === 0 ? -6 : 1 - day;
+			const monday = new Date(d);
+			monday.setDate(d.getDate() + diffToMonday);
+			monday.setHours(0, 0, 0, 0);
+			from = monday.getTime();
+			to = from + 7 * 86_400_000 - 1;
+		} else {
+			const first = new Date(d.getFullYear(), d.getMonth(), 1);
+			const last = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+			from = first.getTime();
+			to = last.getTime();
+		}
 		try {
 			const res = await fetch(`/api/caffeine-logs?from=${from}&to=${to}`);
 			if (res.ok) {
@@ -406,6 +458,18 @@
 	let caffeineHistoryCardExpanded = $state(false);
 	const historyCaffeineTotalMg = $derived(historyCaffeineLogs.reduce((s, l) => s + l.caffeineMg, 0));
 	const historyCaffeineTotalMl = $derived(historyCaffeineLogs.reduce((s, l) => s + l.amountMl, 0));
+	const caffeineByDay = $derived.by(() => {
+		const map = new Map<string, { totalMg: number; totalMl: number; drinks: { name: string; mg: number; ml: number }[] }>();
+		for (const log of historyCaffeineLogs) {
+			const key = toLocalDateStr(new Date(log.loggedAt));
+			if (!map.has(key)) map.set(key, { totalMg: 0, totalMl: 0, drinks: [] });
+			const entry = map.get(key)!;
+			entry.totalMg += log.caffeineMg;
+			entry.totalMl += log.amountMl;
+			entry.drinks.push({ name: log.drinkName, mg: log.caffeineMg, ml: log.amountMl });
+		}
+		return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+	});
 
 	function toMcg(total: number, unit: string): number {
 		const u = unit.toLowerCase();
@@ -490,7 +554,19 @@
 					<div class="px-5 pt-3 pb-3 space-y-1.5" style="border-top: 1px solid var(--color-outline-variant)">
 						{#each todayReminders as reminder}
 							{@const isDone = reminderIsDone(reminder)}
-							<div class="flex items-baseline gap-3" style={isDone ? 'opacity: 0.5' : ''}>
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="flex items-center gap-3 active:opacity-60 cursor-pointer select-none"
+							     onclick={() => toggleReminderDone(reminder)}
+							     style={isDone ? 'opacity: 0.5' : ''}>
+								<div class="w-4 h-4 rounded-full shrink-0 flex items-center justify-center"
+								     style="border: 1.5px solid {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}; background: {isDone ? 'var(--color-on-surface-variant)' : 'transparent'}">
+									{#if isDone}
+										<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--color-surface-low)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+											<polyline points="20 6 9 17 4 12"/>
+										</svg>
+									{/if}
+								</div>
 								<span class="text-sm font-semibold tabular-nums shrink-0"
 								      style="color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}; {isDone ? 'text-decoration: line-through' : ''}"
 								>{reminder.time}</span>
@@ -711,7 +787,7 @@
 				/>
 			</div>
 		{/if}
-		{#if userSettings.caffeineTrackerEnabled}
+		{#if userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0}
 			<div class="px-4 pt-3">
 				<CaffeineTrackerCard
 					logs={caffeineLogsToday}
@@ -805,32 +881,78 @@
 				{/if}
 
 				<!-- Caffeine -->
-				{#if userSettings.caffeineTrackerEnabled && historyPeriod === 'day' && historyCaffeineTotalMg > 0}
+				{#if userSettings.caffeineTrackerEnabled && historyCaffeineTotalMg > 0}
 					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
-						<button
-							onclick={() => caffeineHistoryCardExpanded = !caffeineHistoryCardExpanded}
-							class="w-full flex items-center justify-between active:opacity-60"
-							style="margin-bottom: 0.375rem"
-						>
-							<p class="text-xs font-semibold uppercase tracking-wider" style="color: #C8956C">{t.caffeine_title}</p>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-							     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '-90' : '90'}deg)">
-								<polyline points="9 6 15 12 9 18"/>
-							</svg>
-						</button>
-						<div class="flex justify-between items-center text-sm" style="margin-bottom: {caffeineHistoryCardExpanded ? '0.75rem' : '0'}">
-							<span style="color: var(--color-on-surface-variant)">{historyCaffeineTotalMl} ml</span>
-							<span class="font-semibold" style="color: {historyCaffeineTotalMg > (userSettings.caffeineLimitMg ?? 400) ? '#EF4444' : '#C8956C'}">{historyCaffeineTotalMg} / {userSettings.caffeineLimitMg ?? 400} mg</span>
-						</div>
-						{#if caffeineHistoryCardExpanded}
-							<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
-								{#each historyCaffeineLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
-									<div class="flex justify-between items-center text-sm">
-										<span style="color: var(--color-on-surface)">{log.drinkName} · {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-										<span class="font-semibold" style="color: #C8956C">{log.caffeineMg} mg</span>
-									</div>
-								{/each}
+						{#if historyPeriod === 'day'}
+							<button
+								onclick={() => caffeineHistoryCardExpanded = !caffeineHistoryCardExpanded}
+								class="w-full flex items-center justify-between active:opacity-60"
+								style="margin-bottom: 0.375rem"
+							>
+								<p class="text-xs font-semibold uppercase tracking-wider" style="color: #C8956C">{t.caffeine_title}</p>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+								     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '-90' : '90'}deg)">
+									<polyline points="9 6 15 12 9 18"/>
+								</svg>
+							</button>
+							<div class="flex justify-between items-center text-sm" style="margin-bottom: {caffeineHistoryCardExpanded ? '0.75rem' : '0'}">
+								<span style="color: var(--color-on-surface-variant)">{historyCaffeineTotalMl} ml</span>
+								<span class="font-semibold" style="color: {historyCaffeineTotalMg > (userSettings.caffeineLimitMg ?? 400) ? '#EF4444' : '#C8956C'}">{historyCaffeineTotalMg} / {userSettings.caffeineLimitMg ?? 400} mg</span>
 							</div>
+							{#if caffeineHistoryCardExpanded}
+								<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
+									{#each historyCaffeineLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
+										<div class="flex justify-between items-center text-sm">
+											<span style="color: var(--color-on-surface)">{log.drinkName} · {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+											<span class="font-semibold" style="color: #C8956C">{log.caffeineMg} mg</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						{:else if historyPeriod === 'week'}
+							<button
+								onclick={() => caffeineHistoryCardExpanded = !caffeineHistoryCardExpanded}
+								class="w-full flex items-center justify-between active:opacity-60"
+								style="margin-bottom: 0.375rem"
+							>
+								<p class="text-xs font-semibold uppercase tracking-wider" style="color: #C8956C">{t.caffeine_title}</p>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+								     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '-90' : '90'}deg)">
+									<polyline points="9 6 15 12 9 18"/>
+								</svg>
+							</button>
+							<div class="flex justify-between items-center text-sm" style="margin-bottom: {caffeineHistoryCardExpanded ? '0.75rem' : '0'}">
+								<span style="color: var(--color-on-surface-variant)">{historyCaffeineTotalMl} ml · {historyCaffeineLogs.length}×</span>
+								<span class="font-semibold" style="color: #C8956C">{historyCaffeineTotalMg} mg</span>
+							</div>
+							{#if caffeineHistoryCardExpanded}
+								<div class="space-y-3 pt-2 border-t" style="border-color: var(--color-outline-variant)">
+									{#each caffeineByDay as [dateKey, dayData]}
+										<div>
+											<div class="flex justify-between items-center mb-1">
+												<span class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">
+													{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+												</span>
+												<span class="text-xs font-semibold" style="color: #C8956C">{dayData.totalMg} mg</span>
+											</div>
+											<div class="space-y-0.5">
+												{#each dayData.drinks as drink}
+													<div class="flex justify-between items-center text-xs">
+														<span style="color: var(--color-on-surface)">{drink.name} · {drink.ml} ml</span>
+														<span style="color: var(--color-on-surface-variant)">{drink.mg} mg</span>
+													</div>
+												{/each}
+											</div>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						{:else}
+							<div class="flex items-center justify-between">
+								<p class="text-xs font-semibold uppercase tracking-wider" style="color: #C8956C">{t.caffeine_title}</p>
+								<span class="text-sm font-semibold" style="color: #C8956C">{historyCaffeineTotalMg} mg</span>
+							</div>
+							<div class="text-xs mt-0.5" style="color: var(--color-on-surface-variant)">{historyCaffeineTotalMl} ml · {historyCaffeineLogs.length}×</div>
 						{/if}
 					</div>
 				{/if}
@@ -886,6 +1008,14 @@
 	caffeineLimitMg={userSettings.caffeineLimitMg ?? 400}
 	caffeineDrinks={visibleCaffeineDrinks}
 	onlogged={() => Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs()])}
+	onCaffeineShortcutClick={handleCaffeineShortcut}
+/>
+
+<CaffeineDrinkPickerSheet
+	bind:open={caffeinePickerOpen}
+	drinks={visibleCaffeineDrinks}
+	preselectedDrink={caffeinePickerPreselect}
+	onlogged={() => Promise.all([loadTodayLogs(), loadCaffeineLogs()])}
 />
 
 <AppBottomNav
