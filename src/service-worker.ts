@@ -30,6 +30,17 @@ registerRoute(
 	new StaleWhileRevalidate({ cacheName: 'static-assets' })
 );
 
+// Cache all images (including external recipe images) on first load so they're
+// available offline. StaleWhileRevalidate serves from cache instantly and
+// refreshes in the background when online.
+registerRoute(
+	({ request }) => request.destination === 'image',
+	new StaleWhileRevalidate({
+		cacheName: 'images',
+		plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })]
+	})
+);
+
 // Cache SvelteKit server-load responses (__data.json) so offline navigation works
 // after the user has visited a page at least once while online.
 registerRoute(

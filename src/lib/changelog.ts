@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.6-2',
+		de: [
+			'Rezeptbilder werden jetzt offline angezeigt',
+			'Rezept-Cache robuster — Fehler beim Speichern werden jetzt erkannt',
+		],
+		en: [
+			'Recipe images now display correctly when offline',
+			'Recipe cache is more robust — errors during saving are now detected',
+		],
+	},
+	{
 		version: '0.6.6-1',
 		de: [
 			'Rezepte werden jetzt offline korrekt angezeigt',

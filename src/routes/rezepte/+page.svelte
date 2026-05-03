@@ -146,7 +146,7 @@
 			const json = await res.json();
 			recipes = json.recipes ?? [];
 			limit = json.limit ?? 50;
-			cacheRecipes(json.recipes ?? []).catch(() => {});
+			try { await cacheRecipes(json.recipes ?? []); } catch (e) { console.error('cacheRecipes failed:', e); }
 		} catch {
 			const cached = await getOfflineRecipes();
 			recipes = cached;
