@@ -145,17 +145,12 @@
 				<div class="w-px self-stretch my-2.5 shrink-0" style="background-color: var(--color-surface-high)"></div>
 
 				<!-- Time -->
-				<div class="flex items-center gap-1 shrink-0">
-					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C8956C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
-						<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-					</svg>
-					<input
-						type="time"
-						bind:value={logTime}
-						class="border-0 outline-none bg-transparent font-semibold shrink-0"
-						style="color: #C8956C; font-size: 16px; width: 5.5rem"
-					/>
-				</div>
+				<input
+					type="time"
+					bind:value={logTime}
+					class="shrink-0 h-8 px-1 rounded-lg border-0 outline-none text-center font-semibold"
+					style="width: 5.5rem; background-color: var(--color-surface-high); color: #C8956C; font-size: 16px; font-family: inherit"
+				/>
 
 				<!-- mg — only when drink selected -->
 				{#if selected}

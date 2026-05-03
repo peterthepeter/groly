@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { shortcuts, shortcutMenu } from '$lib/shortcuts.svelte';
 
-	let { onTap, label = 'Hinzufügen', size = 12 }: { onTap: () => void; label?: string; size?: number } = $props();
+	let { onTap, label = 'Hinzufügen', size = 12, color = 'var(--color-primary)' }: { onTap: () => void; label?: string; size?: number; color?: string } = $props();
 
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let longFired = false;
@@ -128,7 +128,7 @@
 	onclick={handleClick}
 	oncontextmenu={(e) => e.preventDefault()}
 	class="rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform select-none"
-	style="width: {size * 4}px; height: {size * 4}px; background-color: var(--color-primary); -webkit-touch-callout: none; touch-action: manipulation"
+	style="width: {size * 4}px; height: {size * 4}px; background-color: {color}; -webkit-touch-callout: none; touch-action: manipulation"
 	aria-label={label}
 >
 	<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.5" stroke-linecap="round">

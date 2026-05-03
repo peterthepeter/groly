@@ -56,7 +56,7 @@
 					class="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl transition-all active:opacity-70"
 					style="background-color: {selectedIconId === null ? 'color-mix(in srgb, var(--color-primary) 18%, transparent)' : 'transparent'}; outline: 1.5px solid {selectedIconId === null ? 'var(--color-primary)' : 'transparent'}; outline-offset: -1.5px"
 				>
-					<span class="w-10 h-10 flex items-center justify-center font-bold text-xl"
+					<span class="w-7 h-7 flex items-center justify-center font-bold text-base"
 					      style="color: var(--color-on-surface-variant)">
 						{name[0]?.toUpperCase() || '?'}
 					</span>

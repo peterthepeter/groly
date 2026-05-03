@@ -10,13 +10,15 @@
 		onFabTap = null,
 		fabLabel = '',
 		showFab = true,
-		fabVariant = 'add'
+		fabVariant = 'add',
+		fabColor = 'var(--color-primary)'
 	}: {
 		activeTab: 'lists' | 'supplements' | 'recipes' | 'none';
 		onFabTap?: (() => void) | null;
 		fabLabel?: string;
 		showFab?: boolean;
 		fabVariant?: 'add' | 'edit';
+		fabColor?: string;
 	} = $props();
 
 	const activeOut = '1.5px solid color-mix(in srgb, var(--color-primary) 55%, transparent)';
@@ -112,7 +114,7 @@
 				<button
 					onclick={onFabTap}
 					class="rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-					style="width: 48px; height: 48px; background-color: var(--color-primary)"
+					style="width: 48px; height: 48px; background-color: {fabColor}"
 					aria-label={fabLabel}
 				>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -121,7 +123,7 @@
 					</svg>
 				</button>
 			{:else}
-				<FabWithShortcuts onTap={onFabTap} label={fabLabel} />
+				<FabWithShortcuts onTap={onFabTap} label={fabLabel} color={fabColor} />
 			{/if}
 		{/if}
 

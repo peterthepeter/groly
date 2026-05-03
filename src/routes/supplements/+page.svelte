@@ -123,12 +123,14 @@
 	const pendingReminders = $derived(todayReminders.filter(r => !reminderDoneMap.get(r.time)));
 
 	async function loadTodayReminders() {
-		const res = await fetch('/api/supplement-reminders?today=1');
-		if (res.ok) {
-			const data = await res.json();
-			todayReminders = data.todayReminders ?? [];
-			reminderManualOverrides = new Map(); // reset on fresh load
-		}
+		try {
+			const res = await fetch('/api/supplement-reminders?today=1');
+			if (res.ok) {
+				const data = await res.json();
+				todayReminders = data.todayReminders ?? [];
+				reminderManualOverrides = new Map();
+			}
+		} catch { /* offline — reminders bleiben leer */ }
 	}
 
 	// Quick-log sheet (opened from FAB)

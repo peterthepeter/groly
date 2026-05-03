@@ -2,6 +2,27 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.6',
+		de: [
+			'Supplements Verwaltung: oranger Plus-Button und Zurück-Button zeigen deutlich, dass du im Verwaltungsmodus bist',
+			'Offline-Modus: App lädt jetzt korrekt ohne Internet (kein ewiger Ladekreis mehr)',
+			'Offline-Modus: Rezepte-Seite öffnet sich jetzt auch ohne Verbindung',
+			'Tracking-Dialog: scrollt beim Öffnen automatisch nach unten',
+			'Koffeintracker: Zeiteingabe optisch überarbeitet',
+			'Icon-Auswahl: Darstellungsfehler beim Standard-Icon behoben',
+			'Einkaufslisten: Artikelanzahl jetzt in Grau statt Grün',
+		],
+		en: [
+			'Supplements manage mode: amber FAB and back button make it clear you\'re in management mode',
+			'Offline mode: app now loads correctly without internet (no more endless spinner)',
+			'Offline mode: recipes page now opens without a connection',
+			'Tracking dialog: auto-scrolls to bottom when opened',
+			'Caffeine tracker: time input visually improved',
+			'Icon picker: fixed layout issue with default icon',
+			'Shopping lists: item count now shown in grey instead of green',
+		],
+	},
+	{
 		version: '0.6.5',
 		de: [
 			'Pull-to-Refresh in der Einkaufsliste — nach unten ziehen zum manuellen Aktualisieren',

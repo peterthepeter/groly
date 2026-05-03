@@ -292,6 +292,22 @@
 	</AppHeader>
 	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.5rem)"></div>
 
+	<!-- Back chip -->
+	<div class="flex-shrink-0 px-4 mb-3">
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+			<button
+				onclick={() => goto('/supplements')}
+				class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold active:opacity-70 transition-opacity"
+				style="color: #D97706"
+			>
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<polyline points="15 18 9 12 15 6"/>
+				</svg>
+				{t.supplement_title}
+			</button>
+		</div>
+	</div>
+
 	<!-- Reminders deactivated toast (bottom snackbar) -->
 	{#if remindersDeactivatedToastName !== null}
 		<div class="fixed left-4 right-4 z-50 max-w-[398px] mx-auto flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-xl"
@@ -524,6 +540,7 @@
 	activeTab="supplements"
 	onFabTap={openNew}
 	fabLabel={t.supplement_add}
+	fabColor="#D97706"
 />
 
 <SupplementEditSheet

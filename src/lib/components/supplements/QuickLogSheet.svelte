@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { queueOfflineLog } from '$lib/sync/manager';
 	import { userSettings } from '$lib/userSettings.svelte';
-	import { untrack } from 'svelte';
+	import { untrack, tick } from 'svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
 
 	type Supplement = {
@@ -40,6 +40,7 @@
 		onCaffeineShortcutClick?: ((drink: CaffeineDrink) => void) | null;
 	} = $props();
 
+	let sheetEl = $state<HTMLElement | null>(null);
 	let amounts = $state<Record<string, number>>({});
 	let times = $state<Record<string, string>>({});
 	let waterSaving = $state(false);
@@ -127,6 +128,7 @@
 			waterShowCustom = false;
 			waterCustomAmount = '';
 			waterError = null;
+			tick().then(() => { if (sheetEl) sheetEl.scrollTop = sheetEl.scrollHeight; });
 		}
 	});
 
@@ -225,7 +227,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => open = false}></div>
-	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl overflow-y-auto"
+	<div bind:this={sheetEl} class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl overflow-y-auto"
 	     style="background-color: var(--color-surface-low); max-height: 85vh">
 		<div class="px-5 pt-4 pb-6">
 			<!-- Handle -->
