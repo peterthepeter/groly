@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.6-1',
+		de: [
+			'Rezepte werden jetzt offline korrekt angezeigt',
+			'Wasser- und Koffeintracker auch im Offline-Modus sichtbar',
+		],
+		en: [
+			'Recipes now display correctly when offline',
+			'Water and caffeine trackers visible in offline mode',
+		],
+	},
+	{
 		version: '0.6.6',
 		de: [
 			'Supplements Verwaltung: oranger Plus-Button und Zurück-Button zeigen deutlich, dass du im Verwaltungsmodus bist',

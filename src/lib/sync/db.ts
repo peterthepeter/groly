@@ -73,6 +73,20 @@ interface OfflineRecipeDetail extends OfflineRecipe {
 	steps: { id: string; stepNumber: number; text: string }[];
 }
 
+interface OfflineWaterLog {
+	id: string;
+	amountMl: number;
+	loggedAt: number;
+}
+
+interface OfflineCaffeineLog {
+	id: string;
+	drinkName: string;
+	caffeineMg: number;
+	amountMl: number;
+	loggedAt: number;
+}
+
 class GrolydDb extends Dexie {
 	lists!: EntityTable<OfflineList, 'id'>;
 	items!: EntityTable<OfflineItem, 'id'>;
@@ -81,6 +95,8 @@ class GrolydDb extends Dexie {
 	supplementLogs!: EntityTable<OfflineSupplementLog, 'id'>;
 	recipes!: EntityTable<OfflineRecipe, 'id'>;
 	recipeDetails!: EntityTable<OfflineRecipeDetail, 'id'>;
+	waterLogs!: EntityTable<OfflineWaterLog, 'id'>;
+	caffeineLogs!: EntityTable<OfflineCaffeineLog, 'id'>;
 
 	constructor() {
 		super('groly');
@@ -95,6 +111,10 @@ class GrolydDb extends Dexie {
 			recipes: 'id, updatedAt',
 			recipeDetails: 'id'
 		});
+		this.version(3).stores({
+			waterLogs: 'id, loggedAt',
+			caffeineLogs: 'id, loggedAt'
+		});
 	}
 }
 
@@ -106,5 +126,7 @@ export type {
 	OfflineSupplement,
 	OfflineSupplementLog,
 	OfflineRecipe,
-	OfflineRecipeDetail
+	OfflineRecipeDetail,
+	OfflineWaterLog,
+	OfflineCaffeineLog
 };

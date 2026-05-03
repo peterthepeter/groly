@@ -1,5 +1,5 @@
 import { offlineDb } from './db';
-import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail } from './db';
+import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog } from './db';
 import { networkStore } from '$lib/stores/online.svelte';
 
 export function generateClientId(): string {
@@ -185,6 +185,28 @@ export async function cacheRecipeDetail(detail: OfflineRecipeDetail) {
 
 export async function getOfflineRecipeDetail(id: string): Promise<OfflineRecipeDetail | undefined> {
 	return offlineDb.recipeDetails.get(id);
+}
+
+// ── Wasser-Cache ───────────────────────────────────────────────────────────────
+
+export async function cacheWaterLogs(logs: OfflineWaterLog[]) {
+	await offlineDb.waterLogs.bulkPut(logs);
+}
+
+export async function getOfflineWaterLogsToday(): Promise<OfflineWaterLog[]> {
+	const d = new Date(); d.setHours(0, 0, 0, 0);
+	return offlineDb.waterLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray();
+}
+
+// ── Koffein-Cache ──────────────────────────────────────────────────────────────
+
+export async function cacheCaffeineLogs(logs: OfflineCaffeineLog[]) {
+	await offlineDb.caffeineLogs.bulkPut(logs);
+}
+
+export async function getOfflineCaffeineLogsToday(): Promise<OfflineCaffeineLog[]> {
+	const d = new Date(); d.setHours(0, 0, 0, 0);
+	return offlineDb.caffeineLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray();
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────

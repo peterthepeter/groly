@@ -5,7 +5,7 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang, nutrients_show_more, today_reminders_label } from '$lib/i18n.svelte';
-	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs } from '$lib/sync/manager';
+	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
@@ -277,8 +277,11 @@
 			if (res.ok) {
 				const data = await res.json();
 				waterLogsToday = data.logs;
-			}
-		} catch {}
+				cacheWaterLogs(data.logs).catch(() => {});
+			} else throw new Error();
+		} catch {
+			waterLogsToday = await getOfflineWaterLogsToday();
+		}
 	}
 
 	async function deleteWaterLog(id: string) {
@@ -305,8 +308,11 @@
 			if (res.ok) {
 				const data = await res.json();
 				caffeineLogsToday = data.logs;
-			}
-		} catch {}
+				cacheCaffeineLogs(data.logs).catch(() => {});
+			} else throw new Error();
+		} catch {
+			caffeineLogsToday = await getOfflineCaffeineLogsToday();
+		}
 	}
 
 	async function deleteCaffeineLog(id: string) {
