@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { lists, items, listMembers } from '$lib/db/schema';
+import { lists, items, listMembers, users } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { emitToListMembers } from '$lib/server/userEvents';
 
@@ -41,6 +41,9 @@ export const PUT: RequestHandler = async (event) => {
 	if (body.isChecked !== undefined) {
 		updates.isChecked = body.isChecked;
 		updates.checkedAt = body.isChecked ? ts : null;
+		if (!body.isChecked && item.isChecked) {
+			updates.createdBy = user!.id;
+		}
 	}
 	if (body.categoryOverride !== undefined) updates.categoryOverride = body.categoryOverride ?? null;
 
@@ -48,10 +51,13 @@ export const PUT: RequestHandler = async (event) => {
 	db.update(lists).set({ updatedAt: ts }).where(eq(lists.id, item.listId)).run();
 
 	const updated = db.select().from(items).where(eq(items.id, item.id)).get()!;
+	const createdByUsername = updated.createdBy
+		? (db.select({ username: users.username }).from(users).where(eq(users.id, updated.createdBy)).get()?.username ?? null)
+		: null;
 	const openCountDelta = body.isChecked !== undefined
 		? (body.isChecked && !item.isChecked ? -1 : !body.isChecked && item.isChecked ? 1 : 0)
 		: 0;
-	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: { id: updated.id, name: updated.name, quantityInfo: updated.quantityInfo, isChecked: updated.isChecked, checkedAt: updated.checkedAt, categoryOverride: updated.categoryOverride, updatedAt: updated.updatedAt }, openCountDelta, byUserId: user!.id });
+	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: { id: updated.id, name: updated.name, quantityInfo: updated.quantityInfo, isChecked: updated.isChecked, checkedAt: updated.checkedAt, categoryOverride: updated.categoryOverride, createdByUsername, updatedAt: updated.updatedAt }, openCountDelta, byUserId: user!.id });
 
 	return json({ ok: true });
 };

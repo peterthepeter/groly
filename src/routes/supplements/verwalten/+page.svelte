@@ -13,6 +13,8 @@
 	import WaterTrackerEditSheet from '$lib/components/supplements/WaterTrackerEditSheet.svelte';
 	import WaterReminderSheet from '$lib/components/supplements/WaterReminderSheet.svelte';
 	import CaffeineTrackerEditSheet from '$lib/components/supplements/CaffeineTrackerEditSheet.svelte';
+	import MeditationTrackerEditSheet from '$lib/components/supplements/MeditationTrackerEditSheet.svelte';
+	import MeditationReminderSheet from '$lib/components/supplements/MeditationReminderSheet.svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
 
 	let { data } = $props();
@@ -64,6 +66,8 @@
 	let waterEditOpen = $state(false);
 	let waterReminderOpen = $state(false);
 	let caffeineEditOpen = $state(false);
+	let meditationEditOpen = $state(false);
+	let meditationReminderOpen = $state(false);
 	let waterHasReminders = $state(false);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 
@@ -361,6 +365,33 @@
 				</div>
 			{/if}
 
+			<!-- Meditationstracker (deaktiviert) -->
+			{#if !userSettings.meditationTrackerEnabled}
+				<div class="rounded-2xl p-4 flex items-center gap-3 opacity-50" style="background-color: var(--color-surface-card)">
+					<button
+						onclick={() => userSettings.meditationTrackerEnabled = !userSettings.meditationTrackerEnabled}
+						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+						style="background-color: var(--color-surface-container)"
+						aria-label={t.meditation_toggle_label}
+					></button>
+					<div class="flex-1 min-w-0">
+						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.meditation_title}</p>
+						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.meditation_disabled_hint}</p>
+					</div>
+					<button
+						onclick={() => meditationEditOpen = true}
+						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+						style="color: var(--color-on-surface-variant)"
+						aria-label={t.meditation_edit_title}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+						</svg>
+					</button>
+				</div>
+			{/if}
+
 			<!-- Trinktracker (deaktiviert) -->
 			{#if !userSettings.waterTrackerEnabled}
 				<div class="rounded-2xl p-4 flex items-center gap-3 opacity-50" style="background-color: var(--color-surface-card)">
@@ -503,6 +534,46 @@
 				</button>
 			</div>
 		{/if}
+		<!-- Meditation Tracker row (aktiviert) -->
+		{#if userSettings.meditationTrackerEnabled}
+			<div class="rounded-2xl p-4 flex items-center gap-3" style="background-color: var(--color-surface-card)">
+				<button
+					onclick={() => userSettings.meditationTrackerEnabled = !userSettings.meditationTrackerEnabled}
+					class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+					style="background-color: #9F7AEA"
+					aria-label={t.meditation_toggle_label}
+				>
+					<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+				</button>
+				<div class="flex-1 min-w-0">
+					<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.meditation_title}</p>
+					<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.meditation_goal_label}: {userSettings.meditationDailyGoalMinutes ?? 15} min</p>
+				</div>
+				<button
+					onclick={() => meditationReminderOpen = true}
+					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+					style="color: var(--color-on-surface-variant)"
+					aria-label={t.supplement_reminders_title}
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+						<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+					</svg>
+				</button>
+				<button
+					onclick={() => meditationEditOpen = true}
+					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+					style="color: var(--color-on-surface-variant)"
+					aria-label={t.meditation_edit_title}
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+					</svg>
+				</button>
+			</div>
+		{/if}
+
 		<!-- Caffeine Tracker row (aktiviert) -->
 		{#if userSettings.caffeineTrackerEnabled}
 			<div class="rounded-2xl p-4 flex items-center gap-3" style="background-color: var(--color-surface-card)">
@@ -589,5 +660,7 @@
 <WaterTrackerEditSheet bind:open={waterEditOpen} />
 <WaterReminderSheet bind:open={waterReminderOpen} />
 <CaffeineTrackerEditSheet bind:open={caffeineEditOpen} />
+<MeditationTrackerEditSheet bind:open={meditationEditOpen} />
+<MeditationReminderSheet bind:open={meditationReminderOpen} />
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />

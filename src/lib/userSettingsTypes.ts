@@ -38,6 +38,13 @@ export type UserSettings = {
 	caffeineLimitMg?: number;
 	caffeineHiddenDrinks?: string[];
 	caffeineCustomAmounts?: Record<string, number>;
+	meditationTrackerEnabled?: boolean;
+	meditationDailyGoalMinutes?: number;
+	meditationDefaultDurationMinutes?: number;
+	meditationPrepSeconds?: number;
+	meditationStartSound?: string;
+	meditationEndSound?: string;
+	meditationVolume?: number;
 };
 
 export const DEFAULT_SETTINGS = {

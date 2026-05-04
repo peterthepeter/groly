@@ -130,6 +130,11 @@
 					title: 'Water Tracker',
 					text: 'Enable the Water Tracker under Manage → Water Tracker toggle. Tap +100, +200, +330 ml or Custom on the card to log your intake. A progress bar shows how close you are to your daily goal (default: 2000 ml). Tap the chevron to expand and delete individual entries. When enabled, the Water Tracker also appears at the top of the quick-log sheet. Edit your daily goal via the pencil icon on the Manage page.',
 					svg: `<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>`
+				},
+				{
+					title: 'Meditation Timer',
+					text: 'Enable the Meditation tracker under Manage. Tap 5/10/15/20 min on the card to start a session. After an optional preparation phase (default 20 s) the main timer begins with a starting sound. The screen stays black with a Zen circle that gradually empties as time runs out. Tap the screen to end early — your elapsed time is saved. An ending sound plays when the timer completes. Choose start/end sounds and daily goal under Manage. Set a daily reminder via the bell icon.',
+					svg: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>`
 				}
 			]
 		},
@@ -271,6 +276,11 @@
 					title: 'Wassertracker',
 					text: 'Aktiviere den Wassertracker unter Verwalten über den Toggle. Tippe auf +100, +200, +330 ml oder „Individuell" auf der Karte, um deine Trinkmenge einzutragen. Ein Fortschrittsbalken zeigt, wie nah du deinem Tagesziel bist (Standard: 2000 ml). Mit dem Chevron-Icon klappst du die Karte auf und kannst einzelne Einträge löschen. Wenn aktiviert, erscheint der Wassertracker auch oben im Quick-Log. Das Tagesziel lässt sich über das Stift-Icon unter Verwalten anpassen.',
 					svg: `<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>`
+				},
+				{
+					title: 'Meditationstimer',
+					text: 'Aktiviere den Meditationstracker unter Verwalten. Tippe auf 5/10/15/20 Min. auf der Karte, um eine Sitzung zu starten. Nach einer optionalen Vorbereitungsphase (Standard 20 s) beginnt der eigentliche Timer mit einem Start-Sound. Der Bildschirm bleibt schwarz mit einem Zen-Kreis, der sich nach und nach leert, je weniger Zeit übrig ist. Tippe auf den Bildschirm, um vorzeitig zu beenden – die abgesessene Zeit wird gespeichert. Am Ende ertönt ein End-Sound. Start-/End-Sound, Tagesziel und Vorbereitungszeit lassen sich unter Verwalten konfigurieren. Über das Glocken-Icon richtest du tägliche Erinnerungen ein.',
+					svg: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>`
 				}
 			]
 		},

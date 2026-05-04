@@ -2,6 +2,23 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.7',
+		de: [
+			'Neuer Meditationstimer: 5/10/15/20 min Schnellstart oder individuelle Dauer per Auswahlrad',
+			'Vollbild-Timer mit Zen-Kreis, einstellbarer Vorbereitungszeit und konfigurierbarem Start-/End-Sound',
+			'Tägliche Meditations-Erinnerungen per Push-Benachrichtigung',
+			'Wochen- und Monatsansicht für Meditationszeiten im Verlauf — Wochenansicht aufklappbar',
+			'Wenn ein Artikel von der erledigt-Liste zurückgeholt wird, gilt jetzt die Person, die ihn zurückgeholt hat, als Ersteller — so ist klarer wer ihn wieder auf die Liste gesetzt hat',
+		],
+		en: [
+			'New meditation timer: 5/10/15/20 min quick-start or custom duration via picker wheel',
+			'Full-screen timer with Zen circle, configurable preparation time, and start/end sound',
+			'Daily meditation reminders via push notification',
+			'Week and month view for meditation time in history — week view expandable per day',
+			'When an item is restored from the checked-off list, the person who restored it now appears as the creator — making it clearer who put it back on the list',
+		],
+	},
+	{
 		version: '0.6.6-2',
 		de: [
 			'Rezeptbilder werden jetzt offline angezeigt',

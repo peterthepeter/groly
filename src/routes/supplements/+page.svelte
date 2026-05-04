@@ -5,7 +5,7 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang, nutrients_show_more, today_reminders_label } from '$lib/i18n.svelte';
-	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday } from '$lib/sync/manager';
+	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheMeditationLogs, getOfflineMeditationLogsToday } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
@@ -14,7 +14,9 @@
 	import WaterTrackerCard from '$lib/components/supplements/WaterTrackerCard.svelte';
 	import CaffeineTrackerCard from '$lib/components/supplements/CaffeineTrackerCard.svelte';
 	import CaffeineDrinkPickerSheet from '$lib/components/supplements/CaffeineDrinkPickerSheet.svelte';
-	import type { WaterLog, CaffeineLog, CaffeineDrink } from '$lib/db/schema';
+	import MeditationTrackerCard from '$lib/components/supplements/MeditationTrackerCard.svelte';
+	import MeditationTimerSheet from '$lib/components/supplements/MeditationTimerSheet.svelte';
+	import type { WaterLog, CaffeineLog, CaffeineDrink, MeditationLog } from '$lib/db/schema';
 
 	let { data } = $props();
 
@@ -36,9 +38,18 @@
 	let waterLogsToday = $state<WaterLog[]>([]);
 	let waterHasReminderToday = $state(false);
 	let caffeineLogsToday = $state<CaffeineLog[]>([]);
+	let meditationLogsToday = $state<MeditationLog[]>([]);
+	let meditationTimerOpen = $state(false);
+	let meditationTimerDuration = $state(10);
+
+	function startMeditation(minutes: number) {
+		meditationTimerDuration = minutes;
+		meditationTimerOpen = true;
+	}
 	const hasVisibleTrackerCards = $derived(
 		(userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday)) ||
-		(userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0)
+		(userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0) ||
+		(userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0)
 	);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 	const visibleCaffeineDrinks = $derived(
@@ -221,7 +232,8 @@
 		const [statsRes] = await Promise.all([
 			fetch(`/api/supplement-stats?period=${historyPeriod}&date=${historyDate}`),
 			loadHistoryWater(),
-			loadHistoryCaffeine()
+			loadHistoryCaffeine(),
+			loadHistoryMeditation()
 		]);
 		if (statsRes.ok) {
 			const data = await statsRes.json();
@@ -280,7 +292,7 @@
 				cacheWaterLogs(data.logs).catch(() => {});
 			} else throw new Error();
 		} catch {
-			waterLogsToday = await getOfflineWaterLogsToday();
+			waterLogsToday = (await getOfflineWaterLogsToday()) as WaterLog[];
 		}
 	}
 
@@ -311,7 +323,7 @@
 				cacheCaffeineLogs(data.logs).catch(() => {});
 			} else throw new Error();
 		} catch {
-			caffeineLogsToday = await getOfflineCaffeineLogsToday();
+			caffeineLogsToday = (await getOfflineCaffeineLogsToday()) as CaffeineLog[];
 		}
 	}
 
@@ -320,6 +332,61 @@
 			const res = await fetch(`/api/caffeine-logs/${id}`, { method: 'DELETE' });
 			if (res.ok) await loadCaffeineLogs();
 		} catch {}
+	}
+
+	async function loadMeditationLogs() {
+		if (!userSettings.meditationTrackerEnabled) return;
+		try {
+			const res = await fetch(`/api/meditation-logs?from=${todayStart()}&to=${todayEnd()}`);
+			if (res.ok) {
+				const data = await res.json();
+				meditationLogsToday = data.logs;
+				cacheMeditationLogs(data.logs).catch(() => {});
+			} else throw new Error();
+		} catch {
+			meditationLogsToday = (await getOfflineMeditationLogsToday()) as MeditationLog[];
+		}
+	}
+
+	async function deleteMeditationLog(id: string) {
+		try {
+			const res = await fetch(`/api/meditation-logs/${id}`, { method: 'DELETE' });
+			if (res.ok) await loadMeditationLogs();
+		} catch {}
+	}
+
+	async function loadHistoryMeditation() {
+		if (!userSettings.meditationTrackerEnabled) {
+			historyMeditationLogs = [];
+			return;
+		}
+		const d = new Date(historyDate + 'T00:00:00');
+		let from: number;
+		let to: number;
+		if (historyPeriod === 'day') {
+			from = d.getTime();
+			to = from + 86_400_000 - 1;
+		} else if (historyPeriod === 'week') {
+			const day = d.getDay();
+			const diffToMonday = day === 0 ? -6 : 1 - day;
+			const monday = new Date(d);
+			monday.setDate(d.getDate() + diffToMonday);
+			monday.setHours(0, 0, 0, 0);
+			from = monday.getTime();
+			to = from + 7 * 86_400_000 - 1;
+		} else {
+			const first = new Date(d.getFullYear(), d.getMonth(), 1);
+			const last = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+			from = first.getTime();
+			to = last.getTime();
+		}
+		try {
+			const res = await fetch(`/api/meditation-logs?from=${from}&to=${to}`);
+			if (res.ok) {
+				const data = await res.json();
+				historyMeditationLogs = data.logs ?? [];
+			}
+		} catch { historyMeditationLogs = []; }
 	}
 
 	async function loadHistoryCaffeine() {
@@ -430,15 +497,19 @@
 		if (userSettings.caffeineTrackerEnabled) void loadCaffeineLogs();
 		else caffeineLogsToday = [];
 	});
+	$effect(() => {
+		if (userSettings.meditationTrackerEnabled) void loadMeditationLogs();
+		else meditationLogsToday = [];
+	});
 
 	onMount(() => {
-		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs()]).then(() => { loading = false; });
+		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs()]).then(() => { loading = false; });
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
 
 		function onVisibilityChange() {
 			if (document.visibilityState === 'visible') {
 				now = new Date();
-				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs()]);
+				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]);
 			}
 		}
 		document.addEventListener('visibilitychange', onVisibilityChange);
@@ -484,6 +555,27 @@
 	let caffeineHistoryCardExpanded = $state(false);
 	const historyCaffeineTotalMg = $derived(historyCaffeineLogs.reduce((s, l) => s + l.caffeineMg, 0));
 	const historyCaffeineTotalMl = $derived(historyCaffeineLogs.reduce((s, l) => s + l.amountMl, 0));
+	let meditationHistoryCardExpanded = $state(false);
+	let historyMeditationLogs = $state<MeditationLog[]>([]);
+	const historyMeditationTotalSeconds = $derived(historyMeditationLogs.reduce((s, l) => s + l.durationSeconds, 0));
+	let expandedMeditationDays = $state(new Set<string>());
+	function toggleMeditationDay(key: string) {
+		const next = new Set(expandedMeditationDays);
+		if (next.has(key)) next.delete(key); else next.add(key);
+		expandedMeditationDays = next;
+	}
+	const meditationByDay = $derived.by(() => {
+		const map = new Map<string, { totalSeconds: number; sessions: { id: string; durationSeconds: number; loggedAt: number }[] }>();
+		for (const log of historyMeditationLogs) {
+			const key = toLocalDateStr(new Date(log.loggedAt));
+			if (!map.has(key)) map.set(key, { totalSeconds: 0, sessions: [] });
+			const entry = map.get(key)!;
+			entry.totalSeconds += log.durationSeconds;
+			entry.sessions.push(log);
+		}
+		for (const entry of map.values()) entry.sessions.sort((a, b) => a.loggedAt - b.loggedAt);
+		return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+	});
 	const caffeineByDay = $derived.by(() => {
 		const map = new Map<string, { totalMg: number; totalMl: number; drinks: { name: string; mg: number; ml: number }[] }>();
 		for (const log of historyCaffeineLogs) {
@@ -825,6 +917,16 @@
 				/>
 			</div>
 		{/if}
+		{#if userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0}
+			<div class="px-4 pt-3">
+				<MeditationTrackerCard
+					logs={meditationLogsToday}
+					goalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
+					onlogged={loadMeditationLogs}
+					ondeleted={deleteMeditationLog}
+				/>
+			</div>
+		{/if}
 
 	{:else}
 		<!-- HISTORY TAB -->
@@ -984,6 +1086,98 @@
 					</div>
 				{/if}
 
+				<!-- Meditation -->
+				{#if userSettings.meditationTrackerEnabled && historyMeditationTotalSeconds > 0}
+					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
+						{#if historyPeriod === 'day'}
+							<button
+								onclick={() => meditationHistoryCardExpanded = !meditationHistoryCardExpanded}
+								class="w-full flex items-center justify-between active:opacity-60"
+								style="margin-bottom: 0.375rem"
+							>
+								<p class="text-xs font-semibold uppercase tracking-wider" style="color: #9F7AEA">{t.meditation_title}</p>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+								     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '-90' : '90'}deg)">
+									<polyline points="9 6 15 12 9 18"/>
+								</svg>
+							</button>
+							<div class="flex justify-between items-center text-sm" style="margin-bottom: {meditationHistoryCardExpanded ? '0.75rem' : '0'}">
+								<span style="color: var(--color-on-surface-variant)">{historyMeditationLogs.length}×</span>
+								<span class="font-semibold" style="color: #9F7AEA">{Math.floor(historyMeditationTotalSeconds / 60)} min</span>
+							</div>
+							{#if meditationHistoryCardExpanded}
+								<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
+									{#each historyMeditationLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
+										{@const endTs = log.loggedAt}
+										{@const startTs = endTs - log.durationSeconds * 1000}
+										<div class="flex justify-between items-center text-sm">
+											<span style="color: var(--color-on-surface)">
+												{new Date(startTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(endTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+											</span>
+											<span class="font-semibold" style="color: #9F7AEA">{Math.round(log.durationSeconds / 60)} min</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						{:else if historyPeriod === 'week'}
+							<div class="flex items-center justify-between" style="margin-bottom: 0.75rem">
+								<p class="text-xs font-semibold uppercase tracking-wider" style="color: #9F7AEA">{t.meditation_title}</p>
+								<span class="text-sm font-semibold" style="color: #9F7AEA">{Math.floor(historyMeditationTotalSeconds / 60)} min</span>
+							</div>
+							<div class="space-y-1.5">
+								{#each meditationByDay as [dateKey, dayData]}
+									<div>
+										<button
+											onclick={() => toggleMeditationDay(dateKey)}
+											class="w-full flex items-center justify-between text-sm active:opacity-60"
+										>
+											<span style="color: var(--color-on-surface)">
+												{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+											</span>
+											<span class="flex items-center gap-1.5">
+												<span class="font-semibold" style="color: #9F7AEA">{Math.floor(dayData.totalSeconds / 60)} min</span>
+												<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+												     style="transition: transform 0.2s; transform: rotate({expandedMeditationDays.has(dateKey) ? '-90' : '90'}deg)">
+													<polyline points="9 6 15 12 9 18"/>
+												</svg>
+											</span>
+										</button>
+										{#if expandedMeditationDays.has(dateKey)}
+											<div class="mt-1 ml-2 space-y-0.5">
+												{#each dayData.sessions as session}
+													{@const endTs = session.loggedAt}
+													{@const startTs = endTs - session.durationSeconds * 1000}
+													<div class="flex justify-between items-center text-xs">
+														<span style="color: var(--color-on-surface-variant)">
+															{new Date(startTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(endTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+														</span>
+														<span style="color: #9F7AEA">{Math.round(session.durationSeconds / 60)} min</span>
+													</div>
+												{/each}
+											</div>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div class="flex items-center justify-between" style="margin-bottom: 0.75rem">
+								<p class="text-xs font-semibold uppercase tracking-wider" style="color: #9F7AEA">{t.meditation_title}</p>
+								<span class="text-sm font-semibold" style="color: #9F7AEA">{Math.floor(historyMeditationTotalSeconds / 60)} min</span>
+							</div>
+							<div class="space-y-1">
+								{#each meditationByDay as [dateKey, dayData]}
+									<div class="flex justify-between items-center text-sm">
+										<span style="color: var(--color-on-surface)">
+											{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+										</span>
+										<span class="font-semibold" style="color: #9F7AEA">{Math.floor(dayData.totalSeconds / 60)} min</span>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
+
 				<!-- Water -->
 				{#if userSettings.waterTrackerEnabled && historyPeriod === 'day' && historyWaterTotal > 0}
 					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
@@ -1034,8 +1228,18 @@
 	caffeineTotalMg={caffeineLogsToday.reduce((s, l) => s + l.caffeineMg, 0)}
 	caffeineLimitMg={userSettings.caffeineLimitMg ?? 400}
 	caffeineDrinks={visibleCaffeineDrinks}
+	meditationEnabled={userSettings.meditationTrackerEnabled}
+	meditationTotalMinutes={Math.floor(meditationLogsToday.reduce((s, l) => s + l.durationSeconds, 0) / 60)}
+	meditationGoalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
+	onstartmeditation={startMeditation}
 	onlogged={() => Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs()])}
 	onCaffeineShortcutClick={handleCaffeineShortcut}
+/>
+
+<MeditationTimerSheet
+	bind:open={meditationTimerOpen}
+	durationMinutes={meditationTimerDuration}
+	onsaved={loadMeditationLogs}
 />
 
 <CaffeineDrinkPickerSheet

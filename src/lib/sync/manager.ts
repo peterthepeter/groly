@@ -1,5 +1,5 @@
 import { offlineDb } from './db';
-import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog } from './db';
+import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog } from './db';
 import { networkStore } from '$lib/stores/online.svelte';
 
 export function generateClientId(): string {
@@ -207,6 +207,21 @@ export async function cacheCaffeineLogs(logs: OfflineCaffeineLog[]) {
 export async function getOfflineCaffeineLogsToday(): Promise<OfflineCaffeineLog[]> {
 	const d = new Date(); d.setHours(0, 0, 0, 0);
 	return offlineDb.caffeineLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray();
+}
+
+// ── Meditation-Cache ───────────────────────────────────────────────────────────
+
+export async function cacheMeditationLogs(logs: OfflineMeditationLog[]) {
+	await offlineDb.meditationLogs.bulkPut(logs);
+}
+
+export async function getOfflineMeditationLogsToday(): Promise<OfflineMeditationLog[]> {
+	const d = new Date(); d.setHours(0, 0, 0, 0);
+	return offlineDb.meditationLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray();
+}
+
+export async function getOfflineMeditationLogsRange(from: number, to: number): Promise<OfflineMeditationLog[]> {
+	return offlineDb.meditationLogs.where('loggedAt').between(from, to, true, true).toArray();
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────

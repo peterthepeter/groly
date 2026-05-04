@@ -86,6 +86,13 @@ let _caffeineTrackerEnabled = $state<boolean>(cache.caffeineTrackerEnabled ?? fa
 let _caffeineLimitMg = $state<number>(cache.caffeineLimitMg ?? 400);
 let _caffeineHiddenDrinks = $state<string[]>(cache.caffeineHiddenDrinks ?? []);
 let _caffeineCustomAmounts = $state<Record<string, number>>(cache.caffeineCustomAmounts ?? {});
+let _meditationTrackerEnabled = $state<boolean>(cache.meditationTrackerEnabled ?? false);
+let _meditationDailyGoalMinutes = $state<number>(cache.meditationDailyGoalMinutes ?? 15);
+let _meditationDefaultDurationMinutes = $state<number>(cache.meditationDefaultDurationMinutes ?? 10);
+let _meditationPrepSeconds = $state<number>(cache.meditationPrepSeconds ?? 20);
+let _meditationStartSound = $state<string>(cache.meditationStartSound ?? 'zen-tone-mid.mp3');
+let _meditationEndSound = $state<string>(cache.meditationEndSound ?? 'auk-zen-gong.mp3');
+let _meditationVolume = $state<number>(cache.meditationVolume ?? 70);
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -113,7 +120,14 @@ function scheduleSave() {
 			caffeineTrackerEnabled: _caffeineTrackerEnabled,
 			caffeineLimitMg: _caffeineLimitMg,
 			caffeineHiddenDrinks: _caffeineHiddenDrinks,
-			caffeineCustomAmounts: _caffeineCustomAmounts
+			caffeineCustomAmounts: _caffeineCustomAmounts,
+			meditationTrackerEnabled: _meditationTrackerEnabled,
+			meditationDailyGoalMinutes: _meditationDailyGoalMinutes,
+			meditationDefaultDurationMinutes: _meditationDefaultDurationMinutes,
+			meditationPrepSeconds: _meditationPrepSeconds,
+			meditationStartSound: _meditationStartSound,
+			meditationEndSound: _meditationEndSound,
+			meditationVolume: _meditationVolume
 		};
 		saveCache(settings);
 		try {
@@ -244,6 +258,22 @@ export const userSettings = {
 	get caffeineCustomAmounts() { return _caffeineCustomAmounts; },
 	set caffeineCustomAmounts(v: Record<string, number>) { _caffeineCustomAmounts = v; scheduleSave(); },
 
+	// Meditation tracker
+	get meditationTrackerEnabled() { return _meditationTrackerEnabled; },
+	set meditationTrackerEnabled(v: boolean) { _meditationTrackerEnabled = v; scheduleSave(); },
+	get meditationDailyGoalMinutes() { return _meditationDailyGoalMinutes; },
+	set meditationDailyGoalMinutes(v: number) { _meditationDailyGoalMinutes = v; scheduleSave(); },
+	get meditationDefaultDurationMinutes() { return _meditationDefaultDurationMinutes; },
+	set meditationDefaultDurationMinutes(v: number) { _meditationDefaultDurationMinutes = v; scheduleSave(); },
+	get meditationPrepSeconds() { return _meditationPrepSeconds; },
+	set meditationPrepSeconds(v: number) { _meditationPrepSeconds = v; scheduleSave(); },
+	get meditationStartSound() { return _meditationStartSound; },
+	set meditationStartSound(v: string) { _meditationStartSound = v; scheduleSave(); },
+	get meditationEndSound() { return _meditationEndSound; },
+	set meditationEndSound(v: string) { _meditationEndSound = v; scheduleSave(); },
+	get meditationVolume() { return _meditationVolume; },
+	set meditationVolume(v: number) { _meditationVolume = v; scheduleSave(); },
+
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
 	addShortcut(s: Shortcut) {
@@ -289,6 +319,13 @@ export async function initUserSettings(): Promise<UserSettings | null> {
 		_caffeineLimitMg = settings.caffeineLimitMg ?? 400;
 		_caffeineHiddenDrinks = settings.caffeineHiddenDrinks ?? [];
 		_caffeineCustomAmounts = settings.caffeineCustomAmounts ?? {};
+		_meditationTrackerEnabled = settings.meditationTrackerEnabled ?? false;
+		_meditationDailyGoalMinutes = settings.meditationDailyGoalMinutes ?? 15;
+		_meditationDefaultDurationMinutes = settings.meditationDefaultDurationMinutes ?? 10;
+		_meditationPrepSeconds = settings.meditationPrepSeconds ?? 20;
+		_meditationStartSound = settings.meditationStartSound ?? 'zen-tone-mid.mp3';
+		_meditationEndSound = settings.meditationEndSound ?? 'auk-zen-gong.mp3';
+		_meditationVolume = settings.meditationVolume ?? 70;
 		saveCache(settings);
 		return settings;
 	} catch { return null; }

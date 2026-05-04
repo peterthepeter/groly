@@ -25,7 +25,11 @@
 		caffeineTotalMg = 0,
 		caffeineLimitMg = 400,
 		caffeineDrinks = [],
-		onCaffeineShortcutClick = null
+		onCaffeineShortcutClick = null,
+		meditationEnabled = false,
+		meditationTotalMinutes = 0,
+		meditationGoalMinutes = 15,
+		onstartmeditation = null
 	}: {
 		open: boolean;
 		supplements: Supplement[];
@@ -38,6 +42,10 @@
 		caffeineLimitMg?: number;
 		caffeineDrinks?: CaffeineDrink[];
 		onCaffeineShortcutClick?: ((drink: CaffeineDrink) => void) | null;
+		meditationEnabled?: boolean;
+		meditationTotalMinutes?: number;
+		meditationGoalMinutes?: number;
+		onstartmeditation?: ((minutes: number) => void) | null;
 	} = $props();
 
 	let sheetEl = $state<HTMLElement | null>(null);
@@ -48,6 +56,8 @@
 	let waterError = $state<string | null>(null);
 	let waterShowCustom = $state(false);
 	let waterCustomAmount = $state('');
+	let meditationShowCustom = $state(false);
+	let meditationCustomTime = $state('00:10');
 	let caffeineSaving = $state<string | null>(null); // drinkId being saved
 	let caffeineDone = $state<string | null>(null);   // drinkId just logged
 	let saving = $state<Record<string, boolean>>({});
@@ -128,6 +138,8 @@
 			waterShowCustom = false;
 			waterCustomAmount = '';
 			waterError = null;
+			meditationShowCustom = false;
+			meditationCustomTime = '00:10';
 			tick().then(() => { if (sheetEl) sheetEl.scrollTop = sheetEl.scrollHeight; });
 		}
 	});
@@ -159,6 +171,21 @@
 		logWater(ml);
 		waterCustomAmount = '';
 		waterShowCustom = false;
+	}
+
+	function startMeditation(minutes: number) {
+		if (!onstartmeditation || minutes <= 0) return;
+		open = false;
+		meditationShowCustom = false;
+		meditationCustomTime = '00:10';
+		onstartmeditation(minutes);
+	}
+
+	function submitMeditationCustom() {
+		const [h, m] = meditationCustomTime.split(':').map(Number);
+		const totalMin = (h || 0) * 60 + (m || 0);
+		if (totalMin <= 0) return;
+		startMeditation(totalMin);
 	}
 
 	function adjustAmount(id: string, delta: number) {
@@ -335,6 +362,46 @@
 						{/if}
 						{#if waterError}
 							<p class="text-[11px] mt-1 px-1" style="color: var(--color-error)">{waterError}</p>
+						{/if}
+					</div>
+				{/if}
+				{#if meditationEnabled}
+					<div>
+						<div class="flex items-center gap-1.5 rounded-2xl px-2 py-2.5" style="background-color: var(--color-surface-container)">
+							<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
+								<span class="text-sm font-semibold" style="color: #9F7AEA">{t.meditation_title}</span>
+								<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{meditationTotalMinutes} / {meditationGoalMinutes} min</span>
+							</div>
+							<div class="shrink-0 flex items-center gap-1">
+								{#each [5, 10, 15, 20] as min}
+									<button
+										onclick={() => startMeditation(min)}
+										class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+										style="background-color: var(--color-surface-high); color: #9F7AEA"
+									>{min}m</button>
+								{/each}
+								<button
+									onclick={() => { meditationShowCustom = !meditationShowCustom; meditationCustomTime = '00:10'; }}
+									class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+									style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+								>{t.water_custom}</button>
+							</div>
+						</div>
+						{#if meditationShowCustom}
+							<div class="flex gap-1.5 mt-1.5 items-center px-1">
+								<input
+									type="time"
+									bind:value={meditationCustomTime}
+									class="flex-1 px-3 rounded-xl border-0 outline-none text-center"
+									style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; height: 36px"
+									onkeydown={(e) => e.key === 'Enter' && submitMeditationCustom()}
+								/>
+								<button
+									onclick={submitMeditationCustom}
+									class="px-3 rounded-xl text-xs font-semibold active:opacity-70 shrink-0"
+									style="background: linear-gradient(135deg, #9F7AEA, #7C3AED); color: white; height: 36px"
+								>{t.meditation_start}</button>
+							</div>
 						{/if}
 					</div>
 				{/if}

@@ -396,6 +396,30 @@ class TranslationProxy {
 	get caffeine_drink_caffeine_mg() { void _lang; return m.caffeine_drink_caffeine_mg(); }
 	get caffeine_today_ml() { void _lang; return m.caffeine_today_ml(); }
 	get caffeine_limit_exceeded() { void _lang; return m.caffeine_limit_exceeded(); }
+	// meditation tracker
+	get meditation_title() { void _lang; return m.meditation_title(); }
+	get meditation_toggle_label() { void _lang; return m.meditation_toggle_label(); }
+	get meditation_disabled_hint() { void _lang; return m.meditation_disabled_hint(); }
+	get meditation_goal_label() { void _lang; return m.meditation_goal_label(); }
+	get meditation_default_duration() { void _lang; return m.meditation_default_duration(); }
+	get meditation_prep_seconds() { void _lang; return m.meditation_prep_seconds(); }
+	get meditation_prep_none() { void _lang; return m.meditation_prep_none(); }
+	get meditation_volume() { void _lang; return m.meditation_volume(); }
+	get meditation_start_sound() { void _lang; return m.meditation_start_sound(); }
+	get meditation_end_sound() { void _lang; return m.meditation_end_sound(); }
+	get meditation_edit_title() { void _lang; return m.meditation_edit_title(); }
+	get meditation_duration() { void _lang; return m.meditation_duration(); }
+	get meditation_log_delete() { void _lang; return m.meditation_log_delete(); }
+	get meditation_collapse() { void _lang; return m.meditation_collapse(); }
+	get meditation_expand() { void _lang; return m.meditation_expand(); }
+	get meditation_prepare() { void _lang; return m.meditation_prepare(); }
+	get meditation_session_saved() { void _lang; return m.meditation_session_saved(); }
+	get meditation_stop_confirm_title() { void _lang; return m.meditation_stop_confirm_title(); }
+	get meditation_stop_confirm_continue() { void _lang; return m.meditation_stop_confirm_continue(); }
+	get meditation_stop_confirm_end() { void _lang; return m.meditation_stop_confirm_end(); }
+	get meditation_reminder_time() { void _lang; return m.meditation_reminder_time(); }
+	get meditation_reminder_only_if_not_meditated() { void _lang; return m.meditation_reminder_only_if_not_meditated(); }
+	get meditation_start() { void _lang; return m.meditation_start(); }
 	// meal plan
 	get meal_plan_tab() { void _lang; return m.meal_plan_tab(); }
 	get meal_plan_edit() { void _lang; return m.meal_plan_edit(); }

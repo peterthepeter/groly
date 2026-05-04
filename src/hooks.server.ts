@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
 import { runMigrations, db, sqlite } from '$lib/db';
-import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users, mealPlanEntries, supplementLogs, supplementReminderSchedules, supplements, waterReminderSchedules, waterLogs } from '$lib/db/schema';
+import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users, mealPlanEntries, supplementLogs, supplementReminderSchedules, supplements, waterReminderSchedules, waterLogs, meditationReminderSchedules, meditationLogs } from '$lib/db/schema';
 import { eq, lt, and, gte, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
 import { sendPushToUser } from '$lib/server/pushNotifications';
@@ -259,6 +259,49 @@ async function checkWaterReminders() {
 	);
 }
 
+async function checkMeditationReminders() {
+	const now = new Date();
+	const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+	const activeSchedules = db
+		.select({
+			time: meditationReminderSchedules.time,
+			onlyIfNotMeditated: meditationReminderSchedules.onlyIfNotMeditated,
+			userId: meditationReminderSchedules.userId,
+			userSettings: users.settings
+		})
+		.from(meditationReminderSchedules)
+		.innerJoin(users, eq(meditationReminderSchedules.userId, users.id))
+		.where(eq(meditationReminderSchedules.active, true))
+		.all();
+
+	const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+	await Promise.allSettled(
+		activeSchedules.map(async (s) => {
+			try {
+				if (s.time !== currentTime) return;
+				const settings = s.userSettings ? JSON.parse(s.userSettings) : {};
+				if (!settings?.meditationTrackerEnabled) return;
+
+				if (s.onlyIfNotMeditated) {
+					const existing = db
+						.select({ id: meditationLogs.id })
+						.from(meditationLogs)
+						.where(and(eq(meditationLogs.userId, s.userId), gte(meditationLogs.loggedAt, todayStart)))
+						.get();
+					if (existing) return;
+				}
+
+				const lang = settings?.lang === 'en' ? 'en' : 'de';
+				const title = lang === 'en' ? 'Meditation' : 'Meditation';
+				const body = lang === 'en' ? 'Time for your daily meditation' : 'Zeit für deine tägliche Meditation';
+				return sendPushToUser(s.userId, { title, body, url: '/supplements', tag: 'meditation-reminder' });
+			} catch { /* skip invalid */ }
+		})
+	);
+}
+
 async function init() {
 	if (initialized) return;
 	initialized = true; // set synchronously before any await to prevent concurrent init
@@ -276,7 +319,8 @@ async function init() {
 		setTimeout(async () => {
 			await Promise.allSettled([
 				checkSupplementReminders().catch(console.error),
-				checkWaterReminders().catch(console.error)
+				checkWaterReminders().catch(console.error),
+				checkMeditationReminders().catch(console.error)
 			]);
 			scheduleNextReminderCheck();
 		}, msUntilNextMinute);

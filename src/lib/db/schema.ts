@@ -289,6 +289,26 @@ export const caffeineLogs = sqliteTable('caffeine_logs', {
 	index('caffeine_logs_logged_at_idx').on(t.loggedAt)
 ]);
 
+export const meditationLogs = sqliteTable('meditation_logs', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	durationSeconds: integer('duration_seconds').notNull(),
+	loggedAt: integer('logged_at').notNull(),
+	createdAt: integer('created_at').notNull()
+}, (t) => [
+	index('meditation_logs_user_id_idx').on(t.userId),
+	index('meditation_logs_logged_at_idx').on(t.loggedAt)
+]);
+
+export const meditationReminderSchedules = sqliteTable('meditation_reminder_schedules', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	time: text('time').notNull(), // "HH:MM"
+	onlyIfNotMeditated: integer('only_if_not_meditated', { mode: 'boolean' }).notNull().default(true),
+	active: integer('active', { mode: 'boolean' }).notNull().default(true),
+	createdAt: integer('created_at').notNull()
+}, (t) => [index('meditation_reminder_schedules_user_id_idx').on(t.userId)]);
+
 export type Supplement = typeof supplements.$inferSelect;
 export type SupplementNutrient = typeof supplementNutrients.$inferSelect;
 export type SupplementLog = typeof supplementLogs.$inferSelect;
@@ -299,3 +319,5 @@ export type WaterLog = typeof waterLogs.$inferSelect;
 export type WaterReminderSchedule = typeof waterReminderSchedules.$inferSelect;
 export type CaffeineDrink = typeof caffeineDrinks.$inferSelect;
 export type CaffeineLog = typeof caffeineLogs.$inferSelect;
+export type MeditationLog = typeof meditationLogs.$inferSelect;
+export type MeditationReminderSchedule = typeof meditationReminderSchedules.$inferSelect;
