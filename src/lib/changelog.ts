@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.7-1',
+		de: [
+			'Meditationstimer: Vorbereitungsphase zählt jetzt korrekt herunter und springt zuverlässig in die Hauptphase über',
+		],
+		en: [
+			'Meditation timer: preparation phase now counts down correctly and reliably transitions into the main phase',
+		],
+	},
+	{
 		version: '0.6.7',
 		de: [
 			'Neuer Meditationstimer: 5/10/15/20 min Schnellstart oder individuelle Dauer per Auswahlrad',

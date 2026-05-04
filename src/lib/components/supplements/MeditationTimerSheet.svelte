@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { playMeditationSound, preloadMeditationSounds } from '$lib/audio/meditationAudio';
@@ -23,6 +23,7 @@
 	let now = $state(Date.now());
 	let intervalId: ReturnType<typeof setInterval> | null = null;
 	let onZeroFn: (() => void) | null = null;
+	let running = false;
 	let confirmStop = $state(false);
 	let savedFlash = $state(false);
 
@@ -34,12 +35,17 @@
 	const dashOffset = $derived(CIRCUMFERENCE * (1 - progress));
 
 	$effect(() => {
-		if (open) {
-			start();
-			if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility);
-		} else {
-			cleanup();
-		}
+		const isOpen = open;
+		untrack(() => {
+			if (isOpen && !running) {
+				running = true;
+				start();
+				if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility);
+			} else if (!isOpen && running) {
+				running = false;
+				cleanup();
+			}
+		});
 	});
 
 	function formatTime(seconds: number): string {
@@ -146,6 +152,7 @@
 
 	function cleanup() {
 		if (intervalId) { clearInterval(intervalId); intervalId = null; }
+		onZeroFn = null;
 		if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibility);
 		releaseWakeLock();
 		confirmStop = false;
