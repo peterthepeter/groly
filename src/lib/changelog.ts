@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.8',
+		de: [
+			'Mahlzeitenplaner: kompakte Bubble-Ansicht, Rezept per Langdruck entfernen',
+			'Rezepte & Listen: einheitliches Bubble-Design',
+			'Tracker History: Koffein- und Meditations-Monatsansicht aufklappbar (Getränketypen / Sitzungsdauern)',
+			'UI-Verbesserungen & Designkonsistenz',
+		],
+		en: [
+			'Meal planner: compact bubble layout, long-press to remove a recipe',
+			'Recipes & lists: unified bubble design',
+			'Tracker history: caffeine and meditation month view expandable (drink types / session durations)',
+			'UI improvements & design consistency',
+		],
+	},
+	{
 		version: '0.6.7-1',
 		de: [
 			'Meditationstimer: Vorbereitungsphase zählt jetzt korrekt herunter und springt zuverlässig in die Hauptphase über',

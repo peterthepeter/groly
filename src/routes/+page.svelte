@@ -498,7 +498,7 @@
 
 	<!-- Bottom-Anchored Content -->
 	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + {showInstallBanner ? '9' : '4'}rem); padding-bottom: 5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + {showInstallBanner ? '9' : '4'}rem); padding-bottom: 4.5rem">
 		{#if loading}
 			<div class="flex justify-center py-8">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"
@@ -578,14 +578,17 @@
 						</div>
 					{/each}
 				{:else}
-					{#each displayedLists as list (list.id)}
-						<ListCard
-							{list}
-							onClick={() => goto(`/listen/${list.id}`)}
-							onLongPress={list.isOwner ? () => { editList = list; } : () => { memberOptions = list; }}
-							onShare={list.isOwner && list.memberCount > 0 ? () => { shareList = list; } : null}
-						/>
-					{/each}
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+						{#each displayedLists as list, i (list.id)}
+							<ListCard
+								{list}
+								onClick={() => goto(`/listen/${list.id}`)}
+								onLongPress={list.isOwner ? () => { editList = list; } : () => { memberOptions = list; }}
+								onShare={list.isOwner && list.memberCount > 0 ? () => { shareList = list; } : null}
+								showBorder={i < displayedLists.length - 1 || pendingInvitations.length > 0}
+							/>
+						{/each}
+					</div>
 					{#each pendingInvitations as invitation (invitation.id)}
 						<InvitationCard
 							{invitation}

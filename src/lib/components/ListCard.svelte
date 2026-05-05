@@ -11,11 +11,12 @@
 		return COLORS[Math.abs(hash) % COLORS.length];
 	}
 
-	let { list, onClick, onLongPress, onShare = null }: {
+	let { list, onClick, onLongPress, onShare = null, showBorder = false }: {
 		list: { id: string; name: string; description: string | null; openCount: number; iconId?: string | null; ownerUsername?: string | null; locationLat?: number | null };
 		onClick: () => void;
 		onLongPress: () => void;
 		onShare?: (() => void) | null;
+		showBorder?: boolean;
 	} = $props();
 
 	const showLocationBadge = $derived(
@@ -51,21 +52,19 @@
 	onpointerleave={endPress}
 	onpointercancel={endPress}
 	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
-	class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-colors active:opacity-80 text-left select-none"
-	style="background-color: var(--color-surface-card)"
+	class="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-80 text-left select-none"
 >
 	<!-- Icon -->
-	{#if icon}
-		<svg class="flex-shrink-0" width="28" height="28" viewBox="0 0 24 24" fill="none"
-		     stroke={color} stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-			{@html icon.svgContent}
-		</svg>
-	{:else}
-		<span class="flex-shrink-0 w-7 h-7 flex items-center justify-center font-bold text-xl"
-		      style="color: {color}">
-			{initial}
-		</span>
-	{/if}
+	<div class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center">
+		{#if icon}
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+			     stroke={color} stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+				{@html icon.svgContent}
+			</svg>
+		{:else}
+			<span class="font-bold text-base" style="color: {color}">{initial}</span>
+		{/if}
+	</div>
 
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
@@ -114,8 +113,5 @@
 		</div>
 	{/if}
 
-	<!-- Chevron -->
-	<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-		<polyline points="9 18 15 12 9 6"/>
-	</svg>
+
 </button>

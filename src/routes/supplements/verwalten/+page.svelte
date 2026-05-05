@@ -294,7 +294,7 @@
 			</button>
 		{/snippet}
 	</AppHeader>
-	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.5rem)"></div>
+	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
 
 	<!-- Back chip -->
 	<div class="flex-shrink-0 px-4 mb-3">
@@ -330,85 +330,104 @@
 	{/if}
 
 	<div class="flex-1 min-h-0 flex flex-col overflow-y-auto justify-end"
-	     style="padding-bottom: 5rem">
+	     style="padding-bottom: 4.5rem">
 
 	{#if loading}
 		<div class="flex justify-center py-16">
 			<div class="w-8 h-8 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
 		</div>
 	{:else}
-		<div class="px-4 py-4 space-y-3">
-			<!-- Koffeintracker (deaktiviert) -->
-			{#if !userSettings.caffeineTrackerEnabled}
-				<div class="rounded-2xl p-4 flex items-center gap-3 opacity-50" style="background-color: var(--color-surface-card)">
-					<button
-						onclick={() => userSettings.caffeineTrackerEnabled = !userSettings.caffeineTrackerEnabled}
-						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-						style="background-color: var(--color-surface-container)"
-						aria-label={t.caffeine_toggle_label}
-					></button>
-					<div class="flex-1 min-w-0">
-						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.caffeine_title}</p>
-						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.caffeine_disabled_hint}</p>
-					</div>
-					<button
-						onclick={() => caffeineEditOpen = true}
-						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-						style="color: var(--color-on-surface-variant)"
-						aria-label={t.caffeine_limit_edit}
-					>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-						</svg>
-					</button>
+		<div class="px-4 py-3 flex flex-col gap-2">
+			<!-- Supplements group -->
+			{#if supplements.length > 0}
+				<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Supplements</p>
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+					{#each supplements as supplement, i (supplement.id)}
+						<div class="p-3 flex items-center gap-3{!supplement.active ? ' opacity-50' : ''}{ i < supplements.length - 1 ? ' border-b' : ''}"
+						     style="border-color: var(--color-outline-variant)">
+							<button
+								onclick={() => toggleActive(supplement)}
+								class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+								style="background-color: {supplement.active ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+								aria-label={t.supplement_active_label}
+							>
+								{#if supplement.active}
+									<span class="absolute top-0.5 h-4 w-4 rounded-full"
+									      style="background-color: white; transform: translateX(1.25rem)"></span>
+								{/if}
+							</button>
+							<div class="flex-1 min-w-0" onclick={() => openEdit(supplement)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && openEdit(supplement)}>
+								<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{supplement.name}</p>
+								<p class="text-xs leading-snug flex items-center gap-1 min-w-0" style="color: var(--color-on-surface-variant)">
+									{#if supplement.brand}<span class="truncate min-w-0">{supplement.brand}</span>{/if}{#if supplement.stockQuantity != null}<span class="shrink-0" style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-primary)'}">{supplement.brand ? '· ' : ''}({supplement.stockQuantity} {shortUnit(supplement.unit, currentLang())} {t.supplement_stock_left})</span>{:else if !supplement.brand}<span class="shrink-0">{shortUnit(supplement.unit, currentLang())}</span>{/if}
+								</p>
+							</div>
+							<button
+								onclick={() => openReminders(supplement)}
+								disabled={!supplement.active}
+								class="shrink-0 p-1.5 rounded-xl active:opacity-60 disabled:opacity-40"
+								style="color: {supplement.active && supplementsWithReminders.has(supplement.id) ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+								aria-label={t.supplement_reminders_title}
+							>
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+									<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+								</svg>
+							</button>
+							<button
+								onclick={() => addToListSupplementId = supplement.id}
+								class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+								style="color: var(--color-on-surface-variant)"
+								aria-label={t.supplement_add_to_list}
+							>
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+									<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+								</svg>
+							</button>
+							<button
+								onclick={() => openEdit(supplement)}
+								aria-label="Supplement bearbeiten"
+								class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+								style="color: var(--color-on-surface-variant)"
+							>
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+									<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+								</svg>
+							</button>
+						</div>
+					{/each}
 				</div>
 			{/if}
 
-			<!-- Meditationstracker (deaktiviert) -->
-			{#if !userSettings.meditationTrackerEnabled}
-				<div class="rounded-2xl p-4 flex items-center gap-3 opacity-50" style="background-color: var(--color-surface-card)">
-					<button
-						onclick={() => userSettings.meditationTrackerEnabled = !userSettings.meditationTrackerEnabled}
-						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-						style="background-color: var(--color-surface-container)"
-						aria-label={t.meditation_toggle_label}
-					></button>
-					<div class="flex-1 min-w-0">
-						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.meditation_title}</p>
-						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.meditation_disabled_hint}</p>
-					</div>
-					<button
-						onclick={() => meditationEditOpen = true}
-						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-						style="color: var(--color-on-surface-variant)"
-						aria-label={t.meditation_edit_title}
-					>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-						</svg>
-					</button>
-				</div>
-			{/if}
-
-			<!-- Trinktracker (deaktiviert) -->
-			{#if !userSettings.waterTrackerEnabled}
-				<div class="rounded-2xl p-4 flex items-center gap-3 opacity-50" style="background-color: var(--color-surface-card)">
+			<!-- Tracker group -->
+			<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Tracker</p>
+			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+				<!-- Water -->
+				<div class="p-3 flex items-center gap-3 border-b{!userSettings.waterTrackerEnabled ? ' opacity-50' : ''}"
+				     style="border-color: var(--color-outline-variant)">
 					<button
 						onclick={() => userSettings.waterTrackerEnabled = !userSettings.waterTrackerEnabled}
 						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-						style="background-color: var(--color-surface-container)"
+						style="background-color: {userSettings.waterTrackerEnabled ? '#60A5FA' : 'var(--color-surface-container)'}"
 						aria-label={t.water_toggle_label}
-					></button>
+					>
+						{#if userSettings.waterTrackerEnabled}
+							<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+						{/if}
+					</button>
 					<div class="flex-1 min-w-0">
 						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.water_title}</p>
-						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.water_disabled_hint}</p>
+						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">
+							{userSettings.waterTrackerEnabled ? `${t.water_goal_label}: ${userSettings.waterGoalMl ?? 2500} ml` : t.water_disabled_hint}
+						</p>
 					</div>
 					<button
-						disabled
-						class="shrink-0 p-1.5 rounded-xl opacity-40"
-						style="color: var(--color-on-surface-variant)"
+						onclick={() => waterReminderOpen = true}
+						disabled={!userSettings.waterTrackerEnabled}
+						class="shrink-0 p-1.5 rounded-xl active:opacity-60 disabled:opacity-40"
+						style="color: {waterHasReminders && userSettings.waterTrackerEnabled ? '#60A5FA' : 'var(--color-on-surface-variant)'}"
 						aria-label={t.supplement_reminders_title}
 					>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -428,36 +447,30 @@
 						</svg>
 					</button>
 				</div>
-			{/if}
-			{#each supplements as supplement (supplement.id)}
-				<div class="rounded-2xl p-4 flex items-center gap-3 {supplement.active ? '' : 'opacity-50'}"
-				     style="background-color: var(--color-surface-card)">
-					<!-- Active toggle (settings-style) -->
+				<!-- Meditation -->
+				<div class="p-3 flex items-center gap-3 border-b{!userSettings.meditationTrackerEnabled ? ' opacity-50' : ''}"
+				     style="border-color: var(--color-outline-variant)">
 					<button
-						onclick={() => toggleActive(supplement)}
+						onclick={() => userSettings.meditationTrackerEnabled = !userSettings.meditationTrackerEnabled}
 						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-						style="background-color: {supplement.active ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						aria-label={t.supplement_active_label}
+						style="background-color: {userSettings.meditationTrackerEnabled ? '#9F7AEA' : 'var(--color-surface-container)'}"
+						aria-label={t.meditation_toggle_label}
 					>
-						{#if supplement.active}
-							<span class="absolute top-0.5 h-4 w-4 rounded-full"
-							      style="background-color: white; transform: translateX(1.25rem)"></span>
+						{#if userSettings.meditationTrackerEnabled}
+							<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
 						{/if}
 					</button>
-
-					<div class="flex-1 min-w-0" onclick={() => openEdit(supplement)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && openEdit(supplement)}>
-						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{supplement.name}</p>
-						<p class="text-xs leading-snug flex items-center gap-1 min-w-0" style="color: var(--color-on-surface-variant)">
-							{#if supplement.brand}<span class="truncate min-w-0">{supplement.brand}</span>{/if}{#if supplement.stockQuantity != null}<span class="shrink-0" style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-primary)'}">{supplement.brand ? '· ' : ''}({supplement.stockQuantity} {shortUnit(supplement.unit, currentLang())} {t.supplement_stock_left})</span>{:else if !supplement.brand}<span class="shrink-0">{shortUnit(supplement.unit, currentLang())}</span>{/if}
+					<div class="flex-1 min-w-0">
+						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.meditation_title}</p>
+						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">
+							{userSettings.meditationTrackerEnabled ? `${t.meditation_goal_label}: ${userSettings.meditationDailyGoalMinutes ?? 15} min` : t.meditation_disabled_hint}
 						</p>
 					</div>
-
-					<!-- Bell (reminder) button -->
 					<button
-						onclick={() => openReminders(supplement)}
-						disabled={!supplement.active}
+						onclick={() => meditationReminderOpen = true}
+						disabled={!userSettings.meditationTrackerEnabled}
 						class="shrink-0 p-1.5 rounded-xl active:opacity-60 disabled:opacity-40"
-						style="color: {supplement.active && supplementsWithReminders.has(supplement.id) ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+						style="color: var(--color-on-surface-variant)"
 						aria-label={t.supplement_reminders_title}
 					>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -465,26 +478,11 @@
 							<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
 						</svg>
 					</button>
-
-					<!-- Add to list button -->
 					<button
-						onclick={() => addToListSupplementId = supplement.id}
+						onclick={() => meditationEditOpen = true}
 						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
 						style="color: var(--color-on-surface-variant)"
-						aria-label={t.supplement_add_to_list}
-					>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-							<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-						</svg>
-					</button>
-
-					<!-- Edit button -->
-					<button
-						onclick={() => openEdit(supplement)}
-						aria-label="Supplement bearbeiten"
-						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-						style="color: var(--color-on-surface-variant)"
+						aria-label={t.meditation_edit_title}
 					>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -492,116 +490,37 @@
 						</svg>
 					</button>
 				</div>
-			{/each}
-		<!-- Water Tracker row (aktiviert, ganz unten in der Liste) -->
-		{#if userSettings.waterTrackerEnabled}
-			<div class="rounded-2xl p-4 flex items-center gap-3" style="background-color: var(--color-surface-card)">
-				<button
-					onclick={() => userSettings.waterTrackerEnabled = !userSettings.waterTrackerEnabled}
-					class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-					style="background-color: #60A5FA"
-					aria-label={t.water_toggle_label}
-				>
-					<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
-				</button>
-				<div class="flex-1 min-w-0">
-					<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.water_title}</p>
-					<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.water_goal_label}: {userSettings.waterGoalMl ?? 2500} ml</p>
+				<!-- Caffeine -->
+				<div class="p-3 flex items-center gap-3{!userSettings.caffeineTrackerEnabled ? ' opacity-50' : ''}">
+					<button
+						onclick={() => userSettings.caffeineTrackerEnabled = !userSettings.caffeineTrackerEnabled}
+						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+						style="background-color: {userSettings.caffeineTrackerEnabled ? '#C8956C' : 'var(--color-surface-container)'}"
+						aria-label={t.caffeine_toggle_label}
+					>
+						{#if userSettings.caffeineTrackerEnabled}
+							<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+						{/if}
+					</button>
+					<div class="flex-1 min-w-0">
+						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.caffeine_title}</p>
+						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">
+							{userSettings.caffeineTrackerEnabled ? `${t.caffeine_limit_label}: ${userSettings.caffeineLimitMg ?? 400} mg` : t.caffeine_disabled_hint}
+						</p>
+					</div>
+					<button
+						onclick={() => caffeineEditOpen = true}
+						class="shrink-0 p-1.5 rounded-xl active:opacity-60"
+						style="color: var(--color-on-surface-variant)"
+						aria-label={t.caffeine_limit_edit}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+						</svg>
+					</button>
 				</div>
-				<!-- Bell (reminder) button -->
-				<button
-					onclick={() => waterReminderOpen = true}
-					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-					style="color: {waterHasReminders ? '#60A5FA' : 'var(--color-on-surface-variant)'}"
-					aria-label={t.supplement_reminders_title}
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-						<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-					</svg>
-				</button>
-				<!-- Edit button -->
-				<button
-					onclick={() => waterEditOpen = true}
-					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-					style="color: var(--color-on-surface-variant)"
-					aria-label={t.water_goal_edit}
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-					</svg>
-				</button>
 			</div>
-		{/if}
-		<!-- Meditation Tracker row (aktiviert) -->
-		{#if userSettings.meditationTrackerEnabled}
-			<div class="rounded-2xl p-4 flex items-center gap-3" style="background-color: var(--color-surface-card)">
-				<button
-					onclick={() => userSettings.meditationTrackerEnabled = !userSettings.meditationTrackerEnabled}
-					class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-					style="background-color: #9F7AEA"
-					aria-label={t.meditation_toggle_label}
-				>
-					<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
-				</button>
-				<div class="flex-1 min-w-0">
-					<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.meditation_title}</p>
-					<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.meditation_goal_label}: {userSettings.meditationDailyGoalMinutes ?? 15} min</p>
-				</div>
-				<button
-					onclick={() => meditationReminderOpen = true}
-					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-					style="color: var(--color-on-surface-variant)"
-					aria-label={t.supplement_reminders_title}
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-						<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-					</svg>
-				</button>
-				<button
-					onclick={() => meditationEditOpen = true}
-					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-					style="color: var(--color-on-surface-variant)"
-					aria-label={t.meditation_edit_title}
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-					</svg>
-				</button>
-			</div>
-		{/if}
-
-		<!-- Caffeine Tracker row (aktiviert) -->
-		{#if userSettings.caffeineTrackerEnabled}
-			<div class="rounded-2xl p-4 flex items-center gap-3" style="background-color: var(--color-surface-card)">
-				<button
-					onclick={() => userSettings.caffeineTrackerEnabled = !userSettings.caffeineTrackerEnabled}
-					class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-					style="background-color: #C8956C"
-					aria-label={t.caffeine_toggle_label}
-				>
-					<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
-				</button>
-				<div class="flex-1 min-w-0">
-					<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.caffeine_title}</p>
-					<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">{t.caffeine_limit_label}: {userSettings.caffeineLimitMg ?? 400} mg</p>
-				</div>
-				<button
-					onclick={() => caffeineEditOpen = true}
-					class="shrink-0 p-1.5 rounded-xl active:opacity-60"
-					style="color: var(--color-on-surface-variant)"
-					aria-label={t.caffeine_limit_edit}
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-					</svg>
-				</button>
-			</div>
-		{/if}
 		</div>
 	{/if}
 	</div><!-- end scrollable -->

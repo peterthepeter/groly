@@ -256,7 +256,7 @@
 	</AppHeader>
 
 	<!-- Spacer that clears the fixed AppHeader (same height calculation as Settings page) -->
-	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.5rem)"></div>
+	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
 
 	<!-- Search bar (fixed, below header, only when open) -->
 	{#if searchOpen && activeTab === 'recipes'}
@@ -316,7 +316,7 @@
 
 	<!-- Recipes: bottom-anchored scroll (list builds upward), top-anchored when searching -->
 	{:else}
-		<div class="flex-1 min-h-0 flex flex-col overflow-y-auto px-4" class:justify-end={!searchQuery.trim() || !keyboardOpen} style="padding-bottom: 5rem">
+		<div class="flex-1 min-h-0 flex flex-col overflow-y-auto px-4" class:justify-end={!searchQuery.trim() || !keyboardOpen} style="padding-bottom: 4.5rem">
 
 		<!-- Pending Shares -->
 		{#each pendingShares as share (share.id)}
@@ -458,16 +458,16 @@
 			</div>
 		{:else}
 			<!-- Normal Mode -->
-			<div class="space-y-2">
-				{#each filteredRecipes as recipe (recipe.id)}
+			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+				{#each filteredRecipes as recipe, i (recipe.id)}
+					{@const isLast = i === filteredRecipes.length - 1}
 					<button
 						onclick={() => goto(`/rezepte/${recipe.id}`)}
-						class="w-full flex items-center gap-3 px-4 rounded-2xl text-left active:opacity-70 transition-opacity"
-						style="background-color: var(--color-surface-card); min-height: 3.75rem; padding-top: 0.875rem; padding-bottom: 0.875rem"
+						class="w-full flex items-center gap-3 px-4 py-2.5 text-left active:opacity-70 transition-opacity"
 					>
 						<!-- Thumbnail -->
-						<div class="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
-						     style="background-color: {recipe.imageUrl ? 'var(--color-surface-container)' : 'transparent'}">
+						<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
+						     style="background-color: var(--color-surface-container)">
 							{#if recipe.imageUrl}
 								<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
 							{:else}
@@ -485,24 +485,19 @@
 						<div class="flex-1 min-w-0 flex flex-col justify-center">
 							<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{recipe.title}</div>
 							{#if totalTime(recipe) || recipe.description}
-								<div class="text-xs mt-0.5 truncate" style="color: var(--color-primary)">
+								<div class="text-xs mt-0.5 truncate" style="color: var(--color-on-surface-variant)">
 									{totalTime(recipe) || recipe.description}
 								</div>
 							{/if}
 						</div>
 
-						<!-- Servings badge -->
-						<div class="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg"
-						     style="background-color: var(--color-surface-container)">
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<!-- Servings -->
+						<div class="flex-shrink-0 flex items-center gap-1">
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
 							</svg>
-							<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{recipe.servings}</span>
+							<span class="text-xs font-medium" style="color: var(--color-primary)">{recipe.servings}</span>
 						</div>
-
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
 					</button>
 				{/each}
 			</div>

@@ -9,12 +9,14 @@
 		logs,
 		goalMl,
 		onlogged,
-		ondeleted
+		ondeleted,
+		embedded = false
 	}: {
 		logs: { id: string; amountMl: number; loggedAt: number }[];
 		goalMl: number;
 		onlogged: () => void;
 		ondeleted: (id: string) => void;
+		embedded?: boolean;
 	} = $props();
 
 	let expanded = $state(false);
@@ -93,7 +95,7 @@
 	}
 </script>
 
-<div class="rounded-2xl px-4 py-3 flex flex-col" style="background-color: var(--color-surface-card)">
+<div class={embedded ? 'flex flex-col px-4 py-2' : 'rounded-2xl px-4 py-3 flex flex-col'} style={embedded ? '' : 'background-color: var(--color-surface-card)'}>
 
 	<!-- Expanded log entries — renders first in DOM so they expand upward -->
 	{#if expanded && sortedLogs.length > 0}

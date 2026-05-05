@@ -10,13 +10,15 @@
 		limitMg,
 		drinks,
 		onlogged,
-		ondeleted
+		ondeleted,
+		embedded = false
 	}: {
 		logs: { id: string; drinkName: string; amountMl: number; caffeineMg: number; loggedAt: number }[];
 		limitMg: number;
 		drinks: CaffeineDrink[];
 		onlogged: () => void;
 		ondeleted: (id: string) => void;
+		embedded?: boolean;
 	} = $props();
 
 	let expanded = $state(false);
@@ -79,7 +81,7 @@
 	}
 </script>
 
-<div class="rounded-2xl px-4 py-3 flex flex-col" style="background-color: var(--color-surface-card)">
+<div class={embedded ? 'flex flex-col px-4 py-2' : 'rounded-2xl px-4 py-3 flex flex-col'} style={embedded ? '' : 'background-color: var(--color-surface-card)'}>
 
 	<!-- Expanded log entries -->
 	{#if expanded && sortedLogs.length > 0}

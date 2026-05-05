@@ -34,21 +34,21 @@
 					<rect y="12" width="16" height="2" rx="1" fill="var(--color-on-surface)"/>
 				</svg>
 			</button>
-			<div class="min-w-0">
-				<span class="text-xl font-bold" style="color: var(--color-primary); font-family: 'Plus Jakarta Sans', sans-serif">Groly</span>
+			<div class="flex items-center gap-2 min-w-0">
+				<span class="text-xl font-bold shrink-0" style="color: var(--color-primary); font-family: 'Plus Jakarta Sans', sans-serif">Groly</span>
 				{#if !networkStore.online}
-					<div class="flex items-center gap-1 mt-0.5">
-						<span class="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
+					<div class="flex items-center gap-1 min-w-0">
+						<span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
 						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">{t.sync_offline}</span>
 					</div>
 				{:else if !networkStore.serverReachable}
-					<div class="flex items-center gap-1 mt-0.5">
-						<span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
+					<div class="flex items-center gap-1 min-w-0">
+						<span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
 						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">{t.sync_server_offline}</span>
 					</div>
 				{:else if networkStore.pendingCount > 0}
-					<div class="flex items-center gap-1 mt-0.5">
-						<span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: var(--color-primary)"></span>
+					<div class="flex items-center gap-1 min-w-0">
+						<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: var(--color-primary)"></span>
 						<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">{sync_pending(networkStore.pendingCount)}</span>
 					</div>
 				{/if}

@@ -85,6 +85,14 @@
 		if (next === 'freq' && Object.keys(logCounts).length === 0) fetchLogCounts();
 	}
 
+	const trackerList = $derived(
+		([
+			caffeineEnabled && caffeineDrinks.length > 0 ? 'caffeine' : null,
+			waterEnabled ? 'water' : null,
+			meditationEnabled ? 'meditation' : null
+		] as (string | null)[]).filter((x): x is string => x !== null)
+	);
+
 	const sortedSupplements = $derived.by(() => {
 		const mode = userSettings.supplementSortOrder ?? 'az';
 		const arr = [...supplements];
@@ -283,187 +291,191 @@
 				</button>
 			</div>
 
-			<div class="space-y-2">
-				{#if caffeineEnabled && caffeineDrinks.length > 0}
-					<div class="flex items-center gap-1.5 rounded-2xl px-2 py-2.5" style="background-color: var(--color-surface-container)">
-						<!-- Title + subtitle (left, fixed) -->
-						<div class="flex flex-col justify-center leading-none gap-[3px] shrink-0">
-							<span class="text-sm font-semibold" style="color: #C8956C">{t.caffeine_title}</span>
-							<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{caffeineTotalMg} / {caffeineLimitMg} mg</span>
-						</div>
-						<!-- Scrollable drink buttons (right) -->
-						<div class="flex gap-1 overflow-x-auto flex-1 min-w-0" style="-webkit-overflow-scrolling: touch; scrollbar-width: none">
-							{#each caffeineDrinks as drink (drink.id)}
-								{@const isThisDone = caffeineDone === drink.id}
-								{@const isThisSaving = caffeineSaving === drink.id}
-								<button
-									onclick={() => onCaffeineShortcutClick ? onCaffeineShortcutClick(drink) : logCaffeine(drink)}
-									disabled={!!caffeineSaving}
-									class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity shrink-0"
-									style="background-color: {isThisDone ? 'color-mix(in srgb, #C8956C 20%, transparent)' : 'var(--color-surface-high)'}; color: {isThisDone ? '#C8956C' : 'var(--color-on-surface)'}; box-shadow: {isThisDone ? 'inset 0 0 0 1px #C8956C' : 'none'}"
-								>
-									{#if isThisSaving}…{:else if isThisDone}✓ {drink.name}{:else}{drink.name}{/if}
-								</button>
-							{/each}
-						</div>
-					</div>
-				{/if}
-				{#if waterEnabled}
-					<div>
-						<div class="flex items-center gap-1.5 rounded-2xl px-2 py-2.5" style="background-color: var(--color-surface-container)">
-							<!-- Name + progress -->
-							<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
-								{#if waterDone}
-									<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.water_logged}</span>
-								{:else}
-									<span class="text-sm font-semibold" style="color: #60A5FA">{t.water_title}</span>
-									<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{waterTotalMl} / {waterGoalMl} ml</span>
+			<div class="flex flex-col gap-2">
+				{#if trackerList.length > 0}
+					<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Tracker</p>
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+						{#if caffeineEnabled && caffeineDrinks.length > 0}
+							<div class="px-2 py-2.5{trackerList.indexOf('caffeine') < trackerList.length - 1 ? ' border-b' : ''}" style="border-color: var(--color-outline-variant)">
+								<div class="flex items-center gap-1.5">
+									<div class="flex flex-col justify-center leading-none gap-[3px] shrink-0">
+										<span class="text-sm font-semibold" style="color: #C8956C">{t.caffeine_title}</span>
+										<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{caffeineTotalMg} / {caffeineLimitMg} mg</span>
+									</div>
+									<div class="flex gap-1 overflow-x-auto flex-1 min-w-0" style="-webkit-overflow-scrolling: touch; scrollbar-width: none">
+										{#each caffeineDrinks as drink (drink.id)}
+											{@const isThisDone = caffeineDone === drink.id}
+											{@const isThisSaving = caffeineSaving === drink.id}
+											<button
+												onclick={() => onCaffeineShortcutClick ? onCaffeineShortcutClick(drink) : logCaffeine(drink)}
+												disabled={!!caffeineSaving}
+												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity shrink-0"
+												style="background-color: {isThisDone ? 'color-mix(in srgb, #C8956C 20%, transparent)' : 'var(--color-surface-high)'}; color: {isThisDone ? '#C8956C' : 'var(--color-on-surface)'}; box-shadow: {isThisDone ? 'inset 0 0 0 1px #C8956C' : 'none'}"
+											>
+												{#if isThisSaving}…{:else if isThisDone}✓ {drink.name}{:else}{drink.name}{/if}
+											</button>
+										{/each}
+									</div>
+								</div>
+							</div>
+						{/if}
+						{#if waterEnabled}
+							<div class="px-2 py-2.5{trackerList.indexOf('water') < trackerList.length - 1 ? ' border-b' : ''}" style="border-color: var(--color-outline-variant)">
+								<div class="flex items-center gap-1.5">
+									<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
+										{#if waterDone}
+											<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.water_logged}</span>
+										{:else}
+											<span class="text-sm font-semibold" style="color: #60A5FA">{t.water_title}</span>
+											<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{waterTotalMl} / {waterGoalMl} ml</span>
+										{/if}
+									</div>
+									{#if !waterDone}
+										<div class="shrink-0 flex items-center gap-1">
+											{#each (userSettings.waterPresets ?? [100, 200]).slice(0, 2) as ml}
+												<button
+													onclick={() => logWater(ml)}
+													disabled={waterSaving}
+													class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50"
+													style="background-color: var(--color-surface-high); color: #60A5FA"
+												>+{ml}</button>
+											{/each}
+											<button
+												onclick={() => { waterShowCustom = !waterShowCustom; waterCustomAmount = ''; }}
+												disabled={waterSaving}
+												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50"
+												style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+											>{t.water_custom}</button>
+										</div>
+									{/if}
+								</div>
+								{#if waterShowCustom && !waterDone}
+									<div class="flex gap-1.5 mt-1.5 items-center">
+										<input
+											type="number"
+											inputmode="numeric"
+											min="1"
+											bind:value={waterCustomAmount}
+											placeholder="ml"
+											class="flex-1 h-9 px-3 rounded-xl border-0 outline-none"
+											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+											onkeydown={(e) => e.key === 'Enter' && submitWaterCustom()}
+										/>
+										<button
+											onclick={submitWaterCustom}
+											disabled={waterSaving || !waterCustomAmount || Number(waterCustomAmount) <= 0}
+											class="h-9 px-3 rounded-xl text-xs font-semibold disabled:opacity-40 active:opacity-70 shrink-0"
+											style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+										>{t.water_add}</button>
+									</div>
+								{/if}
+								{#if waterError}
+									<p class="text-[11px] mt-1" style="color: var(--color-error)">{waterError}</p>
 								{/if}
 							</div>
-							<!-- Quick-add buttons -->
-							{#if !waterDone}
-								<div class="shrink-0 flex items-center gap-1">
-									{#each (userSettings.waterPresets ?? [100, 200]).slice(0, 2) as ml}
-										<button
-											onclick={() => logWater(ml)}
-											disabled={waterSaving}
-											class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50"
-											style="background-color: var(--color-surface-high); color: #60A5FA"
-										>+{ml}</button>
-									{/each}
-									<button
-										onclick={() => { waterShowCustom = !waterShowCustom; waterCustomAmount = ''; }}
-										disabled={waterSaving}
-										class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50"
-										style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-									>{t.water_custom}</button>
-								</div>
-							{/if}
-						</div>
-						{#if waterShowCustom && !waterDone}
-							<div class="flex gap-1.5 mt-1.5 items-center px-1">
-								<input
-									type="number"
-									inputmode="numeric"
-									min="1"
-									bind:value={waterCustomAmount}
-									placeholder="ml"
-									class="flex-1 h-9 px-3 rounded-xl border-0 outline-none"
-									style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
-									onkeydown={(e) => e.key === 'Enter' && submitWaterCustom()}
-								/>
-								<button
-									onclick={submitWaterCustom}
-									disabled={waterSaving || !waterCustomAmount || Number(waterCustomAmount) <= 0}
-									class="h-9 px-3 rounded-xl text-xs font-semibold disabled:opacity-40 active:opacity-70 shrink-0"
-									style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-								>{t.water_add}</button>
-							</div>
 						{/if}
-						{#if waterError}
-							<p class="text-[11px] mt-1 px-1" style="color: var(--color-error)">{waterError}</p>
+						{#if meditationEnabled}
+							<div class="px-2 py-2.5">
+								<div class="flex items-center gap-1.5">
+									<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
+										<span class="text-sm font-semibold" style="color: #9F7AEA">{t.meditation_title}</span>
+										<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{meditationTotalMinutes} / {meditationGoalMinutes} min</span>
+									</div>
+									<div class="shrink-0 flex items-center gap-1">
+										{#each [5, 10, 15, 20] as min}
+											<button
+												onclick={() => startMeditation(min)}
+												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+												style="background-color: var(--color-surface-high); color: #9F7AEA"
+											>{min}m</button>
+										{/each}
+										<button
+											onclick={() => { meditationShowCustom = !meditationShowCustom; meditationCustomTime = '00:10'; }}
+											class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+											style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+										>{t.water_custom}</button>
+									</div>
+								</div>
+								{#if meditationShowCustom}
+									<div class="flex gap-1.5 mt-1.5 items-center">
+										<input
+											type="time"
+											bind:value={meditationCustomTime}
+											class="flex-1 px-3 rounded-xl border-0 outline-none text-center"
+											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px; height: 36px"
+											onkeydown={(e) => e.key === 'Enter' && submitMeditationCustom()}
+										/>
+										<button
+											onclick={submitMeditationCustom}
+											class="px-3 rounded-xl text-xs font-semibold active:opacity-70 shrink-0"
+											style="background: linear-gradient(135deg, #9F7AEA, #7C3AED); color: white; height: 36px"
+										>{t.meditation_start}</button>
+									</div>
+								{/if}
+							</div>
 						{/if}
 					</div>
 				{/if}
-				{#if meditationEnabled}
-					<div>
-						<div class="flex items-center gap-1.5 rounded-2xl px-2 py-2.5" style="background-color: var(--color-surface-container)">
-							<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
-								<span class="text-sm font-semibold" style="color: #9F7AEA">{t.meditation_title}</span>
-								<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{meditationTotalMinutes} / {meditationGoalMinutes} min</span>
-							</div>
-							<div class="shrink-0 flex items-center gap-1">
-								{#each [5, 10, 15, 20] as min}
+				{#if sortedSupplements.length > 0}
+					<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Supplements</p>
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+						{#each sortedSupplements as s, i (s.id)}
+							{@const isSaving = saving[s.id] ?? false}
+							{@const isDone = done[s.id] ?? false}
+							<div class="flex items-center gap-1.5 px-2 py-2.5{i < sortedSupplements.length - 1 ? ' border-b' : ''}" style="border-color: var(--color-outline-variant)">
+								<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
+									{#if isDone}
+										<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.supplement_taken}</span>
+									{:else}
+										<span class="truncate text-sm font-semibold" style="color: var(--color-primary)">{s.name}</span>
+										{#if s.brand}
+											<span class="truncate text-[10px]" style="color: var(--color-on-surface-variant); opacity: 0.7">{s.brand}</span>
+										{/if}
+									{/if}
+								</div>
+								<div class="shrink-0 flex items-center gap-0 rounded-lg overflow-hidden" style="background-color: var(--color-surface-high)">
 									<button
-										onclick={() => startMeditation(min)}
-										class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
-										style="background-color: var(--color-surface-high); color: #9F7AEA"
-									>{min}m</button>
-								{/each}
-								<button
-									onclick={() => { meditationShowCustom = !meditationShowCustom; meditationCustomTime = '00:10'; }}
-									class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
-									style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-								>{t.water_custom}</button>
-							</div>
-						</div>
-						{#if meditationShowCustom}
-							<div class="flex gap-1.5 mt-1.5 items-center px-1">
+										onclick={() => adjustAmount(s.id, -0.5)}
+										class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
+										style="color: var(--color-on-surface)"
+										aria-label="Weniger"
+									>−</button>
+									<span class="text-xs font-semibold text-center" style="color: var(--color-on-surface); min-width: 2.8rem">
+										{amounts[s.id] ?? 1} {abbreviateUnit(s.unit)}
+									</span>
+									<button
+										onclick={() => adjustAmount(s.id, 0.5)}
+										class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
+										style="color: var(--color-on-surface)"
+										aria-label="Mehr"
+									>+</button>
+								</div>
 								<input
 									type="time"
-									bind:value={meditationCustomTime}
-									class="flex-1 px-3 rounded-xl border-0 outline-none text-center"
-									style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; height: 36px"
-									onkeydown={(e) => e.key === 'Enter' && submitMeditationCustom()}
+									value={times[s.id] ?? ''}
+									oninput={(e) => times = { ...times, [s.id]: (e.target as HTMLInputElement).value }}
+									class="w-16 h-8 shrink-0 px-1 rounded-lg border-0 outline-none text-center"
+									style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 13px; font-family: inherit"
 								/>
 								<button
-									onclick={submitMeditationCustom}
-									class="px-3 rounded-xl text-xs font-semibold active:opacity-70 shrink-0"
-									style="background: linear-gradient(135deg, #9F7AEA, #7C3AED); color: white; height: 36px"
-								>{t.meditation_start}</button>
+									onclick={() => logOne(s.id)}
+									disabled={isSaving || isDone}
+									class="w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all shrink-0"
+									style="background: {isDone ? 'var(--color-surface-high)' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))'}; color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-on-primary)'}; opacity: {isDone ? '0.4' : '1'}"
+									aria-label={t.supplement_log_save}
+								>
+									{#if isSaving}
+										<div class="w-3.5 h-3.5 rounded-full border-2 animate-spin" style="border-color: white; border-top-color: transparent"></div>
+									{:else}
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+											<polyline points="20 6 9 17 4 12"/>
+										</svg>
+									{/if}
+								</button>
 							</div>
-						{/if}
+						{/each}
 					</div>
 				{/if}
-				{#each sortedSupplements as s (s.id)}
-					{@const isSaving = saving[s.id] ?? false}
-					{@const isDone = done[s.id] ?? false}
-					<div class="flex items-center gap-1.5 rounded-2xl px-2 py-2.5" style="background-color: var(--color-surface-container)">
-						<!-- Name + Brand -->
-						<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
-							{#if isDone}
-								<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.supplement_taken}</span>
-							{:else}
-								<span class="truncate text-sm font-semibold" style="color: var(--color-primary)">{s.name}</span>
-								{#if s.brand}
-									<span class="truncate text-[10px]" style="color: var(--color-on-surface-variant); opacity: 0.7">{s.brand}</span>
-								{/if}
-							{/if}
-						</div>
-						<!-- Tight −/amount/+ group -->
-						<div class="shrink-0 flex items-center gap-0 rounded-lg overflow-hidden" style="background-color: var(--color-surface-high)">
-							<button
-								onclick={() => adjustAmount(s.id, -0.5)}
-								class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
-								style="color: var(--color-on-surface)"
-								aria-label="Weniger"
-							>−</button>
-							<span class="text-xs font-semibold text-center" style="color: var(--color-on-surface); min-width: 2.8rem">
-								{amounts[s.id] ?? 1} {abbreviateUnit(s.unit)}
-							</span>
-							<button
-								onclick={() => adjustAmount(s.id, 0.5)}
-								class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
-								style="color: var(--color-on-surface)"
-								aria-label="Mehr"
-							>+</button>
-						</div>
-						<!-- Time -->
-						<input
-							type="time"
-							value={times[s.id] ?? ''}
-							oninput={(e) => times = { ...times, [s.id]: (e.target as HTMLInputElement).value }}
-							class="w-16 h-8 shrink-0 px-1 rounded-lg border-0 outline-none text-center"
-							style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 13px; font-family: inherit"
-						/>
-						<!-- Log ✓ -->
-						<button
-							onclick={() => logOne(s.id)}
-							disabled={isSaving || isDone}
-							class="w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all shrink-0"
-							style="background: {isDone ? 'var(--color-surface-high)' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))'}; color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-on-primary)'}; opacity: {isDone ? '0.4' : '1'}"
-							aria-label={t.supplement_log_save}
-						>
-							{#if isSaving}
-								<div class="w-3.5 h-3.5 rounded-full border-2 animate-spin" style="border-color: white; border-top-color: transparent"></div>
-							{:else}
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-									<polyline points="20 6 9 17 4 12"/>
-								</svg>
-							{/if}
-						</button>
-					</div>
-				{/each}
 			</div>
 
 			<!-- Bottom actions -->

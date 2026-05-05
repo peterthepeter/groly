@@ -540,7 +540,7 @@
 
 	<!-- Bottom-Anchored Content -->
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'} + {showLocationHint ? '3.5rem' : '0px'}); padding-bottom: 5rem; overscroll-behavior: none">
+	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'} + {showLocationHint ? '3.5rem' : '0px'}); padding-bottom: 4.5rem; overscroll-behavior: none">
 		<div class="min-h-full flex flex-col" class:justify-end={!searchQuery.trim() || !keyboardOpen}>
 		{#if loading}
 			<div class="flex justify-center py-8">
