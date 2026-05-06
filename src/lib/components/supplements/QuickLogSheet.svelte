@@ -296,7 +296,7 @@
 					<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Tracker</p>
 					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
 						{#if caffeineEnabled && caffeineDrinks.length > 0}
-							<div class="px-2 py-2.5{trackerList.indexOf('caffeine') < trackerList.length - 1 ? ' border-b' : ''}" style="border-color: var(--color-outline-variant)">
+							<div class="px-2 py-2.5">
 								<div class="flex items-center gap-1.5">
 									<div class="flex flex-col justify-center leading-none gap-[3px] shrink-0">
 										<span class="text-sm font-semibold" style="color: #C8956C">{t.caffeine_title}</span>
@@ -320,7 +320,7 @@
 							</div>
 						{/if}
 						{#if waterEnabled}
-							<div class="px-2 py-2.5{trackerList.indexOf('water') < trackerList.length - 1 ? ' border-b' : ''}" style="border-color: var(--color-outline-variant)">
+							<div class="px-2 py-2.5">
 								<div class="flex items-center gap-1.5">
 									<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
 										{#if waterDone}
@@ -422,7 +422,7 @@
 						{#each sortedSupplements as s, i (s.id)}
 							{@const isSaving = saving[s.id] ?? false}
 							{@const isDone = done[s.id] ?? false}
-							<div class="flex items-center gap-1.5 px-2 py-2.5{i < sortedSupplements.length - 1 ? ' border-b' : ''}" style="border-color: var(--color-outline-variant)">
+							<div class="flex items-center gap-1.5 px-2 py-2.5">
 								<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
 									{#if isDone}
 										<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.supplement_taken}</span>

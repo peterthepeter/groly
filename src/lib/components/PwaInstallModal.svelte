@@ -84,27 +84,26 @@
 	</div>
 
 	<!-- Steps -->
-	<div class="px-4 space-y-2 overflow-y-auto" style="max-height: 50vh">
+	<div class="px-4 overflow-y-auto" style="max-height: 50vh">
 		{#if activePlatform === 'ios'}
 			{#if lang === 'en'}
 				{@const steps = [
-					{ n: 1, icon: `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>`, text: 'Open Groly in Safari (not Chrome or another browser).' },
-					{ n: 2, icon: `<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>`, text: 'Tap the Share button at the bottom of the screen (box with an arrow pointing up).' },
-					{ n: 3, icon: `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>`, text: 'Scroll down in the Share menu and tap "Add to Home Screen".' },
-					{ n: 4, icon: `<polyline points="20 6 9 17 4 12"/>`, text: 'Tap "Add" in the top right corner. Groly will appear on your home screen like a native app.' }
+					{ n: 1, text: 'Open Groly in Safari (not Chrome or another browser).' },
+					{ n: 2, text: 'Tap the Share button at the bottom of the screen (box with an arrow pointing up).' },
+					{ n: 3, text: 'Scroll down in the Share menu and tap "Add to Home Screen".' },
+					{ n: 4, text: 'Tap "Add" in the top right corner. Groly will appear on your home screen like a native app.' }
 				]}
-				{#each steps as s}
-					<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
-					     style="background-color: var(--color-surface-container)">
-						<div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-						     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
-							{s.n}
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					{#each steps as s}
+						<div class="flex items-start gap-3 px-3 py-2.5">
+							<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+							     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
+								{s.n}
+							</div>
+							<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">{s.text}</div>
 						</div>
-						<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">
-							{s.text}
-						</div>
-					</div>
-				{/each}
+					{/each}
+				</div>
 			{:else}
 				{@const steps = [
 					{ n: 1, text: 'Öffne Groly in Safari (nicht Chrome oder einem anderen Browser).' },
@@ -112,22 +111,21 @@
 					{ n: 3, text: 'Scrolle im Teilen-Menü nach unten und wähle „Zum Home-Bildschirm".' },
 					{ n: 4, text: 'Tippe oben rechts auf „Hinzufügen". Groly erscheint wie eine native App auf deinem Startbildschirm.' }
 				]}
-				{#each steps as s}
-					<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
-					     style="background-color: var(--color-surface-container)">
-						<div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-						     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
-							{s.n}
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					{#each steps as s}
+						<div class="flex items-start gap-3 px-3 py-2.5">
+							<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+							     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
+								{s.n}
+							</div>
+							<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">{s.text}</div>
 						</div>
-						<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">
-							{s.text}
-						</div>
-					</div>
-				{/each}
+					{/each}
+				</div>
 			{/if}
 		{:else}
 			{#if installDone}
-				<div class="px-3 py-4 rounded-xl text-center"
+				<div class="px-3 py-4 rounded-2xl text-center"
 				     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent)">
 					<div class="text-2xl mb-1">✓</div>
 					<div class="text-sm font-semibold" style="color: var(--color-on-surface)">
@@ -140,7 +138,7 @@
 			{:else if deferredPrompt}
 				<button
 					onclick={triggerInstall}
-					class="w-full flex items-center justify-center gap-3 py-4 rounded-xl text-sm font-semibold transition-colors active:opacity-80"
+					class="w-full flex items-center justify-center gap-3 py-3 rounded-2xl text-sm font-semibold transition-colors active:opacity-80"
 					style="background-color: var(--color-primary); color: var(--color-on-primary)"
 				>
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -161,21 +159,16 @@
 						{ n: 3, text: 'Tap "Add to Home screen" or "Install app".' },
 						{ n: 4, text: 'Confirm with "Add". Groly will appear on your home screen and runs in its own window.' }
 					]}
-					{#each steps as s}
-						<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
-						     style="background-color: var(--color-surface-container)">
-							<div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-							     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
-								{s.n}
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+						{#each steps as s}
+							<div class="flex items-start gap-3 px-3 py-2.5">
+								<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+								     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
+									{s.n}
+								</div>
+								<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">{s.text}</div>
 							</div>
-							<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">
-								{s.text}
-							</div>
-						</div>
-					{/each}
-					<div class="px-3 py-2.5 rounded-xl text-xs leading-relaxed"
-					     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-on-surface-variant)">
-						💡 If you're already using Chrome, the install button may appear automatically next time.
+						{/each}
 					</div>
 				{:else}
 					{@const steps = [
@@ -184,21 +177,16 @@
 						{ n: 3, text: 'Wähle „Zum Startbildschirm hinzufügen" oder „App installieren".' },
 						{ n: 4, text: 'Bestätige mit „Hinzufügen". Groly erscheint auf dem Startbildschirm und läuft im eigenen Fenster.' }
 					]}
-					{#each steps as s}
-						<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
-						     style="background-color: var(--color-surface-container)">
-							<div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-							     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
-								{s.n}
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+						{#each steps as s}
+							<div class="flex items-start gap-3 px-3 py-2.5">
+								<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+								     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
+									{s.n}
+								</div>
+								<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">{s.text}</div>
 							</div>
-							<div class="flex-1 min-w-0 text-xs leading-relaxed pt-1" style="color: var(--color-on-surface-variant)">
-								{s.text}
-							</div>
-						</div>
-					{/each}
-					<div class="px-3 py-2.5 rounded-xl text-xs leading-relaxed"
-					     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-on-surface-variant)">
-						💡 Falls du Chrome verwendest, erscheint der Installieren-Button beim nächsten Besuch möglicherweise automatisch.
+						{/each}
 					</div>
 				{/if}
 			{/if}

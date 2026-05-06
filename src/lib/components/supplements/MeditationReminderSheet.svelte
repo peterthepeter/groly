@@ -142,14 +142,20 @@
 								/>
 							</div>
 
-							<label class="flex items-center justify-between gap-3 cursor-pointer">
+							<div class="flex items-center justify-between gap-3">
 								<span class="text-sm" style="color: var(--color-on-surface)">{t.meditation_reminder_only_if_not_meditated}</span>
-								<input
-									type="checkbox"
-									bind:checked={entry.onlyIfNotMeditated}
-									class="w-5 h-5"
-								/>
-							</label>
+								<button
+									type="button"
+									onclick={() => entry.onlyIfNotMeditated = !entry.onlyIfNotMeditated}
+									class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+									style="background-color: {entry.onlyIfNotMeditated ? '#9F7AEA' : 'var(--color-surface-container)'}"
+									aria-label={t.meditation_reminder_only_if_not_meditated}
+								>
+									{#if entry.onlyIfNotMeditated}
+										<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+									{/if}
+								</button>
+							</div>
 
 							<div class="flex gap-2 pt-1">
 								<button

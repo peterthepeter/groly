@@ -97,47 +97,6 @@
 
 <div class={embedded ? 'flex flex-col px-4 py-2' : 'rounded-2xl px-4 py-3 flex flex-col'} style={embedded ? '' : 'background-color: var(--color-surface-card)'}>
 
-	<!-- Expanded log entries — renders first in DOM so they expand upward -->
-	{#if expanded && sortedLogs.length > 0}
-		<div class="mb-3 pb-3 border-b space-y-1.5" style="border-color: var(--color-outline-variant)">
-			{#each sortedLogs as log (log.id)}
-				<div class="flex items-center justify-between text-xs">
-					<span style="color: var(--color-on-surface-variant)">
-						<span style="color: #60A5FA">{log.amountMl} ml</span>
-						{t.supplement_log_at} {formatTime(log.loggedAt)}
-					</span>
-					<div class="flex items-center gap-0.5 shrink-0">
-						<button
-							onclick={() => openEdit(log)}
-							class="p-1 rounded active:opacity-50"
-							aria-label="Bearbeiten"
-							style="color: var(--color-on-surface-variant)"
-						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-								<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-							</svg>
-						</button>
-						<button
-							onclick={() => ondeleted(log.id)}
-							class="p-1 rounded active:opacity-50"
-							aria-label={t.water_log_delete}
-							style="color: var(--color-on-surface-variant)"
-						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<polyline points="3 6 5 6 21 6"/>
-								<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-								<path d="M10 11v6"/>
-								<path d="M14 11v6"/>
-								<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-							</svg>
-						</button>
-					</div>
-				</div>
-			{/each}
-		</div>
-	{/if}
-
 	<!-- Header row: title left, buttons right -->
 	<div class="flex items-center gap-2">
 		<p class="font-semibold text-sm shrink-0" style="color: var(--color-on-surface)">{t.water_title}</p>
@@ -166,7 +125,7 @@
 				aria-label={expanded ? t.water_collapse : t.water_expand}
 			>
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-				     style="transition: transform 0.2s; transform: rotate({expanded ? '-90' : '0'}deg)">
+				     style="transition: transform 0.2s; transform: rotate({expanded ? '90' : '0'}deg)">
 					<polyline points="9 6 15 12 9 18"/>
 				</svg>
 			</button>
@@ -224,6 +183,47 @@
 	<!-- Error message -->
 	{#if errorMsg}
 		<p class="text-xs mt-1.5 text-center" style="color: var(--color-error)">{errorMsg}</p>
+	{/if}
+
+	<!-- Expanded log entries -->
+	{#if expanded && sortedLogs.length > 0}
+		<div class="mt-2 pt-2 border-t space-y-1.5" style="border-color: var(--color-outline-variant)">
+			{#each sortedLogs as log (log.id)}
+				<div class="flex items-center justify-between text-xs">
+					<span style="color: var(--color-on-surface-variant)">
+						<span style="color: #60A5FA">{log.amountMl} ml</span>
+						{t.supplement_log_at} {formatTime(log.loggedAt)}
+					</span>
+					<div class="flex items-center gap-0.5 shrink-0">
+						<button
+							onclick={() => openEdit(log)}
+							class="p-1 rounded active:opacity-50"
+							aria-label="Bearbeiten"
+							style="color: var(--color-on-surface-variant)"
+						>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+								<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+							</svg>
+						</button>
+						<button
+							onclick={() => ondeleted(log.id)}
+							class="p-1 rounded active:opacity-50"
+							aria-label={t.water_log_delete}
+							style="color: var(--color-on-surface-variant)"
+						>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="3 6 5 6 21 6"/>
+								<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+								<path d="M10 11v6"/>
+								<path d="M14 11v6"/>
+								<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+							</svg>
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
 	{/if}
 </div>
 

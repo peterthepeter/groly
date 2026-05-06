@@ -170,13 +170,13 @@
      onclick={onClose}></div>
 
 <!-- Modal -->
-<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-8 pt-4"
+<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-4 pt-3"
      style="background-color: var(--color-surface-low); bottom: {bottomOffset}px">
-	<div class="flex justify-center mb-4">
+	<div class="flex justify-center mb-2">
 		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 	</div>
 
-	<div class="flex items-center justify-between mb-5">
+	<div class="flex items-center justify-between mb-3">
 		<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{list ? t.list_edit_title : t.list_create_title}</h2>
 		{#if list && onShare}
 			<button
@@ -195,62 +195,147 @@
 		{/if}
 	</div>
 
-	<div class="space-y-3 mb-3">
-		<!-- Teilen nach Erstellen Toggle (nur beim Erstellen) -->
-		{#if !list}
-			<button
-				type="button"
-				onclick={() => shareAfterCreate = !shareAfterCreate}
-				class="w-full flex items-center gap-3 px-4 rounded-xl active:opacity-70 transition-opacity"
-				style="background-color: var(--color-surface-container); height: 52px"
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-				     stroke={shareAfterCreate ? 'var(--color-primary)' : 'var(--color-outline)'}
-				     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-					<polyline points="16 6 12 2 8 6"/>
-					<line x1="12" y1="2" x2="12" y2="15"/>
-				</svg>
-				<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
-					{currentLang() === 'en' ? 'Share after creating' : 'Nach Erstellen teilen'}
-				</span>
-				<div class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-				     style="background-color: {shareAfterCreate ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
-					{#if shareAfterCreate}
-						<span class="absolute top-0.5 h-4 w-4 rounded-full"
-						      style="background-color: white; transform: translateX(1.25rem)"></span>
-					{/if}
-				</div>
-			</button>
-		{/if}
+	<div class="space-y-2 mb-2">
+		<!-- Optionen-Bubble: Share/Notif + Category Sort (edit) + Icon-Picker -->
+		<div class="rounded-2xl overflow-visible" style="background-color: var(--color-surface-container)">
+			{#if !list}
+				<button
+					type="button"
+					onclick={() => shareAfterCreate = !shareAfterCreate}
+					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
+					style="height: 44px"
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+					     stroke={shareAfterCreate ? 'var(--color-primary)' : 'var(--color-outline)'}
+					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+						<polyline points="16 6 12 2 8 6"/>
+						<line x1="12" y1="2" x2="12" y2="15"/>
+					</svg>
+					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
+						{currentLang() === 'en' ? 'Share after creating' : 'Nach Erstellen teilen'}
+					</span>
+					<div class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+					     style="background-color: {shareAfterCreate ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
+						{#if shareAfterCreate}
+							<span class="absolute top-0.5 h-4 w-4 rounded-full"
+							      style="background-color: white; transform: translateX(1.25rem)"></span>
+						{/if}
+					</div>
+				</button>
+			{/if}
 
-		<!-- Notification Toggle (nur bei geteilten Listen) -->
-		{#if list && memberCount > 0}
-			<button
-				type="button"
-				onclick={toggleNotifications}
-				disabled={notifLoading}
-				class="w-full flex items-center gap-3 px-4 rounded-xl active:opacity-70 transition-opacity"
-				style="background-color: var(--color-surface-container); height: 52px"
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-				     stroke={notificationsEnabled ? 'var(--color-primary)' : 'var(--color-outline)'}
-				     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					{#if notificationsEnabled}
-						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-						<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-					{:else}
-						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-						<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-						<line x1="1" y1="1" x2="23" y2="23"/>
-					{/if}
-				</svg>
-				<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">Benachrichtigungen</span>
-				<span class="text-xs font-medium" style="color: {notificationsEnabled ? 'var(--color-primary)' : 'var(--color-outline)'}">
-					{notificationsEnabled ? 'An' : 'Aus'}
-				</span>
-			</button>
-		{/if}
+			{#if list && memberCount > 0}
+				<button
+					type="button"
+					onclick={toggleNotifications}
+					disabled={notifLoading}
+					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
+					style="height: 44px"
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+					     stroke={notificationsEnabled ? 'var(--color-primary)' : 'var(--color-outline)'}
+					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						{#if notificationsEnabled}
+							<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+							<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+						{:else}
+							<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+							<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+							<line x1="1" y1="1" x2="23" y2="23"/>
+						{/if}
+					</svg>
+					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
+						{currentLang() === 'en' ? 'Notifications' : 'Benachrichtigungen'}
+					</span>
+					<span class="text-xs font-medium" style="color: {notificationsEnabled ? 'var(--color-primary)' : 'var(--color-outline)'}">
+						{notificationsEnabled ? (currentLang() === 'en' ? 'On' : 'An') : (currentLang() === 'en' ? 'Off' : 'Aus')}
+					</span>
+				</button>
+			{/if}
+
+			{#if list}
+				<button
+					type="button"
+					onclick={() => categorySortOpen = !categorySortOpen}
+					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
+					style="height: 44px"
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+					     stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+						<line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+						<line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+					</svg>
+					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
+						{currentLang() === 'en' ? 'Category sorting' : 'Kategorien sortieren'}
+					</span>
+					<span class="text-xs font-medium mr-1" style="color: {listCatSettings ? 'var(--color-primary)' : 'var(--color-outline)'}">
+						{listCatSettings ? (currentLang() === 'en' ? 'Custom' : 'Angepasst') : (currentLang() === 'en' ? 'Automatic' : 'Automatisch')}
+					</span>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
+					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({categorySortOpen ? 180 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+						<polyline points="6 9 12 15 18 9"/>
+					</svg>
+				</button>
+				{#if categorySortOpen}
+					<div class="px-4 pb-3 pt-1">
+						{#if !listCatSettings}
+							<p class="text-xs mb-3" style="color: var(--color-on-surface-variant)">
+								{currentLang() === 'en' ? 'Uses the global setting from preferences.' : 'Verwendet die globale Einstellung aus den Einstellungen.'}
+							</p>
+							<button type="button" onclick={enableCustomSort}
+								class="w-full py-2.5 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity"
+								style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
+								{currentLang() === 'en' ? 'Customise for this list' : 'Für diese Liste anpassen'}
+							</button>
+						{:else}
+							<button type="button" onclick={toggleListSortEnabled}
+								class="w-full flex items-center gap-3 mb-3 active:opacity-70 transition-opacity">
+								<span class="flex-1 text-xs text-left" style="color: var(--color-on-surface-variant)">
+									{currentLang() === 'en' ? 'Sort by category' : 'Nach Kategorie sortieren'}
+								</span>
+								<div class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
+								     style="background-color: {listCatSettings.enabled ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
+									<div class="absolute top-0.5 w-5 h-5 rounded-full transition-transform shadow-sm"
+									     style="background-color: white; left: {listCatSettings.enabled ? '1.25rem' : '0.125rem'}"></div>
+								</div>
+							</button>
+							{#if listCatSettings.enabled}
+								<p class="text-xs mb-2" style="color: var(--color-on-surface-variant)">
+									{currentLang() === 'en' ? 'First category appears at the bottom of the grid.' : 'Erste Kategorie erscheint unten im Raster.'}
+								</p>
+								<div class="space-y-1 mb-3 overflow-y-auto" style="max-height: 220px">
+									{#each listCatSettings.order as key, i}
+										<div class="flex items-center gap-2 rounded-xl px-3 py-2" style="background-color: var(--color-surface-low)">
+											<span class="flex-1 text-xs font-medium" style="color: var(--color-on-surface)">
+												{i + 1}. {CATEGORY_LABELS[key]?.[currentLang()] ?? key}
+											</span>
+											<button type="button" onclick={() => list && userSettings.moveListCategoryUp(list.id, i)}
+												disabled={i === 0} aria-label="Nach oben" class="p-1 rounded-lg disabled:opacity-20" style="color: var(--color-on-surface-variant)">
+												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+											</button>
+											<button type="button" onclick={() => list && userSettings.moveListCategoryDown(list.id, i)}
+												disabled={i === listCatSettings.order.length - 1} aria-label="Nach unten" class="p-1 rounded-lg disabled:opacity-20" style="color: var(--color-on-surface-variant)">
+												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+											</button>
+										</div>
+									{/each}
+								</div>
+							{/if}
+							<button type="button" onclick={resetToGlobal}
+								class="w-full py-2 rounded-xl text-xs font-medium active:opacity-70 transition-opacity"
+								style="background-color: color-mix(in srgb, var(--color-outline) 12%, transparent); color: var(--color-on-surface-variant)">
+								{currentLang() === 'en' ? 'Reset to global setting' : 'Auf globale Einstellung zurücksetzen'}
+							</button>
+						{/if}
+					</div>
+				{/if}
+			{/if}
+
+			<IconPicker {selectedIconId} {name} onSelect={(id) => selectedIconId = id} flat />
+		</div>
 
 		<!-- Standorterkennung -->
 		{#if userSettings.locationNavEnabled}
@@ -415,147 +500,7 @@
 			</div>
 		{/if}
 
-		<!-- Kategorie-Sortierung (nur beim Bearbeiten) -->
-		{#if list}
-			<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
-				<!-- Header / Toggle -->
-				<button
-					type="button"
-					onclick={() => categorySortOpen = !categorySortOpen}
-					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
-					style="height: 52px"
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-					     stroke="var(--color-primary)"
-					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<line x1="8" y1="6" x2="21" y2="6"/>
-						<line x1="8" y1="12" x2="21" y2="12"/>
-						<line x1="8" y1="18" x2="21" y2="18"/>
-						<line x1="3" y1="6" x2="3.01" y2="6"/>
-						<line x1="3" y1="12" x2="3.01" y2="12"/>
-						<line x1="3" y1="18" x2="3.01" y2="18"/>
-					</svg>
-					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
-						{currentLang() === 'en' ? 'Category sorting' : 'Kategorien sortieren'}
-					</span>
-					<span class="text-xs font-medium mr-1" style="color: {listCatSettings ? 'var(--color-primary)' : 'var(--color-outline)'}">
-						{listCatSettings
-							? (currentLang() === 'en' ? 'Custom' : 'Angepasst')
-							: (currentLang() === 'en' ? 'Automatic' : 'Automatisch')}
-					</span>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
-					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({categorySortOpen ? 180 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="6 9 12 15 18 9"/>
-					</svg>
-				</button>
-
-				{#if categorySortOpen}
-					<div class="px-4 pb-4">
-						{#if !listCatSettings}
-							<!-- Auto mode -->
-							<p class="text-xs mb-3" style="color: var(--color-on-surface-variant)">
-								{currentLang() === 'en'
-									? 'Uses the global setting from preferences.'
-									: 'Verwendet die globale Einstellung aus den Einstellungen.'}
-							</p>
-							<button
-								type="button"
-								onclick={enableCustomSort}
-								class="w-full py-2.5 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity"
-								style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-							>
-								{currentLang() === 'en' ? 'Customise for this list' : 'Für diese Liste anpassen'}
-							</button>
-						{:else}
-							<!-- Custom mode: enabled toggle -->
-							<button
-								type="button"
-								onclick={toggleListSortEnabled}
-								class="w-full flex items-center gap-3 mb-3 active:opacity-70 transition-opacity"
-							>
-								<span class="flex-1 text-xs text-left" style="color: var(--color-on-surface-variant)">
-									{currentLang() === 'en' ? 'Sort by category' : 'Nach Kategorie sortieren'}
-								</span>
-								<div class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
-								     style="background-color: {listCatSettings.enabled ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
-									<div class="absolute top-0.5 w-5 h-5 rounded-full transition-transform shadow-sm"
-									     style="background-color: white; left: {listCatSettings.enabled ? '1.25rem' : '0.125rem'}"></div>
-								</div>
-							</button>
-
-							{#if listCatSettings.enabled}
-								<p class="text-xs mb-2" style="color: var(--color-on-surface-variant)">
-									{currentLang() === 'en'
-										? 'First category appears at the bottom of the grid.'
-										: 'Erste Kategorie erscheint unten im Raster.'}
-								</p>
-								<!-- Scrollable category list -->
-								<div class="space-y-1 mb-3 overflow-y-auto" style="max-height: 220px">
-									{#each listCatSettings.order as key, i}
-										<div class="flex items-center gap-2 rounded-xl px-3 py-2"
-										     style="background-color: var(--color-surface-low)">
-											<span class="flex-1 text-xs font-medium" style="color: var(--color-on-surface)">
-												{i + 1}. {CATEGORY_LABELS[key]?.[currentLang()] ?? key}
-											</span>
-											<button
-												type="button"
-												onclick={() => list && userSettings.moveListCategoryUp(list.id, i)}
-												disabled={i === 0}
-												aria-label="Nach oben"
-												class="p-1 rounded-lg disabled:opacity-20"
-												style="color: var(--color-on-surface-variant)"
-											>
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-													<polyline points="18 15 12 9 6 15"/>
-												</svg>
-											</button>
-											<button
-												type="button"
-												onclick={() => list && userSettings.moveListCategoryDown(list.id, i)}
-												disabled={i === listCatSettings.order.length - 1}
-												aria-label="Nach unten"
-												class="p-1 rounded-lg disabled:opacity-20"
-												style="color: var(--color-on-surface-variant)"
-											>
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-													<polyline points="6 9 12 15 18 9"/>
-												</svg>
-											</button>
-										</div>
-									{/each}
-								</div>
-							{/if}
-
-							<!-- Reset to global -->
-							<button
-								type="button"
-								onclick={resetToGlobal}
-								class="w-full py-2 rounded-xl text-xs font-medium active:opacity-70 transition-opacity"
-								style="background-color: color-mix(in srgb, var(--color-outline) 12%, transparent); color: var(--color-on-surface-variant)"
-							>
-								{currentLang() === 'en' ? 'Reset to global setting' : 'Auf globale Einstellung zurücksetzen'}
-							</button>
-						{/if}
-					</div>
-				{/if}
-			</div>
-		{/if}
-
-		<!-- Icon Picker -->
-		<IconPicker {selectedIconId} {name} onSelect={(id) => selectedIconId = id} />
-
-		<div class="rounded-xl px-4 flex items-center" style="background-color: var(--color-surface-container); height: 52px">
-			<input
-				type="text"
-				placeholder={t.list_description_placeholder}
-				bind:value={description}
-				class="w-full bg-transparent outline-none text-base"
-				style="color: var(--color-on-surface); font-size: 16px"
-			/>
-		</div>
-
-		<div class="rounded-xl px-4 flex items-center" style="background-color: var(--color-surface-container); height: 52px">
+<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				type="text"
@@ -563,8 +508,16 @@
 				bind:value={name}
 				autofocus
 				onfocus={(e) => { const el = e.target as HTMLInputElement; setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0); }}
-				class="w-full bg-transparent outline-none text-base font-medium"
-				style="color: var(--color-on-surface); font-size: 16px"
+				class="w-full px-4 bg-transparent outline-none text-base font-medium"
+				style="color: var(--color-on-surface); font-size: 16px; height: 44px"
+			/>
+			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+			<input
+				type="text"
+				placeholder={t.list_description_placeholder}
+				bind:value={description}
+				class="w-full px-4 bg-transparent outline-none text-sm"
+				style="color: var(--color-on-surface); font-size: 16px; height: 44px"
 			/>
 		</div>
 	</div>

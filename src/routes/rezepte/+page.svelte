@@ -522,45 +522,44 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => addSheetOpen = false}></div>
-	<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-10 pt-4"
+	<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-4 pt-3"
 	     style="background-color: var(--color-surface-low); bottom: 0">
-		<div class="flex justify-center mb-5">
+		<div class="flex justify-center mb-2">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>
-		<h2 class="text-lg font-bold mb-5" style="color: var(--color-on-surface)">{t.recipe_add}</h2>
-		<div class="space-y-3">
+		<h2 class="text-lg font-bold mb-3" style="color: var(--color-on-surface)">{t.recipe_add}</h2>
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
 			<button
 				onclick={() => { addSheetOpen = false; goto('/rezepte/import'); }}
-				class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl active:opacity-70 transition-opacity"
-				style="background-color: var(--color-surface-container)"
+				class="w-full flex items-center gap-3 px-4 py-2.5 active:opacity-70 transition-opacity"
 			>
-				<div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+				<div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
 				     style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
 						<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
 					</svg>
 				</div>
 				<div class="text-left">
 					<div class="text-sm font-semibold" style="color: var(--color-on-surface)">{t.recipe_import_url}</div>
-					<div class="text-xs mt-0.5" style="color: var(--color-on-surface-variant)">{t.recipe_import_url_hint}</div>
+					<div class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_import_url_hint}</div>
 				</div>
 			</button>
+			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
 			<button
 				onclick={() => { addSheetOpen = false; goto('/rezepte/neu'); }}
-				class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl active:opacity-70 transition-opacity"
-				style="background-color: var(--color-surface-container)"
+				class="w-full flex items-center gap-3 px-4 py-2.5 active:opacity-70 transition-opacity"
 			>
-				<div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+				<div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
 				     style="background-color: var(--color-surface-high)">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
 						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
 					</svg>
 				</div>
 				<div class="text-left">
 					<div class="text-sm font-semibold" style="color: var(--color-on-surface)">{t.recipe_create_manual}</div>
-					<div class="text-xs mt-0.5" style="color: var(--color-on-surface-variant)">{t.recipe_create_manual_hint}</div>
+					<div class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_create_manual_hint}</div>
 				</div>
 			</button>
 		</div>

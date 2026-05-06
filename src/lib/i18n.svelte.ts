@@ -77,6 +77,7 @@ class TranslationProxy {
 	get items_add() { void _lang; return m.items_add(); }
 	// item
 	get item_name_label() { void _lang; return m.item_name_label(); }
+	get item_name_placeholder() { void _lang; return m.item_name_placeholder(); }
 	get item_quantity_label() { void _lang; return m.item_quantity_label(); }
 	get item_quantity_placeholder() { void _lang; return m.item_quantity_placeholder(); }
 	get item_save() { void _lang; return m.item_save(); }
@@ -144,6 +145,7 @@ class TranslationProxy {
 	get supplement_catalog_applied() { void _lang; return m.supplement_catalog_applied(); }
 	get supplement_enter_manually() { void _lang; return m.supplement_enter_manually(); }
 	get admin_catalog_header_label() { void _lang; return m.admin_catalog_header_label(); }
+	get admin_catalog_brands_label() { void _lang; return m.admin_catalog_brands_label(); }
 	get admin_catalog_text_hint() { void _lang; return m.admin_catalog_text_hint(); }
 	get admin_catalog_text_placeholder() { void _lang; return m.admin_catalog_text_placeholder(); }
 	get admin_catalog_parse_placeholder() { void _lang; return m.admin_catalog_parse_placeholder(); }

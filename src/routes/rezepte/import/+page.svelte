@@ -100,8 +100,8 @@
 	     style="background-color: var(--color-surface-card); max-height: 92dvh; padding-bottom: max(env(safe-area-inset-bottom), 1.5rem)">
 
 		<!-- Drag handle + header -->
-		<div class="flex-shrink-0 pt-3 px-6 pb-4">
-			<div class="w-10 h-1 rounded-full mx-auto mb-5" style="background-color: var(--color-outline-variant)"></div>
+		<div class="flex-shrink-0 pt-3 px-6 pb-3">
+			<div class="w-10 h-1 rounded-full mx-auto mb-2" style="background-color: var(--color-outline-variant)"></div>
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{t.recipe_import_title}</h2>
 				<button
@@ -118,7 +118,7 @@
 		</div>
 
 		<!-- Scrollable content -->
-		<div class="flex-1 min-h-0 overflow-y-auto px-6 flex flex-col gap-4 pb-2">
+		<div class="flex-1 min-h-0 overflow-y-auto px-6 flex flex-col gap-3 pb-2">
 
 			<!-- Preview (erscheint nach erfolgreichem Import) -->
 			{#if parsed}
@@ -168,7 +168,6 @@
 						{#each [
 							{ label: 'Chefkoch', href: 'https://www.chefkoch.de/rs/s0/Rezepte.html' },
 							{ label: 'BBC Good Food', href: 'https://www.bbcgoodfood.com/recipes' },
-							{ label: 'Sallys Welt', href: 'https://sallys-blog.de/rezepte' },
 							{ label: 'Kitchen Stories', href: 'https://www.kitchenstories.com/de/rezepte' },
 							{ label: 'Allrecipes', href: 'https://www.allrecipes.com' },
 							{ label: 'Lecker.de', href: 'https://www.lecker.de/rezepte' }
@@ -197,7 +196,7 @@
 			<!-- URL input -->
 			<div class="flex gap-2">
 				<div class="flex-1 flex items-center px-4 rounded-2xl"
-				     style="background-color: var(--color-surface-container); height: 52px">
+				     style="background-color: var(--color-surface-container); height: 44px">
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0 mr-2">
 						<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
 					</svg>
@@ -220,7 +219,7 @@
 				<button
 					onclick={pasteFromClipboard}
 					class="px-4 rounded-2xl text-xs font-semibold active:opacity-70 transition-opacity"
-					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant); height: 52px"
+					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant); height: 44px"
 				>{t.recipe_import_paste}</button>
 			</div>
 
@@ -232,7 +231,7 @@
 				<button
 					onclick={saveRecipe}
 					disabled={saving}
-					class="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40 active:scale-95 transition-all"
+					class="w-full py-3 rounded-2xl font-semibold text-sm disabled:opacity-40 active:opacity-70 transition-opacity"
 					style="background-color: var(--color-primary); color: var(--color-on-primary)"
 				>
 					{saving ? t.recipe_saving : t.recipe_save}
@@ -241,7 +240,7 @@
 				<button
 					onclick={importUrl}
 					disabled={!url.trim() || loading}
-					class="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40 active:scale-95 transition-all"
+					class="w-full py-3 rounded-2xl font-semibold text-sm disabled:opacity-40 active:opacity-70 transition-opacity"
 					style="background-color: var(--color-primary); color: var(--color-on-primary)"
 				>
 					{#if loading}

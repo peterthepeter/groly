@@ -648,17 +648,14 @@
 			<!-- Content -->
 			{#if usersOpen}
 				<div class="px-3 pb-3 space-y-2">
-					<div class="h-px mb-1" style="background-color: var(--color-outline-variant)"></div>
-
 					<!-- User List -->
 					<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
 						{#each users as user, i (user.id)}
 							<button
 								onclick={() => openEdit(user)}
-								class="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity {i > 0 ? 'border-t' : ''}"
-								style="border-color: var(--color-outline-variant)"
+								class="w-full flex items-center gap-3 px-4 py-2.5 text-left active:opacity-70 transition-opacity"
 							>
-								<div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+								<div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
 								     style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)">
 									{user.username[0].toUpperCase()}
 								</div>
@@ -667,9 +664,6 @@
 									<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">
 										{user.role === 'admin' ? t.admin_role_admin : t.admin_role_user}
 										· {user.listCount} {user.listCount === 1 ? 'Liste' : 'Listen'}, {user.itemCount} Items, {user.recipeCount} {user.recipeCount === 1 ? 'Rezept' : 'Rezepte'}
-									</div>
-									<div class="text-[10px] truncate" style="color: var(--color-on-surface-variant); opacity: 0.7">
-										{formatLastLogin(user.lastLoginAt)}
 									</div>
 								</div>
 								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -853,8 +847,6 @@
 			<!-- Content -->
 			{#if catalogOpen}
 				<div class="px-3 pb-3 space-y-2">
-					<div class="h-px mb-1" style="background-color: var(--color-outline-variant)"></div>
-
 					<!-- Add button -->
 					{#if !catalogForm}
 						<button
@@ -869,8 +861,11 @@
 						</button>
 					{/if}
 
-					<!-- Catalog search -->
-					{#if catalog.length > 0}
+					<!-- Catalog list grouped by brand -->
+					{#if catalog.length === 0}
+						<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_empty}</p>
+					{:else}
+						<!-- Search -->
 						<div class="relative">
 							<svg class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 								<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -886,18 +881,18 @@
 								onblur={(e) => (e.currentTarget as HTMLInputElement).style.borderColor = 'transparent'}
 							/>
 						</div>
-					{/if}
 
-					<!-- Catalog list grouped by brand -->
-					{#if catalog.length === 0}
-						<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_empty}</p>
-					{:else if catalogGrouped.length === 0}
-						<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_no_results}</p>
-					{:else}
-						<div class="space-y-1.5">
+						<!-- Brands bubble -->
+						<div>
+							<p class="text-xs font-semibold px-1 pb-1.5 pt-0.5" style="color: var(--color-on-surface-variant)">{t.admin_catalog_brands_label}</p>
+							{#if catalogGrouped.length === 0}
+								<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_no_results}</p>
+							{:else}
+							<div class="rounded-xl overflow-hidden space-y-0" style="background-color: var(--color-surface-container)">
+							<div class="space-y-0">
 							{#each catalogGrouped as [brand, entries] (brand)}
 								{@const isOpen = openBrands.has(brand)}
-								<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+								<div class="overflow-hidden">
 									<!-- Brand header -->
 									<button
 										onclick={() => toggleBrand(brand)}
@@ -919,8 +914,8 @@
 										{#each entries as entry, i (entry.id)}
 											<button
 												onclick={() => openCatalogEdit(entry)}
-												class="w-full flex items-center gap-3 px-4 py-3.5 text-left active:opacity-70 transition-opacity border-t"
-												style="border-color: var(--color-outline-variant)"
+												class="w-full flex items-center gap-3 px-4 py-2.5 text-left active:opacity-70 transition-opacity"
+												style=""
 											>
 												<div class="flex-1 min-w-0">
 													<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{entry.name}</div>
@@ -940,9 +935,174 @@
 									{/if}
 								</div>
 							{/each}
+							</div>
+							</div>
+							{/if}
 						</div>
 					{/if}
 
+				</div>
+			{/if}
+		</div>
+
+		<!-- ── Caffeine Drinks Accordion ──────────────────────────────────────── -->
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<button
+				onclick={() => { caffeineDrinksOpen = !caffeineDrinksOpen; if (caffeineDrinksOpen) loadCaffeineDrinks(); }}
+				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8956C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+					<path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+					<path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+					<line x1="6" y1="1" x2="6" y2="4"/>
+					<line x1="10" y1="1" x2="10" y2="4"/>
+					<line x1="14" y1="1" x2="14" y2="4"/>
+				</svg>
+				<span class="flex-1 font-semibold text-sm" style="color: var(--color-on-surface)">{t.caffeine_admin_drinks_title}</span>
+				{#if caffeineDrinks.length > 0}
+					<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{caffeineDrinks.length}</span>
+				{/if}
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+				     style="transform: rotate({caffeineDrinksOpen ? '180deg' : '0deg'}); transition: transform 0.2s ease">
+					<polyline points="6 9 12 15 18 9"/>
+				</svg>
+			</button>
+
+			{#if caffeineDrinksOpen}
+				<div class="px-3 pb-3 space-y-2">
+					{#if caffeineLoading}
+						<div class="flex justify-center py-4">
+							<div class="w-5 h-5 rounded-full border-2 animate-spin" style="border-color: #C8956C; border-top-color: transparent"></div>
+						</div>
+					{:else}
+						{#each caffeineDrinks as drink (drink.id)}
+							<div class="rounded-xl px-3 py-2.5" style="background-color: var(--color-surface-container)">
+								{#if caffeineEditId === drink.id}
+									<div class="space-y-2">
+										<input
+											type="text"
+											bind:value={caffeineEditName}
+											placeholder={t.caffeine_drink_name}
+											class="w-full h-9 px-3 rounded-xl border-0 outline-none text-sm"
+											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+										/>
+										<div class="flex gap-2">
+											<div class="flex-1 flex items-center gap-1.5">
+												<input
+													type="number"
+													inputmode="numeric"
+													bind:value={caffeineEditMl}
+													placeholder="ml"
+													class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
+													style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+												/>
+												<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">ml</span>
+											</div>
+											<div class="flex-1 flex items-center gap-1.5">
+												<input
+													type="number"
+													inputmode="numeric"
+													bind:value={caffeineEditMg}
+													placeholder="mg"
+													class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
+													style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+												/>
+												<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">mg</span>
+											</div>
+										</div>
+										<div class="flex gap-2">
+											<button
+												onclick={() => caffeineEditId = null}
+												class="flex-1 py-2 rounded-xl text-xs font-semibold active:opacity-70"
+												style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+											>{t.close}</button>
+											<button
+												onclick={() => saveCaffeineDrink(drink.id)}
+												class="flex-1 py-2 rounded-xl text-xs font-semibold active:opacity-80"
+												style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
+											>{t.supplement_save}</button>
+										</div>
+									</div>
+								{:else}
+									<div class="flex items-center gap-2">
+										<div class="flex-1 min-w-0">
+											<p class="text-sm font-semibold" style="color: var(--color-on-surface)">{drink.name}</p>
+											<p class="text-xs" style="color: var(--color-on-surface-variant)">{drink.defaultMl} ml · {drink.caffeineMg} mg</p>
+										</div>
+										<button
+											onclick={() => { caffeineEditId = drink.id; caffeineEditName = drink.name; caffeineEditMl = String(drink.defaultMl); caffeineEditMg = String(drink.caffeineMg); }}
+											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
+											style="color: var(--color-on-surface-variant)"
+											aria-label="Bearbeiten"
+										>
+											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+												<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+											</svg>
+										</button>
+										<button
+											onclick={() => deleteCaffeineDrink(drink.id)}
+											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
+											style="color: var(--color-error)"
+											aria-label="Löschen"
+										>
+											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<polyline points="3 6 5 6 21 6"/>
+												<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+												<path d="M10 11v6M14 11v6"/>
+												<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+											</svg>
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/each}
+
+						<!-- Add new drink -->
+						<div class="rounded-xl px-3 py-3 space-y-2" style="background-color: var(--color-surface-container)">
+							<p class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.caffeine_add}</p>
+							<input
+								type="text"
+								bind:value={caffeineAddName}
+								placeholder={t.caffeine_drink_name}
+								class="w-full h-9 px-3 rounded-xl border-0 outline-none text-sm"
+								style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+							/>
+							<div class="flex gap-2">
+								<div class="flex-1 flex items-center gap-1.5">
+									<input
+										type="number"
+										inputmode="numeric"
+										bind:value={caffeineAddMl}
+										placeholder="ml"
+										class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
+										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+									/>
+									<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">ml</span>
+								</div>
+								<div class="flex-1 flex items-center gap-1.5">
+									<input
+										type="number"
+										inputmode="numeric"
+										bind:value={caffeineAddMg}
+										placeholder="mg"
+										class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
+										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+									/>
+									<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">mg</span>
+								</div>
+							</div>
+							{#if caffeineAddError}
+								<p class="text-xs" style="color: var(--color-error)">{caffeineAddError}</p>
+							{/if}
+							<button
+								onclick={addCaffeineDrink}
+								disabled={caffeineAddSaving}
+								class="w-full py-2.5 rounded-xl text-sm font-semibold active:opacity-80 disabled:opacity-50"
+								style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
+							>{caffeineAddSaving ? '…' : '+ ' + t.caffeine_title}</button>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -1326,169 +1486,6 @@
 				{/if}
 			</div>
 		{/if}
-
-		<!-- ── Caffeine Drinks Accordion ──────────────────────────────────────── -->
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
-			<button
-				onclick={() => { caffeineDrinksOpen = !caffeineDrinksOpen; if (caffeineDrinksOpen) loadCaffeineDrinks(); }}
-				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8956C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
-					<path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-					<path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-					<line x1="6" y1="1" x2="6" y2="4"/>
-					<line x1="10" y1="1" x2="10" y2="4"/>
-					<line x1="14" y1="1" x2="14" y2="4"/>
-				</svg>
-				<span class="flex-1 font-semibold text-sm" style="color: var(--color-on-surface)">{t.caffeine_admin_drinks_title}</span>
-				{#if caffeineDrinks.length > 0}
-					<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{caffeineDrinks.length}</span>
-				{/if}
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-				     style="transform: rotate({caffeineDrinksOpen ? '180deg' : '0deg'}); transition: transform 0.2s ease">
-					<polyline points="6 9 12 15 18 9"/>
-				</svg>
-			</button>
-
-			{#if caffeineDrinksOpen}
-				<div class="px-3 pb-3 space-y-2">
-					{#if caffeineLoading}
-						<div class="flex justify-center py-4">
-							<div class="w-5 h-5 rounded-full border-2 animate-spin" style="border-color: #C8956C; border-top-color: transparent"></div>
-						</div>
-					{:else}
-						{#each caffeineDrinks as drink (drink.id)}
-							<div class="rounded-xl px-3 py-2.5" style="background-color: var(--color-surface-container)">
-								{#if caffeineEditId === drink.id}
-									<div class="space-y-2">
-										<input
-											type="text"
-											bind:value={caffeineEditName}
-											placeholder={t.caffeine_drink_name}
-											class="w-full h-9 px-3 rounded-xl border-0 outline-none text-sm"
-											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-										/>
-										<div class="flex gap-2">
-											<div class="flex-1 flex items-center gap-1.5">
-												<input
-													type="number"
-													inputmode="numeric"
-													bind:value={caffeineEditMl}
-													placeholder="ml"
-													class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
-													style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-												/>
-												<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">ml</span>
-											</div>
-											<div class="flex-1 flex items-center gap-1.5">
-												<input
-													type="number"
-													inputmode="numeric"
-													bind:value={caffeineEditMg}
-													placeholder="mg"
-													class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
-													style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-												/>
-												<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">mg</span>
-											</div>
-										</div>
-										<div class="flex gap-2">
-											<button
-												onclick={() => caffeineEditId = null}
-												class="flex-1 py-2 rounded-xl text-xs font-semibold active:opacity-70"
-												style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-											>{t.close}</button>
-											<button
-												onclick={() => saveCaffeineDrink(drink.id)}
-												class="flex-1 py-2 rounded-xl text-xs font-semibold active:opacity-80"
-												style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
-											>{t.supplement_save}</button>
-										</div>
-									</div>
-								{:else}
-									<div class="flex items-center gap-2">
-										<div class="flex-1 min-w-0">
-											<p class="text-sm font-semibold" style="color: var(--color-on-surface)">{drink.name}</p>
-											<p class="text-xs" style="color: var(--color-on-surface-variant)">{drink.defaultMl} ml · {drink.caffeineMg} mg</p>
-										</div>
-										<button
-											onclick={() => { caffeineEditId = drink.id; caffeineEditName = drink.name; caffeineEditMl = String(drink.defaultMl); caffeineEditMg = String(drink.caffeineMg); }}
-											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
-											style="color: var(--color-on-surface-variant)"
-											aria-label="Bearbeiten"
-										>
-											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-												<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-											</svg>
-										</button>
-										<button
-											onclick={() => deleteCaffeineDrink(drink.id)}
-											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
-											style="color: var(--color-error)"
-											aria-label="Löschen"
-										>
-											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<polyline points="3 6 5 6 21 6"/>
-												<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-												<path d="M10 11v6M14 11v6"/>
-												<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-											</svg>
-										</button>
-									</div>
-								{/if}
-							</div>
-						{/each}
-
-						<!-- Add new drink -->
-						<div class="rounded-xl px-3 py-3 space-y-2" style="background-color: var(--color-surface-container)">
-							<p class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.caffeine_add}</p>
-							<input
-								type="text"
-								bind:value={caffeineAddName}
-								placeholder={t.caffeine_drink_name}
-								class="w-full h-9 px-3 rounded-xl border-0 outline-none text-sm"
-								style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-							/>
-							<div class="flex gap-2">
-								<div class="flex-1 flex items-center gap-1.5">
-									<input
-										type="number"
-										inputmode="numeric"
-										bind:value={caffeineAddMl}
-										placeholder="ml"
-										class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
-										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-									/>
-									<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">ml</span>
-								</div>
-								<div class="flex-1 flex items-center gap-1.5">
-									<input
-										type="number"
-										inputmode="numeric"
-										bind:value={caffeineAddMg}
-										placeholder="mg"
-										class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
-										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-									/>
-									<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">mg</span>
-								</div>
-							</div>
-							{#if caffeineAddError}
-								<p class="text-xs" style="color: var(--color-error)">{caffeineAddError}</p>
-							{/if}
-							<button
-								onclick={addCaffeineDrink}
-								disabled={caffeineAddSaving}
-								class="w-full py-2.5 rounded-xl text-sm font-semibold active:opacity-80 disabled:opacity-50"
-								style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
-							>{caffeineAddSaving ? '…' : '+ ' + t.caffeine_title}</button>
-						</div>
-					{/if}
-				</div>
-			{/if}
-		</div>
-
 	</div>
 {/if}
 

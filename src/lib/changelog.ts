@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.6.9',
+		de: [
+			'Bereiche überall in einheitliche Bubbles zusammengefasst',
+			'Navigation „Supplements" umbenannt zu „Tracker"',
+		],
+		en: [
+			'Sections grouped into single bubbles throughout the app',
+			'"Supplements" nav renamed to "Tracker"',
+		],
+	},
+	{
 		version: '0.6.8',
 		de: [
 			'Mahlzeitenplaner: kompakte Bubble-Ansicht, Rezept per Langdruck entfernen',

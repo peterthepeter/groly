@@ -804,7 +804,7 @@
 			].filter(Boolean)}
 			<div class="px-4 flex flex-col gap-2">
 			{#if loggedTodaySupplements.length > 0}
-				<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-primary)">Supplements</p>
+				<p class="text-xs font-semibold tracking-widest px-1" style="color: var(--color-primary)">Supplements</p>
 				<div class="rounded-2xl flex flex-col select-none" style="background-color: var(--color-surface-card)">
 					{#each loggedTodaySupplements as supplement, i (supplement.id)}
 						{@const logs = logsForSupplement(supplement.id)}
@@ -812,8 +812,8 @@
 						{@const expanded = expandedIds.has(supplement.id)}
 						{@const logTimes = allLogTimes(supplement.id)}
 						<div
-							class="px-4 py-2 flex flex-col min-h-[52px] justify-center{i < loggedTodaySupplements.length - 1 ? ' border-b' : ''}"
-							style={i < loggedTodaySupplements.length - 1 ? 'border-color: var(--color-outline-variant)' : ''}
+							class="px-4 py-2 flex flex-col min-h-[52px] justify-center"
+							style=""
 							>
 								<!-- Header row — long-press on info area opens edit for most recent log -->
 								<div class="flex items-center justify-between gap-3">
@@ -905,7 +905,7 @@
 				</div>
 			{/if}
 			{#if visibleTrackers.length > 0}
-				<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-primary)">Tracker</p>
+				<p class="text-xs font-semibold tracking-widest px-1" style="color: var(--color-primary)">Tracker</p>
 				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
 						{#if visibleTrackers.includes('water')}
 							<div>
@@ -963,9 +963,9 @@
 							onclick={() => supplementsCardExpanded = !supplementsCardExpanded}
 							class="w-full flex items-center justify-between mb-2 active:opacity-60"
 						>
-							<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--color-primary)">Supplements</p>
+							<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">Supplements</p>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-							     style="transition: transform 0.2s; transform: rotate({supplementsCardExpanded ? '-90' : '90'}deg)">
+							     style="transition: transform 0.2s; transform: rotate({supplementsCardExpanded ? '90' : '0'}deg)">
 								<polyline points="9 6 15 12 9 18"/>
 							</svg>
 						</button>
@@ -989,9 +989,9 @@
 							onclick={() => nutrientsCardExpanded = !nutrientsCardExpanded}
 							class="w-full flex items-center justify-between mb-2 active:opacity-60"
 						>
-							<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--color-primary)">{t.supplement_stats_nutrients}</p>
+							<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">{t.supplement_stats_nutrients}</p>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-							     style="transition: transform 0.2s; transform: rotate({nutrientsCardExpanded ? '-90' : '90'}deg)">
+							     style="transition: transform 0.2s; transform: rotate({nutrientsCardExpanded ? '90' : '0'}deg)">
 								<polyline points="9 6 15 12 9 18"/>
 							</svg>
 						</button>
@@ -1033,7 +1033,7 @@
 				{#if visibleHistoryTrackers.length > 0}
 					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
 						<div class="px-4 pt-3 pb-2">
-							<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--color-primary)">Tracker</p>
+							<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">Tracker</p>
 						</div>
 						<!-- Caffeine -->
 						{#if userSettings.caffeineTrackerEnabled && historyCaffeineTotalMg > 0}
@@ -1046,7 +1046,7 @@
 									>
 										<p class="text-xs font-semibold tracking-wide" style="color: #C8956C">{t.caffeine_title}</p>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '-90' : '90'}deg)">
+										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '90' : '0'}deg)">
 											<polyline points="9 6 15 12 9 18"/>
 										</svg>
 									</button>
@@ -1072,7 +1072,7 @@
 									>
 										<p class="text-xs font-semibold tracking-wide" style="color: #C8956C">{t.caffeine_title}</p>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '-90' : '90'}deg)">
+										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '90' : '0'}deg)">
 											<polyline points="9 6 15 12 9 18"/>
 										</svg>
 									</button>
@@ -1110,7 +1110,7 @@
 									>
 										<p class="text-xs font-semibold tracking-wide" style="color: #C8956C">{t.caffeine_title}</p>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '-90' : '90'}deg)">
+										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '90' : '0'}deg)">
 											<polyline points="9 6 15 12 9 18"/>
 										</svg>
 									</button>
@@ -1143,7 +1143,7 @@
 									>
 										<p class="text-xs font-semibold tracking-wide" style="color: #9F7AEA">{t.meditation_title}</p>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '-90' : '90'}deg)">
+										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '90' : '0'}deg)">
 											<polyline points="9 6 15 12 9 18"/>
 										</svg>
 									</button>
@@ -1173,7 +1173,7 @@
 									>
 										<p class="text-xs font-semibold tracking-wide" style="color: #9F7AEA">{t.meditation_title}</p>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '-90' : '90'}deg)">
+										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '90' : '0'}deg)">
 											<polyline points="9 6 15 12 9 18"/>
 										</svg>
 									</button>
@@ -1201,7 +1201,7 @@
 									>
 										<p class="text-xs font-semibold tracking-wide" style="color: #9F7AEA">{t.meditation_title}</p>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '-90' : '90'}deg)">
+										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '90' : '0'}deg)">
 											<polyline points="9 6 15 12 9 18"/>
 										</svg>
 									</button>
@@ -1233,7 +1233,7 @@
 								>
 									<p class="text-xs font-semibold tracking-wide" style="color: #60A5FA">{t.water_title}</p>
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-									     style="transition: transform 0.2s; transform: rotate({waterHistoryCardExpanded ? '-90' : '90'}deg)">
+									     style="transition: transform 0.2s; transform: rotate({waterHistoryCardExpanded ? '90' : '0'}deg)">
 										<polyline points="9 6 15 12 9 18"/>
 									</svg>
 								</button>

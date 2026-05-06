@@ -169,11 +169,11 @@
 
 <!-- Bottom sheet -->
 <div class="fixed left-0 right-0 z-[60] max-w-[430px] mx-auto" style="bottom: {bottomOffset}px">
-	<div class="rounded-t-3xl px-4 pb-6 pt-3 shadow-2xl"
+	<div class="rounded-t-3xl px-4 pb-3 pt-3 shadow-2xl"
 	     style="background-color: var(--color-surface-low)">
 
 		<!-- Handle -->
-		<div class="flex justify-center mb-4">
+		<div class="flex justify-center mb-3">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>
 
@@ -373,55 +373,56 @@
 			{/if}
 
 			<!-- Eingabefelder -->
-			<div class="space-y-2 mb-3">
-				{#if !isMultiItem}
-					<div class="flex items-center gap-2 rounded-xl px-4"
-					     style="background-color: var(--color-surface-card); height: 52px">
-						<input
-							type="text"
-							placeholder={t.item_quantity_placeholder}
-							bind:value={quantityInfo}
-							onkeydown={handleKeydown}
-							autocomplete="off"
-							class="flex-1 bg-transparent outline-none text-base min-w-0"
-							style="color: var(--color-on-surface)"
-						/>
-						<button
-							onpointerdown={(e) => e.preventDefault()}
-							onclick={decrement}
-							disabled={!isNumeric || quantityInfo.trim() === ''}
-							tabindex="-1"
-							class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
-							style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-						>−</button>
-						<button
-							onpointerdown={(e) => e.preventDefault()}
-							onclick={increment}
-							disabled={!isNumeric}
-							tabindex="-1"
-							class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
-							style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-						>+</button>
-					</div>
-				{/if}
-
-				<!-- svelte-ignore a11y_autofocus -->
-				<input
-					bind:this={nameInput}
-					type="text"
-					placeholder={t.item_name_label}
-					bind:value={name}
-					oninput={() => showSuggestions = true}
-					onkeydown={handleKeydown}
-					autofocus={!autoOpenScanner}
-					autocomplete="off"
-					class="w-full rounded-xl px-4 text-base font-medium outline-none"
-					style="background-color: var(--color-surface-card); color: var(--color-on-surface); height: 52px"
-				/>
+			<div class="mb-3">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+					{#if !isMultiItem}
+						<div class="flex items-center gap-2 px-4" style="height: 44px">
+							<input
+								type="text"
+								placeholder={t.item_quantity_placeholder}
+								bind:value={quantityInfo}
+								onkeydown={handleKeydown}
+								autocomplete="off"
+								class="flex-1 bg-transparent outline-none text-sm min-w-0"
+								style="color: var(--color-on-surface)"
+							/>
+							<button
+								onpointerdown={(e) => e.preventDefault()}
+								onclick={decrement}
+								disabled={!isNumeric || quantityInfo.trim() === ''}
+								tabindex="-1"
+								class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+								style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+							>−</button>
+							<button
+								onpointerdown={(e) => e.preventDefault()}
+								onclick={increment}
+								disabled={!isNumeric}
+								tabindex="-1"
+								class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+								style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+							>+</button>
+						</div>
+						<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+					{/if}
+					<!-- svelte-ignore a11y_autofocus -->
+					<input
+						bind:this={nameInput}
+						type="text"
+						placeholder={t.item_name_placeholder}
+						bind:value={name}
+						oninput={() => showSuggestions = true}
+						onkeydown={handleKeydown}
+						autofocus={!autoOpenScanner}
+						autocomplete="off"
+						class="w-full px-4 text-base font-medium outline-none bg-transparent"
+						style="color: var(--color-on-surface); height: 44px"
+					/>
+				</div>
 
 				<!-- Multi-item preview chips -->
 				{#if isMultiItem && parsedItems.length > 0}
-					<div class="flex gap-1.5 flex-wrap px-1">
+					<div class="flex gap-1.5 flex-wrap px-1 mt-2">
 						{#each parsedItems as item}
 							{#if item.name}
 								<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"

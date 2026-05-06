@@ -337,59 +337,54 @@
 
 	<!-- Sections -->
 	<div class="px-4 overflow-y-auto" style="max-height: 65vh">
-		{#each sections as sec, i (i)}
-			<!-- Section header (always visible) -->
-			<button
-				onclick={() => toggleSection(i)}
-				class="w-full flex items-center gap-3 px-3 py-3 rounded-xl active:opacity-70 transition-opacity"
-				class:mb-1={openSections.has(i)}
-				style="background-color: var(--color-surface-container)"
-			>
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-				     stroke="var(--color-primary)" stroke-width="2"
-				     stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
-					{@html sec.svg}
-				</svg>
-				<span class="flex-1 text-left text-sm font-medium" style="color: var(--color-on-surface)">{sec.section}</span>
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-				     stroke="var(--color-on-surface-variant)" stroke-width="2"
-				     stroke-linecap="round" stroke-linejoin="round"
-				     style="transition: transform 0.2s; transform: rotate({openSections.has(i) ? 90 : 0}deg)">
-					<polyline points="9 18 15 12 9 6"/>
-				</svg>
-			</button>
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+			{#each sections as sec, i (i)}
+				<!-- Section header -->
+				<button
+					onclick={() => toggleSection(i)}
+					class="w-full flex items-center gap-3 px-3 py-2.5 active:opacity-70 transition-opacity"
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+					     stroke="var(--color-primary)" stroke-width="2"
+					     stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+						{@html sec.svg}
+					</svg>
+					<span class="flex-1 text-left text-sm font-medium" style="color: var(--color-on-surface)">{sec.section}</span>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+					     stroke="var(--color-on-surface-variant)" stroke-width="2"
+					     stroke-linecap="round" stroke-linejoin="round"
+					     style="transition: transform 0.2s; transform: rotate({openSections.has(i) ? 90 : 0}deg)">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</button>
 
-			<!-- Section items (expanded) -->
-			{#if openSections.has(i)}
-				<div class="mb-2 space-y-1 pl-2">
-					{#each sec.items as item}
-						<div class="flex items-start gap-3 px-3 py-3 rounded-xl"
-						     style="background-color: color-mix(in srgb, var(--color-surface-container) 50%, transparent)">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-							     stroke="var(--color-primary)" stroke-width="2"
-							     stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5">
-								{@html item.svg}
-							</svg>
-							<div class="flex-1 min-w-0">
-								<div class="text-sm font-semibold leading-tight mb-0.5"
-								     style="color: var(--color-on-surface)">{item.title}</div>
-								<div class="text-xs leading-relaxed"
-								     style="color: var(--color-on-surface-variant)">{item.text}</div>
-								{#if item.link}
-									<a href={item.link.href} onclick={onClose}
-									   class="text-xs font-medium mt-1 inline-block"
-									   style="color: var(--color-primary)">{item.link.label}</a>
-								{/if}
+				<!-- Section items (expanded) -->
+				{#if openSections.has(i)}
+					<div style="background-color: color-mix(in srgb, var(--color-outline-variant) 30%, transparent)">
+						{#each sec.items as item}
+							<div class="flex items-start gap-3 px-3 py-2">
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+								     stroke="var(--color-primary)" stroke-width="2"
+								     stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5">
+									{@html item.svg}
+								</svg>
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-semibold leading-tight mb-0.5"
+									     style="color: var(--color-on-surface)">{item.title}</div>
+									<div class="text-xs leading-relaxed"
+									     style="color: var(--color-on-surface-variant)">{item.text}</div>
+									{#if item.link}
+										<a href={item.link.href} onclick={onClose}
+										   class="text-xs font-medium mt-1 inline-block"
+										   style="color: var(--color-primary)">{item.link.label}</a>
+									{/if}
+								</div>
 							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-
-			{#if i < sections.length - 1}
-				<div class="h-1.5"></div>
-			{/if}
-		{/each}
+						{/each}
+					</div>
+				{/if}
+			{/each}
+		</div>
 	</div>
 
 	<!-- Close button -->

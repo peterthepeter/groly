@@ -52,10 +52,10 @@
 	onpointerleave={endPress}
 	onpointercancel={endPress}
 	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
-	class="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:opacity-80 text-left select-none"
+	class="w-full flex items-center gap-3 px-3 py-2.5 transition-colors active:opacity-80 text-left select-none"
 >
 	<!-- Icon -->
-	<div class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center">
+	<div class="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center">
 		{#if icon}
 			<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
 			     stroke={color} stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">

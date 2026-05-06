@@ -509,7 +509,7 @@
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.lists_empty}</p>
 			</div>
 		{:else}
-			<div class="space-y-2" style="touch-action: pan-y">
+			<div class="space-y-1" style="touch-action: pan-y">
 				{#if sortMode}
 					{#each displayedLists as list, i (list.id)}
 						<div class="flex items-center gap-2 transition-opacity" style="user-select: none; -webkit-user-select: none; {dragId === list.id ? 'opacity: 0.45' : ''}">

@@ -83,9 +83,57 @@
 
 <div class={embedded ? 'flex flex-col px-4 py-2' : 'rounded-2xl px-4 py-3 flex flex-col'} style={embedded ? '' : 'background-color: var(--color-surface-card)'}>
 
+	<!-- Header row -->
+	<div class="flex items-center gap-2">
+		<p class="font-semibold text-sm shrink-0" style="color: var(--color-on-surface)">
+			{t.caffeine_title}{#if logs.length > 0}&nbsp;<span class="font-normal opacity-50">({logs.length}×)</span>{/if}
+		</p>
+		<div class="flex gap-1 flex-1 justify-end">
+			<button
+				onclick={() => pickerOpen = true}
+				class="px-2.5 py-0.5 rounded-xl text-xs font-semibold active:opacity-70 transition-opacity"
+				style="background-color: var(--color-surface-container); color: #C8956C"
+			>+ {t.caffeine_add}</button>
+		</div>
+		{#if logs.length > 0}
+			<button
+				onclick={() => expanded = !expanded}
+				class="shrink-0 w-7 h-7 flex items-center justify-center active:opacity-60"
+				style="color: var(--color-on-surface-variant)"
+				aria-label={expanded ? t.caffeine_collapse : t.caffeine_expand}
+			>
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+				     style="transition: transform 0.2s; transform: rotate({expanded ? '90' : '0'}deg)">
+					<polyline points="9 6 15 12 9 18"/>
+				</svg>
+			</button>
+		{/if}
+	</div>
+
+	<!-- Progress row -->
+	<div class="mt-0.5">
+		<div class="flex items-center gap-1.5 mb-1">
+			<p class="text-xs font-semibold" style="color: {exceeded ? '#EF4444' : '#C8956C'}">
+				{totalMg} / {limitMg} mg
+			</p>
+			{#if totalMl > 0}
+				<p class="text-xs" style="color: var(--color-on-surface-variant)">· {totalMl} {t.caffeine_today_ml}</p>
+			{/if}
+		</div>
+		<div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-surface-container)">
+			<div
+				class="h-full rounded-full"
+				style="width: {animatedPercent}%; background: linear-gradient(90deg, rgba(200,149,108,0.35), rgba(200,149,108,0.75)); transition: width {isMounted ? '0.3s ease' : '0.9s cubic-bezier(0.25,0.46,0.45,0.94)'}"
+			></div>
+		</div>
+		{#if exceeded}
+			<p class="text-[10px] mt-0.5" style="color: #EF4444">{t.caffeine_limit_exceeded}</p>
+		{/if}
+	</div>
+
 	<!-- Expanded log entries -->
 	{#if expanded && sortedLogs.length > 0}
-		<div class="mb-3 pb-3 border-b space-y-1.5" style="border-color: var(--color-outline-variant)">
+		<div class="mt-2 pt-2 border-t space-y-1.5" style="border-color: var(--color-outline-variant)">
 			{#each sortedLogs as log (log.id)}
 				<div class="flex items-center justify-between text-xs">
 					<span style="color: var(--color-on-surface-variant)">
@@ -124,54 +172,6 @@
 			{/each}
 		</div>
 	{/if}
-
-	<!-- Header row -->
-	<div class="flex items-center gap-2">
-		<p class="font-semibold text-sm shrink-0" style="color: var(--color-on-surface)">
-			{t.caffeine_title}{#if logs.length > 0}&nbsp;<span class="font-normal opacity-50">({logs.length}×)</span>{/if}
-		</p>
-		<div class="flex gap-1 flex-1 justify-end">
-			<button
-				onclick={() => pickerOpen = true}
-				class="px-2.5 py-0.5 rounded-xl text-xs font-semibold active:opacity-70 transition-opacity"
-				style="background-color: var(--color-surface-container); color: #C8956C"
-			>+ {t.caffeine_add}</button>
-		</div>
-		{#if logs.length > 0}
-			<button
-				onclick={() => expanded = !expanded}
-				class="shrink-0 w-7 h-7 flex items-center justify-center active:opacity-60"
-				style="color: var(--color-on-surface-variant)"
-				aria-label={expanded ? t.caffeine_collapse : t.caffeine_expand}
-			>
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-				     style="transition: transform 0.2s; transform: rotate({expanded ? '-90' : '0'}deg)">
-					<polyline points="9 6 15 12 9 18"/>
-				</svg>
-			</button>
-		{/if}
-	</div>
-
-	<!-- Progress row -->
-	<div class="mt-0.5">
-		<div class="flex items-center gap-1.5 mb-1">
-			<p class="text-xs font-semibold" style="color: {exceeded ? '#EF4444' : '#C8956C'}">
-				{totalMg} / {limitMg} mg
-			</p>
-			{#if totalMl > 0}
-				<p class="text-xs" style="color: var(--color-on-surface-variant)">· {totalMl} {t.caffeine_today_ml}</p>
-			{/if}
-		</div>
-		<div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-surface-container)">
-			<div
-				class="h-full rounded-full"
-				style="width: {animatedPercent}%; background: linear-gradient(90deg, rgba(200,149,108,0.35), rgba(200,149,108,0.75)); transition: width {isMounted ? '0.3s ease' : '0.9s cubic-bezier(0.25,0.46,0.45,0.94)'}"
-			></div>
-		</div>
-		{#if exceeded}
-			<p class="text-[10px] mt-0.5" style="color: #EF4444">{t.caffeine_limit_exceeded}</p>
-		{/if}
-	</div>
 </div>
 
 <CaffeineEditLogSheet bind:sheet={editSheet} onreload={onlogged} />

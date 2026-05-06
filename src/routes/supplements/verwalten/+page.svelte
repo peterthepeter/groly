@@ -343,7 +343,7 @@
 				<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Supplements</p>
 				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
 					{#each supplements as supplement, i (supplement.id)}
-						<div class="p-3 flex items-center gap-3{!supplement.active ? ' opacity-50' : ''}{ i < supplements.length - 1 ? ' border-b' : ''}"
+						<div class="px-3 py-2 flex items-center gap-3{!supplement.active ? ' opacity-50' : ''}"
 						     style="border-color: var(--color-outline-variant)">
 							<button
 								onclick={() => toggleActive(supplement)}
@@ -405,7 +405,7 @@
 			<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Tracker</p>
 			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
 				<!-- Water -->
-				<div class="p-3 flex items-center gap-3 border-b{!userSettings.waterTrackerEnabled ? ' opacity-50' : ''}"
+				<div class="px-3 py-2 flex items-center gap-3{!userSettings.waterTrackerEnabled ? ' opacity-50' : ''}"
 				     style="border-color: var(--color-outline-variant)">
 					<button
 						onclick={() => userSettings.waterTrackerEnabled = !userSettings.waterTrackerEnabled}
@@ -448,7 +448,7 @@
 					</button>
 				</div>
 				<!-- Meditation -->
-				<div class="p-3 flex items-center gap-3 border-b{!userSettings.meditationTrackerEnabled ? ' opacity-50' : ''}"
+				<div class="px-3 py-2 flex items-center gap-3{!userSettings.meditationTrackerEnabled ? ' opacity-50' : ''}"
 				     style="border-color: var(--color-outline-variant)">
 					<button
 						onclick={() => userSettings.meditationTrackerEnabled = !userSettings.meditationTrackerEnabled}
@@ -491,7 +491,7 @@
 					</button>
 				</div>
 				<!-- Caffeine -->
-				<div class="p-3 flex items-center gap-3{!userSettings.caffeineTrackerEnabled ? ' opacity-50' : ''}">
+				<div class="px-3 py-2 flex items-center gap-3{!userSettings.caffeineTrackerEnabled ? ' opacity-50' : ''}">
 					<button
 						onclick={() => userSettings.caffeineTrackerEnabled = !userSettings.caffeineTrackerEnabled}
 						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"

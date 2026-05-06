@@ -2,10 +2,11 @@
 	import { currentLang } from '$lib/i18n.svelte';
 	import { LIST_ICONS, getListIcon, getListIconLabel } from '$lib/listIcons';
 
-	let { selectedIconId, name = '', onSelect }: {
+	let { selectedIconId, name = '', onSelect, flat = false }: {
 		selectedIconId: string | null;
 		name?: string;
 		onSelect: (id: string | null) => void;
+		flat?: boolean;
 	} = $props();
 
 	let iconPickerOpen = $state(false);
@@ -22,8 +23,8 @@
 	<button
 		type="button"
 		onclick={() => iconPickerOpen = !iconPickerOpen}
-		class="w-full flex items-center gap-3 px-4 rounded-xl active:opacity-70 transition-opacity"
-		style="background-color: var(--color-surface-container); height: 52px"
+		class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity {flat ? '' : 'rounded-xl'}"
+		style="{flat ? '' : 'background-color: var(--color-surface-container);'} height: {flat ? '44px' : '52px'}"
 	>
 		{#if selectedIcon}
 			<svg class="flex-shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none"
