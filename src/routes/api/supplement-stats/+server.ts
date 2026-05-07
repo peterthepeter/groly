@@ -10,12 +10,39 @@ export const GET: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const period = event.url.searchParams.get('period') ?? 'day';
-	const from = Number(event.url.searchParams.get('from'));
-	const to = Number(event.url.searchParams.get('to'));
+	let from = Number(event.url.searchParams.get('from'));
+	let to = Number(event.url.searchParams.get('to'));
 
 	if (!['day', 'week', 'month'].includes(period)) {
 		return json({ error: 'Invalid period' }, { status: 400 });
 	}
+
+	// Backwards compatibility: older PWA clients (cached service worker) send ?date=YYYY-MM-DD
+	if (!from || !to) {
+		const date = event.url.searchParams.get('date');
+		if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+			const d = new Date(date + 'T00:00:00');
+			if (period === 'day') {
+				from = d.getTime();
+				to = from + 86_400_000 - 1;
+			} else if (period === 'week') {
+				const day = d.getDay();
+				const diff = day === 0 ? -6 : 1 - day;
+				const monday = new Date(d);
+				monday.setDate(d.getDate() + diff);
+				monday.setHours(0, 0, 0, 0);
+				from = monday.getTime();
+				const sunday = new Date(monday);
+				sunday.setDate(monday.getDate() + 6);
+				sunday.setHours(23, 59, 59, 999);
+				to = sunday.getTime();
+			} else {
+				from = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+				to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+			}
+		}
+	}
+
 	if (!from || !to || isNaN(from) || isNaN(to)) {
 		return json({ error: 'Invalid from/to' }, { status: 400 });
 	}

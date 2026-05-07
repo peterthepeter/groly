@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.0-1',
+		de: [
+			'Fehlerbehebungen für v0.7.0',
+		],
+		en: [
+			'Bug fixes for v0.7.0',
+		],
+	},
+	{
 		version: '0.7.0',
 		de: [
 			'Vergangene Supplement-Einträge können jetzt manuell nachgetragen werden — „+" im Verlauf-Tab öffnet ein Eingabeformular mit Datum, Uhrzeit, Menge und Notiz',
