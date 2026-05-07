@@ -10,36 +10,12 @@ export const GET: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const period = event.url.searchParams.get('period') ?? 'day';
-	let from = Number(event.url.searchParams.get('from'));
-	let to = Number(event.url.searchParams.get('to'));
+	const from = Number(event.url.searchParams.get('from'));
+	const to = Number(event.url.searchParams.get('to'));
 
 	if (!['day', 'week', 'month'].includes(period)) {
 		return json({ error: 'Invalid period' }, { status: 400 });
 	}
-
-	// Backwards compatibility: old clients send ?date=YYYY-MM-DD instead of from/to
-	if (!from || !to) {
-		const date = event.url.searchParams.get('date');
-		if (date) {
-			const d = new Date(date + 'T00:00:00Z');
-			if (period === 'day') {
-				from = d.getTime();
-				to = from + 86_400_000 - 1;
-			} else if (period === 'week') {
-				const day = d.getUTCDay();
-				const diff = day === 0 ? -6 : 1 - day;
-				const monday = new Date(d);
-				monday.setUTCDate(d.getUTCDate() + diff);
-				from = monday.getTime();
-				to = from + 7 * 86_400_000 - 1;
-			} else {
-				const y = d.getUTCFullYear(), m = d.getUTCMonth();
-				from = Date.UTC(y, m, 1);
-				to = Date.UTC(y, m + 1, 0, 23, 59, 59, 999);
-			}
-		}
-	}
-
 	if (!from || !to || isNaN(from) || isNaN(to)) {
 		return json({ error: 'Invalid from/to' }, { status: 400 });
 	}

@@ -498,7 +498,8 @@
 									</div>
 									<input
 										type="time"
-										bind:value={times[s.id]}
+										value={times[s.id] ?? ''}
+										oninput={(e) => times = { ...times, [s.id]: (e.target as HTMLInputElement).value }}
 										class="w-16 h-8 shrink-0 px-1 rounded-lg border-0 outline-none text-center"
 										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 13px; font-family: inherit"
 									/>
