@@ -36,6 +36,17 @@ function migrateItemHistory() {
 	db.insert(appMeta).values({ key: 'item_history_migrated', value: '1' }).run();
 }
 
+function ensureSupplementLogNoteColumn() {
+	// Migration 0031 was silently skipped on prod DBs because its journal `when`-timestamp
+	// is smaller than 0030's. Drizzle only applies a migration when its folderMillis is
+	// greater than the latest applied one. PRAGMA + ALTER is idempotent and safe both for
+	// affected prod DBs and fresh installs where 0031 already ran.
+	const cols = sqlite.prepare(`PRAGMA table_info(supplement_logs)`).all() as Array<{ name: string }>;
+	if (!cols.some((c) => c.name === 'note')) {
+		sqlite.exec(`ALTER TABLE supplement_logs ADD COLUMN note text`);
+	}
+}
+
 function bootstrapCaffeineTables() {
 	sqlite.exec(`
 		CREATE TABLE IF NOT EXISTS caffeine_drinks (
@@ -306,6 +317,7 @@ async function init() {
 	if (initialized) return;
 	initialized = true; // set synchronously before any await to prevent concurrent init
 	runMigrations();
+	ensureSupplementLogNoteColumn();
 	bootstrapAdmin();
 	migrateItemHistory();
 	bootstrapCaffeineTables();

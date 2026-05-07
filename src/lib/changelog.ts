@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.0-2',
+		de: [
+			'Datenbank-Fix für v0.7.0',
+		],
+		en: [
+			'Database fix for v0.7.0',
+		],
+	},
+	{
 		version: '0.7.0-1',
 		de: [
 			'Fehlerbehebungen für v0.7.0',
