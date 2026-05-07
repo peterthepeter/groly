@@ -50,7 +50,7 @@
 	const PULL_THRESHOLD = 65;
 	let pullStartY = 0;
 	let pullDistance = $state(0);
-	let isPulling = false;
+	let isPulling = $state(false);
 	let isRefreshing = $state(false);
 	const pullIndicatorY = $derived(
 		isRefreshing ? 8 : -40 + Math.min(pullDistance, PULL_THRESHOLD) / PULL_THRESHOLD * 48

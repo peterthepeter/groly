@@ -2,6 +2,23 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.0',
+		de: [
+			'Vergangene Supplement-Einträge können jetzt manuell nachgetragen werden — „+" im Verlauf-Tab öffnet ein Eingabeformular mit Datum, Uhrzeit, Menge und Notiz',
+			'Notizen zu einzelnen Supplement-Logs hinzufügen (beim Schnell-Log und beim Bearbeiten)',
+			'CSV-Export: Zeitraum-Filter (Komplett oder eigener Datumsbereich), korrekte lokale Uhrzeit im Export',
+			'CSV-Import: Logs aus einer Datei importieren, unbekannte Supplemente werden übersprungen und gemeldet',
+			'Zeitzone-Fix: Supplement-Verlauf zeigt jetzt immer die korrekte lokale Zeit, unabhängig vom Server-Standort',
+		],
+		en: [
+			'Past supplement entries can now be logged manually — "+" in the history tab opens an input form with date, time, amount and note',
+			'Add notes to individual supplement logs (in the quick-log sheet and when editing)',
+			'CSV export: date range filter (complete or custom range), correct local time in the export',
+			'CSV import: import logs from a file, unknown supplements are skipped and reported',
+			'Timezone fix: supplement history now always shows the correct local time, regardless of server location',
+		],
+	},
+	{
 		version: '0.6.9',
 		de: [
 			'Bereiche überall in einheitliche Bubbles zusammengefasst',

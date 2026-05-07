@@ -50,6 +50,7 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Brand & info** – Optionally store brand and additional information per supplement.
 - **Water tracker** – Log daily water intake with preset quick-add buttons or a custom amount. Set a personal daily goal (ml) and track progress with a fill bar. Configure push reminders at fixed intervals within a time window.
 - **Caffeine tracker** – Log caffeine intake by selecting from a built-in drink catalog (10 pre-seeded drinks: Espresso, Filter Coffee, Cold Brew, and more). Per-drink default amounts are individually adjustable per user. Set a daily limit with a visual fill bar — exceeding the limit is highlighted in red. Hide drinks you don't use from the picker.
+- **Meditation tracker** – Start a full-screen meditation timer with 5/10/15/20 min quick-start presets or a custom duration via a picker wheel. Includes a configurable preparation phase, Zen circle progress animation, and configurable start/end sounds. Set a daily goal and track your session history in day, week, and month views. Optional daily push reminders.
 
 ### Recipes & Meal Planning
 

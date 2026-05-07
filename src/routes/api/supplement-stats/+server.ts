@@ -5,49 +5,20 @@ import { db } from '$lib/db';
 import { supplementLogs, supplements, supplementNutrients } from '$lib/db/schema';
 import { eq, and, gte, lte, inArray } from 'drizzle-orm';
 
-function getDateBounds(period: string, date: string): { from: number; to: number } {
-	const d = new Date(date + 'T00:00:00');
-
-	if (period === 'day') {
-		const from = d.getTime();
-		const to = from + 86_400_000 - 1;
-		return { from, to };
-	}
-
-	if (period === 'week') {
-		// Start on Monday
-		const day = d.getDay(); // 0 = Sunday
-		const diffToMonday = (day === 0 ? -6 : 1 - day);
-		const monday = new Date(d);
-		monday.setDate(d.getDate() + diffToMonday);
-		monday.setHours(0, 0, 0, 0);
-		const sunday = new Date(monday);
-		sunday.setDate(monday.getDate() + 6);
-		sunday.setHours(23, 59, 59, 999);
-		return { from: monday.getTime(), to: sunday.getTime() };
-	}
-
-	// month
-	const from = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-	const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-	return { from, to };
-}
-
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error) return error;
 
 	const period = event.url.searchParams.get('period') ?? 'day';
-	const date = event.url.searchParams.get('date') ?? new Date().toISOString().slice(0, 10);
+	const from = Number(event.url.searchParams.get('from'));
+	const to = Number(event.url.searchParams.get('to'));
 
 	if (!['day', 'week', 'month'].includes(period)) {
 		return json({ error: 'Invalid period' }, { status: 400 });
 	}
-	if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date + 'T00:00:00').getTime())) {
-		return json({ error: 'Invalid date' }, { status: 400 });
+	if (!from || !to || isNaN(from) || isNaN(to)) {
+		return json({ error: 'Invalid from/to' }, { status: 400 });
 	}
-
-	const { from, to } = getDateBounds(period, date);
 
 	// Get all logs for the period
 	const logs = db
@@ -119,7 +90,6 @@ export const GET: RequestHandler = async (event) => {
 		supplements: supplementTotals,
 		logs,
 		period,
-		date,
 		from,
 		to
 	});

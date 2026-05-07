@@ -1,0 +1,1 @@
+ALTER TABLE `supplement_logs` ADD COLUMN `note` text;

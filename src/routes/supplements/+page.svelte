@@ -28,7 +28,7 @@
 		stockQuantity: number | null; defaultAmount: number;
 		nutrients: Nutrient[];
 	};
-	type Log = { id: string; supplementId: string; amount: number; loggedAt: number };
+	type Log = { id: string; supplementId: string; amount: number; loggedAt: number; note?: string | null };
 	type NutrientStat = { total: number; unit: string; name: string };
 	type SupplementStat = { name: string; unit: string; total: number };
 
@@ -69,10 +69,22 @@
 	let historyDate = $state(toLocalDateStr(new Date()));
 	let historyNutrients = $state<Record<string, NutrientStat>>({});
 	let historySupplements = $state<Record<string, SupplementStat>>({});
+	let historyLogs = $state<Log[]>([]);
 	let historyLoading = $state(false);
 
-	// Expand/collapse per supplement card
+	const historyLogsBySuppId = $derived.by(() => {
+		const map = new Map<string, Log[]>();
+		for (const log of historyLogs) {
+			if (!map.has(log.supplementId)) map.set(log.supplementId, []);
+			map.get(log.supplementId)!.push(log);
+		}
+		return map;
+	});
+
+	// Expand/collapse per supplement card (today tab)
 	let expandedIds = $state(new Set<string>());
+	// Expand/collapse per supplement in history view (for notes)
+	let historyExpandedSuppIds = $state(new Set<string>());
 
 	function toggleExpand(id: string) {
 		const next = new Set(expandedIds);
@@ -227,10 +239,33 @@
 		}
 	}
 
+	function getHistoryBounds(): { from: number; to: number } {
+		const d = new Date(historyDate + 'T00:00:00');
+		if (historyPeriod === 'day') {
+			const from = d.getTime();
+			return { from, to: from + 86_400_000 - 1 };
+		}
+		if (historyPeriod === 'week') {
+			const day = d.getDay();
+			const diffToMonday = day === 0 ? -6 : 1 - day;
+			const monday = new Date(d);
+			monday.setDate(d.getDate() + diffToMonday);
+			monday.setHours(0, 0, 0, 0);
+			const sunday = new Date(monday);
+			sunday.setDate(monday.getDate() + 6);
+			sunday.setHours(23, 59, 59, 999);
+			return { from: monday.getTime(), to: sunday.getTime() };
+		}
+		const from = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+		const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+		return { from, to };
+	}
+
 	async function loadHistory() {
 		historyLoading = true;
+		const { from, to } = getHistoryBounds();
 		const [statsRes] = await Promise.all([
-			fetch(`/api/supplement-stats?period=${historyPeriod}&date=${historyDate}`),
+			fetch(`/api/supplement-stats?period=${historyPeriod}&from=${from}&to=${to}`),
 			loadHistoryWater(),
 			loadHistoryCaffeine(),
 			loadHistoryMeditation()
@@ -239,7 +274,9 @@
 			const data = await statsRes.json();
 			historyNutrients = data.nutrients ?? {};
 			historySupplements = data.supplements ?? {};
+			historyLogs = data.logs ?? [];
 		}
+		historyExpandedSuppIds = new Set();
 		historyLoading = false;
 	}
 
@@ -423,10 +460,11 @@
 		} catch { historyCaffeineLogs = []; }
 	}
 
-	// ─── Edit log sheet ─────────────────────────────────────────────────────────
+	// ─── Edit / Add log sheet ────────────────────────────────────────────────────
 
-	type EditLogSheetType = { id: string; supplementName: string; unit: string; amount: number; time: string };
+	type EditLogSheetType = { id: string; supplementName: string; unit: string; amount: number; time: string; note: string | null };
 	let editLogSheet = $state<EditLogSheetType | null>(null);
+	let addLogSheet = $state<{ date: string } | null>(null);
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let pressStart = { x: 0, y: 0 };
 
@@ -437,7 +475,8 @@
 			supplementName: supplement.name,
 			unit: supplement.unit,
 			amount: log.amount,
-			time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+			time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+			note: log.note ?? null
 		};
 	}
 
@@ -476,11 +515,13 @@
 		if (type === 'popstate') {
 			// Back/swipe: close one sheet at a time instead of navigating
 			if (editLogSheet) { editLogSheet = null; cancel(); return; }
+			if (addLogSheet) { addLogSheet = null; cancel(); return; }
 			if (quickLogOpen) { quickLogOpen = false; cancel(); return; }
 		} else {
 			// Forward navigation: close everything silently
 			quickLogOpen = false;
 			editLogSheet = null;
+			addLogSheet = null;
 		}
 	});
 
@@ -608,8 +649,30 @@
 	const nutrientEntriesHidden = $derived(nutrientEntries.slice(NUTRIENTS_VISIBLE));
 
 	const supplementStatEntries = $derived(
-		Object.values(historySupplements).sort((a, b) => a.name.localeCompare(b.name))
+		Object.entries(historySupplements)
+			.map(([id, val]) => ({ id, ...val }))
+			.sort((a, b) => a.name.localeCompare(b.name))
 	);
+
+	function toggleHistorySupp(id: string) {
+		const next = new Set(historyExpandedSuppIds);
+		if (next.has(id)) next.delete(id); else next.add(id);
+		historyExpandedSuppIds = next;
+	}
+
+	function openHistoryEditLog(log: Log, suppId: string) {
+		const sup = historySupplements[suppId];
+		if (!sup) return;
+		const d = new Date(log.loggedAt);
+		editLogSheet = {
+			id: log.id,
+			supplementName: sup.name,
+			unit: sup.unit,
+			amount: log.amount,
+			time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+			note: log.note ?? null
+		};
+	}
 </script>
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
@@ -725,16 +788,28 @@
 				</svg>
 			</button>
 			<span class="text-sm font-semibold" style="color: var(--color-on-surface)">{formatPeriodLabel()}</span>
-			<button
-				onclick={() => navigateHistory(1)}
-				aria-label="Nächster Zeitraum"
-				class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
-				style="background-color: var(--color-surface-container)"
-			>
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<polyline points="9 18 15 12 9 6"/>
-				</svg>
-			</button>
+			<div class="flex items-center gap-1">
+				<button
+					onclick={() => navigateHistory(1)}
+					aria-label="Nächster Zeitraum"
+					class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
+					style="background-color: var(--color-surface-container)"
+				>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</button>
+				<button
+					onclick={() => addLogSheet = { date: historyDate }}
+					aria-label="Eintrag hinzufügen"
+					class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
+					style="background-color: var(--color-surface-container)"
+				>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+					</svg>
+				</button>
+			</div>
 		</div>
 	{/if}
 
@@ -857,36 +932,41 @@
 								{#if expanded}
 									<div class="mt-2 pt-2 border-t space-y-1.5" style="border-color: var(--color-outline-variant)">
 										{#each logs as log (log.id)}
-											<div class="flex items-center justify-between text-xs">
-												<button
-													onpointerdown={(e) => startPress(e, log, supplement)}
-													onpointermove={movePress}
-													onpointerup={cancelPress}
-													onpointercancel={cancelPress}
-													class="flex-1 text-left py-0.5 active:opacity-60"
-													style="color: var(--color-on-surface-variant)"
-												><span style="color: var(--color-primary)">{log.amount} {displayUnit(supplement.unit, currentLang())}</span> {t.supplement_log_at} {formatTime(log.loggedAt)}</button>
-												<button
-													onclick={() => openEditLog(log, supplement)}
-													class="p-1 rounded active:opacity-50 shrink-0"
-													aria-label="Bearbeiten"
-													style="color: var(--color-on-surface-variant)"
-												>
-													<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-														<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-													</svg>
-												</button>
-												<button
-													onclick={() => deleteLog(log.id)}
-													class="p-1 rounded active:opacity-50 shrink-0"
-													aria-label={t.supplement_log_delete}
-													style="color: var(--color-on-surface-variant)"
-												>
-													<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-														<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-													</svg>
-												</button>
+											<div>
+												<div class="flex items-center justify-between text-xs">
+													<button
+														onpointerdown={(e) => startPress(e, log, supplement)}
+														onpointermove={movePress}
+														onpointerup={cancelPress}
+														onpointercancel={cancelPress}
+														class="flex-1 text-left py-0.5 active:opacity-60"
+														style="color: var(--color-on-surface-variant)"
+													><span style="color: var(--color-primary)">{log.amount} {displayUnit(supplement.unit, currentLang())}</span> {t.supplement_log_at} {formatTime(log.loggedAt)}</button>
+													<button
+														onclick={() => openEditLog(log, supplement)}
+														class="p-1 rounded active:opacity-50 shrink-0"
+														aria-label="Bearbeiten"
+														style="color: var(--color-on-surface-variant)"
+													>
+														<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+															<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+															<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+														</svg>
+													</button>
+													<button
+														onclick={() => deleteLog(log.id)}
+														class="p-1 rounded active:opacity-50 shrink-0"
+														aria-label={t.supplement_log_delete}
+														style="color: var(--color-on-surface-variant)"
+													>
+														<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+															<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+														</svg>
+													</button>
+												</div>
+												{#if log.note}
+													<p class="text-[11px] px-0.5 pb-0.5 italic" style="color: var(--color-on-surface-variant)">{log.note}</p>
+												{/if}
 											</div>
 										{/each}
 										{#if supplement.nutrients.length > 0 && total > 0}
@@ -972,9 +1052,59 @@
 						{#if supplementsCardExpanded}
 							<div class="space-y-1.5">
 								{#each supplementStatEntries as sup}
-									<div class="flex justify-between items-center text-sm">
-										<span style="color: var(--color-on-surface)">{sup.name}</span>
-										<span class="font-semibold" style="color: var(--color-primary)">{sup.total} {displayUnit(sup.unit, currentLang())}</span>
+									{@const suppLogs = historyLogsBySuppId.get(sup.id) ?? []}
+									{@const expandable = historyPeriod !== 'month' && suppLogs.length > 0}
+									{@const suppExpanded = historyExpandedSuppIds.has(sup.id)}
+									<div>
+										<div class="flex justify-between items-center text-sm">
+											<span style="color: var(--color-on-surface)">{sup.name}</span>
+											<div class="flex items-center gap-1.5">
+												<span class="font-semibold" style="color: var(--color-primary)">{sup.total} {displayUnit(sup.unit, currentLang())}</span>
+												{#if expandable}
+													<button
+														onclick={() => toggleHistorySupp(sup.id)}
+														class="active:opacity-60"
+														aria-label={suppExpanded ? 'Einklappen' : 'Aufklappen'}
+													>
+														<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+														     style="transition: transform 0.2s; transform: rotate({suppExpanded ? '90' : '0'}deg)">
+															<polyline points="9 6 15 12 9 18"/>
+														</svg>
+													</button>
+												{/if}
+											</div>
+										</div>
+										{#if expandable && suppExpanded}
+											<div class="mt-1.5 space-y-1.5 pt-1.5 border-t" style="border-color: var(--color-outline-variant)">
+												{#each suppLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
+													<div class="flex items-start gap-2 text-xs">
+														<div class="flex-1 min-w-0">
+															<span class="tabular-nums" style="color: var(--color-on-surface-variant)">
+																{#if historyPeriod === 'week'}
+																	{new Date(log.loggedAt).toLocaleDateString([], { weekday: 'short', day: 'numeric' })}
+																{/if}
+																{formatTime(log.loggedAt)} ·
+															</span>
+															<span class="font-medium" style="color: var(--color-primary)">{log.amount} {displayUnit(sup.unit, currentLang())}</span>
+															{#if log.note}
+																<span class="italic ml-1" style="color: var(--color-on-surface-variant)">{log.note}</span>
+															{/if}
+														</div>
+														<button
+															onclick={() => openHistoryEditLog(log, sup.id)}
+															class="shrink-0 p-1 rounded active:opacity-50"
+															aria-label="Bearbeiten"
+															style="color: var(--color-on-surface-variant)"
+														>
+															<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+																<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+																<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+															</svg>
+														</button>
+													</div>
+												{/each}
+											</div>
+										{/if}
 									</div>
 								{/each}
 							</div>
@@ -1301,7 +1431,12 @@
 
 <EditLogSheet
 	bind:sheet={editLogSheet}
-	onreload={() => Promise.all([loadTodayLogs(), loadSupplements()])}
+	bind:createSheet={addLogSheet}
+	supplements={activeSupplements.map(s => ({ id: s.id, name: s.name, unit: s.unit, defaultAmount: s.defaultAmount }))}
+	onreload={() => {
+		if (activeTab === 'history') loadHistory();
+		else Promise.all([loadTodayLogs(), loadSupplements()]);
+	}}
 />
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />

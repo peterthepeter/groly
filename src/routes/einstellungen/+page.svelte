@@ -23,6 +23,102 @@
 	let loading = $state(false);
 	let menuOpen = $state(false);
 	let passwordOpen = $state(false);
+	let exportOpen = $state(false);
+	let exportLogs = $state(true);
+	let exportCatalog = $state(true);
+	let importFileInput = $state<HTMLInputElement | null>(null);
+	let importing = $state(false);
+	let importResult = $state<{ imported: number; skipped: string[] } | null>(null);
+	let importError = $state(false);
+
+	function parseCsvLine(line: string): string[] {
+		const cells: string[] = [];
+		let i = 0;
+		while (i < line.length) {
+			if (line[i] === '"') {
+				let val = '';
+				i++;
+				while (i < line.length) {
+					if (line[i] === '"' && line[i + 1] === '"') { val += '"'; i += 2; }
+					else if (line[i] === '"') { i++; break; }
+					else { val += line[i++]; }
+				}
+				cells.push(val);
+				if (line[i] === ',') i++;
+			} else {
+				const end = line.indexOf(',', i);
+				if (end === -1) { cells.push(line.slice(i)); break; }
+				else { cells.push(line.slice(i, end)); i = end + 1; }
+			}
+		}
+		return cells;
+	}
+
+	async function handleImport(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+		importing = true;
+		importResult = null;
+		importError = false;
+		try {
+			const text = await file.text();
+			const clean = text.replace(/^﻿/, '');
+			const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
+			if (lines.length < 2) { importError = true; return; }
+			const header = parseCsvLine(lines[0]);
+			const dtIdx = header.indexOf('datetime');
+			const suppIdx = header.indexOf('supplement');
+			const amountIdx = header.indexOf('amount');
+			const noteIdx = header.indexOf('log_note');
+			if (dtIdx === -1 || suppIdx === -1 || amountIdx === -1) { importError = true; return; }
+			const rows = lines.slice(1).map(line => {
+				const cells = parseCsvLine(line);
+				const datetime = cells[dtIdx] ?? '';
+				const [datePart, timePart] = datetime.split('T');
+				const [year, month, day] = (datePart ?? '').split('-').map(Number);
+				const [hour, minute, second] = (timePart ?? '00:00:00').split(':').map(Number);
+				const loggedAt = (year && month && day)
+					? new Date(year, month - 1, day, hour || 0, minute || 0, second || 0).getTime()
+					: NaN;
+				return {
+					loggedAt,
+					supplement: cells[suppIdx] ?? '',
+					amount: parseFloat(cells[amountIdx] ?? '0'),
+					note: noteIdx >= 0 ? (cells[noteIdx] ?? '') : ''
+				};
+			}).filter(r => !isNaN(r.loggedAt) && r.supplement && r.amount > 0);
+			const res = await fetch('/api/supplement-logs/import', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ rows })
+			});
+			if (!res.ok) { importError = true; return; }
+			importResult = await res.json();
+		} catch { importError = true; }
+		finally {
+			importing = false;
+			if (importFileInput) importFileInput.value = '';
+		}
+	}
+	let exportFrom = $state('');
+	let exportTo = $state('');
+	let exportRangeMode = $state(false);
+	let importHelpOpen = $state(false);
+
+	const exportHref = $derived.by(() => {
+		const params = new URLSearchParams();
+		if (exportLogs) params.set('logs', '1');
+		if (exportCatalog) params.set('catalog', '1');
+		params.set('tz', Intl.DateTimeFormat().resolvedOptions().timeZone);
+		if (exportRangeMode && exportFrom) params.set('fromDate', exportFrom);
+		if (exportRangeMode && exportTo) params.set('toDate', exportTo);
+		return `/api/supplement-logs/export?${params.toString()}`;
+	});
+	const exportFilename = $derived(
+		exportLogs && exportCatalog ? 'groly-supplements.zip' :
+		exportLogs ? 'supplement-logs.csv' :
+		'supplement-catalog.csv'
+	);
 	let langOpen = $state(false);
 	let themeOpen = $state(false);
 	let categorySortOpen = $state(false);
@@ -1057,7 +1153,190 @@
 		   style="color: var(--color-on-surface-variant); opacity: 0.5">
 			{currentLang() === 'en' ? 'Account' : 'Konto'}
 		</p>
+
 		<div class="rounded-2xl mb-6 overflow-hidden" style="background-color: var(--color-surface-card)">
+
+			<!-- Daten exportieren & importieren -->
+			<div>
+				<button
+					onclick={() => { exportOpen = !exportOpen; importResult = null; importError = false; }}
+					class="w-full flex items-center justify-between px-5 py-3"
+				>
+					<div class="flex items-center gap-3">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+						</svg>
+						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.supplement_data_title}</span>
+					</div>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({exportOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</button>
+				{#if exportOpen}
+					<div class="px-5 pb-4 space-y-4">
+						<!-- Export -->
+						<div class="space-y-2">
+							<p class="text-xs font-semibold uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.supplement_export_title}</p>
+							<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.supplement_export_desc}</p>
+							<div class="flex items-center justify-between">
+								<span class="text-sm" style="color: var(--color-on-surface)">{t.supplement_export_logs}</span>
+								<div
+									role="switch"
+									aria-checked={exportLogs}
+									onclick={() => exportLogs = !exportLogs}
+									onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') exportLogs = !exportLogs; }}
+									tabindex="0"
+									class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+									style="background-color: {exportLogs ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+								>
+									{#if exportLogs}
+										<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+									{/if}
+								</div>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-sm" style="color: var(--color-on-surface)">{t.supplement_export_catalog}</span>
+								<div
+									role="switch"
+									aria-checked={exportCatalog}
+									onclick={() => exportCatalog = !exportCatalog}
+									onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') exportCatalog = !exportCatalog; }}
+									tabindex="0"
+									class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+									style="background-color: {exportCatalog ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+								>
+									{#if exportCatalog}
+										<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+									{/if}
+								</div>
+							</div>
+							<!-- Zeitraum Toggle -->
+							{#if exportLogs}
+								<div class="rounded-xl overflow-hidden p-1 flex gap-1" style="background-color: var(--color-surface-container)">
+									<button
+										onclick={() => exportRangeMode = false}
+										class="flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors"
+										style="background-color: {!exportRangeMode ? 'var(--color-surface-high)' : 'transparent'}; color: {!exportRangeMode ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+									>{currentLang() === 'en' ? 'Complete' : 'Komplett'}</button>
+									<button
+										onclick={() => exportRangeMode = true}
+										class="flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors"
+										style="background-color: {exportRangeMode ? 'var(--color-surface-high)' : 'transparent'}; color: {exportRangeMode ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+									>{currentLang() === 'en' ? 'Date range' : 'Zeitraum'}</button>
+								</div>
+								{#if exportRangeMode}
+									<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+										<div class="flex">
+											<div class="flex-1 px-3 py-2 flex flex-col gap-0.5">
+												<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'From' : 'Von'}</span>
+												<input
+													type="date"
+													bind:value={exportFrom}
+													class="border-0 outline-none w-full"
+													style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
+												/>
+											</div>
+											<div class="flex-1 px-3 py-2 flex flex-col gap-0.5" style="border-left: 1px solid var(--color-surface-high)">
+												<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'To' : 'Bis'}</span>
+												<input
+													type="date"
+													bind:value={exportTo}
+													class="border-0 outline-none w-full"
+													style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
+												/>
+											</div>
+										</div>
+									</div>
+								{/if}
+							{/if}
+							{#if exportLogs || exportCatalog}
+								<a
+									href={exportHref}
+									download={exportFilename}
+									class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity"
+									style="background-color: var(--color-surface-container); color: var(--color-primary)"
+								>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+									</svg>
+									{t.supplement_export_btn}
+								</a>
+							{/if}
+						</div>
+
+						<!-- Import -->
+						<div class="space-y-3">
+							<p class="text-xs font-semibold uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.supplement_import_title}</p>
+
+							<!-- Hilfe-Akkordeon -->
+							<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+								<button
+									onclick={() => importHelpOpen = !importHelpOpen}
+									class="w-full flex items-center justify-between px-3 py-2.5 active:opacity-70"
+								>
+									<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'Format & hints' : 'Format & Hinweise'}</span>
+									<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+									     style="transform: rotate({importHelpOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+										<polyline points="9 18 15 12 9 6"/>
+									</svg>
+								</button>
+								{#if importHelpOpen}
+									<div class="px-3 pb-3 space-y-2">
+										<p class="text-xs leading-relaxed" style="color: var(--color-on-surface-variant)">
+											{currentLang() === 'en'
+												? 'The CSV must have these columns. Times are interpreted in your device timezone. Supplements that don\'t exist in your list will be skipped — create them first.'
+												: 'Die CSV muss folgende Spalten haben. Uhrzeiten werden in der Gerätezeitzone interpretiert. Supplements die nicht in deiner Liste existieren werden übersprungen — lege sie vorher an.'}
+										</p>
+										<div class="rounded-lg px-3 py-2 overflow-x-auto" style="background-color: var(--color-surface-high)">
+											<pre class="text-xs" style="color: var(--color-primary); font-family: monospace; white-space: pre">datetime,supplement,brand,amount,unit,log_note
+2026-04-28T07:15:00,Vitamin C,,1000,mg,Mit Frühstück
+2026-04-28T08:00:00,Magnesium,Brand,400,mg,</pre>
+										</div>
+										<p class="text-xs" style="color: var(--color-on-surface-variant)">
+											{currentLang() === 'en'
+												? 'brand and log_note are optional.'
+												: 'brand und log_note sind optional.'}
+										</p>
+									</div>
+								{/if}
+							</div>
+
+							<input
+								bind:this={importFileInput}
+								type="file"
+								accept=".csv"
+								onchange={handleImport}
+								class="hidden"
+							/>
+							<button
+								onclick={() => importFileInput?.click()}
+								disabled={importing}
+								class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity disabled:opacity-50"
+								style="background-color: var(--color-surface-container); color: var(--color-primary)"
+							>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+								</svg>
+								{importing ? '…' : t.supplement_import_btn}
+							</button>
+							{#if importError}
+								<p class="text-sm" style="color: var(--color-error)">{t.supplement_import_error}</p>
+							{/if}
+							{#if importResult}
+								<p class="text-sm font-semibold" style="color: var(--color-primary)">{importResult.imported} {importResult.imported === 1 ? 'Eintrag' : 'Einträge'} importiert</p>
+								{#if importResult.skipped.length > 0}
+									<div>
+										<p class="text-xs font-medium mb-1" style="color: var(--color-on-surface-variant)">{t.supplement_import_skipped}</p>
+										<p class="text-xs" style="color: var(--color-on-surface-variant)">{importResult.skipped.join(', ')}</p>
+									</div>
+								{/if}
+							{/if}
+						</div>
+					</div>
+				{/if}
+			</div>
 
 			<!-- Passwort ändern -->
 			<div>

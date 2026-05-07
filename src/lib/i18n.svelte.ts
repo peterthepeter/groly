@@ -303,6 +303,18 @@ class TranslationProxy {
 	get supplement_log_time() { void _lang; return m.supplement_log_time(); }
 	get supplement_log_save() { void _lang; return m.supplement_log_save(); }
 	get supplement_log_delete() { void _lang; return m.supplement_log_delete(); }
+	get supplement_log_note_placeholder() { void _lang; return m.supplement_log_note_placeholder(); }
+	get supplement_export_title() { void _lang; return m.supplement_export_title(); }
+	get supplement_data_title() { void _lang; return m.supplement_data_title(); }
+	get supplement_export_desc() { void _lang; return m.supplement_export_desc(); }
+	get supplement_export_btn() { void _lang; return m.supplement_export_btn(); }
+	get supplement_export_logs() { void _lang; return m.supplement_export_logs(); }
+	get supplement_export_catalog() { void _lang; return m.supplement_export_catalog(); }
+	get supplement_import_title() { void _lang; return m.supplement_import_title(); }
+	get supplement_import_desc() { void _lang; return m.supplement_import_desc(); }
+	get supplement_import_btn() { void _lang; return m.supplement_import_btn(); }
+	get supplement_import_skipped() { void _lang; return m.supplement_import_skipped(); }
+	get supplement_import_error() { void _lang; return m.supplement_import_error(); }
 	get supplement_manage() { void _lang; return m.supplement_manage(); }
 	get supplement_empty() { void _lang; return m.supplement_empty(); }
 	get supplement_empty_hint() { void _lang; return m.supplement_empty_hint(); }
@@ -356,6 +368,9 @@ class TranslationProxy {
 	get supplement_day_sa() { void _lang; return m.supplement_day_sa(); }
 	get supplement_day_so() { void _lang; return m.supplement_day_so(); }
 	get supplement_log_edit_title() { void _lang; return m.supplement_log_edit_title(); }
+	get supplement_log_add_title() { void _lang; return m.supplement_log_add_title(); }
+	get supplement_log_date() { void _lang; return m.supplement_log_date(); }
+	get supplement_log_select_supplement() { void _lang; return m.supplement_log_select_supplement(); }
 	// water tracker
 	get water_title() { void _lang; return m.water_title(); }
 	get water_toggle_label() { void _lang; return m.water_toggle_label(); }

@@ -33,7 +33,7 @@ export const POST: RequestHandler = async (event) => {
 
 	try {
 		const body = await event.request.json();
-		const { supplementId, amount, loggedAt } = body;
+		const { supplementId, amount, loggedAt, note } = body;
 
 		if (!supplementId) return json({ error: 'supplementId erforderlich' }, { status: 400 });
 		if (typeof amount !== 'number' || amount <= 0) return json({ error: 'Menge muss > 0 sein' }, { status: 400 });
@@ -56,6 +56,7 @@ export const POST: RequestHandler = async (event) => {
 				supplementId,
 				amount,
 				loggedAt: loggedAt ?? now,
+				note: (typeof note === 'string' && note.trim()) ? note.trim() : null,
 				createdAt: now
 			}).run();
 

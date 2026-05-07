@@ -197,6 +197,7 @@ export const supplementLogs = sqliteTable('supplement_logs', {
 	supplementId: text('supplement_id').notNull().references(() => supplements.id, { onDelete: 'cascade' }),
 	amount: real('amount').notNull(), // z.B. 2.0 = 2 Kapseln
 	loggedAt: integer('logged_at').notNull(), // Unix ms inkl. Uhrzeit
+	note: text('note'),
 	createdAt: integer('created_at').notNull()
 }, (t) => [index('supplement_logs_user_id_idx').on(t.userId), index('supplement_logs_logged_at_idx').on(t.loggedAt)]);
 

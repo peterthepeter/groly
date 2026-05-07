@@ -51,6 +51,9 @@
 	let sheetEl = $state<HTMLElement | null>(null);
 	let amounts = $state<Record<string, number>>({});
 	let times = $state<Record<string, string>>({});
+	let notes = $state<Record<string, string>>({});
+	let expandedNoteIds = $state(new Set<string>());
+	let editingAmountId = $state<string | null>(null);
 	let waterSaving = $state(false);
 	let waterDone = $state(false);
 	let waterError = $state<string | null>(null);
@@ -140,6 +143,9 @@
 			});
 			amounts = a;
 			times = ti;
+			notes = {};
+			expandedNoteIds = new Set();
+			editingAmountId = null;
 			saving = {};
 			done = {};
 			waterDone = false;
@@ -202,6 +208,20 @@
 		amounts = { ...amounts, [id]: next };
 	}
 
+	function toggleNote(id: string) {
+		const next = new Set(expandedNoteIds);
+		if (next.has(id)) next.delete(id); else next.add(id);
+		expandedNoteIds = next;
+	}
+
+	function commitAmount(id: string, raw: string) {
+		const val = parseFloat(raw);
+		if (isFinite(val) && val > 0) {
+			amounts = { ...amounts, [id]: Math.round(val * 10) / 10 };
+		}
+		editingAmountId = null;
+	}
+
 	async function logOne(supplementId: string) {
 		saving = { ...saving, [supplementId]: true };
 		const amount = amounts[supplementId] ?? 1;
@@ -210,13 +230,14 @@
 		const d = new Date();
 		d.setHours(h, min, 0, 0);
 		const loggedAt = d.getTime();
+		const note = notes[supplementId]?.trim() || null;
 
 		let success = false;
 		try {
 			const res = await fetch('/api/supplement-logs', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ supplementId, amount, loggedAt })
+				body: JSON.stringify({ supplementId, amount, loggedAt, note })
 			});
 			success = res.ok;
 		} catch {
@@ -422,56 +443,93 @@
 						{#each sortedSupplements as s, i (s.id)}
 							{@const isSaving = saving[s.id] ?? false}
 							{@const isDone = done[s.id] ?? false}
-							<div class="flex items-center gap-1.5 px-2 py-2.5">
-								<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
-									{#if isDone}
-										<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.supplement_taken}</span>
-									{:else}
-										<span class="truncate text-sm font-semibold" style="color: var(--color-primary)">{s.name}</span>
-										{#if s.brand}
-											<span class="truncate text-[10px]" style="color: var(--color-on-surface-variant); opacity: 0.7">{s.brand}</span>
+							{@const noteOpen = expandedNoteIds.has(s.id)}
+							{@const isEditingAmount = editingAmountId === s.id}
+							<div class="px-2 py-2.5">
+								<div class="flex items-center gap-1.5">
+									<button
+										onclick={() => !isDone && toggleNote(s.id)}
+										class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px] text-left active:opacity-70 transition-opacity"
+									>
+										{#if isDone}
+											<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.supplement_taken}</span>
+										{:else}
+											<span class="flex items-center gap-1 min-w-0">
+												<span class="truncate text-sm font-semibold" style="color: var(--color-primary)">{s.name}</span>
+												<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" style="color: var(--color-on-surface-variant); opacity: 0.45"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+											</span>
+											{#if s.brand}
+												<span class="truncate text-[10px]" style="color: var(--color-on-surface-variant); opacity: 0.7">{s.brand}</span>
+											{/if}
 										{/if}
-									{/if}
-								</div>
-								<div class="shrink-0 flex items-center gap-0 rounded-lg overflow-hidden" style="background-color: var(--color-surface-high)">
+									</button>
+									<div class="shrink-0 flex items-center gap-0 rounded-lg overflow-hidden" style="background-color: var(--color-surface-high)">
+										<button
+											onclick={() => adjustAmount(s.id, -0.5)}
+											class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
+											style="color: var(--color-on-surface)"
+											aria-label="Weniger"
+										>−</button>
+										{#if isEditingAmount}
+											<!-- svelte-ignore a11y_autofocus -->
+											<input
+												type="number"
+												inputmode="decimal"
+												autofocus
+												value={amounts[s.id] ?? 1}
+												onblur={(e) => commitAmount(s.id, (e.target as HTMLInputElement).value)}
+												onkeydown={(e) => { if (e.key === 'Enter') commitAmount(s.id, (e.target as HTMLInputElement).value); if (e.key === 'Escape') editingAmountId = null; }}
+												class="text-xs font-semibold text-center border-0 outline-none"
+												style="color: var(--color-on-surface); background: transparent; min-width: 2.8rem; width: 2.8rem; font-size: 12px"
+											/>
+										{:else}
+											<button
+												onclick={() => { editingAmountId = s.id; }}
+												class="text-xs font-semibold text-center active:opacity-60"
+												style="color: var(--color-on-surface); min-width: 2.8rem; line-height: 2rem"
+											>{amounts[s.id] ?? 1} {abbreviateUnit(s.unit)}</button>
+										{/if}
+										<button
+											onclick={() => adjustAmount(s.id, 0.5)}
+											class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
+											style="color: var(--color-on-surface)"
+											aria-label="Mehr"
+										>+</button>
+									</div>
+									<input
+										type="time"
+										value={times[s.id] ?? ''}
+										oninput={(e) => times = { ...times, [s.id]: (e.target as HTMLInputElement).value }}
+										class="w-16 h-8 shrink-0 px-1 rounded-lg border-0 outline-none text-center"
+										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 13px; font-family: inherit"
+									/>
 									<button
-										onclick={() => adjustAmount(s.id, -0.5)}
-										class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
-										style="color: var(--color-on-surface)"
-										aria-label="Weniger"
-									>−</button>
-									<span class="text-xs font-semibold text-center" style="color: var(--color-on-surface); min-width: 2.8rem">
-										{amounts[s.id] ?? 1} {abbreviateUnit(s.unit)}
-									</span>
-									<button
-										onclick={() => adjustAmount(s.id, 0.5)}
-										class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
-										style="color: var(--color-on-surface)"
-										aria-label="Mehr"
-									>+</button>
+										onclick={() => logOne(s.id)}
+										disabled={isSaving || isDone}
+										class="w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all shrink-0"
+										style="background: {isDone ? 'var(--color-surface-high)' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))'}; color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-on-primary)'}; opacity: {isDone ? '0.4' : '1'}"
+										aria-label={t.supplement_log_save}
+									>
+										{#if isSaving}
+											<div class="w-3.5 h-3.5 rounded-full border-2 animate-spin" style="border-color: white; border-top-color: transparent"></div>
+										{:else}
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+												<polyline points="20 6 9 17 4 12"/>
+											</svg>
+										{/if}
+									</button>
 								</div>
-								<input
-									type="time"
-									value={times[s.id] ?? ''}
-									oninput={(e) => times = { ...times, [s.id]: (e.target as HTMLInputElement).value }}
-									class="w-16 h-8 shrink-0 px-1 rounded-lg border-0 outline-none text-center"
-									style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 13px; font-family: inherit"
-								/>
-								<button
-									onclick={() => logOne(s.id)}
-									disabled={isSaving || isDone}
-									class="w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all shrink-0"
-									style="background: {isDone ? 'var(--color-surface-high)' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))'}; color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-on-primary)'}; opacity: {isDone ? '0.4' : '1'}"
-									aria-label={t.supplement_log_save}
-								>
-									{#if isSaving}
-										<div class="w-3.5 h-3.5 rounded-full border-2 animate-spin" style="border-color: white; border-top-color: transparent"></div>
-									{:else}
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-											<polyline points="20 6 9 17 4 12"/>
-										</svg>
-									{/if}
-								</button>
+								{#if noteOpen && !isDone}
+									<div class="mt-1.5">
+										<input
+											type="text"
+											placeholder={t.supplement_log_note_placeholder}
+											bind:value={notes[s.id]}
+											class="w-full h-8 px-2.5 rounded-lg border-0 outline-none text-xs"
+											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 13px; font-family: inherit"
+										/>
+									</div>
+								{/if}
 							</div>
 						{/each}
 					</div>

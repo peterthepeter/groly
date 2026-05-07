@@ -23,13 +23,16 @@ export const PUT: RequestHandler = async (event) => {
 		const body = await event.request.json();
 		const newAmount = body.amount != null ? Number(body.amount) : existing.amount;
 		const newLoggedAt = body.loggedAt != null ? Number(body.loggedAt) : existing.loggedAt;
+		const newNote = 'note' in body
+			? (typeof body.note === 'string' && body.note.trim() ? body.note.trim() : null)
+			: existing.note;
 
 		if (!isFinite(newAmount) || newAmount <= 0) {
 			return json({ error: 'Menge muss > 0 sein' }, { status: 400 });
 		}
 
 		db.update(supplementLogs)
-			.set({ amount: newAmount, loggedAt: newLoggedAt })
+			.set({ amount: newAmount, loggedAt: newLoggedAt, note: newNote })
 			.where(eq(supplementLogs.id, id))
 			.run();
 
