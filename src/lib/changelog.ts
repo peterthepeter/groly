@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.1',
+		de: [
+			'Neues App-Icon: Einkaufskorb mit Tracker-Ringen — symbolisiert Einkaufsliste + Tracker-Funktionen',
+		],
+		en: [
+			'New app icon: shopping basket with tracker rings — reflecting shopping list + tracker features',
+		],
+	},
+	{
 		version: '0.7.0-2',
 		de: [
 			'Datenbank-Fix für v0.7.0',

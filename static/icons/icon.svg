@@ -4,15 +4,14 @@
       <stop offset="0%" stop-color="#00C49A"/>
       <stop offset="100%" stop-color="#00a882"/>
     </linearGradient>
-    <clipPath id="rounded">
-      <rect width="512" height="512" rx="112" ry="112"/>
-    </clipPath>
   </defs>
   <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
-  <!-- Shopping bag icon (scaled to ~200px centered) -->
-  <g transform="translate(126, 126) scale(10.83)" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-    <line x1="3" y1="6" x2="21" y2="6"/>
-    <path d="M16 10a4 4 0 0 1-8 0"/>
-  </g>
+  <!-- Outer tracker ring (solid white) -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="white" stroke-width="11" stroke-dasharray="850 280" stroke-linecap="round" transform="rotate(-90 256 256)"/>
+  <!-- Inner tracker ring (faded) -->
+  <circle cx="256" cy="256" r="140" fill="none" stroke="white" stroke-width="11" stroke-opacity="0.35" stroke-dasharray="660 220" stroke-linecap="round" transform="rotate(120 256 256)"/>
+  <!-- Basket handle -->
+  <path d="M228 232 a28 28 0 0 1 56 0" fill="none" stroke="white" stroke-width="11" stroke-linecap="round"/>
+  <!-- Basket outline -->
+  <path d="M204 240 H308 L298 314 a10 10 0 0 1 -10 9 H224 a10 10 0 0 1 -10 -9 Z" fill="none" stroke="white" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
 </svg>
