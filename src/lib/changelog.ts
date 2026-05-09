@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.2',
+		de: [
+			'Tracker-Erinnerungen manuell abhaken — bleibt jetzt gespeichert, auch nach App-Wechsel oder Neustart',
+			'App-Updates werden automatisch im Hintergrund installiert',
+		],
+		en: [
+			'Manually checking off tracker reminders now stays saved — even after switching apps or restarting',
+			'App updates now install automatically in the background',
+		],
+	},
+	{
 		version: '0.7.1',
 		de: [
 			'Neues App-Icon: Einkaufskorb mit Tracker-Ringen — symbolisiert Einkaufsliste + Tracker-Funktionen',

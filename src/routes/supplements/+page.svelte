@@ -96,14 +96,11 @@
 	type TodayReminder = { time: string; names: string[] };
 	let todayReminders = $state<TodayReminder[]>([]);
 	let remindersExpanded = $state(false);
-	let reminderManualOverrides = $state<Map<string, boolean>>(new Map());
+	// Server-persisted overrides: reminderTime → done (true/false)
+	let reminderOverrides = $state<Record<string, boolean>>({});
 	let now = $state(new Date());
 
 	const REMINDER_PRE_WINDOW_MS = 30 * 60 * 1000; // 30 Minuten
-
-	function currentTimeStr(): string {
-		return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-	}
 
 	function todayAtTime(timeStr: string): number {
 		const [h, m] = timeStr.split(':').map(Number);
@@ -116,10 +113,12 @@
 	const reminderDoneMap = $derived.by(() => {
 		const map = new Map<string, boolean>();
 		for (const reminder of todayReminders) {
-			if (reminderManualOverrides.has(reminder.time)) {
-				map.set(reminder.time, reminderManualOverrides.get(reminder.time)!);
+			// Server-Override hat Vorrang
+			if (reminder.time in reminderOverrides) {
+				map.set(reminder.time, reminderOverrides[reminder.time]);
 				continue;
 			}
+			// Auto-Erkennung: Log im 30-Minuten-Fenster vor der Erinnerungszeit
 			const reminderTs = todayAtTime(reminder.time);
 			const windowStart = reminderTs - REMINDER_PRE_WINDOW_MS;
 			const autoDone = reminder.names.every(name => {
@@ -136,11 +135,26 @@
 		return reminderDoneMap.get(reminder.time) ?? false;
 	}
 
-	function toggleReminderDone(reminder: TodayReminder) {
+	async function toggleReminderDone(reminder: TodayReminder) {
 		const current = reminderIsDone(reminder);
-		const newOverrides = new Map(reminderManualOverrides);
-		newOverrides.set(reminder.time, !current);
-		reminderManualOverrides = newOverrides;
+		const newDone = !current;
+		const date = toLocalDateStr(new Date());
+
+		// Optimistic update
+		reminderOverrides = { ...reminderOverrides, [reminder.time]: newDone };
+
+		try {
+			await fetch('/api/supplement-reminder-overrides', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ date, reminderTime: reminder.time, done: newDone })
+			});
+		} catch {
+			// Bei Fehler: Rollback
+			const restored = { ...reminderOverrides };
+			delete restored[reminder.time];
+			reminderOverrides = restored;
+		}
 	}
 
 	const pendingReminders = $derived(todayReminders.filter(r => !reminderDoneMap.get(r.time)));
@@ -151,7 +165,7 @@
 			if (res.ok) {
 				const data = await res.json();
 				todayReminders = data.todayReminders ?? [];
-				reminderManualOverrides = new Map();
+				reminderOverrides = data.overrides ?? {};
 			}
 		} catch { /* offline — reminders bleiben leer */ }
 	}

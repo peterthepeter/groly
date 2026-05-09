@@ -79,11 +79,7 @@ setCatchHandler(async ({ request }) => {
 });
 
 self.addEventListener('install', (event) => {
-	// Deliberately NOT calling skipWaiting() here.
-	// The app detects the waiting SW and prompts the user before reloading.
-	//
-	// Pre-cache the root page so we always have an app shell to fall back to
-	// when the user navigates to an uncached route while offline.
+	self.skipWaiting();
 	event.waitUntil(
 		caches.open('pages').then(cache =>
 			cache.add(new Request('/', { cache: 'reload' })).catch(() => {})

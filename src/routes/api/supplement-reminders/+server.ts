@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { supplementReminderSchedules, supplements } from '$lib/db/schema';
+import { supplementReminderSchedules, supplements, supplementReminderOverrides } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -32,9 +32,12 @@ export const GET: RequestHandler = async (event) => {
 		return json({ schedules: rows });
 	}
 
-	// ?today=1 → return today's active reminders grouped by time
+	// ?today=1 → return today's active reminders grouped by time + today's overrides
 	if (event.url.searchParams.get('today') === '1') {
-		const todayDay = new Date().getDay(); // 0=Sun … 6=Sat
+		const now = new Date();
+		const todayDay = now.getDay(); // 0=Sun … 6=Sat
+		const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
 		const allActive = db
 			.select({
 				time: supplementReminderSchedules.time,
@@ -64,7 +67,18 @@ export const GET: RequestHandler = async (event) => {
 			.sort(([a], [b]) => a.localeCompare(b))
 			.map(([time, names]) => ({ time, names }));
 
-		return json({ todayReminders });
+		// Load today's manual overrides
+		const overrideRows = db
+			.select({ reminderTime: supplementReminderOverrides.reminderTime, done: supplementReminderOverrides.done })
+			.from(supplementReminderOverrides)
+			.where(and(
+				eq(supplementReminderOverrides.userId, user!.id),
+				eq(supplementReminderOverrides.date, todayDate)
+			))
+			.all();
+		const overrides = Object.fromEntries(overrideRows.map(r => [r.reminderTime, r.done]));
+
+		return json({ todayReminders, overrides });
 	}
 
 	// No supplementId → return all supplement IDs that have at least one reminder (for this user)

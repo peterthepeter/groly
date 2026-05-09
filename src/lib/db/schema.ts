@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey(),
@@ -225,6 +225,18 @@ export const supplementReminderSchedules = sqliteTable('supplement_reminder_sche
 	createdAt: integer('created_at').notNull()
 }, (t) => [index('supplement_reminder_schedules_supplement_id_idx').on(t.supplementId)]);
 
+export const supplementReminderOverrides = sqliteTable('supplement_reminder_overrides', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	date: text('date').notNull(), // YYYY-MM-DD
+	reminderTime: text('reminder_time').notNull(), // HH:MM
+	done: integer('done', { mode: 'boolean' }).notNull().default(true),
+	createdAt: integer('created_at').notNull()
+}, (t) => [
+	index('supplement_reminder_overrides_user_date_idx').on(t.userId, t.date),
+	uniqueIndex('supplement_reminder_overrides_unique').on(t.userId, t.date, t.reminderTime)
+]);
+
 export const supplementCatalog = sqliteTable('supplement_catalog', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
@@ -322,3 +334,4 @@ export type CaffeineDrink = typeof caffeineDrinks.$inferSelect;
 export type CaffeineLog = typeof caffeineLogs.$inferSelect;
 export type MeditationLog = typeof meditationLogs.$inferSelect;
 export type MeditationReminderSchedule = typeof meditationReminderSchedules.$inferSelect;
+export type SupplementReminderOverride = typeof supplementReminderOverrides.$inferSelect;

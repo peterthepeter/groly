@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { networkStore } from '$lib/stores/online.svelte';
 	import { t, sync_pending } from '$lib/i18n.svelte';
-	import { pwaStore } from '$lib/stores/pwa.svelte';
-	import PwaUpdateModal from '$lib/components/PwaUpdateModal.svelte';
 
 	import type { Snippet } from 'svelte';
-
-	let showUpdateModal = $state(false);
 
 	let { title = 'Meine Listen', subtitle = '', onMenuOpen, onSearch = null, actions = null }: {
 		title?: string;
@@ -73,24 +69,7 @@
 					</svg>
 				</button>
 			{/if}
-			{#if pwaStore.updateAvailable}
-				<button
-					onclick={() => showUpdateModal = true}
-					class="update-btn flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl active:opacity-60 transition-opacity"
-					aria-label={t.pwa_update_available}
-					title={t.pwa_update_available}
-					style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent)"
-				>
-					<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-					     stroke="var(--color-primary)" stroke-width="2.5"
-					     stroke-linecap="round" stroke-linejoin="round">
-						<circle cx="12" cy="12" r="10"/>
-						<polyline points="16 12 12 8 8 12"/>
-						<line x1="12" y1="16" x2="12" y2="8"/>
-					</svg>
-				</button>
-			{/if}
-			<div class="text-right">
+<div class="text-right">
 				<div class="text-sm font-semibold truncate max-w-28" style="color: var(--color-on-surface)">{title}</div>
 				{#if subtitle}
 					<div class="text-xs truncate max-w-28" style="color: var(--color-on-surface-variant)">{subtitle}</div>
@@ -100,16 +79,3 @@
 	</div>
 </header>
 
-{#if showUpdateModal}
-	<PwaUpdateModal onClose={() => showUpdateModal = false} />
-{/if}
-
-<style>
-	@keyframes update-pulse {
-		0%, 100% { opacity: 1; transform: scale(1); }
-		50% { opacity: 0.65; transform: scale(0.9); }
-	}
-	.update-btn {
-		animation: update-pulse 2.2s ease-in-out infinite;
-	}
-</style>

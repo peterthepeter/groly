@@ -225,6 +225,13 @@
       "when": 1746700000000,
       "tag": "0031_supplement_log_note",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1778352708680,
+      "tag": "0032_supplement_reminder_overrides",
+      "breakpoints": true
     }
   ]
 }
