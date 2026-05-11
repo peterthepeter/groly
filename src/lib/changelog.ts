@@ -2,6 +2,23 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.3',
+		de: [
+			'Neu: Stimmungs-Tracker — Tagesstimmung (1–5) mit Aktivitäten (Sport, Hobbys, Soziales, Schlaf, Arbeit, Wetter) und Notiz erfassen, Verlauf einsehen, Push-Erinnerungen einrichten',
+			'Meditations-Timer: Überzieh-Modus — wenn der Timer abläuft, läuft automatisch ein zweiter Timer hoch (bis 1 Stunde). So kannst du entscheiden, ob du nur die geplante Zeit speicherst oder die zusätzliche Zeit dazu zählst',
+			'iOS-PWA: Untere Buttons sitzen tiefer und werden nicht mehr abgeschnitten — Status-Bar-Modus angepasst',
+			'Seitenwechsel deutlich smoother — sanfter Übergang plus schnelleres Vorladen beim Antippen',
+			'Tracker-Karten aufgeräumt: Mood-Eintrag ist Teil der Tracker-Sektion, einheitlicher Fortschrittsbalken (in der Stimmungsfarbe), dezentere Quick-Action-Buttons',
+		],
+		en: [
+			'New: Mood tracker — log daily mood (1–5) with activities (sports, hobbies, social, sleep, work, weather) and a note, view history, set up push reminders',
+			'Meditation timer: overtime mode — when the timer ends, a second timer counts up (up to 1 hour) so you can choose whether to save just the planned duration or include the extra time',
+			'iOS PWA: bottom buttons sit lower and no longer get clipped — adjusted status-bar mode',
+			'Page transitions are noticeably smoother — soft crossfade plus faster preloading on tap',
+			'Tracker cards tidied up: mood entry is now part of the tracker section, uniform progress bar (in the mood color), more subtle quick-action buttons',
+		],
+	},
+	{
 		version: '0.7.2',
 		de: [
 			'Tracker-Erinnerungen manuell abhaken — bleibt jetzt gespeichert, auch nach App-Wechsel oder Neustart',

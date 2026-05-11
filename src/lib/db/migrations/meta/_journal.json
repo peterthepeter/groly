@@ -232,6 +232,20 @@
       "when": 1778352708680,
       "tag": "0032_supplement_reminder_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1778500000000,
+      "tag": "0033_mood_tracker",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1778500100000,
+      "tag": "0034_mood_reminders",
+      "breakpoints": true
     }
   ]
 }

@@ -106,15 +106,15 @@
 				<button
 					onclick={() => addWater(ml)}
 					disabled={saving}
-					class="px-2.5 py-0.5 rounded-xl text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity"
-					style="background-color: var(--color-surface-container); color: #60A5FA"
+					class="px-2 py-0.5 text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity"
+					style="color: #60A5FA"
 				>+{ml}</button>
 			{/each}
 			<button
 				onclick={() => { showCustomInput = !showCustomInput; customAmount = ''; }}
 				disabled={saving}
-				class="px-2.5 py-0.5 rounded-xl text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity"
-				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+				class="px-2 py-0.5 text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity"
+				style="color: var(--color-on-surface-variant)"
 			>{t.water_custom}</button>
 		</div>
 		{#if logs.length > 0}

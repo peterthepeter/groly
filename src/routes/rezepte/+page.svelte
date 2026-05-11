@@ -316,7 +316,7 @@
 
 	<!-- Recipes: bottom-anchored scroll (list builds upward), top-anchored when searching -->
 	{:else}
-		<div class="flex-1 min-h-0 flex flex-col overflow-y-auto px-4" class:justify-end={!searchQuery.trim() || !keyboardOpen} style="padding-bottom: 4.5rem">
+		<div class="flex-1 min-h-0 flex flex-col overflow-y-auto px-4" class:justify-end={!searchQuery.trim() || !keyboardOpen} style="padding-bottom: 5.5rem">
 
 		<!-- Pending Shares -->
 		{#each pendingShares as share (share.id)}
@@ -522,8 +522,8 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => addSheetOpen = false}></div>
-	<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-4 pt-3"
-	     style="background-color: var(--color-surface-low); bottom: 0">
+	<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pt-3"
+	     style="background-color: var(--color-surface-low); bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
 		<div class="flex justify-center mb-2">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>

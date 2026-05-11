@@ -7,12 +7,14 @@
 		open = $bindable<boolean>(false),
 		drinks,
 		onlogged,
-		preselectedDrink = null
+		preselectedDrink = null,
+		logDate = null as string | null
 	}: {
 		open: boolean;
 		drinks: CaffeineDrink[];
 		onlogged: () => void;
 		preselectedDrink?: CaffeineDrink | null;
+		logDate?: string | null;
 	} = $props();
 
 	let selected = $state<CaffeineDrink | null>(null);
@@ -70,7 +72,7 @@
 					caffeineMg: scaledCaffeine,
 					loggedAt: (() => {
 						const [hh, mm] = logTime.split(':').map(Number);
-						const d = new Date();
+						const d = new Date((logDate ?? new Date().toISOString().slice(0, 10)) + 'T00:00:00');
 						d.setHours(hh, mm, 0, 0);
 						return d.getTime();
 					})()

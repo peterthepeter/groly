@@ -16,6 +16,9 @@
 	import CaffeineDrinkPickerSheet from '$lib/components/supplements/CaffeineDrinkPickerSheet.svelte';
 	import MeditationTrackerCard from '$lib/components/supplements/MeditationTrackerCard.svelte';
 	import MeditationTimerSheet from '$lib/components/supplements/MeditationTimerSheet.svelte';
+	import MoodTrackerCard from '$lib/components/supplements/MoodTrackerCard.svelte';
+	import MoodHistoryView from '$lib/components/supplements/MoodHistoryView.svelte';
+	import MoodEntrySheet from '$lib/components/supplements/MoodEntrySheet.svelte';
 	import type { WaterLog, CaffeineLog, CaffeineDrink, MeditationLog } from '$lib/db/schema';
 
 	let { data } = $props();
@@ -41,6 +44,9 @@
 	let meditationLogsToday = $state<MeditationLog[]>([]);
 	let meditationTimerOpen = $state(false);
 	let meditationTimerDuration = $state(10);
+	type MoodEntry = { date: string; mood: number; activities: string[]; note: string | null };
+	let todayMoodEntry = $state<MoodEntry | null>(null);
+	let moodEntryOpen = $state(false);
 
 	function startMeditation(minutes: number) {
 		meditationTimerDuration = minutes;
@@ -49,7 +55,8 @@
 	const hasVisibleTrackerCards = $derived(
 		(userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday)) ||
 		(userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0) ||
-		(userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0)
+		(userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0) ||
+		(userSettings.moodTrackerEnabled && todayMoodEntry !== null)
 	);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 	const visibleCaffeineDrinks = $derived(
@@ -406,6 +413,25 @@
 		} catch {}
 	}
 
+	async function loadTodayMoodEntry() {
+		if (!userSettings.moodTrackerEnabled) { todayMoodEntry = null; return; }
+		try {
+			const dateStr = toLocalDateStr(new Date());
+			const res = await fetch(`/api/mood-logs?from=${dateStr}&to=${dateStr}`);
+			if (res.ok) {
+				const data = await res.json();
+				const log = (data.logs ?? [])[0];
+				if (log) {
+					let acts: string[] = [];
+					try { acts = log.activities ? JSON.parse(log.activities) : []; } catch {}
+					todayMoodEntry = { date: log.date, mood: log.mood, activities: acts, note: log.note };
+				} else {
+					todayMoodEntry = null;
+				}
+			}
+		} catch { todayMoodEntry = null; }
+	}
+
 	async function loadHistoryMeditation() {
 		if (!userSettings.meditationTrackerEnabled) {
 			historyMeditationLogs = [];
@@ -525,6 +551,14 @@
 		if (activeTab === 'history') loadHistory();
 	});
 
+	// Push a same-URL history entry when the sheet opens so iOS back-swipe
+	// shows this page (not the previous route) during the gesture animation.
+	$effect(() => {
+		if (quickLogOpen) {
+			history.pushState(null, '', location.href);
+		}
+	});
+
 	beforeNavigate(({ type, cancel }) => {
 		if (type === 'popstate') {
 			// Back/swipe: close one sheet at a time instead of navigating
@@ -557,14 +591,19 @@
 		else meditationLogsToday = [];
 	});
 
+	$effect(() => {
+		if (userSettings.moodTrackerEnabled) void loadTodayMoodEntry();
+		else todayMoodEntry = null;
+	});
+
 	onMount(() => {
-		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs()]).then(() => { loading = false; });
+		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]).then(() => { loading = false; });
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
 
 		function onVisibilityChange() {
 			if (document.visibilityState === 'visible') {
 				now = new Date();
-				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]);
+				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]);
 			}
 		}
 		document.addEventListener('visibilitychange', onVisibilityChange);
@@ -699,14 +738,14 @@
 			<!-- Tab switcher -->
 			<div class="flex gap-1 p-1">
 				<button
-					onclick={() => goto($page.url.pathname, { noScroll: true, keepFocus: true })}
+					onclick={() => goto($page.url.pathname, { noScroll: true, keepFocus: true, replaceState: true })}
 					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
 					style="background-color: {activeTab === 'today' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'today' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>
 					{t.supplement_tab_today}
 				</button>
 				<button
-					onclick={() => goto(`${$page.url.pathname}?tab=history`, { noScroll: true, keepFocus: true })}
+					onclick={() => goto(`${$page.url.pathname}?tab=history`, { noScroll: true, keepFocus: true, replaceState: true })}
 					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
 					style="background-color: {activeTab === 'history' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'history' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>
@@ -801,35 +840,36 @@
 					<polyline points="15 18 9 12 15 6"/>
 				</svg>
 			</button>
-			<span class="text-sm font-semibold" style="color: var(--color-on-surface)">{formatPeriodLabel()}</span>
-			<div class="flex items-center gap-1">
-				<button
-					onclick={() => navigateHistory(1)}
-					aria-label="Nächster Zeitraum"
-					class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
-					style="background-color: var(--color-surface-container)"
-				>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				<button
-					onclick={() => addLogSheet = { date: historyDate }}
-					aria-label="Eintrag hinzufügen"
-					class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
-					style="background-color: var(--color-surface-container)"
-				>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-						<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-					</svg>
-				</button>
-			</div>
+			{#if historyPeriod === 'day'}
+				<div style="position:relative; display:inline-block">
+					<span class="text-sm font-semibold select-none" style="color:var(--color-on-surface); pointer-events:none">{formatPeriodLabel()}</span>
+					<input
+						type="date"
+						bind:value={historyDate}
+						max={toLocalDateStr(new Date())}
+						style="position:absolute; inset:0; width:100%; height:100%; opacity:0.001; cursor:pointer; border:none; padding:0; background:transparent"
+						aria-label="Datum wählen"
+					/>
+				</div>
+			{:else}
+				<span class="text-sm font-semibold" style="color:var(--color-on-surface)">{formatPeriodLabel()}</span>
+			{/if}
+			<button
+				onclick={() => navigateHistory(1)}
+				aria-label="Nächster Zeitraum"
+				class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
+				style="background-color: var(--color-surface-container)"
+			>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<polyline points="9 18 15 12 9 6"/>
+				</svg>
+			</button>
 		</div>
 	{/if}
 
 	<div bind:this={scrollContainer}
 	     class="flex-1 min-h-0 overflow-y-auto {activeTab === 'today' ? 'flex flex-col justify-end' : ''}"
-	     style="padding-bottom: 4.5rem">
+	     style="padding-bottom: 5.5rem">
 
 	{#if loading}
 		<div class="flex justify-center py-16">
@@ -837,56 +877,13 @@
 		</div>
 	{:else if activeTab === 'today'}
 		<!-- TODAY TAB -->
-		{#if supplements.length === 0 && !userSettings.waterTrackerEnabled && !userSettings.caffeineTrackerEnabled}
-			<div class="flex flex-col items-center text-center px-4 py-16">
-				<div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-				     style="background-color: var(--color-surface-container)">
-					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
-						<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
-					</svg>
-				</div>
-				<p class="text-sm font-semibold mb-1" style="color: var(--color-on-surface)">{t.supplement_empty}</p>
-				<p class="text-xs mb-4" style="color: var(--color-on-surface-variant)">{t.supplement_empty_hint}</p>
-				<button
-					onclick={() => goto('/supplements/verwalten')}
-					class="px-6 py-3 rounded-2xl text-sm font-semibold active:opacity-80 transition-opacity mb-3"
-					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-				>
-					{t.supplement_manage}
-				</button>
-				<p class="text-xs mb-3 max-w-[260px]" style="color: var(--color-on-surface-variant)">{t.supplement_empty_tracker_hint}</p>
-				<button
-					onclick={() => goto('/einstellungen')}
-					class="text-xs active:opacity-60 transition-opacity"
-					style="color: var(--color-primary)"
-				>{t.disable_hint_supplements}</button>
-			</div>
-		{:else if activeSupplements.length === 0 && !userSettings.waterTrackerEnabled && !userSettings.caffeineTrackerEnabled}
-			<div class="flex flex-col items-center text-center px-4 py-16">
-				<div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-				     style="background-color: var(--color-surface-container)">
-					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
-						<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
-					</svg>
-				</div>
-				<p class="text-sm font-semibold mb-1" style="color: var(--color-on-surface)">{t.supplement_empty}</p>
-				<p class="text-xs mb-4" style="color: var(--color-on-surface-variant)">{t.supplement_today_none_active}</p>
-				<button
-					onclick={() => goto('/supplements/verwalten')}
-					class="px-6 py-3 rounded-2xl text-sm font-semibold active:opacity-80"
-					style="background-color: var(--color-surface-container); color: var(--color-primary)"
-				>
-					{t.supplement_manage}
-				</button>
-			</div>
-		{:else if loggedTodaySupplements.length === 0 && !hasVisibleTrackerCards}
+		{#if loggedTodaySupplements.length === 0 && !hasVisibleTrackerCards}
 			<div class="px-4 py-16 text-center">
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_today_empty}</p>
 			</div>
 		{:else}
 			{@const visibleTrackers = [
+				userSettings.moodTrackerEnabled && todayMoodEntry !== null ? 'mood' : null,
 				userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday) ? 'water' : null,
 				userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0 ? 'caffeine' : null,
 				userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0 ? 'meditation' : null
@@ -1001,6 +998,14 @@
 			{#if visibleTrackers.length > 0}
 				<p class="text-xs font-semibold tracking-widest px-1" style="color: var(--color-primary)">Tracker</p>
 				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+						{#if visibleTrackers.includes('mood') && todayMoodEntry !== null}
+							<MoodTrackerCard
+								todayEntry={todayMoodEntry}
+								todayDate={toLocalDateStr(new Date())}
+								onreload={loadTodayMoodEntry}
+								embedded={true}
+							/>
+						{/if}
 						{#if visibleTrackers.includes('water')}
 							<div>
 								<WaterTrackerCard
@@ -1045,11 +1050,16 @@
 				<div class="flex justify-center py-8">
 					<div class="w-6 h-6 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
 				</div>
-			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0 && historyWaterTotal === 0 && historyCaffeineTotalMg === 0}
+			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0 && historyWaterTotal === 0 && historyCaffeineTotalMg === 0 && !userSettings.moodTrackerEnabled}
 				<div class="py-12 text-center">
 					<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_stats_empty}</p>
 				</div>
+			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0 && historyWaterTotal === 0 && historyCaffeineTotalMg === 0 && userSettings.moodTrackerEnabled}
+				<MoodHistoryView onreload={loadTodayMoodEntry} fixedView={historyPeriod === 'day' ? 'today' : historyPeriod} parentDate={historyDate} />
 			{:else}
+				{#if userSettings.moodTrackerEnabled}
+					<MoodHistoryView onreload={loadTodayMoodEntry} fixedView={historyPeriod === 'day' ? 'today' : historyPeriod} parentDate={historyDate} />
+				{/if}
 				<!-- Supplements taken -->
 				{#if supplementStatEntries.length > 0}
 					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
@@ -1419,22 +1429,36 @@
 	meditationEnabled={userSettings.meditationTrackerEnabled}
 	meditationTotalMinutes={Math.floor(meditationLogsToday.reduce((s, l) => s + l.durationSeconds, 0) / 60)}
 	meditationGoalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
+	moodEnabled={userSettings.moodTrackerEnabled}
+	moodHasEntry={todayMoodEntry !== null}
 	onstartmeditation={startMeditation}
-	onlogged={() => Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs()])}
+	onrateMood={() => { quickLogOpen = false; moodEntryOpen = true; }}
+	onlogged={() => { Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]); if (activeTab === 'history') loadHistory(); }}
 	onCaffeineShortcutClick={handleCaffeineShortcut}
+	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
+/>
+
+<MoodEntrySheet
+	bind:open={moodEntryOpen}
+	date={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
+	initialMood={null}
+	initialActivities={[]}
+	initialNote={''}
+	onsaved={() => { moodEntryOpen = false; loadTodayMoodEntry(); if (activeTab === 'history') loadHistory(); }}
 />
 
 <MeditationTimerSheet
 	bind:open={meditationTimerOpen}
 	durationMinutes={meditationTimerDuration}
-	onsaved={loadMeditationLogs}
+	onsaved={() => { loadMeditationLogs(); if (activeTab === 'history') loadHistory(); }}
 />
 
 <CaffeineDrinkPickerSheet
 	bind:open={caffeinePickerOpen}
 	drinks={visibleCaffeineDrinks}
 	preselectedDrink={caffeinePickerPreselect}
-	onlogged={() => Promise.all([loadTodayLogs(), loadCaffeineLogs()])}
+	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
+	onlogged={() => { Promise.all([loadTodayLogs(), loadCaffeineLogs()]); if (activeTab === 'history') loadHistory(); }}
 />
 
 <AppBottomNav

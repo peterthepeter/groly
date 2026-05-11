@@ -140,6 +140,13 @@
   100% { opacity: 0; }
 }
 
+/* View Transitions API — snappy crossfade between pages */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 @layer utilities {
   .pt-safe-top {
     padding-top: env(safe-area-inset-top);

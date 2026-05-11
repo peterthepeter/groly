@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { tick, onMount } from 'svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
+	import { getListIcon } from '$lib/listIcons';
 
 	type RecipeOption = { id: string; title: string; imageUrl: string | null; servings: number };
 	type PlanEntry = {
@@ -453,17 +454,17 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				id={isToday ? 'meal-plan-today' : undefined}
-				class="flex gap-3 px-4 py-2"
+				class="flex gap-1 px-3 py-1.5"
 			>
 				<!-- Left: day label + date -->
 				<div class="flex-shrink-0 w-10 text-center pt-0.5">
-					<div class="text-[10px] font-bold uppercase tracking-wider leading-tight" style="color: {isToday ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">{dayLabels[i]}</div>
-					<div class="text-[11px] leading-tight mt-0.5" style="color: {isToday ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}; opacity: {isToday ? 0.85 : 0.6}">{formatDayDate(day)}</div>
+					<div class="text-[11px] font-bold uppercase tracking-wider leading-tight whitespace-nowrap" style="color: {isToday ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">{dayLabels[i]}</div>
+					<div class="text-[11px] leading-tight mt-0.5 whitespace-nowrap" style="color: {isToday ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}; opacity: {isToday ? 0.85 : 0.6}">{formatDayDate(day)}</div>
 				</div>
 
 				<!-- Center: meals always visible, stacked -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<div class="flex-1 min-w-0 flex flex-col gap-2">
+				<div class="flex-1 min-w-0 flex flex-col gap-1.5">
 					{#if dayEntries.length === 0}
 						<div
 							onclick={() => openPicker(date)}
@@ -527,7 +528,7 @@
 
 								<!-- Right side: servings + actions -->
 								<!-- svelte-ignore a11y_click_events_have_key_events -->
-								<div class="flex items-center gap-1.5 flex-shrink-0" onclick={(e) => e.stopPropagation()}>
+								<div class="flex items-center gap-1 flex-shrink-0" onclick={(e) => e.stopPropagation()}>
 									{#if editMode}
 										<button
 											onclick={() => updateServings(entry, -1)}
@@ -555,13 +556,13 @@
 											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 										</button>
 									{:else}
-										<span class="text-xs font-semibold px-1.5" style="color: var(--color-on-surface-variant)">{entry.servings ?? (entry.recipeServings ?? 2)}P</span>
+										<span class="text-[13px] font-semibold" style="color: var(--color-on-surface-variant)">{entry.servings ?? (entry.recipeServings ?? 2)}P</span>
 										<button
 											onclick={() => openListSheet([entry.date])}
 											aria-label={t.meal_plan_add_to_list}
-											class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60"
+											class="w-7 h-7 flex items-center justify-center active:opacity-60"
 										>
-											<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 												<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
 												<line x1="3" y1="6" x2="21" y2="6"/>
 												<path d="M16 10a4 4 0 0 1-8 0"/>
@@ -578,10 +579,10 @@
 				<button
 					onclick={() => openPicker(date)}
 					aria-label={currentLang() === 'en' ? 'Add meal' : 'Mahlzeit hinzufügen'}
-					class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl active:opacity-60 self-start mt-0.5"
+					class="flex-shrink-0 w-7 h-7 flex items-center justify-center active:opacity-60 self-start mt-0.5"
 					style="color: var(--color-primary)"
 				>
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
 						<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
 					</svg>
 				</button>
@@ -774,81 +775,93 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => { if (!listSheetAdding) listSheetOpen = false; }}></div>
-	<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 pb-8 flex flex-col"
-	     style="background-color: var(--color-surface-low); max-height: 70dvh">
+	<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 flex flex-col"
+	     style="background-color: var(--color-surface-low); max-height: 70dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
 		<div class="flex justify-center mb-3 flex-shrink-0">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>
 		<h2 class="px-4 text-base font-bold mb-3 flex-shrink-0" style="color: var(--color-on-surface)">{t.meal_plan_add_to_list}</h2>
-		<div class="flex-1 overflow-y-auto px-4 space-y-2 min-h-0">
+		<div class="flex-1 overflow-y-auto px-4 min-h-0">
 			{#if listSheetLoading}
 				<div class="flex justify-center py-8">
 					<div class="w-5 h-5 rounded-full border-2 animate-spin"
 					     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 				</div>
 			{:else}
-				{#if listSheetNewMode}
-					<div class="flex items-center gap-2 px-4 py-3 rounded-2xl"
-					     style="background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-container))">
-						<!-- svelte-ignore a11y_autofocus -->
-						<input
-							type="text"
-							bind:value={listSheetNewName}
-							onkeydown={(e) => { if (e.key === 'Enter') createNewListAndAdd(); if (e.key === 'Escape') listSheetNewMode = false; }}
-							class="flex-1 bg-transparent outline-none font-semibold"
-							style="color: var(--color-on-surface); font-size: 16px"
-							autofocus
-						/>
-						<button
-							onclick={createNewListAndAdd}
-							disabled={!listSheetNewName.trim() || listSheetAdding}
-							class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-40 active:opacity-70"
-							style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))"
-							aria-label="Erstellen"
-						>
-							{#if listSheetAdding}
-								<div class="w-4 h-4 rounded-full border-2 animate-spin" style="border-color: var(--color-on-primary); border-top-color: transparent"></div>
-							{:else}
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-							{/if}
-						</button>
-						<button
-							onclick={() => listSheetNewMode = false}
-							class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 active:opacity-70"
-							style="background-color: var(--color-surface-high)"
-							aria-label="Abbrechen"
-						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-						</button>
-					</div>
-				{:else}
-					<button
-						onclick={() => listSheetNewMode = true}
-						disabled={listSheetAdding}
-						class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl active:opacity-70 disabled:opacity-40 transition-opacity"
-						style="background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-container))"
-					>
-						<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-						     style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					{#if listSheetNewMode}
+						<div class="flex items-center gap-2 px-4"
+						     style="height: 56px; background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-container))">
+							<!-- svelte-ignore a11y_autofocus -->
+							<input
+								type="text"
+								bind:value={listSheetNewName}
+								onkeydown={(e) => { if (e.key === 'Enter') createNewListAndAdd(); if (e.key === 'Escape') listSheetNewMode = false; }}
+								class="flex-1 bg-transparent outline-none font-semibold"
+								style="color: var(--color-on-surface); font-size: 16px; border: none"
+								autofocus
+							/>
+							<button
+								onclick={createNewListAndAdd}
+								disabled={!listSheetNewName.trim() || listSheetAdding}
+								class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 disabled:opacity-40 active:opacity-70"
+								style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))"
+								aria-label="Erstellen"
+							>
+								{#if listSheetAdding}
+									<div class="w-4 h-4 rounded-full border-2 animate-spin" style="border-color: var(--color-on-primary); border-top-color: transparent"></div>
+								{:else}
+									<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+								{/if}
+							</button>
+							<button onclick={() => listSheetNewMode = false} aria-label="Abbrechen"
+							        class="w-8 h-8 flex items-center justify-center flex-shrink-0 active:opacity-70">
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round">
+									<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+								</svg>
+							</button>
 						</div>
-						<span class="text-sm font-semibold" style="color: var(--color-primary)">{currentLang() === 'en' ? 'New list' : 'Neue Liste'}</span>
-					</button>
-				{/if}
+					{:else}
+						<button
+							onclick={() => listSheetNewMode = true}
+							disabled={listSheetAdding}
+							class="w-full flex items-center gap-3 px-4 active:opacity-70 disabled:opacity-40 text-left"
+							style="height: 46px"
+						>
+							<div class="w-8 h-8 flex items-center justify-center flex-shrink-0">
+								<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round">
+									<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+								</svg>
+							</div>
+							<span class="text-sm font-semibold" style="color: var(--color-primary)">{currentLang() === 'en' ? 'New list' : 'Neue Liste'}</span>
+						</button>
+					{/if}
 
-				{#each listSheetLists as list (list.id)}
-					<button
-						onclick={() => addToList(list.id)}
-						disabled={listSheetAdding}
-						class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl active:opacity-70 disabled:opacity-40 transition-opacity text-left"
-						style="background-color: var(--color-surface-card)"
-					>
-						<span class="flex-1 text-sm font-medium" style="color: var(--color-on-surface)">{list.name}</span>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</button>
-				{/each}
+					{#each listSheetLists as list (list.id)}
+						{@const icon = getListIcon(list.iconId)}
+						<button
+							onclick={() => addToList(list.id)}
+							disabled={listSheetAdding}
+							class="w-full flex items-center gap-3 px-4 active:opacity-70 disabled:opacity-40 text-left"
+							style="height: 46px"
+						>
+							{#if icon}
+								<div class="w-8 h-8 flex items-center justify-center flex-shrink-0">
+									<svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+									     stroke="{icon.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										{@html icon.svgContent}
+									</svg>
+								</div>
+							{:else}
+								<div class="w-8 h-8 flex-shrink-0"></div>
+							{/if}
+							<span class="flex-1 text-sm font-medium truncate" style="color: var(--color-on-surface)">{list.name}</span>
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="9 18 15 12 9 6"/>
+							</svg>
+						</button>
+					{/each}
+				</div>
 			{/if}
 		</div>
 	</div>

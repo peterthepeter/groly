@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { bootstrapAdmin } from '$lib/auth';
 import { runMigrations, db, sqlite } from '$lib/db';
-import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users, mealPlanEntries, supplementLogs, supplementReminderSchedules, supplements, waterReminderSchedules, waterLogs, meditationReminderSchedules, meditationLogs } from '$lib/db/schema';
+import { appMeta, barcodeCache, items, itemHistory, sessions, pushSubscriptions, users, mealPlanEntries, supplementLogs, supplementReminderSchedules, supplements, waterReminderSchedules, waterLogs, meditationReminderSchedules, meditationLogs, moodReminderSchedules, moodLogs } from '$lib/db/schema';
 import { eq, lt, and, gte, sql } from 'drizzle-orm';
 import { LATEST_CHANGES } from '$lib/changelog';
 import { sendPushToUser } from '$lib/server/pushNotifications';
@@ -88,6 +88,45 @@ function bootstrapCaffeineTables() {
 			('cd-gruentee',           'Green Tea',      200,  30, 7, 0),
 			('cd-energy-drink',       'Energy Drink',   250,  80, 8, 0),
 			('cd-cola',               'Cola',           330,  35, 9, 0);
+	`);
+}
+
+function bootstrapMoodTables() {
+	sqlite.exec(`
+		CREATE TABLE IF NOT EXISTS mood_logs (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			date TEXT NOT NULL,
+			mood INTEGER NOT NULL,
+			activities TEXT,
+			note TEXT,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL
+		);
+		CREATE UNIQUE INDEX IF NOT EXISTS mood_logs_user_date_unique ON mood_logs(user_id, date);
+		CREATE INDEX IF NOT EXISTS mood_logs_user_id_idx ON mood_logs(user_id);
+		CREATE TABLE IF NOT EXISTS mood_custom_tags (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			key TEXT NOT NULL,
+			label TEXT NOT NULL,
+			category TEXT NOT NULL,
+			emoji TEXT,
+			sort_order INTEGER NOT NULL DEFAULT 0,
+			active INTEGER NOT NULL DEFAULT 1,
+			created_at INTEGER NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS mood_custom_tags_user_id_idx ON mood_custom_tags(user_id);
+		CREATE TABLE IF NOT EXISTS mood_reminder_schedules (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			days TEXT NOT NULL,
+			time TEXT NOT NULL,
+			only_if_not_rated INTEGER NOT NULL DEFAULT 1,
+			active INTEGER NOT NULL DEFAULT 1,
+			created_at INTEGER NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS mood_reminder_schedules_user_id_idx ON mood_reminder_schedules(user_id);
 	`);
 }
 
@@ -313,6 +352,54 @@ async function checkMeditationReminders() {
 	);
 }
 
+async function checkMoodReminders() {
+	const now = new Date();
+	const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+	const todayDow = now.getDay(); // 0=So,1=Mo,...,6=Sa
+
+	const activeSchedules = db
+		.select({
+			id: moodReminderSchedules.id,
+			time: moodReminderSchedules.time,
+			days: moodReminderSchedules.days,
+			onlyIfNotRated: moodReminderSchedules.onlyIfNotRated,
+			userId: moodReminderSchedules.userId,
+			userSettings: users.settings
+		})
+		.from(moodReminderSchedules)
+		.innerJoin(users, eq(moodReminderSchedules.userId, users.id))
+		.where(eq(moodReminderSchedules.active, true))
+		.all();
+
+	const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+	await Promise.allSettled(
+		activeSchedules.map(async (s) => {
+			try {
+				if (s.time !== currentTime) return;
+				const days: number[] = JSON.parse(s.days);
+				if (!days.includes(todayDow)) return;
+				const settings = s.userSettings ? JSON.parse(s.userSettings) : {};
+				if (!settings?.moodTrackerEnabled) return;
+
+				if (s.onlyIfNotRated) {
+					const existing = db
+						.select({ id: moodLogs.id })
+						.from(moodLogs)
+						.where(and(eq(moodLogs.userId, s.userId), eq(moodLogs.date, todayStr)))
+						.get();
+					if (existing) return;
+				}
+
+				const lang = settings?.lang === 'en' ? 'en' : 'de';
+				const title = lang === 'en' ? 'How was your day?' : 'Wie war dein Tag?';
+				const body = lang === 'en' ? 'Rate your day in Groly' : 'Bewerte deinen Tag in Groly';
+				return sendPushToUser(s.userId, { title, body, url: '/supplements', tag: 'mood-reminder' });
+			} catch { /* skip invalid */ }
+		})
+	);
+}
+
 async function init() {
 	if (initialized) return;
 	initialized = true; // set synchronously before any await to prevent concurrent init
@@ -321,6 +408,7 @@ async function init() {
 	bootstrapAdmin();
 	migrateItemHistory();
 	bootstrapCaffeineTables();
+	bootstrapMoodTables();
 	await notifyOnNewVersion();
 	cleanupBarcodeCache();
 	cleanupOldData();
@@ -332,7 +420,8 @@ async function init() {
 			await Promise.allSettled([
 				checkSupplementReminders().catch(console.error),
 				checkWaterReminders().catch(console.error),
-				checkMeditationReminders().catch(console.error)
+				checkMeditationReminders().catch(console.error),
+				checkMoodReminders().catch(console.error)
 			]);
 			scheduleNextReminderCheck();
 		}, msUntilNextMinute);

@@ -10,13 +10,19 @@ function getAudio(filename: string): HTMLAudioElement {
 	return audio;
 }
 
-export async function playMeditationSound(filename: string, volumePercent: number) {
+export async function playMeditationSound(filename: string, volumePercent: number, awaitEnd = false) {
 	if (typeof window === 'undefined') return;
 	try {
 		const audio = getAudio(filename);
 		audio.volume = Math.max(0, Math.min(1, volumePercent / 100));
 		audio.currentTime = 0;
 		await audio.play();
+		if (awaitEnd) {
+			await new Promise<void>(resolve => {
+				if (audio.ended) { resolve(); return; }
+				audio.addEventListener('ended', () => resolve(), { once: true });
+			});
+		}
 	} catch { /* autoplay may be blocked; ignore */ }
 }
 

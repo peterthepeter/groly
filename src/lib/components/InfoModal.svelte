@@ -135,6 +135,11 @@
 					title: 'Meditation Timer',
 					text: 'Enable the Meditation tracker under Manage. Tap 5/10/15/20 min on the card to start a session. After an optional preparation phase (default 20 s) the main timer begins with a starting sound. The screen stays black with a Zen circle that gradually empties as time runs out. Tap the screen to end early — your elapsed time is saved. An ending sound plays when the timer completes. Choose start/end sounds and daily goal under Manage. Set a daily reminder via the bell icon.',
 					svg: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>`
+				},
+				{
+					title: 'Mood Journal',
+					text: 'Enable the Mood Journal under Manage. Each day, rate how you felt on a 5-point scale — from Very bad to Great. Add activity tags (Sport, Hobbies, Emotions, Social, Health, Work, Weather) and an optional free-text note. In the History tab, the Mood section shows a weekly view (7 circles) and a monthly calendar — tap any day to see details or add a missing entry for a past day. Tags you never use can be hidden via the gear icon in the entry sheet.',
+					svg: `<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>`
 				}
 			]
 		},
@@ -281,6 +286,11 @@
 					title: 'Meditationstimer',
 					text: 'Aktiviere den Meditationstracker unter Verwalten. Tippe auf 5/10/15/20 Min. auf der Karte, um eine Sitzung zu starten. Nach einer optionalen Vorbereitungsphase (Standard 20 s) beginnt der eigentliche Timer mit einem Start-Sound. Der Bildschirm bleibt schwarz mit einem Zen-Kreis, der sich nach und nach leert, je weniger Zeit übrig ist. Tippe auf den Bildschirm, um vorzeitig zu beenden – die abgesessene Zeit wird gespeichert. Am Ende ertönt ein End-Sound. Start-/End-Sound, Tagesziel und Vorbereitungszeit lassen sich unter Verwalten konfigurieren. Über das Glocken-Icon richtest du tägliche Erinnerungen ein.',
 					svg: `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>`
+				},
+				{
+					title: 'Stimmungstagebuch',
+					text: 'Aktiviere das Stimmungstagebuch unter Verwalten. Bewerte jeden Tag deine Stimmung auf einer 5-Stufen-Skala – von „Sehr schlecht" bis „Super". Füge Aktivitäts-Tags aus den Kategorien Sport, Hobbies, Emotionen, Soziales, Gesundheit, Arbeit und Wetter hinzu sowie eine optionale Freitext-Notiz. Im Verlauf-Tab zeigt der Stimmungsbereich eine Wochen- und Monatsansicht – tippe auf einen Tag, um Details zu sehen oder einen vergangenen Tag nachzutragen. Tags, die du nie nutzt, lassen sich über das Zahnrad-Icon im Eingabe-Sheet ausblenden.',
+					svg: `<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>`
 				}
 			]
 		},

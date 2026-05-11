@@ -5,7 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="theme-color" content="#121212" />
 		<link rel="icon" type="image/png" href="/icons/favicon-32.png" sizes="32x32" />
 		<link rel="icon" type="image/png" href="/icons/icon-192.png" sizes="192x192" />
@@ -29,7 +29,7 @@
 			if (e.touches.length > 1) e.preventDefault();
 		}, { passive: false });
 	</script>
-	<body data-sveltekit-preload-data="hover">
+	<body data-sveltekit-preload-data="tap">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

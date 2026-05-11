@@ -45,6 +45,8 @@ export type UserSettings = {
 	meditationStartSound?: string;
 	meditationEndSound?: string;
 	meditationVolume?: number;
+	moodTrackerEnabled?: boolean;
+	hiddenMoodTags?: string[];
 };
 
 export const DEFAULT_SETTINGS = {

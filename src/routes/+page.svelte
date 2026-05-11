@@ -498,7 +498,7 @@
 
 	<!-- Bottom-Anchored Content -->
 	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + {showInstallBanner ? '9' : '4'}rem); padding-bottom: 4.5rem">
+	     style="padding-top: calc(env(safe-area-inset-top) + {showInstallBanner ? '9' : '4'}rem); padding-bottom: 5.5rem">
 		{#if loading}
 			<div class="flex justify-center py-8">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"

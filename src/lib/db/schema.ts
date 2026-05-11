@@ -335,3 +335,43 @@ export type CaffeineLog = typeof caffeineLogs.$inferSelect;
 export type MeditationLog = typeof meditationLogs.$inferSelect;
 export type MeditationReminderSchedule = typeof meditationReminderSchedules.$inferSelect;
 export type SupplementReminderOverride = typeof supplementReminderOverrides.$inferSelect;
+
+export const moodLogs = sqliteTable('mood_logs', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	date: text('date').notNull(), // YYYY-MM-DD
+	mood: integer('mood').notNull(), // 1–5
+	activities: text('activities'), // JSON array of tag keys
+	note: text('note'),
+	createdAt: integer('created_at').notNull(),
+	updatedAt: integer('updated_at').notNull()
+}, (t) => [
+	index('mood_logs_user_id_idx').on(t.userId),
+	uniqueIndex('mood_logs_user_date_unique').on(t.userId, t.date)
+]);
+
+export const moodCustomTags = sqliteTable('mood_custom_tags', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	key: text('key').notNull(),
+	label: text('label').notNull(),
+	category: text('category').notNull(),
+	emoji: text('emoji'),
+	sortOrder: integer('sort_order').notNull().default(0),
+	active: integer('active', { mode: 'boolean' }).notNull().default(true),
+	createdAt: integer('created_at').notNull()
+}, (t) => [index('mood_custom_tags_user_id_idx').on(t.userId)]);
+
+export const moodReminderSchedules = sqliteTable('mood_reminder_schedules', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	days: text('days').notNull(), // JSON-Array "[1,2,3,4,5]" (0=So,1=Mo,...,6=Sa)
+	time: text('time').notNull(), // "HH:MM"
+	onlyIfNotRated: integer('only_if_not_rated', { mode: 'boolean' }).notNull().default(true),
+	active: integer('active', { mode: 'boolean' }).notNull().default(true),
+	createdAt: integer('created_at').notNull()
+}, (t) => [index('mood_reminder_schedules_user_id_idx').on(t.userId)]);
+
+export type MoodLog = typeof moodLogs.$inferSelect;
+export type MoodCustomTag = typeof moodCustomTags.$inferSelect;
+export type MoodReminderSchedule = typeof moodReminderSchedules.$inferSelect;

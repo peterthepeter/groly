@@ -1,7 +1,7 @@
 {
 	"name": "groly",
 	"private": true,
-	"version": "0.7.2",
+	"version": "0.7.3",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -36,6 +36,7 @@
 		"dexie": "^4.3.0",
 		"drizzle-orm": "^0.45.1",
 		"fflate": "^0.8.2",
+		"lucide-svelte": "^1.0.1",
 		"web-push": "^3.6.7",
 		"workbox-expiration": "^7.4.0",
 		"workbox-precaching": "^7.4.0",

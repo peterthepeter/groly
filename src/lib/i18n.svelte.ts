@@ -437,6 +437,9 @@ class TranslationProxy {
 	get meditation_reminder_time() { void _lang; return m.meditation_reminder_time(); }
 	get meditation_reminder_only_if_not_meditated() { void _lang; return m.meditation_reminder_only_if_not_meditated(); }
 	get meditation_start() { void _lang; return m.meditation_start(); }
+	get meditation_overtime_end() { void _lang; return m.meditation_overtime_end(); }
+	get meditation_overtime_add() { void _lang; return m.meditation_overtime_add(); }
+	get meditation_session_extended() { void _lang; return m.meditation_session_extended(); }
 	// meal plan
 	get meal_plan_tab() { void _lang; return m.meal_plan_tab(); }
 	get meal_plan_edit() { void _lang; return m.meal_plan_edit(); }
@@ -455,6 +458,95 @@ class TranslationProxy {
 	get meal_plan_no_recipe() { void _lang; return m.meal_plan_no_recipe(); }
 	get meal_plan_search_placeholder() { void _lang; return m.meal_plan_search_placeholder(); }
 	get meal_plan_no_results() { void _lang; return m.meal_plan_no_results(); }
+	// mood tracker
+	get mood_tracker_label() { void _lang; return m.mood_tracker_label(); }
+	get mood_entry_title() { void _lang; return m.mood_entry_title(); }
+	get mood_very_bad() { void _lang; return m.mood_very_bad(); }
+	get mood_bad() { void _lang; return m.mood_bad(); }
+	get mood_okay() { void _lang; return m.mood_okay(); }
+	get mood_good() { void _lang; return m.mood_good(); }
+	get mood_great() { void _lang; return m.mood_great(); }
+	get mood_activities_label() { void _lang; return m.mood_activities_label(); }
+	get mood_note_placeholder() { void _lang; return m.mood_note_placeholder(); }
+	get mood_save() { void _lang; return m.mood_save(); }
+	get mood_edit() { void _lang; return m.mood_edit(); }
+	get mood_delete() { void _lang; return m.mood_delete(); }
+	get mood_no_entry() { void _lang; return m.mood_no_entry(); }
+	get mood_week_view() { void _lang; return m.mood_week_view(); }
+	get mood_month_view() { void _lang; return m.mood_month_view(); }
+	get mood_toggle_label() { void _lang; return m.mood_toggle_label(); }
+	get mood_toggle_desc() { void _lang; return m.mood_toggle_desc(); }
+	get mood_disabled_hint() { void _lang; return m.mood_disabled_hint(); }
+	get mood_bewerten() { void _lang; return m.mood_bewerten(); }
+	get mood_summary_title() { void _lang; return m.mood_summary_title(); }
+	get mood_rate_for_date() { void _lang; return m.mood_rate_for_date(); }
+	get mood_today_rated() { void _lang; return m.mood_today_rated(); }
+	get mood_cat_sport() { void _lang; return m.mood_cat_sport(); }
+	get mood_cat_hobbies() { void _lang; return m.mood_cat_hobbies(); }
+	get mood_cat_emotions() { void _lang; return m.mood_cat_emotions(); }
+	get mood_cat_social() { void _lang; return m.mood_cat_social(); }
+	get mood_cat_health() { void _lang; return m.mood_cat_health(); }
+	get mood_cat_work() { void _lang; return m.mood_cat_work(); }
+	get mood_cat_weather() { void _lang; return m.mood_cat_weather(); }
+	get act_sport_general() { void _lang; return m.act_sport_general(); }
+	get act_running() { void _lang; return m.act_running(); }
+	get act_cycling() { void _lang; return m.act_cycling(); }
+	get act_climbing() { void _lang; return m.act_climbing(); }
+	get act_bouldering() { void _lang; return m.act_bouldering(); }
+	get act_yoga() { void _lang; return m.act_yoga(); }
+	get act_swimming() { void _lang; return m.act_swimming(); }
+	get act_gym() { void _lang; return m.act_gym(); }
+	get act_hiking() { void _lang; return m.act_hiking(); }
+	get act_stretching() { void _lang; return m.act_stretching(); }
+	get act_reading() { void _lang; return m.act_reading(); }
+	get act_music() { void _lang; return m.act_music(); }
+	get act_gaming() { void _lang; return m.act_gaming(); }
+	get act_movie() { void _lang; return m.act_movie(); }
+	get act_tv() { void _lang; return m.act_tv(); }
+	get act_drawing() { void _lang; return m.act_drawing(); }
+	get act_cooking() { void _lang; return m.act_cooking(); }
+	get act_photography() { void _lang; return m.act_photography(); }
+	get act_walk() { void _lang; return m.act_walk(); }
+	get act_happy() { void _lang; return m.act_happy(); }
+	get act_relaxed() { void _lang; return m.act_relaxed(); }
+	get act_excited() { void _lang; return m.act_excited(); }
+	get act_grateful() { void _lang; return m.act_grateful(); }
+	get act_proud() { void _lang; return m.act_proud(); }
+	get act_calm() { void _lang; return m.act_calm(); }
+	get act_hopeful() { void _lang; return m.act_hopeful(); }
+	get act_depressed() { void _lang; return m.act_depressed(); }
+	get act_lonely() { void _lang; return m.act_lonely(); }
+	get act_anxious() { void _lang; return m.act_anxious(); }
+	get act_sad() { void _lang; return m.act_sad(); }
+	get act_angry() { void _lang; return m.act_angry(); }
+	get act_stressed() { void _lang; return m.act_stressed(); }
+	get act_tired() { void _lang; return m.act_tired(); }
+	get act_bored() { void _lang; return m.act_bored(); }
+	get act_annoyed() { void _lang; return m.act_annoyed(); }
+	get act_pressured() { void _lang; return m.act_pressured(); }
+	get act_friends() { void _lang; return m.act_friends(); }
+	get act_family() { void _lang; return m.act_family(); }
+	get act_date() { void _lang; return m.act_date(); }
+	get act_party() { void _lang; return m.act_party(); }
+	get act_alone_time() { void _lang; return m.act_alone_time(); }
+	get act_good_sleep() { void _lang; return m.act_good_sleep(); }
+	get act_bad_sleep() { void _lang; return m.act_bad_sleep(); }
+	get act_healthy_eating() { void _lang; return m.act_healthy_eating(); }
+	get act_meditation() { void _lang; return m.act_meditation(); }
+	get act_doctor_visit() { void _lang; return m.act_doctor_visit(); }
+	get act_sick() { void _lang; return m.act_sick(); }
+	get act_outdoor() { void _lang; return m.act_outdoor(); }
+	get act_work_normal() { void _lang; return m.act_work_normal(); }
+	get act_end_on_time() { void _lang; return m.act_end_on_time(); }
+	get act_overtime() { void _lang; return m.act_overtime(); }
+	get act_work_from_home() { void _lang; return m.act_work_from_home(); }
+	get act_vacation() { void _lang; return m.act_vacation(); }
+	get act_sick_day() { void _lang; return m.act_sick_day(); }
+	get act_sunny() { void _lang; return m.act_sunny(); }
+	get act_rainy() { void _lang; return m.act_rainy(); }
+	get act_cloudy() { void _lang; return m.act_cloudy(); }
+	get mood_reminder_only_if_not_rated() { void _lang; return m.mood_reminder_only_if_not_rated(); }
+	get mood_reminder_bell_hint() { void _lang; return m.mood_reminder_bell_hint(); }
 }
 
 export const t = new TranslationProxy();

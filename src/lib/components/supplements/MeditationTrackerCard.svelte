@@ -108,7 +108,7 @@
 				<div class="flex items-center justify-between text-xs">
 					<span style="color: var(--color-on-surface-variant)">
 						<span style="color: #9F7AEA">{formatDurationShort(log.durationSeconds)}</span>
-						{t.supplement_log_at} {formatTime(log.loggedAt)}
+						{formatTime(log.loggedAt - log.durationSeconds * 1000)}–{formatTime(log.loggedAt)}
 					</span>
 					<div class="flex items-center gap-0.5 shrink-0">
 						<button

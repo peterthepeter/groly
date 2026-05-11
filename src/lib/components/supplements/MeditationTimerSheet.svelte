@@ -15,7 +15,7 @@
 		onsaved: () => void;
 	} = $props();
 
-	type Phase = 'prep' | 'meditation' | 'done';
+	type Phase = 'prep' | 'meditation' | 'overtime' | 'done';
 	let phase = $state<Phase>('prep');
 	let totalSeconds = $state(0);
 	let startedAt = $state(0);
@@ -26,6 +26,7 @@
 	let running = false;
 	let confirmStop = $state(false);
 	let savedFlash = $state(false);
+	let overtimeStartedAt = $state(0);
 
 	const CIRCLE_R = 130;
 	const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
@@ -33,6 +34,7 @@
 	const elapsedSeconds = $derived(Math.max(0, Math.min(totalSeconds, Math.floor((now - startedAt) / 1000))));
 	const progress = $derived(totalSeconds > 0 ? remainingSeconds / totalSeconds : 0);
 	const dashOffset = $derived(CIRCUMFERENCE * (1 - progress));
+	const overtimeSeconds = $derived(phase === 'overtime' ? Math.min(3600, Math.floor((now - overtimeStartedAt) / 1000)) : 0);
 
 	$effect(() => {
 		const isOpen = open;
@@ -55,7 +57,6 @@
 	}
 
 	function start() {
-		// Wake Lock first (still within user-gesture activation window)
 		acquireWakeLock();
 		preloadMeditationSounds([userSettings.meditationStartSound, userSettings.meditationEndSound]);
 
@@ -71,9 +72,7 @@
 	function onVisibility() {
 		if (typeof document === 'undefined') return;
 		if (document.visibilityState === 'visible' && (phase === 'prep' || phase === 'meditation')) {
-			// iOS releases the wake lock when the page becomes hidden — reacquire on resume
 			acquireWakeLock();
-			// Catch up: if endsAt passed during standby, fire onZero immediately
 			tick();
 		}
 	}
@@ -104,27 +103,53 @@
 		}
 	}
 
+	function tickOvertime() {
+		now = Date.now();
+		if (now - overtimeStartedAt >= 60 * 60 * 1000) {
+			if (intervalId) { clearInterval(intervalId); intervalId = null; }
+			doSaveAndClose(totalSeconds + 3600);
+		}
+	}
+
 	async function finish(naturalEnd: boolean) {
 		if (intervalId) { clearInterval(intervalId); intervalId = null; }
 		onZeroFn = null;
+
 		if (naturalEnd) {
-			playMeditationSound(userSettings.meditationEndSound, userSettings.meditationVolume ?? 70);
+			playMeditationSound(userSettings.meditationEndSound, userSettings.meditationVolume ?? 70, true);
+			overtimeStartedAt = Date.now();
+			phase = 'overtime';
+			intervalId = setInterval(tickOvertime, 250);
+			return;
 		}
-		if (phase === 'meditation') {
-			const seconds = naturalEnd ? totalSeconds : elapsedSeconds;
-			if (seconds >= 1) {
-				try {
-					await fetch('/api/meditation-logs', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ durationSeconds: seconds, loggedAt: Date.now() })
-					});
-					savedFlash = true;
-				} catch { /* offline: TODO queue mutation in v2 */ }
-			}
+
+		// Manual stop during meditation
+		await doSaveAndClose(elapsedSeconds);
+	}
+
+	async function endOvertime() {
+		if (intervalId) { clearInterval(intervalId); intervalId = null; }
+		await doSaveAndClose(totalSeconds);
+	}
+
+	async function addOvertime() {
+		if (intervalId) { clearInterval(intervalId); intervalId = null; }
+		await doSaveAndClose(totalSeconds + overtimeSeconds);
+	}
+
+	async function doSaveAndClose(seconds: number) {
+		if (seconds >= 1) {
+			try {
+				await fetch('/api/meditation-logs', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ durationSeconds: seconds, loggedAt: Date.now() })
+				});
+				savedFlash = true;
+			} catch { /* offline */ }
 		}
 		phase = 'done';
-		await new Promise(r => setTimeout(r, 1500));
+		await new Promise(r => setTimeout(r, 1200));
 		close();
 	}
 
@@ -165,7 +190,7 @@
 {#if open}
 	<div class="fixed inset-0 z-[60] flex items-center justify-center" style="background-color: #000">
 
-		<!-- Top: Close button (during prep, otherwise tap-to-stop) -->
+		<!-- Close button during prep -->
 		{#if phase === 'prep'}
 			<button
 				onclick={requestStop}
@@ -179,7 +204,7 @@
 			</button>
 		{/if}
 
-		<!-- Tap area for stop confirmation during meditation -->
+		<!-- Tap area for stop confirmation during meditation only -->
 		{#if phase === 'meditation' && !confirmStop}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -215,6 +240,51 @@
 			</div>
 		{/if}
 
+		<!-- Overtime phase -->
+		{#if phase === 'overtime'}
+			<div class="flex flex-col items-center gap-6 px-8 w-full">
+				<!-- Original time, full circle -->
+				<div class="relative flex items-center justify-center">
+					<svg width="260" height="260" viewBox="-130 -130 260 260">
+						<circle cx="0" cy="0" r={CIRCLE_R} fill="none" stroke="rgba(159,122,234,0.15)" stroke-width="2"/>
+						<circle
+							cx="0" cy="0" r={CIRCLE_R}
+							fill="none" stroke="#9F7AEA" stroke-width="3"
+							stroke-linecap="round"
+							stroke-dasharray={CIRCUMFERENCE}
+							stroke-dashoffset={0}
+							transform="rotate(-90)"
+						/>
+					</svg>
+					<div class="absolute text-5xl font-light tabular-nums" style="color: rgba(255,255,255,0.95)">
+						{formatTime(totalSeconds)}
+					</div>
+				</div>
+
+				<!-- Overtime counter + buttons -->
+				<div class="flex items-center gap-3 w-full">
+					<!-- End button -->
+					<button
+						onclick={endOvertime}
+						class="flex-1 py-3.5 rounded-2xl text-sm font-semibold active:opacity-80"
+						style="background-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7)"
+					>
+						{t.meditation_overtime_end}
+					</button>
+
+					<!-- Add overtime button with live timer -->
+					<button
+						onclick={addOvertime}
+						class="flex-1 py-3.5 rounded-2xl text-sm font-semibold active:opacity-80 flex items-center justify-center gap-2"
+						style="background: linear-gradient(135deg, #9F7AEA, #7C5CBF); color: #fff"
+					>
+						<span class="tabular-nums font-bold">{formatTime(overtimeSeconds)}</span>
+						<span>{t.meditation_overtime_add}</span>
+					</button>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Done flash -->
 		{#if phase === 'done'}
 			<div class="flex flex-col items-center gap-3">
@@ -225,7 +295,7 @@
 			</div>
 		{/if}
 
-		<!-- Stop confirmation -->
+		<!-- Stop confirmation (only during meditation) -->
 		{#if confirmStop}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->

@@ -4,18 +4,30 @@
 	import { initLanguage, currentLang } from '$lib/i18n.svelte';
 	import { dispatch } from '$lib/sseStore.svelte';
 	import { initUpdateDetection, checkForUpdate } from '$lib/stores/pwa.svelte';
-	import { afterNavigate } from '$app/navigation';
+	import { afterNavigate, onNavigate } from '$app/navigation';
 	import WhatsNewModal from '$lib/components/WhatsNewModal.svelte';
 	import ShortcutMenu from '$lib/components/ShortcutMenu.svelte';
 	import { shortcuts, shortcutMenu } from '$lib/shortcuts.svelte';
 	import { LATEST_CHANGES } from '$lib/changelog';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { browser } from '$app/environment';
+	import { userSettings, seedSettings } from '$lib/userSettings.svelte';
 
 	let whatsNewOpen = $state(false);
 
 	let { data, children } = $props();
 
 	afterNavigate(() => { checkForUpdate(); shortcutMenu.hide(); });
+
+	onNavigate((navigation) => {
+		if (typeof document === 'undefined' || !('startViewTransition' in document)) return;
+		return new Promise((resolve) => {
+			(document as Document & { startViewTransition: (cb: () => Promise<void>) => unknown })
+				.startViewTransition(async () => {
+					resolve();
+					await navigation.complete;
+				});
+		});
+	});
 
 	function applyTheme(theme: 'system' | 'light' | 'dark') {
 		if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
@@ -26,6 +38,11 @@
 	$effect(() => { applyTheme(userSettings.theme); });
 
 	onMount(() => {
+		// Seed settings from SSR data only when localStorage has no cached settings (incognito / first visit).
+		if (!localStorage.getItem('groly_settings') && data.settings && Object.keys(data.settings as object).length > 0) {
+			seedSettings(data.settings);
+		}
+
 		initLanguage();
 		initUpdateDetection();
 

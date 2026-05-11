@@ -91,8 +91,8 @@
 		<div class="flex gap-1 flex-1 justify-end">
 			<button
 				onclick={() => pickerOpen = true}
-				class="px-2.5 py-0.5 rounded-xl text-xs font-semibold active:opacity-70 transition-opacity"
-				style="background-color: var(--color-surface-container); color: #C8956C"
+				class="px-2 py-0.5 text-xs font-semibold active:opacity-70 transition-opacity"
+				style="color: #C8956C"
 			>+ {t.caffeine_add}</button>
 		</div>
 		{#if logs.length > 0}

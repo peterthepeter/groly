@@ -15,6 +15,7 @@
 	import CaffeineTrackerEditSheet from '$lib/components/supplements/CaffeineTrackerEditSheet.svelte';
 	import MeditationTrackerEditSheet from '$lib/components/supplements/MeditationTrackerEditSheet.svelte';
 	import MeditationReminderSheet from '$lib/components/supplements/MeditationReminderSheet.svelte';
+	import MoodReminderSheet from '$lib/components/supplements/MoodReminderSheet.svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
 
 	let { data } = $props();
@@ -68,7 +69,9 @@
 	let caffeineEditOpen = $state(false);
 	let meditationEditOpen = $state(false);
 	let meditationReminderOpen = $state(false);
+	let moodReminderOpen = $state(false);
 	let waterHasReminders = $state(false);
+	let moodHasReminders = $state(false);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 
 	beforeNavigate(({ type, cancel }) => {
@@ -89,12 +92,21 @@
 		return s.brand ? `${s.brand} ${s.name}` : s.name;
 	}
 
+	$effect(() => {
+		if (!moodReminderOpen) {
+			fetch('/api/mood-reminders').then(r => r.ok ? r.json() : null).then(d => {
+				if (d) moodHasReminders = (d.schedules?.length ?? 0) > 0;
+			});
+		}
+	});
+
 	async function load() {
-		const [suppRes, remRes, waterRemRes, caffeineRes] = await Promise.all([
+		const [suppRes, remRes, waterRemRes, caffeineRes, moodRemRes] = await Promise.all([
 			fetch('/api/supplements'),
 			fetch('/api/supplement-reminders'),
 			fetch('/api/water-reminders'),
-			fetch('/api/caffeine-drinks')
+			fetch('/api/caffeine-drinks'),
+			fetch('/api/mood-reminders')
 		]);
 		if (suppRes.ok) {
 			const data = await suppRes.json();
@@ -111,6 +123,10 @@
 		if (caffeineRes.ok) {
 			const caffeineData = await caffeineRes.json();
 			caffeineDrinks = caffeineData.drinks ?? [];
+		}
+		if (moodRemRes.ok) {
+			const data = await moodRemRes.json();
+			moodHasReminders = (data.schedules?.length ?? 0) > 0;
 		}
 		loading = false;
 	}
@@ -330,7 +346,7 @@
 	{/if}
 
 	<div class="flex-1 min-h-0 flex flex-col overflow-y-auto justify-end"
-	     style="padding-bottom: 4.5rem">
+	     style="padding-bottom: 5.5rem">
 
 	{#if loading}
 		<div class="flex justify-center py-16">
@@ -490,6 +506,38 @@
 						</svg>
 					</button>
 				</div>
+				<!-- Mood -->
+				<div class="px-3 py-2 flex items-center gap-3{!userSettings.moodTrackerEnabled ? ' opacity-50' : ''}">
+					<button
+						onclick={() => userSettings.moodTrackerEnabled = !userSettings.moodTrackerEnabled}
+						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+						style="background-color: {userSettings.moodTrackerEnabled ? '#F472B6' : 'var(--color-surface-container)'}"
+						aria-label={t.mood_toggle_label}
+					>
+						{#if userSettings.moodTrackerEnabled}
+							<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+						{/if}
+					</button>
+					<div class="flex-1 min-w-0">
+						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
+						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">
+							{userSettings.moodTrackerEnabled ? t.mood_toggle_desc : t.mood_disabled_hint}
+						</p>
+					</div>
+					{#if userSettings.moodTrackerEnabled}
+						<button
+							onclick={() => moodReminderOpen = true}
+							class="shrink-0 p-2 rounded-xl active:opacity-60"
+							aria-label={t.mood_reminder_bell_hint}
+							style="color: {moodHasReminders ? '#F472B6' : 'var(--color-on-surface-variant)'}"
+						>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+								<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+							</svg>
+						</button>
+					{/if}
+				</div>
 				<!-- Caffeine -->
 				<div class="px-3 py-2 flex items-center gap-3{!userSettings.caffeineTrackerEnabled ? ' opacity-50' : ''}">
 					<button
@@ -581,5 +629,6 @@
 <CaffeineTrackerEditSheet bind:open={caffeineEditOpen} />
 <MeditationTrackerEditSheet bind:open={meditationEditOpen} />
 <MeditationReminderSheet bind:open={meditationReminderOpen} />
+<MoodReminderSheet bind:open={moodReminderOpen} />
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />

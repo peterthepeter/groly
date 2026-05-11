@@ -79,20 +79,22 @@ let _showSupplementTracker = $state<boolean>(cache.showSupplementTracker ?? true
 let _showRecipes = $state<boolean>(cache.showRecipes ?? true);
 let _theme = $state<'system' | 'light' | 'dark'>(cache.theme ?? 'system');
 let _supplementSortOrder = $state<'az' | 'za' | 'freq'>(cache.supplementSortOrder ?? 'az');
-let _waterTrackerEnabled = $state<boolean>(cache.waterTrackerEnabled ?? false);
+let _waterTrackerEnabled = $state<boolean>(cache.waterTrackerEnabled ?? true);
 let _waterGoalMl = $state<number>(cache.waterGoalMl ?? 2000);
 let _waterPresets = $state<[number, number]>(cache.waterPresets ?? [100, 200]);
-let _caffeineTrackerEnabled = $state<boolean>(cache.caffeineTrackerEnabled ?? false);
+let _caffeineTrackerEnabled = $state<boolean>(cache.caffeineTrackerEnabled ?? true);
 let _caffeineLimitMg = $state<number>(cache.caffeineLimitMg ?? 400);
 let _caffeineHiddenDrinks = $state<string[]>(cache.caffeineHiddenDrinks ?? []);
 let _caffeineCustomAmounts = $state<Record<string, number>>(cache.caffeineCustomAmounts ?? {});
-let _meditationTrackerEnabled = $state<boolean>(cache.meditationTrackerEnabled ?? false);
+let _meditationTrackerEnabled = $state<boolean>(cache.meditationTrackerEnabled ?? true);
 let _meditationDailyGoalMinutes = $state<number>(cache.meditationDailyGoalMinutes ?? 15);
 let _meditationDefaultDurationMinutes = $state<number>(cache.meditationDefaultDurationMinutes ?? 10);
 let _meditationPrepSeconds = $state<number>(cache.meditationPrepSeconds ?? 20);
 let _meditationStartSound = $state<string>(cache.meditationStartSound ?? 'zen-tone-mid.mp3');
 let _meditationEndSound = $state<string>(cache.meditationEndSound ?? 'auk-zen-gong.mp3');
 let _meditationVolume = $state<number>(cache.meditationVolume ?? 70);
+let _moodTrackerEnabled = $state<boolean>(cache.moodTrackerEnabled ?? true);
+let _hiddenMoodTags = $state<string[]>(cache.hiddenMoodTags ?? []);
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -127,7 +129,9 @@ function scheduleSave() {
 			meditationPrepSeconds: _meditationPrepSeconds,
 			meditationStartSound: _meditationStartSound,
 			meditationEndSound: _meditationEndSound,
-			meditationVolume: _meditationVolume
+			meditationVolume: _meditationVolume,
+			moodTrackerEnabled: _moodTrackerEnabled,
+			hiddenMoodTags: _hiddenMoodTags
 		};
 		saveCache(settings);
 		try {
@@ -274,6 +278,12 @@ export const userSettings = {
 	get meditationVolume() { return _meditationVolume; },
 	set meditationVolume(v: number) { _meditationVolume = v; scheduleSave(); },
 
+	// Mood tracker
+	get moodTrackerEnabled() { return _moodTrackerEnabled; },
+	set moodTrackerEnabled(v: boolean) { _moodTrackerEnabled = v; scheduleSave(); },
+	get hiddenMoodTags() { return _hiddenMoodTags; },
+	set hiddenMoodTags(v: string[]) { _hiddenMoodTags = v; scheduleSave(); },
+
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
 	addShortcut(s: Shortcut) {
@@ -291,41 +301,51 @@ export const userSettings = {
 	}
 };
 
+function applySettings(settings: UserSettings) {
+	const merged = merge(settings);
+	_lang = merged.lang;
+	_categorySortEnabled = merged.categorySortEnabled;
+	_categoryOrder = merged.categoryOrder;
+	_listCategorySettings = settings.listCategorySettings ?? {};
+	_shortcuts = settings.shortcuts ?? [];
+	_locationNavEnabled = settings.locationNavEnabled ?? false;
+	_listLocationDisabled = settings.listLocationDisabled ?? [];
+	_itemLayout = settings.itemLayout ?? 'grid';
+	_showAllCheckedItems = settings.showAllCheckedItems ?? false;
+	_showFavoriteIndicator = settings.showFavoriteIndicator ?? true;
+	_showSupplementTracker = settings.showSupplementTracker ?? true;
+	_showRecipes = settings.showRecipes ?? true;
+	_theme = settings.theme ?? 'system';
+	_supplementSortOrder = settings.supplementSortOrder ?? 'az';
+	_waterTrackerEnabled = settings.waterTrackerEnabled ?? true;
+	_waterGoalMl = settings.waterGoalMl ?? 2000;
+	_waterPresets = settings.waterPresets ?? [100, 200];
+	_caffeineTrackerEnabled = settings.caffeineTrackerEnabled ?? true;
+	_caffeineLimitMg = settings.caffeineLimitMg ?? 400;
+	_caffeineHiddenDrinks = settings.caffeineHiddenDrinks ?? [];
+	_caffeineCustomAmounts = settings.caffeineCustomAmounts ?? {};
+	_meditationTrackerEnabled = settings.meditationTrackerEnabled ?? true;
+	_meditationDailyGoalMinutes = settings.meditationDailyGoalMinutes ?? 15;
+	_meditationDefaultDurationMinutes = settings.meditationDefaultDurationMinutes ?? 10;
+	_meditationPrepSeconds = settings.meditationPrepSeconds ?? 20;
+	_meditationStartSound = settings.meditationStartSound ?? 'zen-tone-mid.mp3';
+	_meditationEndSound = settings.meditationEndSound ?? 'auk-zen-gong.mp3';
+	_meditationVolume = settings.meditationVolume ?? 70;
+	_moodTrackerEnabled = settings.moodTrackerEnabled ?? true;
+	_hiddenMoodTags = settings.hiddenMoodTags ?? [];
+}
+
+export function seedSettings(settings: UserSettings) {
+	applySettings(settings);
+}
+
 export async function initUserSettings(): Promise<UserSettings | null> {
 	if (!browser) return null;
 	try {
 		const res = await fetch('/api/users/me');
 		if (!res.ok) return null;
 		const { settings } = await res.json() as { settings: UserSettings };
-		const merged = merge(settings);
-		_lang = merged.lang;
-		_categorySortEnabled = merged.categorySortEnabled;
-		_categoryOrder = merged.categoryOrder;
-		_listCategorySettings = settings.listCategorySettings ?? {};
-		_shortcuts = settings.shortcuts ?? [];
-		_locationNavEnabled = settings.locationNavEnabled ?? false;
-		_listLocationDisabled = settings.listLocationDisabled ?? [];
-		_itemLayout = settings.itemLayout ?? 'grid';
-		_showAllCheckedItems = settings.showAllCheckedItems ?? false;
-		_showFavoriteIndicator = settings.showFavoriteIndicator ?? true;
-		_showSupplementTracker = settings.showSupplementTracker ?? true;
-		_showRecipes = settings.showRecipes ?? true;
-		_theme = settings.theme ?? 'system';
-		_supplementSortOrder = settings.supplementSortOrder ?? 'az';
-		_waterTrackerEnabled = settings.waterTrackerEnabled ?? false;
-		_waterGoalMl = settings.waterGoalMl ?? 2000;
-		_waterPresets = settings.waterPresets ?? [100, 200];
-		_caffeineTrackerEnabled = settings.caffeineTrackerEnabled ?? false;
-		_caffeineLimitMg = settings.caffeineLimitMg ?? 400;
-		_caffeineHiddenDrinks = settings.caffeineHiddenDrinks ?? [];
-		_caffeineCustomAmounts = settings.caffeineCustomAmounts ?? {};
-		_meditationTrackerEnabled = settings.meditationTrackerEnabled ?? false;
-		_meditationDailyGoalMinutes = settings.meditationDailyGoalMinutes ?? 15;
-		_meditationDefaultDurationMinutes = settings.meditationDefaultDurationMinutes ?? 10;
-		_meditationPrepSeconds = settings.meditationPrepSeconds ?? 20;
-		_meditationStartSound = settings.meditationStartSound ?? 'zen-tone-mid.mp3';
-		_meditationEndSound = settings.meditationEndSound ?? 'auk-zen-gong.mp3';
-		_meditationVolume = settings.meditationVolume ?? 70;
+		applySettings(settings);
 		saveCache(settings);
 		return settings;
 	} catch { return null; }

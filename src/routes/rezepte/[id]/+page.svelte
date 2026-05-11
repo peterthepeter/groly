@@ -240,35 +240,15 @@
 					<p class="text-sm mt-2" style="color: var(--color-on-surface-variant)">{recipe.description}</p>
 				{/if}
 
-				<!-- Meta row -->
-				<div class="flex items-center gap-3 mt-4 flex-wrap">
-					{#if recipe.prepTime}
-						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-						     style="background-color: var(--color-surface-container)">
-							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-							</svg>
-							<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_prep_time} {recipe.prepTime} {t.recipe_minutes}</span>
-						</div>
-					{/if}
-					{#if recipe.cookTime}
-						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-						     style="background-color: var(--color-surface-container)">
-							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
-							</svg>
-							<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_cook_time} {recipe.cookTime} {t.recipe_minutes}</span>
-						</div>
-					{/if}
-
-					<!-- Servings Stepper -->
-					<div class="flex items-center gap-2 ml-auto">
+				<!-- Action row -->
+				<div class="flex items-center justify-between mt-4">
+					<!-- Links: Portionen Stepper -->
+					<div class="flex items-center gap-2">
 						<button
 							onclick={() => changeServings(-1)}
 							disabled={currentServings <= 1}
 							aria-label="Portionen verringern"
 							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
-							style="background-color: var(--color-surface-high)"
 						>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
 								<line x1="5" y1="12" x2="19" y2="12"/>
@@ -291,71 +271,84 @@
 							onclick={() => changeServings(1)}
 							aria-label="Portionen erhöhen"
 							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
-							style="background-color: var(--color-surface-high)"
 						>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
 								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
 							</svg>
 						</button>
-						<!-- Delete, Share & Edit -->
-						<div class="flex items-center gap-1 ml-2 pl-2" style="border-left: 1.5px solid var(--color-outline-variant)">
+					</div>
+					<!-- Rechts: Auf Liste + Delete/Share/Edit -->
+					<div class="flex items-center gap-1">
+						{#if recipe.ingredients.length > 0}
 							<button
-								onclick={deleteRecipe}
-								disabled={isOfflineFallback}
-								aria-label="Rezept löschen"
-								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
-								style="background-color: var(--color-surface-high)"
+								onclick={() => listModalOpen = true}
+								disabled={selectedCount === 0}
+								aria-label="Auf Einkaufsliste"
+								class="flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold active:opacity-60 disabled:opacity-40 active:scale-95 transition-transform mr-1"
+								style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 							>
-								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
 								</svg>
+								<span>{selectedCount}/{recipe.ingredients.length}</span>
 							</button>
-							<button
-								onclick={() => shareModalOpen = true}
-								disabled={isOfflineFallback}
-								aria-label="Teilen"
-								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
-								style="background-color: var(--color-surface-high)"
-							>
-								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-									<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-								</svg>
-							</button>
-							<button
-								onclick={() => !isOfflineFallback && goto(`/rezepte/${recipeId}/bearbeiten`)}
-								disabled={isOfflineFallback}
-								aria-label="Bearbeiten"
-								class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
-								style="background-color: var(--color-surface-high)"
-							>
-								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-									<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-								</svg>
-							</button>
-						</div>
+						{/if}
+						<button
+							onclick={deleteRecipe}
+							disabled={isOfflineFallback}
+							aria-label="Rezept löschen"
+							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
+						>
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+							</svg>
+						</button>
+						<button
+							onclick={() => shareModalOpen = true}
+							disabled={isOfflineFallback}
+							aria-label="Teilen"
+							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
+						>
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+								<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+							</svg>
+						</button>
+						<button
+							onclick={() => !isOfflineFallback && goto(`/rezepte/${recipeId}/bearbeiten`)}
+							disabled={isOfflineFallback}
+							aria-label="Bearbeiten"
+							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
+						>
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+								<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+							</svg>
+						</button>
 					</div>
 				</div>
-
-				<!-- Auf Liste Button -->
-				{#if recipe.ingredients.length > 0}
-					<button
-						onclick={() => listModalOpen = true}
-						disabled={selectedCount === 0}
-						class="w-full mt-4 py-3.5 rounded-full font-semibold text-sm shadow-lg active:scale-95 transition-transform disabled:opacity-40"
-						style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-					>
-						<div class="flex items-center justify-center gap-2">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
-							</svg>
-							{t.recipe_add_to_list}
-							{#if selectedCount < recipe.ingredients.length}
-								<span class="text-xs opacity-80">({selectedCount}/{recipe.ingredients.length})</span>
-							{/if}
-						</div>
-					</button>
+				<!-- Meta row (prep/cook times) -->
+				{#if recipe.prepTime || recipe.cookTime}
+					<div class="flex items-center gap-2 mt-2">
+						{#if recipe.prepTime}
+							<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+							     style="background-color: var(--color-surface-container)">
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+								</svg>
+								<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_prep_time} {recipe.prepTime} {t.recipe_minutes}</span>
+							</div>
+						{/if}
+						{#if recipe.cookTime}
+							<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+							     style="background-color: var(--color-surface-container)">
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+								</svg>
+								<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_cook_time} {recipe.cookTime} {t.recipe_minutes}</span>
+							</div>
+						{/if}
+					</div>
 				{/if}
 
 				<!-- Tabs -->
@@ -385,7 +378,6 @@
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div
 								class="flex items-center gap-3 px-4 py-2.5 active:opacity-60 cursor-pointer"
-								style="{i > 0 ? 'border-top: 1px solid var(--color-outline-variant)' : ''}"
 								onclick={() => toggleIngredient(ing.id)}
 							>
 								<div class="w-4.5 h-4.5 rounded-md flex items-center justify-center flex-shrink-0"
