@@ -4,7 +4,7 @@
   <img src="static/icons/icon.svg" width="96" alt="Groly" />
 </p>
 
-A mobile-first **grocery list, supplement tracker, and meal planner** built for self-hosting — designed for your phone, not adapted to it. Every interaction is touch-optimized: bottom navigation, large tap targets, swipe gestures, and offline support so it works without signal in the store. Also fully usable in a desktop browser.
+A mobile-first **grocery list, health & lifestyle tracker, and meal planner** built for self-hosting — designed for your phone, not adapted to it. Every interaction is touch-optimized: bottom navigation, large tap targets, swipe gestures, and offline support so it works without signal in the store. Also fully usable in a desktop browser.
 
 Groly is a **PWA (Progressive Web App)**. Install it to your home screen on iOS or Android to unlock the full experience: offline mode, push notifications, barcode scanner, and location-based list opening all require the installed PWA.
 
@@ -29,16 +29,18 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Swipe to peek** – Swipe left or right on any item tile whose name is truncated to reveal the full name in an overlay, without accidentally checking it off.
 - **Favourites** – Long-press an item and tap the star next to the quantity field to save it as a favourite. Favourited items are marked with a small green dot on their tile (can be turned off in Settings → Display). Open the favourites panel via + → Favourites to quickly re-add them to any list, sorted by category. Long-press a favourite card to remove it.
 
-### Supplement Tracker
+### Tracker
 
 <p align="center">
-  <img src="docs/screenshots/Supplement Today.png" width="180" alt="Supplement tracker – today" />
-  <img src="docs/screenshots/Add Supplement.png" width="180" alt="Quick log sheet" />
-  <img src="docs/screenshots/Supplement History.png" width="180" alt="Supplement history" />
+  <img src="docs/screenshots/Supplement Today.png" width="140" alt="Supplement tracker – today" />
+  <img src="docs/screenshots/Log Supplement.png" width="140" alt="Log supplement" />
+  <img src="docs/screenshots/Log Tracker.png" width="140" alt="Add tracker entry" />
+  <img src="docs/screenshots/mood_tracker.png" width="140" alt="Mood tracker" />
 </p>
 <p align="center">
-  <img src="docs/screenshots/Manage Supplement.png" width="180" alt="Manage supplements" />
-  <img src="docs/screenshots/Edit Supplement.png" width="180" alt="Edit supplement" />
+  <img src="docs/screenshots/Supplement History.png" width="140" alt="Supplement history" />
+  <img src="docs/screenshots/Manage Supplement.png" width="140" alt="Manage supplements" />
+  <img src="docs/screenshots/Edit Supplement.png" width="140" alt="Edit supplement" />
 </p>
 
 - **Log supplements** – Track daily intake with a quick-log sheet. Adjust amounts, set the time, and confirm with one tap.
@@ -51,6 +53,7 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Water tracker** – Log daily water intake with preset quick-add buttons or a custom amount. Set a personal daily goal (ml) and track progress with a fill bar. Configure push reminders at fixed intervals within a time window.
 - **Caffeine tracker** – Log caffeine intake by selecting from a built-in drink catalog (10 pre-seeded drinks: Espresso, Filter Coffee, Cold Brew, and more). Per-drink default amounts are individually adjustable per user. Set a daily limit with a visual fill bar — exceeding the limit is highlighted in red. Hide drinks you don't use from the picker.
 - **Meditation tracker** – Start a full-screen meditation timer with 5/10/15/20 min quick-start presets or a custom duration via a picker wheel. Includes a configurable preparation phase, Zen circle progress animation, and configurable start/end sounds. Set a daily goal and track your session history in day, week, and month views. Optional daily push reminders.
+- **Mood tracker** – Log your daily mood on a 1–5 scale with an optional note. Track patterns over time in day, week, and month views. Set an optional daily push reminder to check in.
 
 ### Recipes & Meal Planning
 
@@ -68,7 +71,7 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
   <img src="docs/screenshots/Settings Page.png" width="180" alt="Settings" />
 </p>
 
-- **Feature flags** – Supplements and Recipes can be independently enabled or disabled per user in Settings → Display. Hide sections you don't use — they disappear from the navigation entirely.
+- **Feature flags** – Supplements, Trackers, and Recipes can be independently enabled or disabled per user in Settings → Display. Hide sections you don't use — they disappear from the navigation entirely.
 - **Category sorting** – Customize the display order of categories globally or per list, to match your supermarket layout.
 - **Quick access shortcuts** – Configure up to 4 shortcuts accessible by long-pressing the + button.
 - **Favourite indicator** – The green dot on favourited items can be turned off per user.
