@@ -95,6 +95,7 @@ let _meditationEndSound = $state<string>(cache.meditationEndSound ?? 'auk-zen-go
 let _meditationVolume = $state<number>(cache.meditationVolume ?? 70);
 let _moodTrackerEnabled = $state<boolean>(cache.moodTrackerEnabled ?? true);
 let _hiddenMoodTags = $state<string[]>(cache.hiddenMoodTags ?? []);
+let _greetingEnabled = $state<boolean>(cache.greetingEnabled ?? true);
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -131,7 +132,8 @@ function scheduleSave() {
 			meditationEndSound: _meditationEndSound,
 			meditationVolume: _meditationVolume,
 			moodTrackerEnabled: _moodTrackerEnabled,
-			hiddenMoodTags: _hiddenMoodTags
+			hiddenMoodTags: _hiddenMoodTags,
+			greetingEnabled: _greetingEnabled
 		};
 		saveCache(settings);
 		try {
@@ -283,6 +285,8 @@ export const userSettings = {
 	set moodTrackerEnabled(v: boolean) { _moodTrackerEnabled = v; scheduleSave(); },
 	get hiddenMoodTags() { return _hiddenMoodTags; },
 	set hiddenMoodTags(v: string[]) { _hiddenMoodTags = v; scheduleSave(); },
+	get greetingEnabled() { return _greetingEnabled; },
+	set greetingEnabled(v: boolean) { _greetingEnabled = v; scheduleSave(); },
 
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
@@ -333,6 +337,7 @@ function applySettings(settings: UserSettings) {
 	_meditationVolume = settings.meditationVolume ?? 70;
 	_moodTrackerEnabled = settings.moodTrackerEnabled ?? true;
 	_hiddenMoodTags = settings.hiddenMoodTags ?? [];
+	_greetingEnabled = settings.greetingEnabled ?? true;
 }
 
 export function seedSettings(settings: UserSettings) {

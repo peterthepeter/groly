@@ -10,7 +10,7 @@
 	import ShareListModal from '$lib/components/ShareListModal.svelte';
 	import InvitationCard from '$lib/components/InvitationCard.svelte';
 	import MemberListModal from '$lib/components/MemberListModal.svelte';
-	import { t, lists_active } from '$lib/i18n.svelte';
+	import { t, currentLang, lists_active } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { getListIcon } from '$lib/listIcons';
 	import { env as publicEnv } from '$env/dynamic/public';
@@ -44,6 +44,18 @@
 	let showInstallModal = $state(false);
 	let installPrompt = $state<any>(null);
 	let listsLoadVersion = 0;
+
+	const todayHour = new Date().getHours();
+	const todayGreeting = $derived(todayHour < 12 ? t.greeting_morning : todayHour < 18 ? t.greeting_day : todayHour < 22 ? t.greeting_evening : t.greeting_night);
+	const todayDayName = $derived(new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(new Date()));
+	const todayDateStr = $derived(new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(new Date()));
+	const totalOpenItems = $derived(lists.reduce((s, l) => s + l.openCount, 0));
+	const listInfoLine = $derived(
+		loading || lists.length === 0 ? '' :
+		currentLang() === 'de'
+			? `${lists.length} ${lists.length === 1 ? 'Liste' : 'Listen'}${totalOpenItems > 0 ? ` · ${totalOpenItems} offene Items` : ''}`
+			: `${lists.length} ${lists.length === 1 ? 'list' : 'lists'}${totalOpenItems > 0 ? ` · ${totalOpenItems} open items` : ''}`
+	);
 
 	const PUSH_PROMPT_KEY = 'groly_push_prompt_dismissed';
 	const INSTALL_BANNER_KEY = 'groly_install_banner_dismissed';
@@ -447,6 +459,7 @@
 			{/if}
 		{/snippet}
 	</AppHeader>
+	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
 
 	<!-- Install Banner -->
 	{#if showInstallBanner}
@@ -496,9 +509,22 @@
 		</div>
 	{/if}
 
-	<!-- Bottom-Anchored Content -->
-	<div class="flex-1 flex flex-col justify-end overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + {showInstallBanner ? '9' : '4'}rem); padding-bottom: 5.5rem">
+	<!-- Spacer to match tab-bar height on other pages -->
+	<div class="flex-shrink-0" style="height: 3.5rem"></div>
+
+	<!-- Hero header + bottom-anchored content -->
+	<div class="relative flex-1 min-h-0">
+		{#if userSettings.greetingEnabled}
+			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: 22vh; min-height: 100px; max-height: 160px; z-index: 0">
+				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
+				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user?.username ?? ''}</p>
+				{#if listInfoLine}
+					<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant); opacity: 0.65">{listInfoLine}</p>
+				{/if}
+			</div>
+		{/if}
+		<div class="absolute inset-0 flex flex-col justify-end overflow-y-auto px-4"
+		     style="z-index: 1; padding-top: {showInstallBanner ? '4.5rem' : '0'}; padding-bottom: 5.5rem">
 		{#if loading}
 			<div class="flex justify-center py-8">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"
@@ -601,6 +627,7 @@
 			</div>
 		{/if}
 	</div>
+	</div><!-- end relative wrapper -->
 
 	<AppBottomNav
 		activeTab="lists"

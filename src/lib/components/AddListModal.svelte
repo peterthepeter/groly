@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import IconPicker from '$lib/components/IconPicker.svelte';
+	import MapPickerSheet from '$lib/components/MapPickerSheet.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { CATEGORY_LABELS, DEFAULT_CATEGORY_ORDER } from '$lib/categories';
 	import { watchVisualViewportBottomOffset } from '$lib/visualViewport';
@@ -43,6 +44,15 @@
 	const listLocationDisabled = $derived(list?.id ? userSettings.isListLocationDisabled(list.id) : false);
 
 	let locationGpsLoading = $state(false);
+	let mapPickerOpen = $state(false);
+
+	function onMapConfirm(lat: number, lng: number, displayName: string) {
+		locationLat = lat;
+		locationLng = lng;
+		locationName = displayName;
+		locationResults = [];
+		locationQuery = '';
+	}
 
 	async function searchLocation() {
 		if (!locationQuery.trim()) return;
@@ -357,10 +367,10 @@
 						{currentLang() === 'en' ? 'Location' : 'Standort'}
 					</span>
 					<span class="text-xs font-medium mr-1"
-					      style="color: {locationLat !== null ? 'var(--color-primary)' : 'var(--color-outline)'}">
+					      style="color: var(--color-primary)">
 						{locationLat !== null
 							? (currentLang() === 'en' ? 'Set' : 'Gesetzt')
-							: (currentLang() === 'en' ? 'None' : 'Keiner')}
+							: (currentLang() === 'en' ? 'Set up' : 'Einrichten')}
 					</span>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
 					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -453,6 +463,21 @@
 										<line x1="19" y1="12" x2="22" y2="12"/>
 									</svg>
 								{/if}
+							</button>
+
+							<!-- Map picker button -->
+							<button
+								type="button"
+								onclick={() => mapPickerOpen = true}
+								aria-label={t.map_pick_on_map}
+								class="rounded-xl flex items-center justify-center transition-opacity active:opacity-70 flex-shrink-0"
+								style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary); width: 40px; height: 40px"
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+									<line x1="9" y1="3" x2="9" y2="18"/>
+									<line x1="15" y1="6" x2="15" y2="21"/>
+								</svg>
 							</button>
 						</div>
 
@@ -549,3 +574,11 @@
 		</button>
 	</div>
 </div>
+
+<MapPickerSheet
+	bind:open={mapPickerOpen}
+	initialLat={locationLat}
+	initialLng={locationLng}
+	initialName={locationName}
+	onConfirm={onMapConfirm}
+/>

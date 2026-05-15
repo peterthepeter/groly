@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
+	import { getRandomQuote } from '$lib/meditationQuotes';
 	import { playMeditationSound, preloadMeditationSounds } from '$lib/audio/meditationAudio';
 	import { acquireWakeLock, releaseWakeLock } from '$lib/wakeLock';
 
@@ -27,6 +28,7 @@
 	let confirmStop = $state(false);
 	let savedFlash = $state(false);
 	let overtimeStartedAt = $state(0);
+	let quote = $state<{ text: string; author: string } | null>(null);
 
 	const CIRCLE_R = 130;
 	const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
@@ -118,6 +120,7 @@
 		if (naturalEnd) {
 			playMeditationSound(userSettings.meditationEndSound, userSettings.meditationVolume ?? 70, true);
 			overtimeStartedAt = Date.now();
+			quote = getRandomQuote(currentLang());
 			phase = 'overtime';
 			intervalId = setInterval(tickOvertime, 250);
 			return;
@@ -260,6 +263,14 @@
 						{formatTime(totalSeconds)}
 					</div>
 				</div>
+
+				<!-- Motivational quote -->
+				{#if quote}
+					<div class="text-center px-2">
+						<p class="text-sm italic leading-relaxed" style="color: rgba(255,255,255,0.55)">&ldquo;{quote.text}&rdquo;</p>
+						<p class="text-xs mt-1.5" style="color: rgba(255,255,255,0.3)">— {quote.author}</p>
+					</div>
+				{/if}
 
 				<!-- Overtime counter + buttons -->
 				<div class="flex items-center gap-3 w-full">

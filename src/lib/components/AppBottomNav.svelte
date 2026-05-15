@@ -11,7 +11,8 @@
 		fabLabel = '',
 		showFab = true,
 		fabVariant = 'add',
-		fabColor = 'var(--color-primary)'
+		fabColor = 'var(--color-primary)',
+		onFavorites = null
 	}: {
 		activeTab: 'lists' | 'supplements' | 'recipes' | 'none';
 		onFabTap?: (() => void) | null;
@@ -19,6 +20,7 @@
 		showFab?: boolean;
 		fabVariant?: 'add' | 'edit';
 		fabColor?: string;
+		onFavorites?: (() => void) | null;
 	} = $props();
 
 	const activeOut = '1.5px solid color-mix(in srgb, var(--color-primary) 55%, transparent)';
@@ -125,6 +127,22 @@
 			{:else}
 				<FabWithShortcuts onTap={onFabTap} label={fabLabel} color={fabColor} />
 			{/if}
+		{/if}
+
+		<!-- Favorites button (only on list-detail view) -->
+		{#if onFavorites}
+			<button
+				onclick={onFavorites}
+				class="rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform select-none"
+				style="width: 48px; height: 48px; background-color: var(--color-surface-card)"
+				aria-label="Favourites"
+			>
+				<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+				     stroke="var(--color-primary)"
+				     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+					<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+				</svg>
+			</button>
 		{/if}
 
 	</div>

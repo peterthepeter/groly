@@ -5,7 +5,7 @@
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import BottomNav from '$lib/components/BottomNav.svelte';
+	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import ItemTile from '$lib/components/ItemTile.svelte';
 	import ItemRow from '$lib/components/ItemRow.svelte';
 	import CheckedDrawer from '$lib/components/CheckedDrawer.svelte';
@@ -610,8 +610,10 @@
 	</div>
 
 	{#if !addModalOpen && userPermission !== 'read'}
-		<BottomNav
-			onAdd={() => { editItem = null; autoFavoritesOnOpen = false; addModalOpen = true; }}
+		<AppBottomNav
+			activeTab="lists"
+			onFabTap={() => { editItem = null; autoFavoritesOnOpen = false; addModalOpen = true; }}
+			fabLabel={t.add}
 			onFavorites={() => { editItem = null; autoFavoritesOnOpen = true; addModalOpen = true; }}
 		/>
 	{/if}

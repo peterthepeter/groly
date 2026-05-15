@@ -24,6 +24,69 @@
 	let saving = $state(false);
 	let error = $state('');
 
+	// Image state
+	let imageFileInput = $state<HTMLInputElement | null>(null);
+	let imagePreview = $state<string | null>(null);
+	let imageUploading = $state(false);
+	let imageUploadError = $state('');
+
+	async function handleImageSelect(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+
+		imageUploading = true;
+		imageUploadError = '';
+
+		imagePreview = await readAsDataUrl(file);
+
+		let uploadBlob: Blob = file;
+		try {
+			uploadBlob = await compressImage(file, 800, 0.78);
+		} catch {
+			// Compression not supported — fall back to original file
+		}
+
+		try {
+			const fd = new FormData();
+			fd.append('image', uploadBlob, 'photo.jpg');
+			const res = await fetch('/api/uploads/image', { method: 'POST', body: fd });
+			if (res.ok) {
+				imageUrl = (await res.json()).url;
+			} else {
+				const body = await res.json().catch(() => ({}));
+				imageUploadError = body.error ?? 'Upload failed';
+			}
+		} catch {
+			imageUploadError = 'Network error';
+		}
+		imageUploading = false;
+	}
+
+	async function compressImage(file: File, maxPx: number, quality: number): Promise<Blob> {
+		const bitmap = await createImageBitmap(file, { resizeWidth: maxPx, resizeQuality: 'medium' });
+		const canvas = document.createElement('canvas');
+		canvas.width = bitmap.width;
+		canvas.height = bitmap.height;
+		canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
+		bitmap.close();
+		return new Promise<Blob>((resolve, reject) => {
+			canvas.toBlob(
+				blob => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
+				'image/jpeg',
+				quality
+			);
+		});
+	}
+
+	function readAsDataUrl(file: File): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result as string);
+			reader.onerror = reject;
+			reader.readAsDataURL(file);
+		});
+	}
+
 	async function loadRecipe() {
 		try {
 			const res = await fetch(`/api/recipes/${recipeId}`);
@@ -90,7 +153,7 @@
 	}
 
 	async function save() {
-		if (!title.trim() || saving) return;
+		if (!title.trim() || saving || imageUploading) return;
 		saving = true;
 		error = '';
 		try {
@@ -165,6 +228,41 @@
 	{:else}
 		<div class="flex-1 overflow-y-auto px-4 space-y-3"
 		     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem); padding-bottom: 6rem">
+
+			<!-- Bild -->
+			<input bind:this={imageFileInput} type="file" accept="image/*"
+			       style="display:none" onchange={handleImageSelect} />
+			<div class="rounded-2xl overflow-hidden relative" style="background-color: var(--color-surface-container)">
+				<button type="button" onclick={() => imageFileInput?.click()}
+				        class="w-full text-left active:opacity-75">
+					{#if imagePreview || imageUrl}
+						<img src={imagePreview ?? imageUrl} alt="Rezeptbild" class="w-full object-cover" style="max-height: 200px" />
+						{#if imageUploading}
+							<div class="absolute inset-0 flex items-center justify-center" style="background: rgba(0,0,0,0.35)">
+								<div class="w-6 h-6 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+							</div>
+						{/if}
+						{#if imageUploadError}
+							<div class="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-xs font-medium" style="background: rgba(180,0,0,0.75); color: white">
+								{imageUploadError}
+							</div>
+						{/if}
+						<div class="absolute bottom-2 right-2 px-2.5 py-1 rounded-lg text-xs font-medium" style="background: rgba(0,0,0,0.55); color: white">
+							{t.recipe_change_image}
+						</div>
+					{:else}
+						<div class="flex items-center gap-3 px-4 py-3.5">
+							<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background-color: var(--color-surface-high)">
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+									<polyline points="21 15 16 10 5 21"/>
+								</svg>
+							</div>
+							<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.recipe_add_image}</span>
+						</div>
+					{/if}
+				</button>
+			</div>
 
 			<!-- Block 1: Name + Beschreibung + Portionen/Zeiten -->
 			<div class="rounded-2xl" style="background-color: var(--color-surface-container)">
@@ -311,11 +409,11 @@
 		     style="padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)">
 			<button
 				onclick={save}
-				disabled={!title.trim() || saving}
+				disabled={!title.trim() || saving || imageUploading}
 				class="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40 active:scale-95 transition-transform shadow-lg"
 				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 			>
-				{saving ? t.recipe_saving : t.recipe_save_changes}
+				{imageUploading ? t.recipe_saving : saving ? t.recipe_saving : t.recipe_save_changes}
 			</button>
 		</div>
 	{/if}

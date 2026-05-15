@@ -47,6 +47,7 @@ export type UserSettings = {
 	meditationVolume?: number;
 	moodTrackerEnabled?: boolean;
 	hiddenMoodTags?: string[];
+	greetingEnabled?: boolean;
 };
 
 export const DEFAULT_SETTINGS = {

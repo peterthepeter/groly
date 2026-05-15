@@ -75,7 +75,7 @@
 	<nav class="px-4 pb-4 space-y-1">
 		<button
 			onclick={() => navigate('/')}
-			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 			style="background-color: {$page.url.pathname === '/' ? 'var(--color-surface-container)' : 'transparent'}"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -89,7 +89,7 @@
 		{#if userSettings.showSupplementTracker}
 			<button
 				onclick={() => navigate('/supplements')}
-				class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+				class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 				style="background-color: {$page.url.pathname.startsWith('/supplements') ? 'var(--color-surface-container)' : 'transparent'}"
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -103,7 +103,7 @@
 		{#if userSettings.showRecipes}
 			<button
 				onclick={() => navigate('/rezepte')}
-				class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+				class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 				style="background-color: {$page.url.pathname.startsWith('/rezepte') ? 'var(--color-surface-container)' : 'transparent'}"
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -116,7 +116,7 @@
 		{#if user?.role === 'admin'}
 			<button
 				onclick={() => navigate('/einstellungen/admin')}
-				class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+				class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 				style="background-color: {$page.url.pathname.startsWith('/einstellungen/admin') ? 'var(--color-surface-container)' : 'transparent'}"
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -131,7 +131,7 @@
 
 		<button
 			onclick={() => navigate('/einstellungen')}
-			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 			style="background-color: {$page.url.pathname === '/einstellungen' ? 'var(--color-surface-container)' : 'transparent'}"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -148,7 +148,7 @@
 
 		<button
 			onclick={() => { close(); infoOpen = true; }}
-			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<circle cx="12" cy="12" r="10"/>
@@ -160,7 +160,7 @@
 
 		<button
 			onclick={() => { close(); pwaOpen = true; }}
-			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
@@ -173,7 +173,7 @@
 
 		<button
 			onclick={() => { close(); changelogOpen = true; }}
-			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
@@ -183,7 +183,7 @@
 
 		<button
 			onclick={() => { close(); aboutOpen = true; }}
-			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<circle cx="12" cy="12" r="10"/>
@@ -195,7 +195,7 @@
 
 		<button
 			onclick={logout}
-			class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:opacity-70 text-left"
+			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>

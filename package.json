@@ -1,7 +1,7 @@
 {
 	"name": "groly",
 	"private": true,
-	"version": "0.7.3",
+	"version": "0.7.5",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -30,12 +30,14 @@
 		"workbox-window": "^7.4.0"
 	},
 	"dependencies": {
+		"@types/leaflet": "^1.9.21",
 		"@undecaf/zbar-wasm": "^0.11.0",
 		"@zxing/browser": "^0.1.5",
 		"better-sqlite3": "^12.8.0",
 		"dexie": "^4.3.0",
 		"drizzle-orm": "^0.45.1",
 		"fflate": "^0.8.2",
+		"leaflet": "^1.9.4",
 		"lucide-svelte": "^1.0.1",
 		"web-push": "^3.6.7",
 		"workbox-expiration": "^7.4.0",

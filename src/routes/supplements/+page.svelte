@@ -4,7 +4,7 @@
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import { t, currentLang, nutrients_show_more, today_reminders_label } from '$lib/i18n.svelte';
+	import { t, currentLang, today_reminders_label } from '$lib/i18n.svelte';
 	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheMeditationLogs, getOfflineMeditationLogsToday } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
@@ -17,8 +17,8 @@
 	import MeditationTrackerCard from '$lib/components/supplements/MeditationTrackerCard.svelte';
 	import MeditationTimerSheet from '$lib/components/supplements/MeditationTimerSheet.svelte';
 	import MoodTrackerCard from '$lib/components/supplements/MoodTrackerCard.svelte';
-	import MoodHistoryView from '$lib/components/supplements/MoodHistoryView.svelte';
 	import MoodEntrySheet from '$lib/components/supplements/MoodEntrySheet.svelte';
+	import HistoryTab from '$lib/components/supplements/HistoryTab.svelte';
 	import type { WaterLog, CaffeineLog, CaffeineDrink, MeditationLog } from '$lib/db/schema';
 
 	let { data } = $props();
@@ -79,19 +79,8 @@
 	let historyLogs = $state<Log[]>([]);
 	let historyLoading = $state(false);
 
-	const historyLogsBySuppId = $derived.by(() => {
-		const map = new Map<string, Log[]>();
-		for (const log of historyLogs) {
-			if (!map.has(log.supplementId)) map.set(log.supplementId, []);
-			map.get(log.supplementId)!.push(log);
-		}
-		return map;
-	});
-
 	// Expand/collapse per supplement card (today tab)
 	let expandedIds = $state(new Set<string>());
-	// Expand/collapse per supplement in history view (for notes)
-	let historyExpandedSuppIds = $state(new Set<string>());
 
 	function toggleExpand(id: string) {
 		const next = new Set(expandedIds);
@@ -205,6 +194,16 @@
 
 	const activeSupplements = $derived(supplements.filter(s => s.active));
 	const loggedTodaySupplements = $derived(activeSupplements.filter(s => logsForSupplement(s.id).length > 0));
+	const trackerInfoLine = $derived.by(() => {
+		const parts: string[] = [];
+		if (loggedTodaySupplements.length > 0) {
+			parts.push(`${loggedTodaySupplements.length} Supplement${loggedTodaySupplements.length > 1 ? 's' : ''}`);
+		}
+		const caffeineMg = caffeineLogsToday.reduce((s, l) => s + l.caffeineMg, 0);
+		if (caffeineMg > 0) parts.push(`${caffeineMg} mg Koffein`);
+		if (parts.length === 0) return '';
+		return parts.join(' · ') + (currentLang() === 'de' ? ' · heute getrackt' : ' · tracked today');
+	});
 
 	function todayStart(): number {
 		const d = new Date();
@@ -297,7 +296,6 @@
 			historySupplements = data.supplements ?? {};
 			historyLogs = data.logs ?? [];
 		}
-		historyExpandedSuppIds = new Set();
 		historyLoading = false;
 	}
 
@@ -639,83 +637,10 @@
 		return d.toLocaleDateString([], { month: 'long', year: 'numeric' });
 	}
 
-	const NUTRIENTS_VISIBLE = 10;
-	let nutrientsExpanded = $state(false);
-	let supplementsCardExpanded = $state(true);
-	let nutrientsCardExpanded = $state(true);
-	let waterHistoryCardExpanded = $state(false);
 	let historyWaterLogs = $state<{ id: string; amountMl: number; loggedAt: number }[]>([]);
-	const historyWaterTotal = $derived(historyWaterLogs.reduce((s, l) => s + l.amountMl, 0));
-	let caffeineHistoryCardExpanded = $state(false);
-	const historyCaffeineTotalMg = $derived(historyCaffeineLogs.reduce((s, l) => s + l.caffeineMg, 0));
-	const historyCaffeineTotalMl = $derived(historyCaffeineLogs.reduce((s, l) => s + l.amountMl, 0));
-	let meditationHistoryCardExpanded = $state(false);
 	let historyMeditationLogs = $state<MeditationLog[]>([]);
-	const historyMeditationTotalSeconds = $derived(historyMeditationLogs.reduce((s, l) => s + l.durationSeconds, 0));
-	let expandedMeditationDays = $state(new Set<string>());
-	function toggleMeditationDay(key: string) {
-		const next = new Set(expandedMeditationDays);
-		if (next.has(key)) next.delete(key); else next.add(key);
-		expandedMeditationDays = next;
-	}
-	const meditationByDay = $derived.by(() => {
-		const map = new Map<string, { totalSeconds: number; sessions: { id: string; durationSeconds: number; loggedAt: number }[] }>();
-		for (const log of historyMeditationLogs) {
-			const key = toLocalDateStr(new Date(log.loggedAt));
-			if (!map.has(key)) map.set(key, { totalSeconds: 0, sessions: [] });
-			const entry = map.get(key)!;
-			entry.totalSeconds += log.durationSeconds;
-			entry.sessions.push(log);
-		}
-		for (const entry of map.values()) entry.sessions.sort((a, b) => a.loggedAt - b.loggedAt);
-		return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-	});
-	const caffeineByDay = $derived.by(() => {
-		const map = new Map<string, { totalMg: number; totalMl: number; drinks: { name: string; mg: number; ml: number }[] }>();
-		for (const log of historyCaffeineLogs) {
-			const key = toLocalDateStr(new Date(log.loggedAt));
-			if (!map.has(key)) map.set(key, { totalMg: 0, totalMl: 0, drinks: [] });
-			const entry = map.get(key)!;
-			entry.totalMg += log.caffeineMg;
-			entry.totalMl += log.amountMl;
-			entry.drinks.push({ name: log.drinkName, mg: log.caffeineMg, ml: log.amountMl });
-		}
-		return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-	});
 
-	function toMcg(total: number, unit: string): number {
-		const u = unit.toLowerCase();
-		if (u === 'g') return total * 1_000_000;
-		if (u === 'mg') return total * 1_000;
-		return total; // mcg or unknown
-	}
-
-	const nutrientEntries = $derived(
-		Object.entries(historyNutrients).map(([, val]) => ({
-			name: val.name,
-			unit: val.unit,
-			total: val.total
-		})).sort((a, b) => toMcg(b.total, b.unit) - toMcg(a.total, a.unit))
-	);
-
-	const nutrientEntriesVisible = $derived(nutrientEntries.slice(0, NUTRIENTS_VISIBLE));
-	const nutrientEntriesHidden = $derived(nutrientEntries.slice(NUTRIENTS_VISIBLE));
-
-	const supplementStatEntries = $derived(
-		Object.entries(historySupplements)
-			.map(([id, val]) => ({ id, ...val }))
-			.sort((a, b) => a.name.localeCompare(b.name))
-	);
-
-	function toggleHistorySupp(id: string) {
-		const next = new Set(historyExpandedSuppIds);
-		if (next.has(id)) next.delete(id); else next.add(id);
-		historyExpandedSuppIds = next;
-	}
-
-	function openHistoryEditLog(log: Log, suppId: string) {
-		const sup = historySupplements[suppId];
-		if (!sup) return;
+	function openHistoryEditLog(log: Log, sup: { name: string; unit: string }) {
 		const d = new Date(log.loggedAt);
 		editLogSheet = {
 			id: log.id,
@@ -867,9 +792,24 @@
 		</div>
 	{/if}
 
-	<div bind:this={scrollContainer}
-	     class="flex-1 min-h-0 overflow-y-auto {activeTab === 'today' ? 'flex flex-col justify-end' : ''}"
-	     style="padding-bottom: 5.5rem">
+	<div class="relative flex-1 min-h-0">
+		{#if activeTab === 'today' && userSettings.greetingEnabled}
+			{@const hour = new Date().getHours()}
+			{@const todayGreeting = hour < 12 ? t.greeting_morning : hour < 18 ? t.greeting_day : hour < 22 ? t.greeting_evening : t.greeting_night}
+			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(new Date())}
+			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(new Date())}
+			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; z-index: 0">
+				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
+				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user.username}</p>
+				{#if trackerInfoLine}
+					<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant); opacity: 0.65">{trackerInfoLine}</p>
+				{/if}
+			</div>
+		{/if}
+
+		<div bind:this={scrollContainer}
+		     class="absolute inset-0 overflow-y-auto {activeTab === 'today' ? 'flex flex-col justify-end' : ''}"
+		     style="z-index: 1; padding-bottom: 5.5rem">
 
 	{#if loading}
 		<div class="flex justify-center py-16">
@@ -878,7 +818,7 @@
 	{:else if activeTab === 'today'}
 		<!-- TODAY TAB -->
 		{#if loggedTodaySupplements.length === 0 && !hasVisibleTrackerCards}
-			<div class="px-4 py-16 text-center">
+			<div class="px-4 py-8 text-center">
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_today_empty}</p>
 			</div>
 		{:else}
@@ -890,8 +830,10 @@
 			].filter(Boolean)}
 			<div class="px-4 flex flex-col gap-2">
 			{#if loggedTodaySupplements.length > 0}
-				<p class="text-xs font-semibold tracking-widest px-1" style="color: var(--color-primary)">Supplements</p>
 				<div class="rounded-2xl flex flex-col select-none" style="background-color: var(--color-surface-card)">
+					<div class="px-4 pt-2.5 pb-0.5">
+						<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">Supplements</p>
+					</div>
 					{#each loggedTodaySupplements as supplement, i (supplement.id)}
 						{@const logs = logsForSupplement(supplement.id)}
 						{@const total = totalTodayAmount(supplement.id)}
@@ -996,8 +938,10 @@
 				</div>
 			{/if}
 			{#if visibleTrackers.length > 0}
-				<p class="text-xs font-semibold tracking-widest px-1" style="color: var(--color-primary)">Tracker</p>
 				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+					<div class="px-4 pt-2 pb-0 -mb-1">
+						<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">Tracker</p>
+					</div>
 						{#if visibleTrackers.includes('mood') && todayMoodEntry !== null}
 							<MoodTrackerCard
 								todayEntry={todayMoodEntry}
@@ -1044,376 +988,23 @@
 		{/if}
 
 	{:else}
-		<!-- HISTORY TAB -->
-		<div class="px-4 space-y-4">
-			{#if historyLoading}
-				<div class="flex justify-center py-8">
-					<div class="w-6 h-6 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
-				</div>
-			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0 && historyWaterTotal === 0 && historyCaffeineTotalMg === 0 && !userSettings.moodTrackerEnabled}
-				<div class="py-12 text-center">
-					<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_stats_empty}</p>
-				</div>
-			{:else if nutrientEntries.length === 0 && supplementStatEntries.length === 0 && historyWaterTotal === 0 && historyCaffeineTotalMg === 0 && userSettings.moodTrackerEnabled}
-				<MoodHistoryView onreload={loadTodayMoodEntry} fixedView={historyPeriod === 'day' ? 'today' : historyPeriod} parentDate={historyDate} />
-			{:else}
-				{#if userSettings.moodTrackerEnabled}
-					<MoodHistoryView onreload={loadTodayMoodEntry} fixedView={historyPeriod === 'day' ? 'today' : historyPeriod} parentDate={historyDate} />
-				{/if}
-				<!-- Supplements taken -->
-				{#if supplementStatEntries.length > 0}
-					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
-						<button
-							onclick={() => supplementsCardExpanded = !supplementsCardExpanded}
-							class="w-full flex items-center justify-between mb-2 active:opacity-60"
-						>
-							<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">Supplements</p>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-							     style="transition: transform 0.2s; transform: rotate({supplementsCardExpanded ? '90' : '0'}deg)">
-								<polyline points="9 6 15 12 9 18"/>
-							</svg>
-						</button>
-						{#if supplementsCardExpanded}
-							<div class="space-y-1.5">
-								{#each supplementStatEntries as sup}
-									{@const suppLogs = historyLogsBySuppId.get(sup.id) ?? []}
-									{@const expandable = historyPeriod !== 'month' && suppLogs.length > 0}
-									{@const suppExpanded = historyExpandedSuppIds.has(sup.id)}
-									<div>
-										<div class="flex justify-between items-center text-sm">
-											<span style="color: var(--color-on-surface)">{sup.name}</span>
-											<div class="flex items-center gap-1.5">
-												<span class="font-semibold" style="color: var(--color-primary)">{sup.total} {displayUnit(sup.unit, currentLang())}</span>
-												{#if expandable}
-													<button
-														onclick={() => toggleHistorySupp(sup.id)}
-														class="active:opacity-60"
-														aria-label={suppExpanded ? 'Einklappen' : 'Aufklappen'}
-													>
-														<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-														     style="transition: transform 0.2s; transform: rotate({suppExpanded ? '90' : '0'}deg)">
-															<polyline points="9 6 15 12 9 18"/>
-														</svg>
-													</button>
-												{/if}
-											</div>
-										</div>
-										{#if expandable && suppExpanded}
-											<div class="mt-1.5 space-y-1.5 pt-1.5 border-t" style="border-color: var(--color-outline-variant)">
-												{#each suppLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
-													<div class="flex items-start gap-2 text-xs">
-														<div class="flex-1 min-w-0">
-															<span class="tabular-nums" style="color: var(--color-on-surface-variant)">
-																{#if historyPeriod === 'week'}
-																	{new Date(log.loggedAt).toLocaleDateString([], { weekday: 'short', day: 'numeric' })}
-																{/if}
-																{formatTime(log.loggedAt)} ·
-															</span>
-															<span class="font-medium" style="color: var(--color-primary)">{log.amount} {displayUnit(sup.unit, currentLang())}</span>
-															{#if log.note}
-																<span class="italic ml-1" style="color: var(--color-on-surface-variant)">{log.note}</span>
-															{/if}
-														</div>
-														<button
-															onclick={() => openHistoryEditLog(log, sup.id)}
-															class="shrink-0 p-1 rounded active:opacity-50"
-															aria-label="Bearbeiten"
-															style="color: var(--color-on-surface-variant)"
-														>
-															<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-																<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-																<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-															</svg>
-														</button>
-													</div>
-												{/each}
-											</div>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				{/if}
-
-				<!-- Nutrients -->
-				{#if nutrientEntries.length > 0}
-					<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
-						<button
-							onclick={() => nutrientsCardExpanded = !nutrientsCardExpanded}
-							class="w-full flex items-center justify-between mb-2 active:opacity-60"
-						>
-							<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">{t.supplement_stats_nutrients}</p>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-							     style="transition: transform 0.2s; transform: rotate({nutrientsCardExpanded ? '90' : '0'}deg)">
-								<polyline points="9 6 15 12 9 18"/>
-							</svg>
-						</button>
-						{#if nutrientsCardExpanded}
-							<div class="space-y-1.5">
-								{#each nutrientEntriesVisible as entry}
-									<div class="flex justify-between items-center text-sm">
-										<span style="color: var(--color-on-surface)">{entry.name}</span>
-										<span class="font-semibold" style="color: var(--color-primary)">{formatNutrientValue(entry.total)} {entry.unit}</span>
-									</div>
-								{/each}
-								{#if nutrientsExpanded}
-									{#each nutrientEntriesHidden as entry}
-										<div class="flex justify-between items-center text-sm">
-											<span style="color: var(--color-on-surface)">{entry.name}</span>
-											<span class="font-semibold" style="color: var(--color-primary)">{formatNutrientValue(entry.total)} {entry.unit}</span>
-										</div>
-									{/each}
-								{/if}
-							</div>
-							{#if nutrientEntriesHidden.length > 0}
-								<button
-									onclick={() => nutrientsExpanded = !nutrientsExpanded}
-									class="mt-3 w-full text-xs font-medium py-1.5 rounded-xl active:opacity-60 transition-opacity"
-									style="color: var(--color-on-surface-variant); background-color: var(--color-surface-container)"
-								>
-									{nutrientsExpanded ? t.supplement_stats_show_less : nutrients_show_more(nutrientEntriesHidden.length)}
-								</button>
-							{/if}
-						{/if}
-					</div>
-				{/if}
-
-				{@const visibleHistoryTrackers = [
-					userSettings.caffeineTrackerEnabled && historyCaffeineTotalMg > 0 ? 'caffeine' : null,
-					userSettings.meditationTrackerEnabled && historyMeditationTotalSeconds > 0 ? 'meditation' : null,
-					userSettings.waterTrackerEnabled && historyPeriod === 'day' && historyWaterTotal > 0 ? 'water' : null,
-				].filter(Boolean)}
-				{#if visibleHistoryTrackers.length > 0}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
-						<div class="px-4 pt-3 pb-2">
-							<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">Tracker</p>
-						</div>
-						<!-- Caffeine -->
-						{#if userSettings.caffeineTrackerEnabled && historyCaffeineTotalMg > 0}
-							<div class="px-4 py-2">
-								{#if historyPeriod === 'day'}
-									<button
-										onclick={() => caffeineHistoryCardExpanded = !caffeineHistoryCardExpanded}
-										class="w-full flex items-center justify-between active:opacity-60"
-										style="margin-bottom: 0.375rem"
-									>
-										<p class="text-xs font-semibold tracking-wide" style="color: #C8956C">{t.caffeine_title}</p>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '90' : '0'}deg)">
-											<polyline points="9 6 15 12 9 18"/>
-										</svg>
-									</button>
-									<div class="flex justify-between items-center text-xs" style="margin-bottom: {caffeineHistoryCardExpanded ? '0.75rem' : '0'}">
-										<span style="color: var(--color-on-surface-variant)">{historyCaffeineTotalMl} ml</span>
-										<span class="font-semibold" style="color: {historyCaffeineTotalMg > (userSettings.caffeineLimitMg ?? 400) ? '#EF4444' : '#C8956C'}">{historyCaffeineTotalMg} / {userSettings.caffeineLimitMg ?? 400} mg</span>
-									</div>
-									{#if caffeineHistoryCardExpanded}
-										<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
-											{#each historyCaffeineLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
-												<div class="flex justify-between items-center text-xs">
-													<span style="color: var(--color-on-surface)">{log.drinkName} · {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-													<span class="font-semibold" style="color: #C8956C">{log.caffeineMg} mg</span>
-												</div>
-											{/each}
-										</div>
-									{/if}
-								{:else if historyPeriod === 'week'}
-									<button
-										onclick={() => caffeineHistoryCardExpanded = !caffeineHistoryCardExpanded}
-										class="w-full flex items-center justify-between active:opacity-60"
-										style="margin-bottom: 0.375rem"
-									>
-										<p class="text-xs font-semibold tracking-wide" style="color: #C8956C">{t.caffeine_title}</p>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '90' : '0'}deg)">
-											<polyline points="9 6 15 12 9 18"/>
-										</svg>
-									</button>
-									<div class="flex justify-between items-center text-xs" style="margin-bottom: {caffeineHistoryCardExpanded ? '0.75rem' : '0'}">
-										<span style="color: var(--color-on-surface-variant)">{historyCaffeineTotalMl} ml · {historyCaffeineLogs.length}×</span>
-										<span class="font-semibold" style="color: #C8956C">{historyCaffeineTotalMg} mg</span>
-									</div>
-									{#if caffeineHistoryCardExpanded}
-										<div class="space-y-3 pt-2 border-t" style="border-color: var(--color-outline-variant)">
-											{#each caffeineByDay as [dateKey, dayData]}
-												<div>
-													<div class="flex justify-between items-center mb-1">
-														<span class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">
-															{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
-														</span>
-														<span class="text-xs font-semibold" style="color: #C8956C">{dayData.totalMg} mg</span>
-													</div>
-													<div class="space-y-0.5">
-														{#each dayData.drinks as drink}
-															<div class="flex justify-between items-center text-xs">
-																<span style="color: var(--color-on-surface)">{drink.name} · {drink.ml} ml</span>
-																<span style="color: var(--color-on-surface-variant)">{drink.mg} mg</span>
-															</div>
-														{/each}
-													</div>
-												</div>
-											{/each}
-										</div>
-									{/if}
-								{:else}
-									<button
-										onclick={() => caffeineHistoryCardExpanded = !caffeineHistoryCardExpanded}
-										class="w-full flex items-center justify-between active:opacity-60"
-										style="margin-bottom: 0.375rem"
-									>
-										<p class="text-xs font-semibold tracking-wide" style="color: #C8956C">{t.caffeine_title}</p>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({caffeineHistoryCardExpanded ? '90' : '0'}deg)">
-											<polyline points="9 6 15 12 9 18"/>
-										</svg>
-									</button>
-									<div class="flex justify-between items-center text-xs" style="margin-bottom: {caffeineHistoryCardExpanded ? '0.75rem' : '0'}">
-										<span style="color: var(--color-on-surface-variant)">{historyCaffeineTotalMl} ml · {historyCaffeineLogs.length}×</span>
-										<span class="font-semibold" style="color: #C8956C">{historyCaffeineTotalMg} mg</span>
-									</div>
-									{#if caffeineHistoryCardExpanded}
-										{@const drinkCounts = [...historyCaffeineLogs.reduce((m, l) => (m.set(l.drinkName, (m.get(l.drinkName) ?? 0) + 1), m), new Map<string, number>()).entries()].sort((a, b) => b[1] - a[1])}
-										<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
-											{#each drinkCounts as [name, count]}
-												<div class="flex justify-between items-center text-xs">
-													<span style="color: var(--color-on-surface)">{name}</span>
-													<span style="color: var(--color-on-surface-variant)">{count}×</span>
-												</div>
-											{/each}
-										</div>
-									{/if}
-								{/if}
-							</div>
-						{/if}
-						<!-- Meditation -->
-						{#if userSettings.meditationTrackerEnabled && historyMeditationTotalSeconds > 0}
-							<div class="px-4 py-2">
-								{#if historyPeriod === 'day'}
-									<button
-										onclick={() => meditationHistoryCardExpanded = !meditationHistoryCardExpanded}
-										class="w-full flex items-center justify-between active:opacity-60"
-										style="margin-bottom: 0.375rem"
-									>
-										<p class="text-xs font-semibold tracking-wide" style="color: #9F7AEA">{t.meditation_title}</p>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '90' : '0'}deg)">
-											<polyline points="9 6 15 12 9 18"/>
-										</svg>
-									</button>
-									<div class="flex justify-between items-center text-xs" style="margin-bottom: {meditationHistoryCardExpanded ? '0.75rem' : '0'}">
-										<span style="color: var(--color-on-surface-variant)">{historyMeditationLogs.length}×</span>
-										<span class="font-semibold" style="color: #9F7AEA">{Math.floor(historyMeditationTotalSeconds / 60)} min</span>
-									</div>
-									{#if meditationHistoryCardExpanded}
-										<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
-											{#each historyMeditationLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
-												{@const endTs = log.loggedAt}
-												{@const startTs = endTs - log.durationSeconds * 1000}
-												<div class="flex justify-between items-center text-xs">
-													<span style="color: var(--color-on-surface)">
-														{new Date(startTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(endTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-													</span>
-													<span class="font-semibold" style="color: #9F7AEA">{Math.round(log.durationSeconds / 60)} min</span>
-												</div>
-											{/each}
-										</div>
-									{/if}
-								{:else if historyPeriod === 'week'}
-									<button
-										onclick={() => meditationHistoryCardExpanded = !meditationHistoryCardExpanded}
-										class="w-full flex items-center justify-between active:opacity-60"
-										style="margin-bottom: 0.375rem"
-									>
-										<p class="text-xs font-semibold tracking-wide" style="color: #9F7AEA">{t.meditation_title}</p>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '90' : '0'}deg)">
-											<polyline points="9 6 15 12 9 18"/>
-										</svg>
-									</button>
-									<div class="flex justify-between items-center text-xs" style="margin-bottom: {meditationHistoryCardExpanded ? '0.75rem' : '0'}">
-										<span style="color: var(--color-on-surface-variant)">{historyMeditationLogs.length}×</span>
-										<span class="font-semibold" style="color: #9F7AEA">{Math.floor(historyMeditationTotalSeconds / 60)} min</span>
-									</div>
-									{#if meditationHistoryCardExpanded}
-										<div class="space-y-1 pt-2 border-t" style="border-color: var(--color-outline-variant)">
-											{#each meditationByDay as [dateKey, dayData]}
-												<div class="flex justify-between items-center text-xs">
-													<span style="color: var(--color-on-surface)">
-														{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
-													</span>
-													<span class="font-semibold" style="color: #9F7AEA">{Math.floor(dayData.totalSeconds / 60)} min</span>
-												</div>
-											{/each}
-										</div>
-									{/if}
-								{:else}
-									<button
-										onclick={() => meditationHistoryCardExpanded = !meditationHistoryCardExpanded}
-										class="w-full flex items-center justify-between active:opacity-60"
-										style="margin-bottom: 0.375rem"
-									>
-										<p class="text-xs font-semibold tracking-wide" style="color: #9F7AEA">{t.meditation_title}</p>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '90' : '0'}deg)">
-											<polyline points="9 6 15 12 9 18"/>
-										</svg>
-									</button>
-									<div class="flex justify-between items-center text-xs" style="margin-bottom: {meditationHistoryCardExpanded ? '0.75rem' : '0'}">
-										<span style="color: var(--color-on-surface-variant)">{historyMeditationLogs.length}×</span>
-										<span class="font-semibold" style="color: #9F7AEA">{Math.floor(historyMeditationTotalSeconds / 60)} min</span>
-									</div>
-									{#if meditationHistoryCardExpanded}
-										{@const durationCounts = [...historyMeditationLogs.reduce((m, l) => { const min = Math.round(l.durationSeconds / 60); m.set(min, (m.get(min) ?? 0) + 1); return m; }, new Map<number, number>()).entries()].sort((a, b) => b[1] - a[1])}
-										<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
-											{#each durationCounts as [min, count]}
-												<div class="flex justify-between items-center text-xs">
-													<span style="color: var(--color-on-surface)">{min} min</span>
-													<span style="color: var(--color-on-surface-variant)">{count}×</span>
-												</div>
-											{/each}
-										</div>
-									{/if}
-								{/if}
-							</div>
-						{/if}
-						<!-- Water -->
-						{#if userSettings.waterTrackerEnabled && historyPeriod === 'day' && historyWaterTotal > 0}
-							<div class="px-4 py-2">
-								<button
-									onclick={() => waterHistoryCardExpanded = !waterHistoryCardExpanded}
-									class="w-full flex items-center justify-between active:opacity-60"
-									style="margin-bottom: 0.375rem"
-								>
-									<p class="text-xs font-semibold tracking-wide" style="color: #60A5FA">{t.water_title}</p>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-									     style="transition: transform 0.2s; transform: rotate({waterHistoryCardExpanded ? '90' : '0'}deg)">
-										<polyline points="9 6 15 12 9 18"/>
-									</svg>
-								</button>
-								<div class="flex justify-between items-center text-xs" style="margin-bottom: {waterHistoryCardExpanded ? '0.75rem' : '0'}">
-									<span style="color: var(--color-on-surface-variant)">{historyDate === toLocalDateStr(new Date()) ? t.supplement_taken_today : historyDate}</span>
-									<span class="font-semibold" style="color: #60A5FA">{historyWaterTotal} / {userSettings.waterGoalMl ?? 2500} ml</span>
-								</div>
-								{#if waterHistoryCardExpanded}
-									<div class="space-y-1.5 pt-2 border-t" style="border-color: var(--color-outline-variant)">
-										{#each historyWaterLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
-											<div class="flex justify-between items-center text-xs">
-												<span style="color: var(--color-on-surface)">{new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-												<span class="font-semibold" style="color: #60A5FA">{log.amountMl} ml</span>
-											</div>
-										{/each}
-									</div>
-								{/if}
-							</div>
-						{/if}
-					</div>
-				{/if}
-			{/if}
-		</div>
+		<HistoryTab
+			loading={historyLoading}
+			period={historyPeriod}
+			date={historyDate}
+			nutrients={historyNutrients}
+			supplementStats={historySupplements}
+			logs={historyLogs}
+			waterLogs={historyWaterLogs}
+			caffeineLogs={historyCaffeineLogs}
+			meditationLogs={historyMeditationLogs}
+			onMoodReload={loadTodayMoodEntry}
+			onEditLog={openHistoryEditLog}
+		/>
 	{/if}
 
 	</div><!-- end scrollable -->
+	</div><!-- end relative wrapper -->
 </div>
 
 <QuickLogSheet
@@ -1441,9 +1032,13 @@
 <MoodEntrySheet
 	bind:open={moodEntryOpen}
 	date={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
-	initialMood={null}
-	initialActivities={[]}
-	initialNote={''}
+	initialMood={todayMoodEntry?.mood ?? null}
+	initialActivities={todayMoodEntry ? todayMoodEntry.activities : [
+		...(meditationLogsToday.length > 0 ? ['meditation'] : []),
+		...(caffeineLogsToday.length > 0 ? ['caffeine'] : []),
+		...(todayLogs.length > 0 ? ['supplements'] : [])
+	]}
+	initialNote={todayMoodEntry?.note ?? ''}
 	onsaved={() => { moodEntryOpen = false; loadTodayMoodEntry(); if (activeTab === 'history') loadHistory(); }}
 />
 

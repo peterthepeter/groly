@@ -248,7 +248,7 @@
 	<button
 		onclick={() => expanded = !expanded}
 		class="w-full flex items-center gap-2 px-4 py-3 active:opacity-70"
-		style={expanded ? 'border-bottom: 1px solid var(--color-outline-variant)' : ''}
+		style=""
 	>
 		<p class="font-semibold text-sm shrink-0" style="color: #F472B6">{t.mood_tracker_label}</p>
 		<div class="flex-1 flex items-center flex-wrap gap-x-2 gap-y-0.5">
@@ -357,14 +357,20 @@
 					<button
 						onclick={() => !isFuture && openDetail(dateStr)}
 						disabled={isFuture}
-						class="aspect-square flex flex-col items-center justify-center rounded-lg transition-all active:opacity-60 disabled:cursor-default"
-						style="background-color: {level ? level.bgColor : 'transparent'}; outline: {dateStr === today ? '1.5px solid var(--color-primary)' : 'none'}"
+						class="flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all active:opacity-60 disabled:cursor-default"
+						style="background-color: {dateStr === today ? 'var(--color-surface-container)' : 'transparent'}"
 					>
-						{#if level}
-							<MoodIcon value={level.value} size={15} style="color: {level.color}"/>
-						{:else}
-							<span class="text-[10px] font-medium" style="color: var(--color-on-surface-variant); opacity: {isFuture ? 0.25 : 0.6}">{dayNum(dateStr)}</span>
-						{/if}
+						<div
+							class="w-7 h-7 rounded-full flex items-center justify-center"
+							style="color: {level ? level.color : 'var(--color-on-surface-variant)'}; opacity: {isFuture ? 0.3 : 1}"
+						>
+							{#if level}
+								<MoodIcon value={level.value} size={20}/>
+							{:else if !isFuture}
+								<span style="font-size: 10px">–</span>
+							{/if}
+						</div>
+						<span class="text-[9px]" style="color: {dateStr === today ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}; opacity: {isFuture ? 0.3 : 1}">{dayNum(dateStr)}</span>
 					</button>
 				{/if}
 			{/each}

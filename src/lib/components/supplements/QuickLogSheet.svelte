@@ -127,7 +127,11 @@
 	async function fetchLogCounts() {
 		try {
 			const res = await fetch('/api/supplement-logs/stats');
-			if (res.ok) logCounts = (await res.json()).counts ?? {};
+			if (res.ok) {
+				logCounts = (await res.json()).counts ?? {};
+				await tick();
+				if (sheetEl && activeSheetTab === 'supplements') sheetEl.scrollTop = sheetEl.scrollHeight;
+			}
 		} catch {}
 	}
 
@@ -189,7 +193,7 @@
 
 	$effect(() => {
 		if (open) {
-			activeSheetTab = getSmartDefault();
+			activeSheetTab = untrack(() => getSmartDefault());
 			try { localStorage.setItem('quicklog_opened', '1'); } catch {}
 			caffeineDone = null;
 			caffeineSaving = null;

@@ -2,6 +2,25 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.5',
+		de: [
+			'Bild-Upload für Rezepte (Foto aus Galerie oder Kamera, automatische Komprimierung)',
+			'Standort-Picker für Listen über Karte mit Adresssuche',
+			'Persönliche Begrüßung auf Tracker- und Hauptseiten',
+			'Meditations-Sprüche nach den Sitzungen',
+			'Aufgeräumte Codebase (interne Strukturverbesserungen)',
+			'Bugfixes: Bild-Upload-Race, Meditation-Verlauf, MIME-Types, Map-Picker-Adresslabel',
+		],
+		en: [
+			'Image upload for recipes (camera or gallery, automatic compression)',
+			'Location picker for lists via map with address search',
+			'Personal greeting on tracker and main pages',
+			'Meditation quotes after sessions',
+			'Cleaner codebase (internal structural improvements)',
+			'Bugfixes: image upload race, meditation history, MIME types, map picker address label',
+		],
+	},
+	{
 		version: '0.7.3',
 		de: [
 			'Neu: Stimmungs-Tracker — Tagesstimmung (1–5) mit Aktivitäten (Sport, Hobbys, Soziales, Schlaf, Arbeit, Wetter) und Notiz erfassen, Verlauf einsehen, Push-Erinnerungen einrichten',

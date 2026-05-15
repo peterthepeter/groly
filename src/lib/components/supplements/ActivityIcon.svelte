@@ -8,7 +8,7 @@
 		Users, Home, House, PartyPopper, Coffee, Sofa,
 		CloudMoon, Salad, Stethoscope, Thermometer, Leaf,
 		Briefcase, CircleCheck, AlarmClock, Plane, Bed,
-		ThermometerSun, Snowflake
+		ThermometerSun, Snowflake, Pill
 	} from 'lucide-svelte';
 
 	const ICON_MAP: Record<string, any> = {
@@ -71,7 +71,8 @@
 		plane: Plane,
 		bed: Bed,
 		'thermometer-sun': ThermometerSun,
-		snowflake: Snowflake
+		snowflake: Snowflake,
+		pill: Pill
 	};
 
 	let { icon, size = 18, color = 'var(--color-primary)' }: { icon: string; size?: number; color?: string } = $props();

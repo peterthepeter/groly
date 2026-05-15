@@ -7,7 +7,8 @@
 	import FabWithShortcuts from '$lib/components/FabWithShortcuts.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import MealPlanner from '$lib/components/MealPlanner.svelte';
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import { userSettings } from '$lib/userSettings.svelte';
 	import { cacheRecipes, getOfflineRecipes } from '$lib/sync/manager';
 
 	let { data } = $props();
@@ -47,6 +48,17 @@
 	let customOrder = $state<string[]>([]);
 	let dragId = $state<string | null>(null);
 	const activeTab = $derived($page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
+
+	const todayHour = new Date().getHours();
+	const todayGreeting = $derived(todayHour < 12 ? t.greeting_morning : todayHour < 18 ? t.greeting_day : todayHour < 22 ? t.greeting_evening : t.greeting_night);
+	const todayDayName = $derived(new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(new Date()));
+	const todayDateStr = $derived(new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(new Date()));
+	const recipeInfoLine = $derived(
+		loading || recipes.length === 0 ? '' :
+		currentLang() === 'de'
+			? `${recipes.length} ${recipes.length === 1 ? 'Rezept' : 'Rezepte'} gespeichert`
+			: `${recipes.length} ${recipes.length === 1 ? 'recipe' : 'recipes'} saved`
+	);
 	let mealPlanEditMode = $state(false);
 
 	function closeSearch() {
@@ -307,16 +319,28 @@
 		</div>
 	{/if}
 
+	<!-- Hero header + scroll area -->
+	<div class="relative flex-1 min-h-0">
+		{#if activeTab === 'recipes' && !searchOpen && !sortMode && userSettings.greetingEnabled}
+			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: 22vh; min-height: 100px; max-height: 160px; z-index: 0">
+				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
+				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user?.username ?? ''}</p>
+				{#if recipeInfoLine}
+					<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant); opacity: 0.65">{recipeInfoLine}</p>
+				{/if}
+			</div>
+		{/if}
+
 	<!-- Meal plan: bottom-anchored scroll (same as recipes) -->
 	{#if activeTab === 'mealplan'}
-		<div class="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-4">
+		<div class="absolute inset-0 flex flex-col justify-end overflow-y-auto px-4" style="z-index: 1">
 			<MealPlanner {recipes} bind:editMode={mealPlanEditMode} />
 			<div class="flex-shrink-0" style="height: 5rem"></div>
 		</div>
 
 	<!-- Recipes: bottom-anchored scroll (list builds upward), top-anchored when searching -->
 	{:else}
-		<div class="flex-1 min-h-0 flex flex-col overflow-y-auto px-4" class:justify-end={!searchQuery.trim() || !keyboardOpen} style="padding-bottom: 5.5rem">
+		<div class="absolute inset-0 flex flex-col overflow-y-auto px-4" class:justify-end={!searchQuery.trim() || !keyboardOpen} style="z-index: 1; padding-bottom: 5.5rem">
 
 		<!-- Pending Shares -->
 		{#each pendingShares as share (share.id)}
@@ -505,6 +529,7 @@
 
 		</div><!-- end recipes scroll -->
 	{/if}<!-- end tab switch -->
+	</div><!-- end relative wrapper -->
 
 	<AppBottomNav
 		activeTab="recipes"
@@ -545,7 +570,6 @@
 					<div class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_import_url_hint}</div>
 				</div>
 			</button>
-			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
 			<button
 				onclick={() => { addSheetOpen = false; goto('/rezepte/neu'); }}
 				class="w-full flex items-center gap-3 px-4 py-2.5 active:opacity-70 transition-opacity"
