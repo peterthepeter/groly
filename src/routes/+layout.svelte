@@ -50,9 +50,13 @@
 		if (data.user) {
 			const lastVersion = localStorage.getItem('groly_last_version');
 			if (lastVersion && lastVersion !== LATEST_CHANGES.version) {
+				// Modal öffnen — localStorage wird erst beim Schließen aktualisiert,
+				// damit ein gleichzeitiger SW-Reload den "ungelesen"-Status nicht killt.
 				whatsNewOpen = true;
+			} else if (!lastVersion) {
+				// Erststart: Version still im localStorage einpflegen, kein Modal.
+				localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
 			}
-			localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
 		}
 
 		// Re-register push subscription once per day (fire-and-forget, kein await nötig)
@@ -150,7 +154,10 @@
 	<WhatsNewModal
 		version={LATEST_CHANGES.version}
 		items={currentLang() === 'en' ? LATEST_CHANGES.en : LATEST_CHANGES.de}
-		onClose={() => { whatsNewOpen = false; }}
+		onClose={() => {
+			whatsNewOpen = false;
+			localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
+		}}
 	/>
 {/if}
 

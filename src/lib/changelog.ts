@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.7',
+		de: [
+			'Push-Erinnerungen führen jetzt direkt ins passende Log-Fenster: Klick auf eine Supplement-, Wasser-, Meditations- oder Mood-Erinnerung öffnet sofort den zugehörigen Eintrag — kein zusätzliches Tippen mehr nötig',
+			'„Was ist neu"-Fenster nach Updates verschwindet nicht mehr von selbst, wenn die App im Hintergrund neu lädt — bleibt offen, bis du „Alles klar" tippst',
+		],
+		en: [
+			'Push reminders now jump straight into the matching log sheet: tapping a supplement, water, meditation, or mood reminder opens the entry sheet immediately — no extra tap needed',
+			"The \"What's new\" modal after an update no longer disappears when the app reloads in the background — it stays open until you dismiss it",
+		],
+	},
+	{
 		version: '0.7.6',
 		de: [
 			'Verbesserter Onboarding-Prozess: Neue User erhalten einen Invite-Link, mit dem sie direkt selbst ihr Passwort festlegen — kein Initialpasswort mehr nötig',

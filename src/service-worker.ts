@@ -113,9 +113,23 @@ self.addEventListener('notificationclick', (event) => {
 	event.waitUntil(
 		self.clients
 			.matchAll({ type: 'window', includeUncontrolled: true })
-			.then((clientList) => {
+			.then(async (clientList) => {
+				// Find any existing app window: navigate it to the target URL and focus.
+				// "focus existing client + navigate" beats "open new window" because the
+				// user's app state (history, cached pages) stays intact, and on iOS PWA
+				// it brings the standalone PWA back to foreground.
 				for (const client of clientList) {
-					if (client.url === url && 'focus' in client) return client.focus();
+					if ('focus' in client) {
+						try {
+							if ('navigate' in client && client.url !== new URL(url, self.location.origin).href) {
+								await (client as WindowClient).navigate(url);
+							}
+							return await client.focus();
+						} catch {
+							// navigate() can throw if the client is from a different origin
+							// or in some edge cases; fall through to openWindow.
+						}
+					}
 				}
 				return self.clients.openWindow(url);
 			})

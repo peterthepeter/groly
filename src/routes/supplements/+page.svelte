@@ -168,11 +168,47 @@
 
 	// Quick-log sheet (opened from FAB)
 	let quickLogOpen = $state(false);
+	let quickLogInitialTab = $state<'tracker' | 'supplements' | null>(null);
 	let caffeinePickerOpen = $state(false);
 	let caffeinePickerPreselect = $state<CaffeineDrink | null>(null);
 
 	function openQuickLog() {
+		quickLogInitialTab = null;
 		quickLogOpen = true;
+	}
+
+	// Handle ?action=... query-param triggered by push notifications.
+	// Opens the matching sheet immediately, then strips the param from the URL
+	// so a reload won't re-open it.
+	function handleActionParam() {
+		const action = $page.url.searchParams.get('action');
+		if (!action) return;
+
+		const consume = () => {
+			const url = new URL($page.url);
+			url.searchParams.delete('action');
+			goto(url.pathname + url.search, { replaceState: true, noScroll: true, keepFocus: true });
+		};
+
+		switch (action) {
+			case 'log-supplement':
+				quickLogInitialTab = 'supplements';
+				quickLogOpen = true;
+				consume();
+				break;
+			case 'log-water':
+			case 'log-meditation':
+				quickLogInitialTab = 'tracker';
+				quickLogOpen = true;
+				consume();
+				break;
+			case 'log-mood':
+				moodEntryOpen = true;
+				consume();
+				break;
+			default:
+				consume();
+		}
 	}
 
 	function handleCaffeineShortcut(drink: CaffeineDrink) {
@@ -596,6 +632,7 @@
 
 	onMount(() => {
 		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]).then(() => { loading = false; });
+		handleActionParam();
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
 
 		function onVisibilityChange() {
@@ -610,6 +647,13 @@
 			clearInterval(clockInterval);
 			document.removeEventListener('visibilitychange', onVisibilityChange);
 		};
+	});
+
+	// React to push-triggered deep-links while the app is already open on /supplements
+	// (SW navigates the existing client → action param appears → open the sheet).
+	$effect(() => {
+		void $page.url.searchParams.get('action');
+		handleActionParam();
 	});
 
 	function navigateHistory(dir: -1 | 1) {
@@ -1027,6 +1071,7 @@
 	onlogged={() => { Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]); if (activeTab === 'history') loadHistory(); }}
 	onCaffeineShortcutClick={handleCaffeineShortcut}
 	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
+	initialTab={quickLogInitialTab}
 />
 
 <MoodEntrySheet

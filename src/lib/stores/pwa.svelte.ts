@@ -4,10 +4,10 @@ export function initUpdateDetection() {
 	// Wenn ein neuer SW die Kontrolle übernimmt (auto-skipWaiting), Version speichern und neu laden.
 	// hadController stellt sicher, dass wir nur bei echten Updates reloaden, nicht beim ersten Install.
 	const hadController = !!navigator.serviceWorker.controller;
-	navigator.serviceWorker.addEventListener('controllerchange', async () => {
+	navigator.serviceWorker.addEventListener('controllerchange', () => {
 		if (!hadController) return;
-		const { LATEST_CHANGES } = await import('$lib/changelog');
-		localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
+		// localStorage wird NICHT hier gesetzt — sonst überschreibt der Reload
+		// das "ungelesen"-Signal für das WhatsNew-Modal. Das setzt das Modal selbst beim Schließen.
 		window.location.reload();
 	});
 }

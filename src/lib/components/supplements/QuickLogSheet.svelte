@@ -33,7 +33,8 @@
 		moodEnabled = false,
 		moodHasEntry = false,
 		onrateMood = null,
-		logDate = null as string | null
+		logDate = null as string | null,
+		initialTab = null as 'tracker' | 'supplements' | null
 	}: {
 		open: boolean;
 		supplements: Supplement[];
@@ -54,6 +55,7 @@
 		moodHasEntry?: boolean;
 		onrateMood?: (() => void) | null;
 		logDate?: string | null;
+		initialTab?: 'tracker' | 'supplements' | null;
 	} = $props();
 
 	function todayStr(): string {
@@ -193,7 +195,7 @@
 
 	$effect(() => {
 		if (open) {
-			activeSheetTab = untrack(() => getSmartDefault());
+			activeSheetTab = untrack(() => initialTab ?? getSmartDefault());
 			try { localStorage.setItem('quicklog_opened', '1'); } catch {}
 			caffeineDone = null;
 			caffeineSaving = null;
