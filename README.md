@@ -179,7 +179,7 @@ Install via **Community Applications** (search for "Groly") or add the template 
 - **Variables:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ORIGIN`
 - **Push notifications (optional):** additionally set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_SUBJECT` — see [Push Notifications](#push-notifications-optional) below
 
-The volume `/app/data` contains the SQLite database. An admin user is created on first start and is prompted to change the password on first login.
+The volume `/app/data` contains the SQLite database. An admin user is created on first start with the credentials from `ADMIN_USERNAME` and `ADMIN_PASSWORD`. After the first start both variables can be safely deleted from the container — `ADMIN_PASSWORD` is never re-applied. If you ever forget your admin password, see [Admin password recovery](#admin-password-recovery) below.
 
 > **File permissions:** The container runs as user `groly` (UID 1000, GID 1000). Make sure the host data directory is owned by this user:
 > ```bash
@@ -195,13 +195,26 @@ The volume `/app/data` contains the SQLite database. An admin user is created on
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | Path to the SQLite file, e.g. `/app/data/groly.db` |
 | `ORIGIN` | Yes | Full URL of your instance, e.g. `https://groly.example.com` |
-| `ADMIN_USERNAME` | First run only | Username for the initial admin account |
-| `ADMIN_PASSWORD` | First run only | Password for the initial admin account |
+| `ADMIN_USERNAME` | First run only | Username for the initial admin account. After first start can be deleted, but must be present (with the original value) if you ever need to use `ADMIN_PASSWORD_RESET`. |
+| `ADMIN_PASSWORD` | First run only | Password for the initial admin account. **Only used when no users exist yet.** Can — and should — be deleted from the container after first start. To reset a forgotten admin password, use `ADMIN_PASSWORD_RESET` instead. |
+| `ADMIN_PASSWORD_RESET` | Emergency only | If set, resets the password of the user defined in `ADMIN_USERNAME` to this value on container start and invalidates all their existing sessions. Leave empty in normal operation — see [Admin password recovery](#admin-password-recovery). |
 | `VAPID_PUBLIC_KEY` | Optional | VAPID public key for push notifications |
 | `VAPID_PRIVATE_KEY` | Optional | VAPID private key for push notifications |
 | `PUBLIC_VAPID_PUBLIC_KEY` | Optional | Same value as `VAPID_PUBLIC_KEY` |
 | `VAPID_SUBJECT` | Optional | `https://` URL or `mailto:` address for VAPID |
 | `ADDRESS_HEADER` | Optional | Set to `X-Forwarded-For` **only** when running behind a reverse proxy (Caddy, Nginx, Traefik). **Do not set this if you're accessing Groly directly** — it will cause login failures. Enables accurate per-client IP rate limiting. |
+
+### Admin password recovery
+
+Forgot your admin password? Since Groly is self-hosted and has no email server, recovery is done through the container environment:
+
+1. **Set the variable** `ADMIN_PASSWORD_RESET` in your container template to a new password (any string — it will become the new admin password).
+2. Make sure `ADMIN_USERNAME` is still set to the username of the admin you want to reset (default `admin`).
+3. **Restart the container.** On startup, Groly will reset that user's password and invalidate all their existing sessions. You will see a warning in the container logs.
+4. **Log in** with the new password.
+5. **Delete `ADMIN_PASSWORD_RESET`** from your container template. As long as it stays set, the password will be re-applied on every container restart.
+
+This works only for the user named in `ADMIN_USERNAME` (the original admin). For any other admin or regular user who is locked out, log in as the original admin and use the "Reset password" button in the user management UI — it generates a fresh invite link you can send them.
 
 ### Push Notifications (optional)
 

@@ -375,3 +375,18 @@ export const moodReminderSchedules = sqliteTable('mood_reminder_schedules', {
 export type MoodLog = typeof moodLogs.$inferSelect;
 export type MoodCustomTag = typeof moodCustomTags.$inferSelect;
 export type MoodReminderSchedule = typeof moodReminderSchedules.$inferSelect;
+
+export const userInvites = sqliteTable('user_invites', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	tokenHash: text('token_hash').notNull().unique(),
+	type: text('type', { enum: ['invite', 'reset'] }).notNull(),
+	createdAt: integer('created_at').notNull(),
+	expiresAt: integer('expires_at').notNull(),
+	usedAt: integer('used_at')
+}, (t) => [
+	index('user_invites_user_id_idx').on(t.userId),
+	index('user_invites_expires_at_idx').on(t.expiresAt)
+]);
+
+export type UserInvite = typeof userInvites.$inferSelect;

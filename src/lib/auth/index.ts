@@ -49,7 +49,7 @@ export async function createUser(
 export async function login(
 	username: string,
 	password: string
-): Promise<{ sessionId: string; mustChangePassword: boolean } | null> {
+): Promise<{ sessionId: string } | null> {
 	const user = db.select().from(users).where(eq(users.username, username.trim())).get();
 	if (!user) return null;
 	if (!verifyPassword(password.trim(), user.passwordHash)) return null;
@@ -64,7 +64,7 @@ export async function login(
 
 	db.update(users).set({ lastLoginAt: ts }).where(eq(users.id, user.id)).run();
 
-	return { sessionId, mustChangePassword: user.mustChangePassword };
+	return { sessionId };
 }
 
 export function getSession(sessionId: string) {
@@ -92,14 +92,40 @@ export function changePassword(userId: string, newPassword: string) {
 export function bootstrapAdmin() {
 	const adminUsername = process.env.ADMIN_USERNAME ?? 'admin';
 	const adminPassword = process.env.ADMIN_PASSWORD;
+	const adminPasswordReset = process.env.ADMIN_PASSWORD_RESET;
 
-	const existing = db.select().from(users).get();
-	if (existing) return; // Bereits User vorhanden
+	const anyUser = db.select().from(users).get();
 
-	if (!adminPassword) {
-		throw new Error('[groly] ADMIN_PASSWORD environment variable is required on first start');
+	// First start: at least one admin must exist. Require env vars.
+	if (!anyUser) {
+		if (!adminPassword) {
+			throw new Error('[groly] ADMIN_PASSWORD environment variable is required on first start');
+		}
+		createUser(adminUsername, adminPassword, 'admin', false);
+		console.log(`[groly] Admin-User "${adminUsername}" angelegt.`);
+		return;
 	}
 
-	createUser(adminUsername, adminPassword, 'admin', true);
-	console.log(`[groly] Admin-User "${adminUsername}" angelegt.`);
+	// Recovery path: if ADMIN_PASSWORD_RESET is set, reset password for the ADMIN_USERNAME user
+	// and invalidate all their existing sessions. ADMIN_PASSWORD is NEVER applied after first start
+	// (existing admins might have changed it long ago — overwriting would lock them out).
+	if (adminPasswordReset) {
+		const target = db.select().from(users).where(eq(users.username, adminUsername)).get();
+		if (target) {
+			db.update(users)
+				.set({
+					passwordHash: hashPassword(adminPasswordReset),
+					mustChangePassword: false,
+					role: 'admin',
+					updatedAt: now()
+				})
+				.where(eq(users.id, target.id))
+				.run();
+			db.delete(sessions).where(eq(sessions.userId, target.id)).run();
+			console.warn(`[groly] WARN: ADMIN_PASSWORD_RESET applied — password for "${adminUsername}" was reset and all sessions invalidated.`);
+			console.warn(`[groly] WARN: Remove the ADMIN_PASSWORD_RESET variable from your container environment after logging in.`);
+		} else {
+			console.warn(`[groly] WARN: ADMIN_PASSWORD_RESET is set but no user named "${adminUsername}" exists. Ignored.`);
+		}
+	}
 }

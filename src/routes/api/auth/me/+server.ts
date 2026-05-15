@@ -8,7 +8,6 @@ export const GET: RequestHandler = async (event) => {
 	return json({
 		id: user.id,
 		username: user.username,
-		role: user.role,
-		mustChangePassword: user.mustChangePassword
+		role: user.role
 	});
 };

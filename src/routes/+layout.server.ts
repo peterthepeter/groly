@@ -16,8 +16,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		user: {
 			id: locals.user.id,
 			username: locals.user.username,
-			role: locals.user.role,
-			mustChangePassword: locals.user.mustChangePassword
+			role: locals.user.role
 		},
 		settings
 	};

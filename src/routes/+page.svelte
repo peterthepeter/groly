@@ -362,8 +362,7 @@
 		loadCustomOrder();
 		loadLists();
 		initSync();
-		if (data.user?.mustChangePassword) goto('/einstellungen?mustChange=1');
-		else { checkInstallBanner(); checkPushPrompt(); }
+		checkInstallBanner(); checkPushPrompt();
 
 		const handleBeforeInstall = (e: Event) => {
 			e.preventDefault();

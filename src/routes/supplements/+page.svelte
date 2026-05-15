@@ -798,7 +798,7 @@
 			{@const todayGreeting = hour < 12 ? t.greeting_morning : hour < 18 ? t.greeting_day : hour < 22 ? t.greeting_evening : t.greeting_night}
 			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(new Date())}
 			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(new Date())}
-			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; z-index: 0">
+			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user.username}</p>
 				{#if trackerInfoLine}
@@ -809,7 +809,7 @@
 
 		<div bind:this={scrollContainer}
 		     class="absolute inset-0 overflow-y-auto {activeTab === 'today' ? 'flex flex-col justify-end' : ''}"
-		     style="z-index: 1; padding-bottom: 5.5rem">
+		     style="padding-bottom: 5.5rem">
 
 	{#if loading}
 		<div class="flex justify-center py-16">

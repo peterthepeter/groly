@@ -32,12 +32,16 @@
     Type="Variable" Display="always" Required="true" Mask="false"></Config>
 
   <Config Name="ADMIN_USERNAME" Target="ADMIN_USERNAME" Default="admin" Mode=""
-    Description="Username for the initial admin account. Only used on first start."
+    Description="Username for the initial admin account. Only used on first start. Can be safely deleted from the container afterwards — it is also the user that ADMIN_PASSWORD_RESET will reset if you ever forget your admin password."
     Type="Variable" Display="always" Required="true" Mask="false">admin</Config>
 
   <Config Name="ADMIN_PASSWORD" Target="ADMIN_PASSWORD" Default="" Mode=""
-    Description="Password for the initial admin account. Only used on first start. You will be prompted to change it on first login."
+    Description="Password for the initial admin account. ONLY used on first start (when no users exist yet). After first start this variable is ignored and can — and should — be deleted from the container template for security. If you ever forget the admin password, use ADMIN_PASSWORD_RESET below instead."
     Type="Variable" Display="always" Required="true" Mask="true"></Config>
+
+  <Config Name="ADMIN_PASSWORD_RESET" Target="ADMIN_PASSWORD_RESET" Default="" Mode=""
+    Description="Emergency password reset for the user defined in ADMIN_USERNAME. Leave EMPTY in normal operation. Only set this if you have forgotten your admin password: enter a new password, restart the container, log in, then DELETE this variable. While set, the password is reset on every container start and all existing sessions are invalidated."
+    Type="Variable" Display="always" Required="false" Mask="true"></Config>
 
   <Config Name="ADDRESS_HEADER" Target="ADDRESS_HEADER" Default="" Mode=""
     Description="Only fill this in if Groly is running behind a reverse proxy (Nginx Proxy Manager, Caddy, Traefik) — set it to X-Forwarded-For. Leave empty if you access Groly directly. Setting this without a reverse proxy will cause login to fail."

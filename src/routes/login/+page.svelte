@@ -34,8 +34,7 @@
 		});
 
 		if (res.ok) {
-			const data = await res.json();
-			goto(data.mustChangePassword ? '/einstellungen?mustChange=1' : '/');
+			goto('/');
 		} else {
 			const data = await res.json();
 			error = data.error ?? t.login_error;

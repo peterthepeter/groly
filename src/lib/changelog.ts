@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.6',
+		de: [
+			'Verbesserter Onboarding-Prozess: Neue User erhalten einen Invite-Link, mit dem sie direkt selbst ihr Passwort festlegen — kein Initialpasswort mehr nötig',
+			'Admin kann für jeden User jederzeit einen neuen Invite- oder Reset-Link erzeugen',
+			'Bugfix: Tracker-Eingabesheets (z.B. Koffein-Picker) liegen wieder korrekt über der unteren Navigationsleiste',
+		],
+		en: [
+			'Improved onboarding: new users receive an invite link to set their own password directly — no more initial passwords',
+			'Admins can generate a fresh invite or reset link for any user at any time',
+			'Bugfix: tracker entry sheets (e.g. caffeine picker) now correctly overlay the bottom navigation bar',
+		],
+	},
+	{
 		version: '0.7.5',
 		de: [
 			'Bild-Upload für Rezepte (Foto aus Galerie oder Kamera, automatische Komprimierung)',

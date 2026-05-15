@@ -27,5 +27,5 @@ export const POST: RequestHandler = async (event) => {
 		secure: process.env.ORIGIN?.startsWith('https://') ?? false
 	});
 
-	return json({ ok: true, mustChangePassword: result.mustChangePassword });
+	return json({ ok: true });
 };

@@ -4,7 +4,6 @@
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
-	import { validatePassword, getPasswordHint } from '$lib/password';
 
 	let { data } = $props();
 
@@ -89,21 +88,28 @@
 		id: string; username: string; role: string;
 		createdAt: number; lastLoginAt: number | null;
 		listCount: number; itemCount: number; recipeCount: number;
+		openInviteType: 'invite' | 'reset' | null;
+		openInviteExpiresAt: number | null;
+	};
+
+	type CreatedInvite = {
+		username: string;
+		inviteUrl: string;
+		expiresAt: number;
+		type: 'invite' | 'reset';
 	};
 
 	let users = $state<UserEntry[]>([]);
 	let showCreateForm = $state(false);
 	let newUsername = $state('');
-	let newPassword = $state('');
 	let newRole = $state<'user' | 'admin'>('user');
 	let userError = $state('');
-	let createdCredentials = $state<{ username: string; password: string } | null>(null);
+	let createdInvite = $state<CreatedInvite | null>(null);
 	let copyFeedback = $state(false);
-	let canShare = $state(false);
 	let editUser = $state<UserEntry | null>(null);
-	let editPassword = $state('');
 	let editError = $state('');
 	let editSuccess = $state('');
+	let creating = $state(false);
 
 	const bootstrapId = $derived(
 		users.length > 0 ? [...users].sort((a, b) => a.createdAt - b.createdAt)[0].id : null
@@ -122,6 +128,35 @@
 		if (user.id === bootstrapId) return false;
 		if (user.role === 'admin' && adminCount <= 1) return false;
 		return true;
+	}
+
+	function nowSec(): number { return Math.floor(Date.now() / 1000); }
+
+	function userStatusLabel(u: UserEntry): { text: string; tone: 'active' | 'pending' | 'expired' } {
+		if (!u.openInviteType) return { text: t.admin_status_active, tone: 'active' };
+		const expired = u.openInviteExpiresAt != null && u.openInviteExpiresAt < nowSec();
+		if (u.openInviteType === 'invite') {
+			return expired
+				? { text: t.admin_status_invite_expired, tone: 'expired' }
+				: { text: t.admin_status_invite_pending, tone: 'pending' };
+		}
+		return expired
+			? { text: t.admin_status_reset_expired, tone: 'expired' }
+			: { text: t.admin_status_reset_pending, tone: 'pending' };
+	}
+
+	function formatExpiresIn(expiresAt: number): string {
+		const diff = expiresAt - nowSec();
+		if (diff <= 0) return '';
+		const hours = Math.floor(diff / 3600);
+		if (hours >= 1) return `${hours}h`;
+		return `${Math.max(1, Math.floor(diff / 60))}m`;
+	}
+
+	function formatExpiry(ts: number): string {
+		return new Date(ts * 1000).toLocaleString(currentLang() === 'de' ? 'de-DE' : 'en-US', {
+			day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+		});
 	}
 
 	async function changeRole() {
@@ -143,23 +178,6 @@
 		}
 	}
 
-	function generatePassword(): string {
-		const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
-		return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-	}
-
-	function formatLastLogin(ts: number | null): string {
-		if (!ts) return 'Noch nie eingeloggt';
-		const diff = Math.floor(Date.now() / 1000) - ts;
-		if (diff < 60) return 'gerade eben';
-		if (diff < 3600) return `vor ${Math.floor(diff / 60)} Min.`;
-		if (diff < 86400) return `vor ${Math.floor(diff / 3600)} Std.`;
-		if (diff < 172800) return 'gestern';
-		if (diff < 604800) return `vor ${Math.floor(diff / 86400)} Tagen`;
-		if (diff < 2592000) return `vor ${Math.floor(diff / 604800)} Wo.`;
-		return `vor ${Math.floor(diff / 2592000)} Mon.`;
-	}
-
 	async function loadUsers() {
 		const res = await fetch('/api/users');
 		if (res.ok) users = await res.json();
@@ -168,34 +186,33 @@
 	async function createUser(e: SubmitEvent) {
 		e.preventDefault();
 		userError = '';
+		creating = true;
 		const usernameToCreate = newUsername.trim();
-		const passwordToCreate = newPassword;
-		const res = await fetch('/api/users', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ username: usernameToCreate, password: passwordToCreate, role: newRole })
-		});
-		if (res.ok) {
-			createdCredentials = { username: usernameToCreate, password: passwordToCreate };
-			newUsername = '';
-			newPassword = '';
-			newRole = 'user';
-			showCreateForm = false;
-			loadUsers();
-		} else {
-			const d = await res.json();
-			userError = d.error ?? 'Fehler';
+		try {
+			const res = await fetch('/api/users', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ username: usernameToCreate, role: newRole })
+			});
+			if (res.ok) {
+				const data = await res.json();
+				createdInvite = {
+					username: usernameToCreate,
+					inviteUrl: data.inviteUrl,
+					expiresAt: nowSec() + 48 * 3600,
+					type: 'invite'
+				};
+				newUsername = '';
+				newRole = 'user';
+				showCreateForm = false;
+				loadUsers();
+			} else {
+				const d = await res.json();
+				userError = d.error ?? 'Fehler';
+			}
+		} finally {
+			creating = false;
 		}
-	}
-
-	function buildMessage1(): string {
-		if (!createdCredentials) return '';
-		const url = `${window.location.origin}/login?u=${encodeURIComponent(createdCredentials.username)}`;
-		return `Hallo ${createdCredentials.username},\n\nhier sind deine Groly-Zugangsdaten:\n${url}\n\nBenutzername: ${createdCredentials.username}\nPasswort:`;
-	}
-
-	function buildMessage2(): string {
-		return createdCredentials?.password ?? '';
 	}
 
 	async function copyToClipboard(text: string): Promise<void> {
@@ -213,38 +230,44 @@
 		document.body.removeChild(textarea);
 	}
 
-	async function copyCredentials() {
-		if (!createdCredentials) return;
-		await copyToClipboard(`${buildMessage1()} ${buildMessage2()}`);
+	function buildShareMessage(invite: CreatedInvite): string {
+		return `${t.admin_invite_share_text}\n${invite.inviteUrl}`;
+	}
+
+	async function copyInvite() {
+		if (!createdInvite) return;
+		await copyToClipboard(buildShareMessage(createdInvite));
 		copyFeedback = true;
 		setTimeout(() => (copyFeedback = false), 2000);
 	}
 
-	async function shareMessage1() {
-		const text = buildMessage1();
-		if (navigator.share) await navigator.share({ text });
-		else await copyToClipboard(text);
+	async function shareInvite() {
+		if (!createdInvite) return;
+		const text = buildShareMessage(createdInvite);
+		if (navigator.share) {
+			try { await navigator.share({ text }); }
+			catch { /* user cancelled */ }
+		} else {
+			await copyToClipboard(text);
+			copyFeedback = true;
+			setTimeout(() => (copyFeedback = false), 2000);
+		}
 	}
 
-	async function shareMessage2() {
-		const text = buildMessage2();
-		if (navigator.share) await navigator.share({ text });
-		else await copyToClipboard(text);
-	}
-
-	async function savePassword() {
-		if (!editUser) return;
+	async function generateInviteFor(userId: string): Promise<void> {
 		editError = '';
-		const pwError = validatePassword(editPassword);
-		if (pwError) { editError = pwError; return; }
-		const res = await fetch(`/api/users/${editUser.id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ password: editPassword })
-		});
+		const res = await fetch(`/api/users/${userId}/invite`, { method: 'POST' });
 		if (res.ok) {
-			editSuccess = t.admin_password_changed;
-			editPassword = '';
+			const target = users.find(u => u.id === userId);
+			const data = await res.json();
+			createdInvite = {
+				username: target?.username ?? '',
+				inviteUrl: data.inviteUrl,
+				expiresAt: nowSec() + 48 * 3600,
+				type: data.type
+			};
+			editUser = null;
+			await loadUsers();
 		} else {
 			const d = await res.json();
 			editError = d.error ?? 'Fehler';
@@ -266,7 +289,6 @@
 
 	function openEdit(user: UserEntry) {
 		editUser = user;
-		editPassword = '';
 		editError = '';
 		editSuccess = '';
 	}
@@ -607,7 +629,6 @@
 	onMount(() => {
 		loadUsers();
 		loadCatalog();
-		canShare = typeof navigator !== 'undefined' && 'share' in navigator;
 	});
 </script>
 
@@ -650,7 +671,10 @@
 				<div class="px-3 pb-3 space-y-2">
 					<!-- User List -->
 					<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
-						{#each users as user, i (user.id)}
+						{#each users as user (user.id)}
+							{@const status = userStatusLabel(user)}
+							{@const expiresIn = status.tone === 'pending' && user.openInviteExpiresAt
+								? formatExpiresIn(user.openInviteExpiresAt) : ''}
 							<button
 								onclick={() => openEdit(user)}
 								class="w-full flex items-center gap-3 px-4 py-2.5 text-left active:opacity-70 transition-opacity"
@@ -660,7 +684,19 @@
 									{user.username[0].toUpperCase()}
 								</div>
 								<div class="flex-1 min-w-0">
-									<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{user.username}</div>
+									<div class="flex items-center gap-2">
+										<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{user.username}</div>
+										<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+										      style="background-color: {status.tone === 'active'
+										        ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
+										        : status.tone === 'pending'
+										        ? 'color-mix(in srgb, #C8956C 18%, transparent)'
+										        : 'color-mix(in srgb, var(--color-error) 18%, transparent)'};
+										        color: {status.tone === 'active' ? 'var(--color-primary)'
+										        : status.tone === 'pending' ? '#C8956C' : 'var(--color-error)'}">
+											{status.text}{expiresIn ? ` · ${t.admin_status_expires_hours} ${expiresIn}` : ''}
+										</span>
+									</div>
 									<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">
 										{user.role === 'admin' ? t.admin_role_admin : t.admin_role_user}
 										· {user.listCount} {user.listCount === 1 ? 'Liste' : 'Listen'}, {user.itemCount} Items, {user.recipeCount} {user.recipeCount === 1 ? 'Rezept' : 'Rezepte'}
@@ -673,51 +709,46 @@
 						{/each}
 					</div>
 
-					<!-- Credentials card after successful creation -->
-					{#if createdCredentials}
+					<!-- Invite-Link card after creation/regeneration -->
+					{#if createdInvite}
 						<div class="rounded-xl px-4 py-4 space-y-3" style="background-color: var(--color-surface-container)">
 							<div class="flex items-center gap-2">
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-									<polyline points="22 4 12 14.01 9 11.01"/>
+									<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+									<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
 								</svg>
-								<span class="text-xs font-semibold" style="color: var(--color-primary)">{t.admin_user_created}</span>
+								<span class="text-xs font-semibold" style="color: var(--color-primary)">
+									{t.admin_invite_link_label} · {createdInvite.username}
+								</span>
 							</div>
-							<div class="rounded-lg px-3 py-2.5 space-y-2" style="background-color: var(--color-surface-low)">
-								<div class="flex items-center justify-between gap-2">
-									<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.admin_username_label}</span>
-									<span class="text-xs font-mono font-semibold" style="color: var(--color-on-surface)">{createdCredentials.username}</span>
-								</div>
-								<div class="h-px" style="background-color: var(--color-outline-variant)"></div>
-								<div class="flex items-center justify-between gap-2">
-									<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.admin_password_label}</span>
-									<span class="text-xs font-mono font-semibold tracking-wider" style="color: var(--color-on-surface)">{createdCredentials.password}</span>
-								</div>
+							<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-low)">
+								<p class="text-[11px] font-mono break-all" style="color: var(--color-on-surface)">{createdInvite.inviteUrl}</p>
 							</div>
 							<p class="text-[10px] px-1" style="color: var(--color-on-surface-variant)">
-								⚠ {t.admin_must_change_hint}
+								{t.admin_invite_send_hint}
+							</p>
+							<p class="text-[10px] px-1" style="color: var(--color-on-surface-variant)">
+								{t.admin_invite_expires_at}: {formatExpiry(createdInvite.expiresAt)}
 							</p>
 							<div class="flex gap-2">
 								<button
-									onclick={copyCredentials}
+									onclick={copyInvite}
 									class="flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-xs font-semibold"
 									style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
 								>
 									{#if copyFeedback}
 										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-										{t.admin_copied}
+										{t.admin_invite_copied}
 									{:else}
 										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 											<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
 											<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
 										</svg>
-										{t.admin_copy_credentials}
+										{t.admin_invite_copy}
 									{/if}
 								</button>
-							</div>
-							<div class="flex gap-2">
 								<button
-									onclick={shareMessage1}
+									onclick={shareInvite}
 									class="flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-xs font-semibold"
 									style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
 								>
@@ -725,34 +756,23 @@
 										<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
 										<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
 									</svg>
-									{t.admin_share_msg1}
-								</button>
-								<button
-									onclick={shareMessage2}
-									class="flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-xs font-semibold"
-									style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-								>
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-										<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-									</svg>
-									{t.admin_share_msg2}
+									{t.admin_invite_share}
 								</button>
 							</div>
 							<button
-								onclick={() => { createdCredentials = null; newPassword = generatePassword(); showCreateForm = true; }}
+								onclick={() => { createdInvite = null; }}
 								class="w-full py-2 rounded-full text-xs font-semibold"
 								style="background-color: var(--color-surface-low); color: var(--color-on-surface-variant)"
 							>
-								{t.admin_create_another}
+								{t.list_cancel}
 							</button>
 						</div>
 					{/if}
 
 					<!-- Add User -->
-					{#if !showCreateForm && !createdCredentials}
+					{#if !showCreateForm && !createdInvite}
 						<button
-							onclick={() => { newPassword = generatePassword(); showCreateForm = true; }}
+							onclick={() => { showCreateForm = true; }}
 							class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left active:opacity-70"
 							style="background-color: var(--color-surface-container)"
 						>
@@ -763,7 +783,8 @@
 						</button>
 					{:else if showCreateForm}
 						<div class="rounded-xl px-4 py-4" style="background-color: var(--color-surface-container)">
-							<h3 class="text-xs font-semibold mb-3" style="color: var(--color-on-surface-variant)">{t.admin_add_user}</h3>
+							<h3 class="text-xs font-semibold mb-1" style="color: var(--color-on-surface-variant)">{t.admin_create_user_title}</h3>
+							<p class="text-[10px] mb-3" style="color: var(--color-on-surface-variant); opacity: 0.8">{t.admin_create_user_hint}</p>
 							<form onsubmit={createUser} class="space-y-2">
 								{#if userError}
 									<div class="rounded-lg px-3 py-2 text-xs"
@@ -772,24 +793,9 @@
 									</div>
 								{/if}
 								<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-low)">
-									<input type="text" placeholder={t.admin_username_label} bind:value={newUsername} required
-									       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface); font-size: 16px" />
-								</div>
-								<div>
-									<div class="rounded-lg px-3 py-2.5 flex items-center gap-2" style="background-color: var(--color-surface-low)">
-										<input type="text" placeholder={t.admin_password_label} bind:value={newPassword} required
-										       class="flex-1 bg-transparent outline-none" style="color: var(--color-on-surface); font-size: 16px" />
-										<button type="button" onclick={() => newPassword = generatePassword()}
-										        aria-label="Passwort generieren"
-										        class="flex-shrink-0 p-1 rounded-lg active:opacity-60"
-										        style="color: var(--color-on-surface-variant)">
-											<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<polyline points="23 4 23 10 17 10"/>
-												<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-											</svg>
-										</button>
-									</div>
-									<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
+									<input type="text" placeholder={t.admin_username_label} bind:value={newUsername}
+									       autocomplete="off" autocapitalize="none" required
+									       class="w-full bg-transparent outline-none" style="color: var(--color-on-surface); font-size: 16px" />
 								</div>
 								<div class="rounded-lg px-3 py-2.5 flex items-center gap-3" style="background-color: var(--color-surface-low)">
 									<span style="color: var(--color-on-surface-variant); font-size: 16px">{t.admin_role_label}:</span>
@@ -804,10 +810,10 @@
 									        style="background-color: var(--color-surface-low); color: var(--color-on-surface-variant)">
 										{t.list_cancel}
 									</button>
-									<button type="submit"
-									        class="flex-1 py-2 rounded-full text-xs font-semibold"
+									<button type="submit" disabled={creating || !newUsername.trim()}
+									        class="flex-1 py-2 rounded-full text-xs font-semibold disabled:opacity-40"
 									        style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)">
-										{t.create}
+										{creating ? '…' : t.create}
 									</button>
 								</div>
 							</form>
@@ -1145,18 +1151,39 @@
 				{editSuccess}
 			</div>
 		{/if}
-		<div class="mb-3">
-			<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
-				<input
-					type="password"
-					placeholder={t.admin_new_password_label}
-					bind:value={editPassword}
-					class="w-full bg-transparent outline-none text-xs"
-					style="color: var(--color-on-surface); font-size: 16px"
-				/>
+		<!-- Invite / Reset action — hidden for the bootstrap admin (recovery via container env) -->
+		{#if editUser.id !== bootstrapId}
+			<button
+				onclick={() => generateInviteFor(editUser!.id)}
+				class="w-full mb-2 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+				style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+			>
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+					<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+				</svg>
+				{editUser.openInviteType != null
+					? t.admin_invite_generate_new
+					: editUser.lastLoginAt
+						? t.admin_reset_password_btn
+						: t.admin_invite_generate_new}
+			</button>
+		{:else}
+			<div class="rounded-xl px-4 py-3 mb-3"
+			     style="background-color: color-mix(in srgb, #C8956C 12%, transparent)">
+				<div class="flex items-center gap-2 mb-1.5">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8956C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="10"/>
+						<line x1="12" y1="16" x2="12" y2="12"/>
+						<line x1="12" y1="8" x2="12.01" y2="8"/>
+					</svg>
+					<span class="text-xs font-semibold" style="color: #C8956C">{t.admin_bootstrap_admin_title}</span>
+				</div>
+				<p class="text-[11px] leading-relaxed" style="color: var(--color-on-surface-variant)">
+					{t.admin_bootstrap_admin_hint}
+				</p>
 			</div>
-			<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
-		</div>
+		{/if}
 		{#if canChangeRole(editUser)}
 			<button
 				onclick={changeRole}
@@ -1188,14 +1215,6 @@
 				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
 			>
 				{t.list_cancel}
-			</button>
-			<button
-				onclick={savePassword}
-				disabled={!!validatePassword(editPassword)}
-				class="flex-1 py-2 rounded-full text-xs font-semibold disabled:opacity-40"
-				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-			>
-				{t.list_save}
 			</button>
 		</div>
 	</div>

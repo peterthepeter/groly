@@ -268,8 +268,7 @@
 	$effect(() => { initPushState(); });
 	$effect(() => { if (shortcutsOpen) void loadAllLists(); });
 
-	const mustChange = $derived($page.url.searchParams.get('mustChange') === '1');
-	$effect(() => { if (mustChange) passwordOpen = true; });
+	const mustChange = false;
 
 	type SharedList = { id: string; name: string; ownerUsername: string | null };
 	let sharedLists = $state<SharedList[]>([]);
