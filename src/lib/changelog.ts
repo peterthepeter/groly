@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.7-1',
+		de: [
+			'Bugfixes für Begrüßung und Tracker',
+		],
+		en: [
+			'Bugfixes for greeting and tracker',
+		],
+	},
+	{
 		version: '0.7.7',
 		de: [
 			'Push-Erinnerungen führen jetzt direkt ins passende Log-Fenster: Klick auf eine Supplement-, Wasser-, Meditations- oder Mood-Erinnerung öffnet sofort den zugehörigen Eintrag — kein zusätzliches Tippen mehr nötig',

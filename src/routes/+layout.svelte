@@ -11,12 +11,17 @@
 	import { LATEST_CHANGES } from '$lib/changelog';
 	import { browser } from '$app/environment';
 	import { userSettings, seedSettings } from '$lib/userSettings.svelte';
+	import { debugLog } from '$lib/debug';
 
 	let whatsNewOpen = $state(false);
 
 	let { data, children } = $props();
 
-	afterNavigate(() => { checkForUpdate(); shortcutMenu.hide(); });
+	afterNavigate((nav) => {
+		checkForUpdate();
+		shortcutMenu.hide();
+		if (data.debug) debugLog(`afterNavigate type=${nav.type} url=${nav.to?.url.pathname ?? '?'}${nav.to?.url.search ?? ''}`);
+	});
 
 	onNavigate((navigation) => {
 		if (typeof document === 'undefined' || !('startViewTransition' in document)) return;
@@ -38,6 +43,13 @@
 	$effect(() => { applyTheme(userSettings.theme); });
 
 	onMount(() => {
+		if (data.debug) {
+			debugLog(`layout.onMount url=${window.location.pathname}${window.location.search} visState=${document.visibilityState}`);
+			document.addEventListener('visibilitychange', () => {
+				debugLog(`visibilitychange → ${document.visibilityState} url=${window.location.pathname}${window.location.search}`);
+			});
+		}
+
 		// Seed settings from SSR data only when localStorage has no cached settings (incognito / first visit).
 		if (!localStorage.getItem('groly_settings') && data.settings && Object.keys(data.settings as object).length > 0) {
 			seedSettings(data.settings);

@@ -8,6 +8,7 @@
 	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheMeditationLogs, getOfflineMeditationLogsToday } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
+	import { debugLog } from '$lib/debug';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
 	import EditLogSheet from '$lib/components/supplements/EditLogSheet.svelte';
@@ -182,6 +183,7 @@
 	// so a reload won't re-open it.
 	function handleActionParam() {
 		const action = $page.url.searchParams.get('action');
+		if (data.debug) debugLog(`supplements.handleActionParam action=${action ?? 'null'} url=${$page.url.pathname}${$page.url.search}`);
 		if (!action) return;
 
 		const consume = () => {
@@ -631,6 +633,7 @@
 	});
 
 	onMount(() => {
+		if (data.debug) debugLog(`supplements.onMount url=${window.location.pathname}${window.location.search} visState=${document.visibilityState}`);
 		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]).then(() => { loading = false; });
 		handleActionParam();
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
@@ -838,10 +841,10 @@
 
 	<div class="relative flex-1 min-h-0">
 		{#if activeTab === 'today' && userSettings.greetingEnabled}
-			{@const hour = new Date().getHours()}
+			{@const hour = now.getHours()}
 			{@const todayGreeting = hour < 12 ? t.greeting_morning : hour < 18 ? t.greeting_day : hour < 22 ? t.greeting_evening : t.greeting_night}
-			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(new Date())}
-			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(new Date())}
+			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(now)}
+			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(now)}
 			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user.username}</p>

@@ -142,7 +142,16 @@ export async function getOfflineSupplements(): Promise<OfflineSupplement[]> {
 }
 
 export async function cacheTodayLogs(logs: OfflineSupplementLog[]) {
-	await offlineDb.supplementLogs.clear();
+	// Skip clear() if there are unsynced supplement logs in the queue —
+	// clearing would drop optimistic entries that aren't on the server yet.
+	// They'll be flushed by processPendingMutations(); afterwards clear() is safe again.
+	const pendingCount = await offlineDb.pendingMutations
+		.where('type')
+		.equals('create_supplement_log')
+		.count();
+	if (pendingCount === 0) {
+		await offlineDb.supplementLogs.clear();
+	}
 	if (logs.length > 0) await offlineDb.supplementLogs.bulkPut(logs);
 }
 
@@ -230,6 +239,16 @@ export function initSync() {
 	if (typeof window === 'undefined') return;
 	window.addEventListener('online', () => {
 		processPendingMutations();
+	});
+	// Beim Foregrounding nach Hintergrund-Suspend (besonders iOS): das 'online'-Event
+	// feuert dort unzuverlässig. Wir prüfen die Queue zusätzlich bei jedem
+	// visibilitychange → visible, damit gestrandete Mutations nicht hängenbleiben.
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState !== 'visible') return;
+		offlineDb.pendingMutations.count().then((c) => {
+			networkStore.setPending(c);
+			if (c > 0) processPendingMutations();
+		});
 	});
 	// Initial prüfen und ggf. sofort abarbeiten
 	offlineDb.pendingMutations.count().then((c) => {
