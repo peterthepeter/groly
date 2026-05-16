@@ -114,20 +114,20 @@ self.addEventListener('notificationclick', (event) => {
 		self.clients
 			.matchAll({ type: 'window', includeUncontrolled: true })
 			.then(async (clientList) => {
-				// Find any existing app window: navigate it to the target URL and focus.
-				// "focus existing client + navigate" beats "open new window" because the
-				// user's app state (history, cached pages) stays intact, and on iOS PWA
-				// it brings the standalone PWA back to foreground.
-				for (const client of clientList) {
-					if ('focus' in client) {
-						try {
-							if ('navigate' in client && client.url !== new URL(url, self.location.origin).href) {
-								await (client as WindowClient).navigate(url);
-							}
-							return await client.focus();
-						} catch {
-							// fall through to openWindow
-						}
+				// Bestehende App-Instanz: per postMessage den Deep-Link an die App schicken
+				// und fokussieren. `client.navigate()` ist auf iOS-PWA unzuverlässig — der
+				// Aufruf läuft durch, aber die URL wird nicht real gesetzt; deshalb wird
+				// die Aktion über einen Message-Channel zugestellt, den die App selbst routet.
+				const target =
+					(clientList.find((c) => (c as WindowClient).focused) as WindowClient | undefined) ??
+					(clientList[0] as WindowClient | undefined);
+				if (target) {
+					try {
+						target.postMessage({ type: 'deeplink', url });
+						await target.focus();
+						return;
+					} catch {
+						// fall through to openWindow
 					}
 				}
 				return self.clients.openWindow(url);
