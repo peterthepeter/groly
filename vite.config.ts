@@ -4,6 +4,11 @@ import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+	server: {
+		// Allow ngrok hostnames so the dev server is reachable from a phone via
+		// `ngrok http 5173`. Dev-only — has no effect on the production build.
+		allowedHosts: ['.ngrok-free.app', '.ngrok.app', '.ngrok.io', '.trycloudflare.com']
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit(),

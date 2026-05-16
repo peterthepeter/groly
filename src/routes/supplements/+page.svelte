@@ -8,7 +8,6 @@
 	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheMeditationLogs, getOfflineMeditationLogsToday } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
-	import { debugLog } from '$lib/debug';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
 	import EditLogSheet from '$lib/components/supplements/EditLogSheet.svelte';
@@ -183,7 +182,6 @@
 	// so a reload won't re-open it.
 	function handleActionParam() {
 		const action = $page.url.searchParams.get('action');
-		if (data.debug) debugLog(`supplements.handleActionParam action=${action ?? 'null'} url=${$page.url.pathname}${$page.url.search}`);
 		if (!action) return;
 
 		const consume = () => {
@@ -595,14 +593,16 @@
 		}
 	});
 
-	beforeNavigate(({ type, cancel }) => {
+	beforeNavigate(({ type, to, cancel }) => {
 		if (type === 'popstate') {
 			// Back/swipe: close one sheet at a time instead of navigating
 			if (editLogSheet) { editLogSheet = null; cancel(); return; }
 			if (addLogSheet) { addLogSheet = null; cancel(); return; }
 			if (quickLogOpen) { quickLogOpen = false; cancel(); return; }
-		} else {
-			// Forward navigation: close everything silently
+		} else if (to && to.url.pathname !== $page.url.pathname) {
+			// Echter Seitenwechsel: Sheets schließen.
+			// Same-page Query-Umschreiben (z.B. consume() in handleActionParam
+			// nach Push-Deep-Link) darf das offene Sheet NICHT killen.
 			quickLogOpen = false;
 			editLogSheet = null;
 			addLogSheet = null;
@@ -633,7 +633,6 @@
 	});
 
 	onMount(() => {
-		if (data.debug) debugLog(`supplements.onMount url=${window.location.pathname}${window.location.search} visState=${document.visibilityState}`);
 		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]).then(() => { loading = false; });
 		handleActionParam();
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);

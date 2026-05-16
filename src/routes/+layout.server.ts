@@ -18,7 +18,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			username: locals.user.username,
 			role: locals.user.role
 		},
-		settings,
-		debug: !!process.env.GROLY_DEBUG
+		settings
 	};
 };

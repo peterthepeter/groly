@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.7-2',
+		de: [
+			'Push-Erinnerungen für Supplements, Wasser und Meditation öffnen jetzt zuverlässig das passende Log-Fenster beim Antippen — vorher öffnete sich die App, das Eingabesheet aber nicht',
+		],
+		en: [
+			'Tapping a supplement, water, or meditation push reminder now reliably opens the matching log sheet — previously the app would open without the entry sheet appearing',
+		],
+	},
+	{
 		version: '0.7.7-1',
 		de: [
 			'Bugfixes für Begrüßung und Tracker',

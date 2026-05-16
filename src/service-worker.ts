@@ -107,24 +107,13 @@ self.addEventListener('push', (event) => {
 	);
 });
 
-function debugLogSW(msg: string): void {
-	void fetch('/api/debug-log', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ msg: `sw ${msg}` }),
-		keepalive: true
-	}).catch(() => {});
-}
-
 self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 	const url: string = (event.notification.data as { url: string })?.url ?? '/';
-	debugLogSW(`notificationclick url=${url}`);
 	event.waitUntil(
 		self.clients
 			.matchAll({ type: 'window', includeUncontrolled: true })
 			.then(async (clientList) => {
-				debugLogSW(`matchAll clients=${clientList.length} ${clientList.map((c) => c.url).join('|')}`);
 				// Find any existing app window: navigate it to the target URL and focus.
 				// "focus existing client + navigate" beats "open new window" because the
 				// user's app state (history, cached pages) stays intact, and on iOS PWA
@@ -133,18 +122,14 @@ self.addEventListener('notificationclick', (event) => {
 					if ('focus' in client) {
 						try {
 							if ('navigate' in client && client.url !== new URL(url, self.location.origin).href) {
-								debugLogSW(`navigate existing client to ${url}`);
 								await (client as WindowClient).navigate(url);
-							} else {
-								debugLogSW(`focus existing client (url already matches)`);
 							}
 							return await client.focus();
-						} catch (e) {
-							debugLogSW(`navigate threw: ${String(e).slice(0, 120)}`);
+						} catch {
+							// fall through to openWindow
 						}
 					}
 				}
-				debugLogSW(`openWindow ${url}`);
 				return self.clients.openWindow(url);
 			})
 	);
