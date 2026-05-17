@@ -199,16 +199,11 @@
 			try { localStorage.setItem('quicklog_opened', '1'); } catch {}
 			caffeineDone = null;
 			caffeineSaving = null;
-			// Read supplements untracked so updates to the list (e.g. after logging)
-			// don't re-trigger this effect and reset done/saving mid-confirmation.
-			const now = new Date().toTimeString().slice(0, 5);
-			const a: Record<string, number> = {};
-			const ti: Record<string, string> = {};
-			untrack(() => {
-				for (const s of supplements) { a[s.id] = s.defaultAmount ?? 1; ti[s.id] = now; }
-			});
-			amounts = a;
-			times = ti;
+			// Session-Reset beim Öffnen. supplements wird hier bewusst NICHT befüllt,
+			// das übernimmt der zweite Effekt unten — sonst Race im Cold-Start, wenn
+			// das Sheet via Push-Deep-Link aufgeht bevor loadSupplements() resolved hat.
+			amounts = {};
+			times = {};
 			notes = {};
 			expandedNoteIds = new Set();
 			editingAmountId = null;
@@ -235,6 +230,24 @@
 				else sheetEl.scrollTop = 0;
 			});
 		}
+	});
+
+	// Füllt fehlende per-supplement Defaults nach, sobald supplements verfügbar wird.
+	// Existierende Einträge werden NIE überschrieben — User-Edits & Mid-Session-Logs bleiben intakt.
+	// Reihenfolge wichtig: muss NACH dem Reset-Effekt oben stehen (Svelte 5 garantiert Source-Order).
+	$effect(() => {
+		if (!open) return;
+		const now = new Date().toTimeString().slice(0, 5);
+		let changedAmounts = false;
+		let changedTimes = false;
+		const a = { ...amounts };
+		const ti = { ...times };
+		for (const s of supplements) {
+			if (a[s.id] === undefined) { a[s.id] = s.defaultAmount ?? 1; changedAmounts = true; }
+			if (ti[s.id] === undefined) { ti[s.id] = now; changedTimes = true; }
+		}
+		if (changedAmounts) amounts = a;
+		if (changedTimes) times = ti;
 	});
 
 	async function logWaterRetro() {

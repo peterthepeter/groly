@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.7-4',
+		de: [
+			'Bugfix: Uhrzeit-Feld im Supplement-Log-Sheet ist nach Push-Klick aus geschlossener App nicht mehr leer',
+		],
+		en: [
+			'Bugfix: time field in the supplement log sheet is no longer empty when opened via push from a closed app',
+		],
+	},
+	{
 		version: '0.7.7-3',
 		de: [
 			'Weiterer Fix für Push-Erinnerungen: Antippen öffnet jetzt auch dann zuverlässig das Log-Fenster, wenn die App im Hintergrund lief',
