@@ -299,7 +299,7 @@
 	>
 		{#snippet actions()}
 			<button
-				onclick={() => goto('/supplements')}
+				onclick={() => goto('/tracker')}
 				class="w-9 h-9 flex items-center justify-center rounded-xl active:opacity-60 transition-opacity"
 				style="background-color: var(--color-surface-high)"
 				aria-label="Zurück"
@@ -316,7 +316,7 @@
 	<div class="flex-shrink-0 px-4 mb-3">
 		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
 			<button
-				onclick={() => goto('/supplements')}
+				onclick={() => goto('/tracker')}
 				class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold active:opacity-70 transition-opacity"
 				style="color: #D97706"
 			>
@@ -575,7 +575,7 @@
 </div>
 
 <AppBottomNav
-	activeTab="supplements"
+	activeTab="tracker"
 	onFabTap={openNew}
 	fabLabel={t.supplement_add}
 	fabColor="#D97706"

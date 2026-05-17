@@ -22,6 +22,8 @@
 			var t = s.theme;
 			if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 			else if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+			var cs = s.colorScheme;
+			if (cs === 'classic' || cs === 'indigo') document.documentElement.setAttribute('data-color-scheme', cs);
 		} catch(e) {}
 
 		// Prevent pinch-to-zoom on all browsers (Firefox iOS ignores touch-action and user-scalable=no)

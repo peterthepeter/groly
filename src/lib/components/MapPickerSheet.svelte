@@ -28,7 +28,7 @@
 	let geocodeTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// Primary color for the pin icon (matches app primary)
-	const PIN_COLOR = '#006c54';
+	const PIN_COLOR = '#2E7D32';
 
 	onMount(async () => {
 		const mod = await import('leaflet');

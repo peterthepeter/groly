@@ -653,7 +653,7 @@
 					<div class="rounded-2xl px-4 py-6 flex flex-col items-center gap-3 text-center" style="background-color: var(--color-surface-container)">
 						<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_empty_hint}</p>
 						<button
-							onclick={() => { open = false; goto('/supplements/verwalten'); }}
+							onclick={() => { open = false; goto('/tracker/verwalten'); }}
 							class="px-5 py-2 rounded-xl text-sm font-semibold active:opacity-70"
 							style="background-color: var(--color-surface-high); color: var(--color-primary)"
 						>{t.supplement_manage}</button>

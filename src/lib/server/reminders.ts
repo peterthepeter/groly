@@ -82,7 +82,7 @@ async function checkSupplementReminders() {
 				: `${list.slice(0, -1).join(', ')} & ${list[list.length - 1]}`;
 			const title = lang === 'en' ? 'Supplement Reminder' : 'Supplement-Erinnerung';
 			const body = lang === 'en' ? `Time to take: ${nameList}` : `Zeit für die Einnahme von: ${nameList}`;
-			return sendPushToUser(userId, { title, body, url: '/supplements?action=log-supplement', tag: 'supplement-reminder' });
+			return sendPushToUser(userId, { title, body, url: '/tracker?action=log-supplement', tag: 'supplement-reminder' });
 		})
 	);
 }
@@ -164,7 +164,7 @@ async function checkWaterReminders() {
 			const lang = settings?.lang === 'en' ? 'en' : 'de';
 			const title = lang === 'en' ? 'Hydration Tracker' : 'Wassertracker';
 			const body = lang === 'en' ? 'Time for a glass of water (250 ml)' : 'Zeit für ein Glas Wasser (250 ml)';
-			return sendPushToUser(userId, { title, body, url: '/supplements?action=log-water', tag: 'water-reminder' });
+			return sendPushToUser(userId, { title, body, url: '/tracker?action=log-water', tag: 'water-reminder' });
 		})
 	);
 }
@@ -206,7 +206,7 @@ async function checkMeditationReminders() {
 				const lang = settings?.lang === 'en' ? 'en' : 'de';
 				const title = lang === 'en' ? 'Meditation' : 'Meditation';
 				const body = lang === 'en' ? 'Time for your daily meditation' : 'Zeit für deine tägliche Meditation';
-				return sendPushToUser(s.userId, { title, body, url: '/supplements?action=log-meditation', tag: 'meditation-reminder' });
+				return sendPushToUser(s.userId, { title, body, url: '/tracker?action=log-meditation', tag: 'meditation-reminder' });
 			} catch { /* skip invalid */ }
 		})
 	);
@@ -254,7 +254,7 @@ async function checkMoodReminders() {
 				const lang = settings?.lang === 'en' ? 'en' : 'de';
 				const title = lang === 'en' ? 'How was your day?' : 'Wie war dein Tag?';
 				const body = lang === 'en' ? 'Rate your day in Groly' : 'Bewerte deinen Tag in Groly';
-				return sendPushToUser(s.userId, { title, body, url: '/supplements?action=log-mood', tag: 'mood-reminder' });
+				return sendPushToUser(s.userId, { title, body, url: '/tracker?action=log-mood', tag: 'mood-reminder' });
 			} catch { /* skip invalid */ }
 		})
 	);

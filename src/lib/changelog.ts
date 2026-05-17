@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.8',
+		de: [
+			'Neue Hauptfarbe der App — über Einstellungen → Farbschema kann das alte Grün oder ein weiteres Schema gewählt werden',
+			'App-Icon in neuer Farbe (bei Neu-Installation sichtbar)',
+			'Tracker-Seite hat jetzt eine passendere URL',
+		],
+		en: [
+			'New main app color — switch back to the old green or pick another scheme under Settings → Color scheme',
+			'App icon refreshed to match the new color (visible on reinstall)',
+			'Tracker page now uses a more fitting URL',
+		],
+	},
+	{
 		version: '0.7.7-4',
 		de: [
 			'Bugfix: Uhrzeit-Feld im Supplement-Log-Sheet ist nach Push-Klick aus geschlossener App nicht mehr leer',

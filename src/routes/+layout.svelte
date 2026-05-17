@@ -38,7 +38,13 @@
 		else document.documentElement.removeAttribute('data-theme');
 	}
 
+	function applyColorScheme(scheme: 'forest' | 'classic' | 'indigo') {
+		if (scheme === 'classic' || scheme === 'indigo') document.documentElement.setAttribute('data-color-scheme', scheme);
+		else document.documentElement.removeAttribute('data-color-scheme');
+	}
+
 	$effect(() => { applyTheme(userSettings.theme); });
+	$effect(() => { applyColorScheme(userSettings.colorScheme); });
 
 	onMount(() => {
 		// Seed settings from SSR data only when localStorage has no cached settings (incognito / first visit).

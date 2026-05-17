@@ -12,11 +12,11 @@
     --color-surface-card: #ffffff;
     --color-surface-elevated: #ffffff;
 
-    --color-primary: #006c54;
-    --color-primary-container: #59f3c5;
-    --color-primary-dim: #005f49;
-    --color-on-primary: #e5fff2;
-    --color-on-primary-container: #005843;
+    --color-primary: #2E7D32;
+    --color-primary-container: #C8E6C9;
+    --color-primary-dim: #1B5E20;
+    --color-on-primary: #ffffff;
+    --color-on-primary-container: #1B5E20;
 
     --color-secondary: #4d626c;
     --color-secondary-container: #cfe6f2;
@@ -50,11 +50,11 @@
     --color-surface-card: #262626;
     --color-surface-elevated: #2a2a2a;
 
-    --color-primary: #00C49A;
-    --color-primary-container: #003d2f;
-    --color-primary-dim: #00a882;
-    --color-on-primary: #001f17;
-    --color-on-primary-container: #00C49A;
+    --color-primary: #81C784;
+    --color-primary-container: #1B3920;
+    --color-primary-dim: #66BB6A;
+    --color-on-primary: #0F2010;
+    --color-on-primary-container: #C8E6C9;
 
     --color-secondary: #07DFC5;
     --color-secondary-container: #003d38;
@@ -81,11 +81,11 @@
       --color-surface-card: #262626;
       --color-surface-elevated: #2a2a2a;
 
-      --color-primary: #00C49A;
-      --color-primary-container: #003d2f;
-      --color-primary-dim: #00a882;
-      --color-on-primary: #001f17;
-      --color-on-primary-container: #00C49A;
+      --color-primary: #81C784;
+      --color-primary-container: #1B3920;
+      --color-primary-dim: #66BB6A;
+      --color-on-primary: #0F2010;
+      --color-on-primary-container: #C8E6C9;
 
       --color-secondary: #07DFC5;
       --color-secondary-container: #003d38;
@@ -100,6 +100,60 @@
       --color-outline-variant: rgba(255, 255, 255, 0.08);
 
       --color-error: #ff6b6b;
+    }
+  }
+
+  /* ===== Alternative color schemes ===== */
+
+  /* Classic (Teal — original Groly green) */
+  :root[data-color-scheme="classic"] {
+    --color-primary: #006c54;
+    --color-primary-container: #59f3c5;
+    --color-primary-dim: #005f49;
+    --color-on-primary: #e5fff2;
+    --color-on-primary-container: #005843;
+  }
+  :root[data-theme="dark"][data-color-scheme="classic"],
+  .dark[data-color-scheme="classic"] {
+    --color-primary: #00C49A;
+    --color-primary-container: #003d2f;
+    --color-primary-dim: #00a882;
+    --color-on-primary: #001f17;
+    --color-on-primary-container: #00C49A;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"])[data-color-scheme="classic"] {
+      --color-primary: #00C49A;
+      --color-primary-container: #003d2f;
+      --color-primary-dim: #00a882;
+      --color-on-primary: #001f17;
+      --color-on-primary-container: #00C49A;
+    }
+  }
+
+  /* Indigo (Material Indigo 800 / 300 — blue/purple contrast) */
+  :root[data-color-scheme="indigo"] {
+    --color-primary: #283593;
+    --color-primary-container: #C5CAE9;
+    --color-primary-dim: #1A237E;
+    --color-on-primary: #ffffff;
+    --color-on-primary-container: #1A237E;
+  }
+  :root[data-theme="dark"][data-color-scheme="indigo"],
+  .dark[data-color-scheme="indigo"] {
+    --color-primary: #9FA8DA;
+    --color-primary-container: #1A2257;
+    --color-primary-dim: #7986CB;
+    --color-on-primary: #0F1538;
+    --color-on-primary-container: #C5CAE9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"])[data-color-scheme="indigo"] {
+      --color-primary: #9FA8DA;
+      --color-primary-container: #1A2257;
+      --color-primary-dim: #7986CB;
+      --color-on-primary: #0F1538;
+      --color-on-primary-container: #C5CAE9;
     }
   }
 

@@ -78,6 +78,7 @@ let _showFavoriteIndicator = $state<boolean>(cache.showFavoriteIndicator ?? true
 let _showSupplementTracker = $state<boolean>(cache.showSupplementTracker ?? true);
 let _showRecipes = $state<boolean>(cache.showRecipes ?? true);
 let _theme = $state<'system' | 'light' | 'dark'>(cache.theme ?? 'system');
+let _colorScheme = $state<'forest' | 'classic' | 'indigo'>(cache.colorScheme ?? 'forest');
 let _supplementSortOrder = $state<'az' | 'za' | 'freq'>(cache.supplementSortOrder ?? 'az');
 let _waterTrackerEnabled = $state<boolean>(cache.waterTrackerEnabled ?? true);
 let _waterGoalMl = $state<number>(cache.waterGoalMl ?? 2000);
@@ -105,6 +106,7 @@ function scheduleSave() {
 		const settings: UserSettings = {
 			lang: _lang,
 			theme: _theme,
+			colorScheme: _colorScheme,
 			categorySortEnabled: _categorySortEnabled,
 			categoryOrder: _categoryOrder,
 			listCategorySettings: _listCategorySettings,
@@ -241,6 +243,8 @@ export const userSettings = {
 	// Theme
 	get theme() { return _theme; },
 	set theme(v: 'system' | 'light' | 'dark') { _theme = v; scheduleSave(); },
+	get colorScheme() { return _colorScheme; },
+	set colorScheme(v: 'forest' | 'classic' | 'indigo') { _colorScheme = v; scheduleSave(); },
 
 	// Supplement sort order
 	get supplementSortOrder() { return _supplementSortOrder; },
@@ -320,6 +324,7 @@ function applySettings(settings: UserSettings) {
 	_showSupplementTracker = settings.showSupplementTracker ?? true;
 	_showRecipes = settings.showRecipes ?? true;
 	_theme = settings.theme ?? 'system';
+	_colorScheme = settings.colorScheme ?? 'forest';
 	_supplementSortOrder = settings.supplementSortOrder ?? 'az';
 	_waterTrackerEnabled = settings.waterTrackerEnabled ?? true;
 	_waterGoalMl = settings.waterGoalMl ?? 2000;

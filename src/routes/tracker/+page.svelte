@@ -727,7 +727,7 @@
 			{#if activeTab === 'today'}
 				<div class="flex items-center">
 					<button
-						onclick={() => goto('/supplements/verwalten')}
+						onclick={() => goto('/tracker/verwalten')}
 						class="flex items-center justify-center gap-2 py-2.5 text-sm font-semibold active:opacity-70 transition-opacity {todayReminders.length > 0 ? 'flex-1' : 'w-full'}"
 						style="color: var(--color-primary)"
 					>
@@ -1104,7 +1104,7 @@
 />
 
 <AppBottomNav
-	activeTab="supplements"
+	activeTab="tracker"
 	onFabTap={openQuickLog}
 	fabLabel={t.add}
 />

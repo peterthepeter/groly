@@ -14,7 +14,7 @@
 		fabColor = 'var(--color-primary)',
 		onFavorites = null
 	}: {
-		activeTab: 'lists' | 'supplements' | 'recipes' | 'none';
+		activeTab: 'lists' | 'tracker' | 'recipes' | 'none';
 		onFabTap?: (() => void) | null;
 		fabLabel?: string;
 		showFab?: boolean;
@@ -58,24 +58,24 @@
 			{#if userSettings.showSupplementTracker}
 				<button
 					onclick={() => {
-					if (activeTab === 'supplements' && $page.url.pathname === '/supplements') {
+					if (activeTab === 'tracker' && $page.url.pathname === '/tracker') {
 						const isHistory = $page.url.searchParams.get('tab') === 'history';
-						goto(isHistory ? '/supplements' : '/supplements?tab=history', { noScroll: true, keepFocus: true });
+						goto(isHistory ? '/tracker' : '/tracker?tab=history', { noScroll: true, keepFocus: true });
 					} else {
-						goto('/supplements');
+						goto('/tracker');
 					}
 				}}
-					class="flex items-center rounded-full transition-all duration-200 active:opacity-70 select-none {activeTab === 'supplements' ? 'gap-2 px-4 h-full' : 'h-11 w-11 justify-center'}"
-					style="background-color: transparent; {activeTab === 'supplements' ? `outline: ${activeOut}` : ''}"
+					class="flex items-center rounded-full transition-all duration-200 active:opacity-70 select-none {activeTab === 'tracker' ? 'gap-2 px-4 h-full' : 'h-11 w-11 justify-center'}"
+					style="background-color: transparent; {activeTab === 'tracker' ? `outline: ${activeOut}` : ''}"
 					aria-label={t.nav_supplements}
 				>
 					<svg width="26" height="26" viewBox="0 0 24 24" fill="none"
-					     stroke={activeTab === 'supplements' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}
+					     stroke={activeTab === 'tracker' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}
 					     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
 						<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
 					</svg>
-					{#if activeTab === 'supplements'}
+					{#if activeTab === 'tracker'}
 						<span class="text-sm font-medium whitespace-nowrap"
 						      style="color: var(--color-primary)">{t.supplement_title}</span>
 					{/if}

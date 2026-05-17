@@ -19,6 +19,7 @@ export type Shortcut = {
 export type UserSettings = {
 	lang?: AvailableLanguageTag;
 	theme?: 'system' | 'light' | 'dark';
+	colorScheme?: 'forest' | 'classic' | 'indigo';
 	categorySortEnabled?: boolean;
 	categoryOrder?: string[];
 	listCategorySettings?: Record<string, ListCategorySettings>;

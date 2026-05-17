@@ -121,6 +121,7 @@
 	);
 	let langOpen = $state(false);
 	let themeOpen = $state(false);
+	let colorSchemeOpen = $state(false);
 	let categorySortOpen = $state(false);
 	let layoutOpen = $state(false);
 	let checkedItemsOpen = $state(false);
@@ -1521,6 +1522,53 @@
 								style="background-color: {userSettings.theme === 'dark' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.theme === 'dark' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
 							>
 								{t.theme_dark}
+							</button>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Color scheme -->
+			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+				<button
+					onclick={() => colorSchemeOpen = !colorSchemeOpen}
+					class="w-full flex items-center justify-between px-5 py-2.5"
+				>
+					<div class="flex items-center gap-3">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 1 1 0-20 5 5 0 0 1 5 5c0 1.5-.5 2.5-1.5 3.5S14 12 14 13.5s.5 2.5 1.5 3.5c1 1 1.5 2 1.5 3.5a2 2 0 0 1-5 1.5z"/></svg>
+						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.color_scheme}</span>
+					</div>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({colorSchemeOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</button>
+				{#if colorSchemeOpen}
+					<div class="px-5 pb-4">
+						<div class="flex gap-2">
+							<button
+								onclick={() => userSettings.colorScheme = 'forest'}
+								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity flex items-center justify-center gap-1.5"
+								style="background-color: {userSettings.colorScheme === 'forest' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.colorScheme === 'forest' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+							>
+								<span class="inline-block w-3 h-3 rounded-full" style="background-color: #2E7D32"></span>
+								{t.color_scheme_forest}
+							</button>
+							<button
+								onclick={() => userSettings.colorScheme = 'classic'}
+								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity flex items-center justify-center gap-1.5"
+								style="background-color: {userSettings.colorScheme === 'classic' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.colorScheme === 'classic' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+							>
+								<span class="inline-block w-3 h-3 rounded-full" style="background-color: #006c54"></span>
+								{t.color_scheme_classic}
+							</button>
+							<button
+								onclick={() => userSettings.colorScheme = 'indigo'}
+								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity flex items-center justify-center gap-1.5"
+								style="background-color: {userSettings.colorScheme === 'indigo' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.colorScheme === 'indigo' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+							>
+								<span class="inline-block w-3 h-3 rounded-full" style="background-color: #283593"></span>
+								{t.color_scheme_indigo}
 							</button>
 						</div>
 					</div>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getListIcon } from '$lib/listIcons';
 
-	const COLORS = ['#006c54', '#2e6771', '#4d626c', '#5a4080', '#a0522d', '#1a6b3c'];
+	const COLORS = ['#2E7D32', '#2e6771', '#4d626c', '#5a4080', '#a0522d', '#1a6b3c'];
 	function colorForName(name: string): string {
 		let hash = 0;
 		for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) & 0xffffffff;

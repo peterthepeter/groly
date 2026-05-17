@@ -88,9 +88,9 @@
 
 		{#if userSettings.showSupplementTracker}
 			<button
-				onclick={() => navigate('/supplements')}
+				onclick={() => navigate('/tracker')}
 				class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-				style="background-color: {$page.url.pathname.startsWith('/supplements') ? 'var(--color-surface-container)' : 'transparent'}"
+				style="background-color: {$page.url.pathname.startsWith('/tracker') ? 'var(--color-surface-container)' : 'transparent'}"
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
