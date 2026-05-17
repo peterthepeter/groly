@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.8-1',
+		de: [
+			'App-Icon-Farbe leicht aufgehellt für mehr Konsistenz mit der App-UI',
+		],
+		en: [
+			'App icon color slightly lightened for better consistency with the in-app UI',
+		],
+	},
+	{
 		version: '0.7.8',
 		de: [
 			'Neue Hauptfarbe der App — über Einstellungen → Farbschema kann das alte Grün oder ein weiteres Schema gewählt werden',
