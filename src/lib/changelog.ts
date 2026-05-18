@@ -2,6 +2,11 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.9',
+		de: ['Fix: Push-Reminder', 'Supplement-Katalog-Suche verbessert'],
+		en: ['Fix: push reminder', 'Supplement catalog search improved'],
+	},
+	{
 		version: '0.7.8-1',
 		de: [
 			'App-Icon-Farbe leicht aufgehellt für mehr Konsistenz mit der App-UI',

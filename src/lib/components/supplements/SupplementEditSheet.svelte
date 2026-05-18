@@ -158,58 +158,49 @@
 			</p>
 		</div>
 
-		<!-- Scrollable content -->
-		<div class="flex-1 overflow-y-auto px-6 pb-2" style="space-y: 0">
-
-			<!-- Search step (only for new supplements in search mode) -->
-			{#if !editSheet.id && newMode === 'search'}
-				<div class="space-y-3 pt-1">
-					<!-- Catalog search -->
-					<input
-						type="text"
-						bind:value={catalogQuery}
-						oninput={onCatalogQueryInput}
-						placeholder={t.supplement_catalog_search_placeholder}
-						class="w-full px-4 py-3 rounded-xl border-0 outline-none"
-						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
-					/>
-
-					{#if catalogResults.length > 0}
-						<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
-							{#each catalogResults as entry, i}
-								<button
-									type="button"
-									onclick={() => applyCatalogEntry(entry)}
-									class="w-full flex items-center gap-3 px-4 py-3 text-left active:opacity-70 {i > 0 ? 'border-t' : ''}"
-									style="border-color: var(--color-outline-variant)"
-								>
-									<div class="flex-1 min-w-0">
-										<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{entry.name}</div>
-										{#if entry.brand}
-											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{entry.brand} · {displayUnit(entry.unit, currentLang())}</div>
-										{:else}
-											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{displayUnit(entry.unit, currentLang())}</div>
-										{/if}
-									</div>
-									{#if entry.nutrients.length > 0}
-										<span class="text-[10px] px-2 py-0.5 rounded-full shrink-0"
-										      style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)">
-											{entry.nutrients.length}
-										</span>
+		<!-- Search step (only for new supplements in search mode) — bottom-up Layout:
+		     Ergebnisse scrollen oben, Suchfeld + Enter-manually sticky unten direkt
+		     über der Tastatur. -->
+		{#if !editSheet.id && newMode === 'search'}
+			<!-- Ergebnis-Liste (scrollt) -->
+			<div class="flex-1 overflow-y-auto px-6 pt-1 pb-1">
+				{#if catalogResults.length > 0}
+					<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+						{#each catalogResults as entry}
+							<button
+								type="button"
+								onclick={() => applyCatalogEntry(entry)}
+								class="w-full flex items-center gap-3 px-4 py-2 text-left active:opacity-70"
+							>
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{entry.name}</div>
+									{#if entry.brand}
+										<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{entry.brand} · {displayUnit(entry.unit, currentLang())}</div>
+									{:else}
+										<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{displayUnit(entry.unit, currentLang())}</div>
 									{/if}
-								</button>
-							{/each}
-						</div>
-					{:else if catalogSearched && catalogQuery.trim()}
-						<p class="text-xs px-1" style="color: var(--color-on-surface-variant)">{t.supplement_catalog_no_results}</p>
-					{/if}
+								</div>
+								{#if entry.nutrients.length > 0}
+									<span class="text-[10px] px-2 py-0.5 rounded-full shrink-0"
+									      style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)">
+										{entry.nutrients.length}
+									</span>
+								{/if}
+							</button>
+						{/each}
+					</div>
+				{:else if catalogSearched && catalogQuery.trim()}
+					<p class="text-xs px-1" style="color: var(--color-on-surface-variant)">{t.supplement_catalog_no_results}</p>
+				{/if}
+			</div>
 
-					<!-- Manual entry option -->
+			<!-- Sticky unten: Enter manually + Suchfeld direkt über der Tastatur, eine Bubble -->
+			<div class="shrink-0 px-6 pt-1 pb-3" style="background-color: var(--color-surface-low)">
+				<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
 					<button
 						type="button"
 						onclick={enterManual}
-						class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl active:opacity-70 text-left"
-						style="background-color: var(--color-surface-container)"
+						class="w-full flex items-center gap-3 px-4 py-2 active:opacity-70 text-left"
 					>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -217,11 +208,21 @@
 						</svg>
 						<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.supplement_enter_manually}</span>
 					</button>
+					<input
+						type="text"
+						bind:value={catalogQuery}
+						oninput={onCatalogQueryInput}
+						placeholder={t.supplement_catalog_search_placeholder}
+						class="w-full px-4 py-2 border-0 outline-none bg-transparent"
+						style="color: var(--color-on-surface); font-family: inherit"
+					/>
 				</div>
-			{/if}
+			</div>
+		{/if}
 
-			<!-- Form fields (edit mode OR after mode selection) -->
-			{#if editSheet.id || newMode === 'form'}
+		<!-- Scrollable content (Form-Modus: edit OR nach Mode-Wahl) -->
+		{#if editSheet.id || newMode === 'form'}
+		<div class="flex-1 overflow-y-auto px-6 pb-2" style="space-y: 0">
 			<div class="space-y-3 pt-1">
 
 			<!-- Catalog tag (only when prefilled from catalog) -->
@@ -435,9 +436,9 @@
 			</div>
 
 		</div><!-- end form fields -->
-		{/if}
 
 		</div><!-- end scrollable -->
+		{/if}<!-- end form-mode wrapper -->
 
 		<!-- Anchored save + delete (only in form mode) -->
 		{#if editSheet.id || newMode === 'form'}
