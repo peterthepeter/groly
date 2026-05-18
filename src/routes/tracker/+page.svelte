@@ -172,11 +172,6 @@
 	let caffeinePickerOpen = $state(false);
 	let caffeinePickerPreselect = $state<CaffeineDrink | null>(null);
 
-	// Flag für ~1s direkt nach Push-Deep-Link-Open: unterdrückt den history.pushState
-	// und ignoriert iOS-Spontan-popstate, das nach langem Suspend-Resume passieren kann
-	// und sonst das gerade geöffnete Sheet sofort wieder schließt.
-	let openedViaDeeplink = $state(false);
-
 	function openQuickLog() {
 		quickLogInitialTab = null;
 		quickLogOpen = true;
@@ -198,17 +193,13 @@
 		switch (action) {
 			case 'log-supplement':
 				quickLogInitialTab = 'supplements';
-				openedViaDeeplink = true;
 				quickLogOpen = true;
-				setTimeout(() => { openedViaDeeplink = false; }, 1000);
 				consume();
 				break;
 			case 'log-water':
 			case 'log-meditation':
 				quickLogInitialTab = 'tracker';
-				openedViaDeeplink = true;
 				quickLogOpen = true;
-				setTimeout(() => { openedViaDeeplink = false; }, 1000);
 				consume();
 				break;
 			case 'log-mood':
@@ -596,21 +587,14 @@
 
 	// Push a same-URL history entry when the sheet opens so iOS back-swipe
 	// shows this page (not the previous route) during the gesture animation.
-	// Beim Push-Deep-Link bewusst NICHT pushen — sonst entsteht ein doppelter
-	// History-Eintrag, der nach langem iOS-Suspend einen Spontan-popstate
-	// auslösen kann, der das gerade geöffnete Sheet sofort wieder schließt.
 	$effect(() => {
-		if (quickLogOpen && !openedViaDeeplink) {
+		if (quickLogOpen) {
 			history.pushState(null, '', location.href);
 		}
 	});
 
 	beforeNavigate(({ type, to, cancel }) => {
 		if (type === 'popstate') {
-			// iOS kann nach langem Suspend einen Spontan-popstate feuern, sobald die
-			// PWA wieder aktiv wird. Während des Deep-Link-Open-Fensters ignorieren,
-			// sonst schließt sich das gerade geöffnete Sheet von selbst.
-			if (openedViaDeeplink) return;
 			// Back/swipe: close one sheet at a time instead of navigating
 			if (editLogSheet) { editLogSheet = null; cancel(); return; }
 			if (addLogSheet) { addLogSheet = null; cancel(); return; }

@@ -107,30 +107,48 @@ self.addEventListener('push', (event) => {
 	);
 });
 
+// Inline-IDB-Helper für den Service-Worker: schreibt den Deep-Link in eine
+// persistente IndexedDB ("groly-deeplink"), die die App beim nächsten Resume
+// ausliest. Notwendig weil postMessage nach langem iOS-Suspend stumm bleibt
+// (per Remote-Inspector bewiesen). Die Datenbank wird auch von src/lib/pendingDeeplink.ts
+// gelesen — Schema muss synchron bleiben.
+function swSetPendingDeeplink(url: string): Promise<void> {
+	return new Promise((resolve) => {
+		try {
+			const req = indexedDB.open('groly-deeplink', 1);
+			req.onupgradeneeded = () => req.result.createObjectStore('pending');
+			req.onsuccess = () => {
+				const db = req.result;
+				const tx = db.transaction('pending', 'readwrite');
+				tx.objectStore('pending').put({ url, ts: Date.now() }, 'current');
+				tx.oncomplete = () => { db.close(); resolve(); };
+				tx.onerror = () => { db.close(); resolve(); };
+			};
+			req.onerror = () => resolve();
+		} catch { resolve(); }
+	});
+}
+
 self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 	const url: string = (event.notification.data as { url: string })?.url ?? '/';
-	event.waitUntil(
-		self.clients
-			.matchAll({ type: 'window', includeUncontrolled: true })
-			.then(async (clientList) => {
-				// Bestehende App-Instanz: per postMessage den Deep-Link an die App schicken
-				// und fokussieren. `client.navigate()` ist auf iOS-PWA unzuverlässig — der
-				// Aufruf läuft durch, aber die URL wird nicht real gesetzt; deshalb wird
-				// die Aktion über einen Message-Channel zugestellt, den die App selbst routet.
-				const target =
-					(clientList.find((c) => (c as WindowClient).focused) as WindowClient | undefined) ??
-					(clientList[0] as WindowClient | undefined);
-				if (target) {
-					try {
-						target.postMessage({ type: 'deeplink', url });
-						await target.focus();
-						return;
-					} catch {
-						// fall through to openWindow
-					}
-				}
-				return self.clients.openWindow(url);
-			})
-	);
+	event.waitUntil((async () => {
+		// 1) Briefkasten füllen — überlebt iOS-Suspend, App liest beim Resume aus
+		await swSetPendingDeeplink(url);
+		// 2) Fast-Path: existierender Client kriegt postMessage (warmer Resume, < ~10 min)
+		const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+		const target =
+			(clientList.find((c) => (c as WindowClient).focused) as WindowClient | undefined) ??
+			(clientList[0] as WindowClient | undefined);
+		if (target) {
+			try {
+				target.postMessage({ type: 'deeplink', url });
+				await target.focus();
+				return;
+			} catch { /* fall through */ }
+		}
+		// 3) Kein Client: neues Fenster mit der Deep-Link-URL. Falls iOS das ignoriert
+		//    und nur die alte Instanz holt, fängt sie der Briefkasten-Read in der App auf.
+		await self.clients.openWindow(url);
+	})());
 });

@@ -7,6 +7,9 @@ interface OfflineList {
 	ownerId: string;
 	openCount: number;
 	updatedAt: number;
+	locationLat?: number | null;
+	locationLng?: number | null;
+	locationName?: string | null;
 }
 
 interface OfflineItem {

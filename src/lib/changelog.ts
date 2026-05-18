@@ -2,6 +2,11 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.10',
+		de: ['Push-Reminder zuverlässiger', 'Standort-Listenöffnung in jeder App-Ansicht'],
+		en: ['Push reminder more reliable', 'Location-based list open from any view'],
+	},
+	{
 		version: '0.7.9',
 		de: ['Fix: Push-Reminder', 'Supplement-Katalog-Suche verbessert'],
 		en: ['Fix: push reminder', 'Supplement catalog search improved'],

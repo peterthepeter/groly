@@ -233,7 +233,6 @@
 		}
 		if (requestVersion !== listsLoadVersion) return;
 		loading = false;
-		checkLocationAndNavigate();
 	}
 
 	async function createList(name: string, description: string, iconId: string | null, shareAfterCreate?: boolean) {
@@ -330,33 +329,8 @@
 		// short tap on lists tab: go to / (already there)
 	}
 
-	const LOCATION_RADIUS_M = 100;
-	const LOC_NAV_KEY = 'groly_loc_nav_done';
-
-	function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-		const R = 6371000;
-		const dLat = (lat2 - lat1) * Math.PI / 180;
-		const dLng = (lng2 - lng1) * Math.PI / 180;
-		const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-		return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-	}
-
-	function checkLocationAndNavigate() {
-		if (sessionStorage.getItem(LOC_NAV_KEY)) return;
-		if (!userSettings.locationNavEnabled) return;
-		if (!('geolocation' in navigator)) return;
-		sessionStorage.setItem(LOC_NAV_KEY, '1');
-		navigator.geolocation.getCurrentPosition((pos) => {
-			const { latitude, longitude } = pos.coords;
-			const match = lists.find(l =>
-				l.locationLat != null &&
-				l.locationLng != null &&
-				!userSettings.isListLocationDisabled(l.id) &&
-				haversineDistance(latitude, longitude, l.locationLat, l.locationLng) <= LOCATION_RADIUS_M
-			);
-			if (match) goto(`/listen/${match.id}`);
-		}, () => { /* permission denied or error — silently ignore */ }, { timeout: 8000, maximumAge: 30000 });
-	}
+	// Geofence-Logik ist in resumeOrchestrator + locationNav verlagert (greift jetzt
+	// Layout-weit auf allen Seiten, nicht nur auf der Listen-Übersicht).
 
 	onMount(() => {
 		loadCustomOrder();
@@ -373,18 +347,9 @@
 		const handleOnline = () => void loadLists();
 		window.addEventListener('online', handleOnline);
 
-		const handleVisibility = () => {
-			if (document.visibilityState === 'visible') {
-				sessionStorage.removeItem(LOC_NAV_KEY);
-				checkLocationAndNavigate();
-			}
-		};
-		document.addEventListener('visibilitychange', handleVisibility);
-
 		return () => {
 			window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
 			window.removeEventListener('online', handleOnline);
-			document.removeEventListener('visibilitychange', handleVisibility);
 		};
 	});
 
