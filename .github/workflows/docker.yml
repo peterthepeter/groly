@@ -1,16 +1,9 @@
 name: Build & Push Docker Image
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'README.md'
-      - 'CLAUDE.md'
-      - 'docs/**'
-      - 'unraid/**'
-      - '.gitignore'
   release:
     types: [published]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -44,9 +37,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v7.1.0
