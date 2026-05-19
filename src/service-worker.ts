@@ -93,18 +93,34 @@ self.addEventListener('message', (event) => {
 	}
 });
 
+// Wärmt den IndexedDB-Storage vor: öffnet die DB einmal kurz und schließt sie wieder.
+// Auf iOS ist der erste IDB-Zugriff nach SW-Cold-Start oft 200-500ms langsam, was
+// im engen notificationclick-Zeitbudget (~5s) zu abgebrochenen Writes führen kann.
+// Aufruf im push-Event garantiert, dass der Storage bei notificationclick warm ist.
+function swPreWarmDeeplinkDb(): Promise<void> {
+	return new Promise((resolve) => {
+		try {
+			const req = indexedDB.open('groly-deeplink', 1);
+			req.onupgradeneeded = () => req.result.createObjectStore('pending');
+			req.onsuccess = () => { req.result.close(); resolve(); };
+			req.onerror = () => resolve();
+		} catch { resolve(); }
+	});
+}
+
 self.addEventListener('push', (event) => {
 	if (!event.data) return;
 	const data = event.data.json() as { title: string; body: string; url?: string; tag?: string };
-	event.waitUntil(
-		self.registration.showNotification(data.title, {
+	event.waitUntil((async () => {
+		await swPreWarmDeeplinkDb();
+		await self.registration.showNotification(data.title, {
 			body: data.body,
 			icon: '/icons/icon-192.png',
 			badge: '/icons/icon-192.png',
 			tag: data.tag,
 			data: { url: data.url ?? '/' }
-		})
-	);
+		});
+	})());
 });
 
 // Inline-IDB-Helper für den Service-Worker: schreibt den Deep-Link in eine

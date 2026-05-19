@@ -57,3 +57,16 @@ export async function consumePendingDeeplink(): Promise<string | null> {
 		return null;
 	}
 }
+
+// Mehrfaches Lesen mit Verzögerung — fängt iOS-SW-Cold-Start-Race ab, bei dem
+// der SW-Write erst Hunderte ms nach dem App-Resume committed wird. Wir prüfen
+// sofort, dann nach 300ms, dann nach 1000ms. Sobald ein Eintrag da ist: zurückgeben.
+export async function consumePendingDeeplinkWithRetry(): Promise<string | null> {
+	const delays = [0, 300, 1000];
+	for (const delay of delays) {
+		if (delay > 0) await new Promise(r => setTimeout(r, delay));
+		const url = await consumePendingDeeplink();
+		if (url) return url;
+	}
+	return null;
+}

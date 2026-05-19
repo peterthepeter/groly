@@ -8,7 +8,7 @@
 // und Push verließ sich auf SW-postMessage, der nach langem iOS-Suspend
 // stumm bleibt — siehe pendingDeeplink.ts).
 
-import { consumePendingDeeplink } from '$lib/pendingDeeplink';
+import { consumePendingDeeplinkWithRetry } from '$lib/pendingDeeplink';
 import { findGeofenceMatch, resetLocationNavSession } from '$lib/locationNav';
 
 export function initResumeOrchestrator() {
@@ -16,7 +16,7 @@ export function initResumeOrchestrator() {
 
 	async function handleResume() {
 		const { goto } = await import('$app/navigation');
-		const pending = await consumePendingDeeplink();
+		const pending = await consumePendingDeeplinkWithRetry();
 		if (pending) {
 			const cur = location.pathname + location.search;
 			if (cur !== pending) goto(pending);
