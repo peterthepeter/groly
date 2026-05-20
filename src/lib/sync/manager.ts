@@ -11,8 +11,23 @@ export function generateClientId(): string {
 		.replace(/=/g, '');
 }
 
+// Fetch mit hartem Abort-Timeout. iOS-PWA-Resume hat oft 5-10 s, in denen der
+// Netz-Stack noch eingefroren ist und ein fetch() einfach hängenbleibt — ohne
+// Timeout würde der Aufrufer ewig warten und nichts in die Queue stellen.
+const DEFAULT_TIMEOUT_MS = 6000;
+
+export async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
+	const ctrl = new AbortController();
+	const t = setTimeout(() => ctrl.abort(), timeoutMs);
+	try {
+		return await fetch(url, { ...init, signal: ctrl.signal });
+	} finally {
+		clearTimeout(t);
+	}
+}
+
 async function apiFetch(url: string, options?: RequestInit) {
-	const res = await fetch(url, {
+	const res = await fetchWithTimeout(url, {
 		...options,
 		headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) }
 	});
@@ -53,6 +68,15 @@ async function processPendingMutations() {
 				case 'delete_supplement_log':
 					await apiFetch(`/api/supplement-logs/${mutation.payload.id}`, { method: 'DELETE' });
 					break;
+				case 'create_water_log':
+					await apiFetch('/api/water-logs', { method: 'POST', body: JSON.stringify(mutation.payload) });
+					break;
+				case 'create_caffeine_log':
+					await apiFetch('/api/caffeine-logs', { method: 'POST', body: JSON.stringify(mutation.payload) });
+					break;
+				case 'create_meditation_log':
+					await apiFetch('/api/meditation-logs', { method: 'POST', body: JSON.stringify(mutation.payload) });
+					break;
 			}
 			await offlineDb.pendingMutations.delete(mutation.id!);
 		} catch (e: unknown) {
@@ -62,11 +86,16 @@ async function processPendingMutations() {
 				await offlineDb.pendingMutations.delete(mutation.id!);
 				continue;
 			}
-			break; // Netzwerkfehler – beim nächsten Online-Event erneut versuchen
+			break; // Netzwerkfehler / Timeout / 5xx — beim nächsten Drain erneut versuchen
 		}
 	}
 	const remaining = await offlineDb.pendingMutations.count();
 	networkStore.setPending(remaining);
+}
+
+// Öffentliche Variante für Aufrufer außerhalb (resumeOrchestrator).
+export function drainPendingMutations(): Promise<void> {
+	return processPendingMutations();
 }
 
 export async function execute<T>(
@@ -90,6 +119,80 @@ export async function execute<T>(
 	// Sofort versuchen, die Queue zu leeren (z.B. 409-Konflikte bereinigen)
 	if (networkStore.online) void processPendingMutations();
 	return null;
+}
+
+// ── Tracker-Logs: optimistisch + idempotent ────────────────────────────────────
+//
+// Einheitlicher Pfad für alle vier Logger (Supplement, Wasser, Koffein, Meditation).
+// Reihenfolge bewusst so:
+//   1. clientLogId generieren (Idempotenz-Schlüssel, überlebt Retries)
+//   2. lokale IDB-Kopie schreiben (UI sieht den Eintrag sofort)
+//   3. Mutation in die Queue legen (Drain übernimmt Server-Sync)
+//   4. wenn online: einmal sofort drainen (best-effort)
+// Bei Timeout/Netzwerk-Fehler bleibt der Eintrag in der Queue und wird beim
+// nächsten Online-Event oder Resume erneut versucht. Dank clientLogId entstehen
+// auf dem Server keine Duplikate, falls ein Request doch durchging und nur die
+// Antwort verloren ging.
+
+async function enqueueLog(
+	type: 'create_supplement_log' | 'create_water_log' | 'create_caffeine_log' | 'create_meditation_log',
+	payload: Record<string, unknown>,
+	localWrite: () => Promise<unknown>
+): Promise<void> {
+	await localWrite();
+	await offlineDb.pendingMutations.add({ type, payload, createdAt: Date.now() });
+	networkStore.setPending(await offlineDb.pendingMutations.count());
+	if (networkStore.online) void processPendingMutations();
+}
+
+export async function logSupplementOffline(args: { supplementId: string; amount: number; loggedAt: number; note: string | null; clientLogId: string }): Promise<void> {
+	await enqueueLog(
+		'create_supplement_log',
+		{ supplementId: args.supplementId, amount: args.amount, loggedAt: args.loggedAt, note: args.note, clientLogId: args.clientLogId },
+		() => offlineDb.supplementLogs.put({ id: args.clientLogId, supplementId: args.supplementId, amount: args.amount, loggedAt: args.loggedAt, note: args.note, clientLogId: args.clientLogId })
+	);
+}
+
+export async function logWaterOffline(args: { amountMl: number; loggedAt: number; clientLogId: string }): Promise<void> {
+	await enqueueLog(
+		'create_water_log',
+		{ amountMl: args.amountMl, loggedAt: args.loggedAt, clientLogId: args.clientLogId },
+		() => offlineDb.waterLogs.put({ id: args.clientLogId, amountMl: args.amountMl, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
+	);
+}
+
+export async function logCaffeineOffline(args: { drinkName: string; amountMl: number; caffeineMg: number; loggedAt: number; clientLogId: string }): Promise<void> {
+	await enqueueLog(
+		'create_caffeine_log',
+		{ drinkName: args.drinkName, amountMl: args.amountMl, caffeineMg: args.caffeineMg, loggedAt: args.loggedAt, clientLogId: args.clientLogId },
+		() => offlineDb.caffeineLogs.put({ id: args.clientLogId, drinkName: args.drinkName, amountMl: args.amountMl, caffeineMg: args.caffeineMg, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
+	);
+}
+
+export async function logMeditationOffline(args: { durationSeconds: number; loggedAt: number; clientLogId: string }): Promise<void> {
+	await enqueueLog(
+		'create_meditation_log',
+		{ durationSeconds: args.durationSeconds, loggedAt: args.loggedAt, clientLogId: args.clientLogId },
+		() => offlineDb.meditationLogs.put({ id: args.clientLogId, durationSeconds: args.durationSeconds, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
+	);
+}
+
+// Liefert noch-nicht-synchronisierte Log-Mutations zurück, gefiltert auf einen
+// Zeitraum. Wird von den Load-Funktionen verwendet, um die Server-Antwort um
+// optimistische Pending-Einträge zu ergänzen (sonst würden sie aus der UI
+// verschwinden, bis der Queue-Drain den Server informiert hat).
+export async function getPendingLogs(
+	type: 'create_supplement_log' | 'create_water_log' | 'create_caffeine_log' | 'create_meditation_log',
+	from: number,
+	to: number
+): Promise<Array<Record<string, unknown>>> {
+	const muts = await offlineDb.pendingMutations.where('type').equals(type).toArray();
+	return muts
+		.map(m => m.payload)
+		.filter(p => {
+			const ts = (p as { loggedAt?: number }).loggedAt;
+			return typeof ts === 'number' && ts >= from && ts <= to;
+		});
 }
 
 // ── Listen-Cache ───────────────────────────────────────────────────────────────
@@ -157,17 +260,6 @@ export async function cacheTodayLogs(logs: OfflineSupplementLog[]) {
 
 export async function addOfflineLog(log: OfflineSupplementLog) {
 	await offlineDb.supplementLogs.put(log);
-}
-
-export async function queueOfflineLog(supplementId: string, amount: number, loggedAt: number): Promise<void> {
-	const tempId = generateClientId();
-	await offlineDb.pendingMutations.add({
-		type: 'create_supplement_log',
-		payload: { supplementId, amount, loggedAt },
-		createdAt: Date.now()
-	});
-	await addOfflineLog({ id: tempId, supplementId, amount, loggedAt });
-	networkStore.setPending(await offlineDb.pendingMutations.count());
 }
 
 export async function getOfflineTodayLogs(): Promise<OfflineSupplementLog[]> {

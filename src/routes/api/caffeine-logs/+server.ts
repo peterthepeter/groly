@@ -33,7 +33,7 @@ export const POST: RequestHandler = async (event) => {
 
 	try {
 		const body = await event.request.json();
-		const { drinkName, amountMl, caffeineMg, loggedAt } = body;
+		const { drinkName, amountMl, caffeineMg, loggedAt, clientLogId } = body;
 
 		if (typeof drinkName !== 'string' || !drinkName.trim())
 			return json({ error: 'drinkName required' }, { status: 400 });
@@ -41,6 +41,15 @@ export const POST: RequestHandler = async (event) => {
 			return json({ error: 'amountMl muss eine positive ganze Zahl sein' }, { status: 400 });
 		if (typeof caffeineMg !== 'number' || caffeineMg < 0 || !Number.isInteger(caffeineMg))
 			return json({ error: 'caffeineMg muss eine nicht-negative ganze Zahl sein' }, { status: 400 });
+
+		if (typeof clientLogId === 'string' && clientLogId.length > 0) {
+			const existing = db
+				.select({ id: caffeineLogs.id })
+				.from(caffeineLogs)
+				.where(and(eq(caffeineLogs.userId, user!.id), eq(caffeineLogs.clientLogId, clientLogId)))
+				.get();
+			if (existing) return json({ id: existing.id, deduped: true }, { status: 200 });
+		}
 
 		const now = Date.now();
 		const id = randomUUID();
@@ -52,6 +61,7 @@ export const POST: RequestHandler = async (event) => {
 			amountMl,
 			caffeineMg,
 			loggedAt: loggedAt ?? now,
+			clientLogId: (typeof clientLogId === 'string' && clientLogId.length > 0) ? clientLogId : null,
 			createdAt: now
 		}).run();
 

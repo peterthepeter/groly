@@ -1,19 +1,3 @@
-// Hört auf Service-Worker Messages und routet Deep-Links (Push-Klick bei laufender App).
-// Notwendig, weil `client.navigate()` aus dem SW heraus auf iOS-PWAs unzuverlässig ist:
-// Der Aufruf läuft scheinbar erfolgreich durch, die URL wird aber nicht real gewechselt.
-// Statt URL-Navigation aus dem SW heraus schickt der SW eine Nachricht — die App routet selbst.
-export function initDeepLinkListener() {
-	if (!('serviceWorker' in navigator)) return;
-	navigator.serviceWorker.addEventListener('message', (event) => {
-		const data = event.data as { type?: string; url?: string } | undefined;
-		if (data?.type === 'deeplink' && typeof data.url === 'string') {
-			// Dynamischer Import vermeidet einen Top-Level-Import aus $app/navigation,
-			// der diesen Helper sonst an den Client-Bundle bindet.
-			import('$app/navigation').then(({ goto }) => goto(data.url!));
-		}
-	});
-}
-
 export function initUpdateDetection() {
 	if (!('serviceWorker' in navigator)) return;
 

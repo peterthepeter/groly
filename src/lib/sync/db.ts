@@ -33,7 +33,10 @@ interface PendingMutation {
 		| 'update_item'
 		| 'delete_item'
 		| 'create_supplement_log'
-		| 'delete_supplement_log';
+		| 'delete_supplement_log'
+		| 'create_water_log'
+		| 'create_caffeine_log'
+		| 'create_meditation_log';
 	payload: Record<string, unknown>;
 	createdAt: number;
 }
@@ -57,6 +60,8 @@ interface OfflineSupplementLog {
 	supplementId: string;
 	amount: number;
 	loggedAt: number;
+	note?: string | null;
+	clientLogId?: string | null;
 }
 
 interface OfflineRecipe {
@@ -80,6 +85,7 @@ interface OfflineWaterLog {
 	id: string;
 	amountMl: number;
 	loggedAt: number;
+	clientLogId?: string | null;
 }
 
 interface OfflineCaffeineLog {
@@ -88,12 +94,14 @@ interface OfflineCaffeineLog {
 	caffeineMg: number;
 	amountMl: number;
 	loggedAt: number;
+	clientLogId?: string | null;
 }
 
 interface OfflineMeditationLog {
 	id: string;
 	durationSeconds: number;
 	loggedAt: number;
+	clientLogId?: string | null;
 }
 
 class GrolydDb extends Dexie {

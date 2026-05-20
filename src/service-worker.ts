@@ -93,41 +93,23 @@ self.addEventListener('message', (event) => {
 	}
 });
 
-// Wärmt den IndexedDB-Storage vor: öffnet die DB einmal kurz und schließt sie wieder.
-// Auf iOS ist der erste IDB-Zugriff nach SW-Cold-Start oft 200-500ms langsam, was
-// im engen notificationclick-Zeitbudget (~5s) zu abgebrochenen Writes führen kann.
-// Aufruf im push-Event garantiert, dass der Storage bei notificationclick warm ist.
-function swPreWarmDeeplinkDb(): Promise<void> {
-	return new Promise((resolve) => {
-		try {
-			const req = indexedDB.open('groly-deeplink', 1);
-			req.onupgradeneeded = () => req.result.createObjectStore('pending');
-			req.onsuccess = () => { req.result.close(); resolve(); };
-			req.onerror = () => resolve();
-		} catch { resolve(); }
-	});
-}
-
 self.addEventListener('push', (event) => {
 	if (!event.data) return;
 	const data = event.data.json() as { title: string; body: string; url?: string; tag?: string };
-	event.waitUntil((async () => {
-		await swPreWarmDeeplinkDb();
-		await self.registration.showNotification(data.title, {
+	event.waitUntil(
+		self.registration.showNotification(data.title, {
 			body: data.body,
 			icon: '/icons/icon-192.png',
 			badge: '/icons/icon-192.png',
 			tag: data.tag,
 			data: { url: data.url ?? '/' }
-		});
-	})());
+		})
+	);
 });
 
-// Inline-IDB-Helper für den Service-Worker: schreibt den Deep-Link in eine
-// persistente IndexedDB ("groly-deeplink"), die die App beim nächsten Resume
-// ausliest. Notwendig weil postMessage nach langem iOS-Suspend stumm bleibt
-// (per Remote-Inspector bewiesen). Die Datenbank wird auch von src/lib/pendingDeeplink.ts
-// gelesen — Schema muss synchron bleiben.
+// Inline-IDB-Helper: schreibt den Deep-Link in die persistente "groly-deeplink"-IDB.
+// Backup-Pfad — der primäre Pfad ist BroadcastChannel (siehe unten). Schema-Konstanten
+// (DB-Name, Store-Name, Key) müssen mit src/lib/pendingDeeplink.ts identisch bleiben.
 function swSetPendingDeeplink(url: string): Promise<void> {
 	return new Promise((resolve) => {
 		try {
@@ -145,26 +127,27 @@ function swSetPendingDeeplink(url: string): Promise<void> {
 	});
 }
 
+// Channel-Name muss mit DEEPLINK_CHANNEL in src/lib/pendingDeeplink.ts übereinstimmen.
+const DEEPLINK_CHANNEL = 'groly-deeplink';
+
 self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 	const url: string = (event.notification.data as { url: string })?.url ?? '/';
 	event.waitUntil((async () => {
-		// 1) Briefkasten füllen — überlebt iOS-Suspend, App liest beim Resume aus
+		// Reihenfolge ist load-bearing:
+		// 1) IDB-Mailbox zuerst — überlebt iOS-Suspend, App-Mount liest sie ein.
+		// 2) BroadcastChannel-Post — primärer Pfad, erreicht alle aktuell laufenden
+		//    Clients sofort. Wird der App-Subscriber später aktiv (z.B. weil iOS
+		//    noch am Auftauen ist), liest er stattdessen die IDB.
+		// 3) openWindow — bringt die App in den Vordergrund. Auf iOS-PWA navigiert
+		//    der Aufruf die URL oft nicht zuverlässig; deshalb verlassen wir uns
+		//    nicht auf den URL-Parameter sondern auf den IDB/BC-Pfad.
 		await swSetPendingDeeplink(url);
-		// 2) Fast-Path: existierender Client kriegt postMessage (warmer Resume, < ~10 min)
-		const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-		const target =
-			(clientList.find((c) => (c as WindowClient).focused) as WindowClient | undefined) ??
-			(clientList[0] as WindowClient | undefined);
-		if (target) {
-			try {
-				target.postMessage({ type: 'deeplink', url });
-				await target.focus();
-				return;
-			} catch { /* fall through */ }
-		}
-		// 3) Kein Client: neues Fenster mit der Deep-Link-URL. Falls iOS das ignoriert
-		//    und nur die alte Instanz holt, fängt sie der Briefkasten-Read in der App auf.
+		try {
+			const bc = new BroadcastChannel(DEEPLINK_CHANNEL);
+			bc.postMessage({ type: 'deeplink', url });
+			bc.close();
+		} catch { /* BC nicht verfügbar — IDB-Pfad fängt es auf */ }
 		await self.clients.openWindow(url);
 	})());
 });

@@ -198,8 +198,13 @@ export const supplementLogs = sqliteTable('supplement_logs', {
 	amount: real('amount').notNull(), // z.B. 2.0 = 2 Kapseln
 	loggedAt: integer('logged_at').notNull(), // Unix ms inkl. Uhrzeit
 	note: text('note'),
+	clientLogId: text('client_log_id'),
 	createdAt: integer('created_at').notNull()
-}, (t) => [index('supplement_logs_user_id_idx').on(t.userId), index('supplement_logs_logged_at_idx').on(t.loggedAt)]);
+}, (t) => [
+	index('supplement_logs_user_id_idx').on(t.userId),
+	index('supplement_logs_logged_at_idx').on(t.loggedAt),
+	uniqueIndex('supplement_logs_client_log_id_unique').on(t.userId, t.clientLogId)
+]);
 
 export type User = typeof users.$inferSelect;
 export type List = typeof lists.$inferSelect;
@@ -263,10 +268,12 @@ export const waterLogs = sqliteTable('water_logs', {
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 	amountMl: integer('amount_ml').notNull(),
 	loggedAt: integer('logged_at').notNull(),
+	clientLogId: text('client_log_id'),
 	createdAt: integer('created_at').notNull()
 }, (t) => [
 	index('water_logs_user_id_idx').on(t.userId),
-	index('water_logs_logged_at_idx').on(t.loggedAt)
+	index('water_logs_logged_at_idx').on(t.loggedAt),
+	uniqueIndex('water_logs_client_log_id_unique').on(t.userId, t.clientLogId)
 ]);
 
 export const waterReminderSchedules = sqliteTable('water_reminder_schedules', {
@@ -296,10 +303,12 @@ export const caffeineLogs = sqliteTable('caffeine_logs', {
 	amountMl: integer('amount_ml').notNull(),
 	caffeineMg: integer('caffeine_mg').notNull(),
 	loggedAt: integer('logged_at').notNull(),
+	clientLogId: text('client_log_id'),
 	createdAt: integer('created_at').notNull()
 }, (t) => [
 	index('caffeine_logs_user_id_idx').on(t.userId),
-	index('caffeine_logs_logged_at_idx').on(t.loggedAt)
+	index('caffeine_logs_logged_at_idx').on(t.loggedAt),
+	uniqueIndex('caffeine_logs_client_log_id_unique').on(t.userId, t.clientLogId)
 ]);
 
 export const meditationLogs = sqliteTable('meditation_logs', {
@@ -307,10 +316,12 @@ export const meditationLogs = sqliteTable('meditation_logs', {
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 	durationSeconds: integer('duration_seconds').notNull(),
 	loggedAt: integer('logged_at').notNull(),
+	clientLogId: text('client_log_id'),
 	createdAt: integer('created_at').notNull()
 }, (t) => [
 	index('meditation_logs_user_id_idx').on(t.userId),
-	index('meditation_logs_logged_at_idx').on(t.loggedAt)
+	index('meditation_logs_logged_at_idx').on(t.loggedAt),
+	uniqueIndex('meditation_logs_client_log_id_unique').on(t.userId, t.clientLogId)
 ]);
 
 export const meditationReminderSchedules = sqliteTable('meditation_reminder_schedules', {

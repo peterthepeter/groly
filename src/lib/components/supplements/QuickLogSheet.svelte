@@ -2,7 +2,8 @@
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { displayUnit } from '$lib/units';
 	import { goto } from '$app/navigation';
-	import { queueOfflineLog } from '$lib/sync/manager';
+	import { fetchWithTimeout, generateClientId, logSupplementOffline, logWaterOffline, logCaffeineOffline, logMeditationOffline } from '$lib/sync/manager';
+	import { networkStore } from '$lib/stores/online.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { untrack, tick } from 'svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
@@ -179,17 +180,27 @@
 		caffeineSaving = drink.id;
 		const ml = userSettings.caffeineCustomAmounts?.[drink.id] ?? drink.defaultMl;
 		const mg = Math.round(drink.caffeineMg * ml / drink.defaultMl);
-		try {
-			const res = await fetch('/api/caffeine-logs', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ drinkName: drink.name, amountMl: ml, caffeineMg: mg, loggedAt: makeTimestamp(logDate ?? todayStr(), new Date().toTimeString().slice(0, 5)) })
-			});
-			if (!res.ok) throw new Error();
-			caffeineDone = drink.id;
-			setTimeout(() => { caffeineDone = null; }, 2500);
-			onlogged();
-		} catch { /* silently fail */ }
+		const loggedAt = makeTimestamp(logDate ?? todayStr(), new Date().toTimeString().slice(0, 5));
+		const clientLogId = generateClientId();
+		const payload = { drinkName: drink.name, amountMl: ml, caffeineMg: mg, loggedAt, clientLogId };
+
+		let ok = false;
+		if (networkStore.online) {
+			try {
+				const res = await fetchWithTimeout('/api/caffeine-logs', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				});
+				ok = res.ok;
+			} catch { /* Timeout / Netzwerk-Fehler → Queue-Fallback */ }
+		}
+		if (!ok) {
+			await logCaffeineOffline({ drinkName: drink.name, amountMl: ml, caffeineMg: mg, loggedAt, clientLogId });
+		}
+		caffeineDone = drink.id;
+		setTimeout(() => { caffeineDone = null; }, 2500);
+		onlogged();
 		caffeineSaving = null;
 	}
 
@@ -263,16 +274,25 @@
 		meditationRetroSaving = true;
 		try {
 			const loggedAt = makeTimestamp(logDate ?? todayStr(), meditationRetroStartTime);
-			const res = await fetch('/api/meditation-logs', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ durationSeconds: meditationRetroDuration * 60, loggedAt })
-			});
-			if (res.ok) {
-				meditationRetroOpen = false;
-				meditationRetroDuration = null;
-				onlogged();
+			const durationSeconds = meditationRetroDuration * 60;
+			const clientLogId = generateClientId();
+			let ok = false;
+			if (networkStore.online) {
+				try {
+					const res = await fetchWithTimeout('/api/meditation-logs', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ durationSeconds, loggedAt, clientLogId })
+					});
+					ok = res.ok;
+				} catch { /* Queue-Fallback */ }
 			}
+			if (!ok) {
+				await logMeditationOffline({ durationSeconds, loggedAt, clientLogId });
+			}
+			meditationRetroOpen = false;
+			meditationRetroDuration = null;
+			onlogged();
 		} finally { meditationRetroSaving = false; }
 	}
 
@@ -280,20 +300,25 @@
 		if (waterSaving) return;
 		waterSaving = true;
 		waterError = null;
-		try {
-			const res = await fetch('/api/water-logs', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ amountMl: ml, loggedAt: loggedAt ?? Date.now() })
-			});
-			if (!res.ok) throw new Error();
-			waterDone = true;
-			setTimeout(() => { waterDone = false; }, 2500);
-			onlogged();
-		} catch {
-			waterError = t.water_error_offline;
-			setTimeout(() => { waterError = null; }, 3000);
+		const ts = loggedAt ?? Date.now();
+		const clientLogId = generateClientId();
+		let ok = false;
+		if (networkStore.online) {
+			try {
+				const res = await fetchWithTimeout('/api/water-logs', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ amountMl: ml, loggedAt: ts, clientLogId })
+				});
+				ok = res.ok;
+			} catch { /* Queue-Fallback */ }
 		}
+		if (!ok) {
+			await logWaterOffline({ amountMl: ml, loggedAt: ts, clientLogId });
+		}
+		waterDone = true;
+		setTimeout(() => { waterDone = false; }, 2500);
+		onlogged();
 		waterSaving = false;
 	}
 
@@ -346,26 +371,26 @@
 		const time = times[supplementId] ?? new Date().toTimeString().slice(0, 5);
 		const loggedAt = makeTimestamp(logDate ?? todayStr(), time);
 		const note = notes[supplementId]?.trim() || null;
+		const clientLogId = generateClientId();
 
-		let success = false;
-		try {
-			const res = await fetch('/api/supplement-logs', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ supplementId, amount, loggedAt, note })
-			});
-			success = res.ok;
-		} catch {
-			// Offline — in Queue stellen und lokal cachen
-			await queueOfflineLog(supplementId, amount, loggedAt);
-			success = true;
+		let ok = false;
+		if (networkStore.online) {
+			try {
+				const res = await fetchWithTimeout('/api/supplement-logs', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ supplementId, amount, loggedAt, note, clientLogId })
+				});
+				ok = res.ok;
+			} catch { /* Timeout / Netzwerk → Queue-Fallback. Server dedupliziert über clientLogId. */ }
+		}
+		if (!ok) {
+			await logSupplementOffline({ supplementId, amount, loggedAt, note, clientLogId });
 		}
 
-		if (success) {
-			done = { ...done, [supplementId]: true };
-			setTimeout(() => { done = { ...done, [supplementId]: false }; }, 2500);
-			onlogged();
-		}
+		done = { ...done, [supplementId]: true };
+		setTimeout(() => { done = { ...done, [supplementId]: false }; }, 2500);
+		onlogged();
 		saving = { ...saving, [supplementId]: false };
 	}
 

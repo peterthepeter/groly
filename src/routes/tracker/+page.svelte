@@ -5,7 +5,7 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang, today_reminders_label } from '$lib/i18n.svelte';
-	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheMeditationLogs, getOfflineMeditationLogsToday } from '$lib/sync/manager';
+	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
@@ -282,14 +282,29 @@
 	}
 
 	async function loadTodayLogs() {
+		const from = todayStart();
+		const to = todayEnd();
 		try {
-			const from = todayStart();
-			const to = todayEnd();
 			const res = await fetch(`/api/supplement-logs?from=${from}&to=${to}`);
 			if (!res.ok) throw new Error();
 			const data = await res.json();
-			todayLogs = data.logs;
-			cacheTodayLogs(data.logs).catch(() => {});
+			const serverLogs = data.logs as Log[];
+			cacheTodayLogs(serverLogs).catch(() => {});
+			// Noch-nicht-synchronisierte optimistische Einträge mergen (Queue-Drain
+			// kann nach onlogged() noch einige Sekunden laufen — ohne Merge würde
+			// das frisch geloggte Item kurz aus der UI verschwinden).
+			const pending = await getPendingLogs('create_supplement_log', from, to);
+			const seen = new Set(serverLogs.map(l => (l as { clientLogId?: string }).clientLogId).filter(Boolean));
+			const extra: Log[] = pending
+				.filter(p => !seen.has(p.clientLogId as string))
+				.map(p => ({
+					id: p.clientLogId as string,
+					supplementId: p.supplementId as string,
+					amount: p.amount as number,
+					loggedAt: p.loggedAt as number,
+					note: (p.note as string | null) ?? null
+				}));
+			todayLogs = [...serverLogs, ...extra];
 		} catch {
 			todayLogs = await getOfflineTodayLogs();
 		}
@@ -376,12 +391,20 @@
 
 	async function loadWaterLogs() {
 		if (!userSettings.waterTrackerEnabled) return;
+		const from = todayStart();
+		const to = todayEnd();
 		try {
-			const res = await fetch(`/api/water-logs?from=${todayStart()}&to=${todayEnd()}`);
+			const res = await fetch(`/api/water-logs?from=${from}&to=${to}`);
 			if (res.ok) {
 				const data = await res.json();
-				waterLogsToday = data.logs;
-				cacheWaterLogs(data.logs).catch(() => {});
+				const serverLogs = data.logs as WaterLog[];
+				cacheWaterLogs(serverLogs).catch(() => {});
+				const pending = await getPendingLogs('create_water_log', from, to);
+				const seen = new Set(serverLogs.map(l => (l as { clientLogId?: string }).clientLogId).filter(Boolean));
+				const extra = pending
+					.filter(p => !seen.has(p.clientLogId as string))
+					.map(p => ({ id: p.clientLogId as string, amountMl: p.amountMl as number, loggedAt: p.loggedAt as number } as WaterLog));
+				waterLogsToday = [...serverLogs, ...extra];
 			} else throw new Error();
 		} catch {
 			waterLogsToday = (await getOfflineWaterLogsToday()) as WaterLog[];
@@ -407,12 +430,26 @@
 
 	async function loadCaffeineLogs() {
 		if (!userSettings.caffeineTrackerEnabled) return;
+		const from = todayStart();
+		const to = todayEnd();
 		try {
-			const res = await fetch(`/api/caffeine-logs?from=${todayStart()}&to=${todayEnd()}`);
+			const res = await fetch(`/api/caffeine-logs?from=${from}&to=${to}`);
 			if (res.ok) {
 				const data = await res.json();
-				caffeineLogsToday = data.logs;
-				cacheCaffeineLogs(data.logs).catch(() => {});
+				const serverLogs = data.logs as CaffeineLog[];
+				cacheCaffeineLogs(serverLogs).catch(() => {});
+				const pending = await getPendingLogs('create_caffeine_log', from, to);
+				const seen = new Set(serverLogs.map(l => (l as { clientLogId?: string }).clientLogId).filter(Boolean));
+				const extra = pending
+					.filter(p => !seen.has(p.clientLogId as string))
+					.map(p => ({
+						id: p.clientLogId as string,
+						drinkName: p.drinkName as string,
+						amountMl: p.amountMl as number,
+						caffeineMg: p.caffeineMg as number,
+						loggedAt: p.loggedAt as number
+					} as CaffeineLog));
+				caffeineLogsToday = [...serverLogs, ...extra];
 			} else throw new Error();
 		} catch {
 			caffeineLogsToday = (await getOfflineCaffeineLogsToday()) as CaffeineLog[];
@@ -428,12 +465,20 @@
 
 	async function loadMeditationLogs() {
 		if (!userSettings.meditationTrackerEnabled) return;
+		const from = todayStart();
+		const to = todayEnd();
 		try {
-			const res = await fetch(`/api/meditation-logs?from=${todayStart()}&to=${todayEnd()}`);
+			const res = await fetch(`/api/meditation-logs?from=${from}&to=${to}`);
 			if (res.ok) {
 				const data = await res.json();
-				meditationLogsToday = data.logs;
-				cacheMeditationLogs(data.logs).catch(() => {});
+				const serverLogs = data.logs as MeditationLog[];
+				cacheMeditationLogs(serverLogs).catch(() => {});
+				const pending = await getPendingLogs('create_meditation_log', from, to);
+				const seen = new Set(serverLogs.map(l => (l as { clientLogId?: string }).clientLogId).filter(Boolean));
+				const extra = pending
+					.filter(p => !seen.has(p.clientLogId as string))
+					.map(p => ({ id: p.clientLogId as string, durationSeconds: p.durationSeconds as number, loggedAt: p.loggedAt as number } as MeditationLog));
+				meditationLogsToday = [...serverLogs, ...extra];
 			} else throw new Error();
 		} catch {
 			meditationLogsToday = (await getOfflineMeditationLogsToday()) as MeditationLog[];

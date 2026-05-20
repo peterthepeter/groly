@@ -33,10 +33,20 @@ export const POST: RequestHandler = async (event) => {
 
 	try {
 		const body = await event.request.json();
-		const { supplementId, amount, loggedAt, note } = body;
+		const { supplementId, amount, loggedAt, note, clientLogId } = body;
 
 		if (!supplementId) return json({ error: 'supplementId erforderlich' }, { status: 400 });
 		if (typeof amount !== 'number' || amount <= 0) return json({ error: 'Menge muss > 0 sein' }, { status: 400 });
+
+		// Idempotenz: gleicher clientLogId vom selben User → vorhandenen Log zurückgeben
+		if (typeof clientLogId === 'string' && clientLogId.length > 0) {
+			const existing = db
+				.select({ id: supplementLogs.id })
+				.from(supplementLogs)
+				.where(and(eq(supplementLogs.userId, user!.id), eq(supplementLogs.clientLogId, clientLogId)))
+				.get();
+			if (existing) return json({ id: existing.id, deduped: true }, { status: 200 });
+		}
 
 		// Verify supplement belongs to current user
 		const supplement = db
@@ -57,6 +67,7 @@ export const POST: RequestHandler = async (event) => {
 				amount,
 				loggedAt: loggedAt ?? now,
 				note: (typeof note === 'string' && note.trim()) ? note.trim() : null,
+				clientLogId: (typeof clientLogId === 'string' && clientLogId.length > 0) ? clientLogId : null,
 				createdAt: now
 			}).run();
 

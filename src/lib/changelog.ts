@@ -2,6 +2,11 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.10-2',
+		de: ['Fix: Push-Erinnerungen'],
+		en: ['Fix: push reminders'],
+	},
+	{
 		version: '0.7.10-1',
 		de: ['Fix: Push-Reminder'],
 		en: ['Fix: push reminder'],

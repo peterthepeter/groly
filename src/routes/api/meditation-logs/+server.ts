@@ -33,10 +33,19 @@ export const POST: RequestHandler = async (event) => {
 
 	try {
 		const body = await event.request.json();
-		const { durationSeconds, loggedAt } = body;
+		const { durationSeconds, loggedAt, clientLogId } = body;
 
 		if (typeof durationSeconds !== 'number' || durationSeconds <= 0 || !Number.isInteger(durationSeconds)) {
 			return json({ error: 'durationSeconds muss eine positive ganze Zahl sein' }, { status: 400 });
+		}
+
+		if (typeof clientLogId === 'string' && clientLogId.length > 0) {
+			const existing = db
+				.select({ id: meditationLogs.id })
+				.from(meditationLogs)
+				.where(and(eq(meditationLogs.userId, user!.id), eq(meditationLogs.clientLogId, clientLogId)))
+				.get();
+			if (existing) return json({ id: existing.id, deduped: true }, { status: 200 });
 		}
 
 		const now = Date.now();
@@ -47,6 +56,7 @@ export const POST: RequestHandler = async (event) => {
 			userId: user!.id,
 			durationSeconds,
 			loggedAt: loggedAt ?? now,
+			clientLogId: (typeof clientLogId === 'string' && clientLogId.length > 0) ? clientLogId : null,
 			createdAt: now
 		}).run();
 

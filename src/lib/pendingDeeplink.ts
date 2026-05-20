@@ -1,17 +1,23 @@
-// Persistent "Briefkasten" für Push-Deep-Links, der das iOS-Suspend-Problem
-// umgeht: der Service-Worker schreibt die ankommende URL in IndexedDB, die
-// App liest beim Resume daraus. So gehen Messages nicht verloren, auch wenn
-// der postMessage-Pfad nach langem iOS-Suspend stumm bleibt (bewiesen per
-// Remote-Inspector-Log: nach 30 min Suspend feuert visibilitychange, aber
-// sw-message kommt nicht durch).
+// Persistente Briefkasten-IDB für Push-Deep-Links. Backup-Pfad für den Fall,
+// dass der primäre BroadcastChannel-Pfad (siehe service-worker.ts +
+// resumeOrchestrator.ts) eine Nachricht verpasst — z.B. weil der App-Mount und
+// der SW-Boot in unterschiedlichen Prozessen parallel laufen und die App schon
+// fertig ist bevor der SW gepostet hat. Die App liest diese IDB beim Mount und
+// bei jedem visibilitychange → wenn dort etwas steht, wird navigiert.
 //
-// Eigene IndexedDB-Datenbank (NICHT Dexie) damit der Service-Worker den
-// Code bare-IDB inlinen kann, ohne Dexie-Bundle in den SW zu ziehen.
+// Der frühere Polling-Loop (0/300/1000 ms) wurde entfernt: er war ein
+// Pflaster gegen genau die Race-Condition, die BroadcastChannel strukturell
+// löst. Diese Datei stellt nur noch zwei eindeutige Operationen bereit:
+// schreiben + atomar konsumieren.
 
 const DB_NAME = 'groly-deeplink';
 const STORE = 'pending';
 const KEY = 'current';
 const TTL_MS = 60 * 60 * 1000; // 1 Stunde — alte Pushes nicht versehentlich nachträglich öffnen
+
+// BroadcastChannel-Name. Wird vom Service-Worker (inline) und vom
+// resumeOrchestrator verwendet — Stringliteral muss synchron bleiben.
+export const DEEPLINK_CHANNEL = 'groly-deeplink';
 
 function openDb(): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
@@ -32,7 +38,7 @@ export async function setPendingDeeplink(url: string): Promise<void> {
 			tx.onerror = () => reject(tx.error);
 		});
 		db.close();
-	} catch { /* IDB nicht verfügbar — Fast-Path (postMessage) versucht's noch */ }
+	} catch { /* IDB nicht verfügbar — BC-Pfad versucht's noch */ }
 }
 
 export async function consumePendingDeeplink(): Promise<string | null> {
@@ -56,17 +62,4 @@ export async function consumePendingDeeplink(): Promise<string | null> {
 	} catch {
 		return null;
 	}
-}
-
-// Mehrfaches Lesen mit Verzögerung — fängt iOS-SW-Cold-Start-Race ab, bei dem
-// der SW-Write erst Hunderte ms nach dem App-Resume committed wird. Wir prüfen
-// sofort, dann nach 300ms, dann nach 1000ms. Sobald ein Eintrag da ist: zurückgeben.
-export async function consumePendingDeeplinkWithRetry(): Promise<string | null> {
-	const delays = [0, 300, 1000];
-	for (const delay of delays) {
-		if (delay > 0) await new Promise(r => setTimeout(r, delay));
-		const url = await consumePendingDeeplink();
-		if (url) return url;
-	}
-	return null;
 }

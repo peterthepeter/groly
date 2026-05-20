@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { initLanguage, currentLang } from '$lib/i18n.svelte';
 	import { dispatch } from '$lib/sseStore.svelte';
-	import { initUpdateDetection, initDeepLinkListener, checkForUpdate } from '$lib/stores/pwa.svelte';
+	import { initUpdateDetection, checkForUpdate } from '$lib/stores/pwa.svelte';
 	import { initResumeOrchestrator } from '$lib/resumeOrchestrator';
 	import { afterNavigate, onNavigate } from '$app/navigation';
 	import WhatsNewModal from '$lib/components/WhatsNewModal.svelte';
@@ -55,7 +55,6 @@
 
 		initLanguage();
 		initUpdateDetection();
-		initDeepLinkListener();
 		initResumeOrchestrator();
 
 // "Was ist neu" nach Update anzeigen – nur wenn eingeloggt
