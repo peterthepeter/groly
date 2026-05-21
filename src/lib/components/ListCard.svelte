@@ -52,7 +52,7 @@
 	onpointerleave={endPress}
 	onpointercancel={endPress}
 	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
-	class="w-full flex items-center gap-3 px-3 py-2.5 transition-colors active:opacity-80 text-left select-none"
+	class="w-full flex items-center gap-3 px-3 py-1.5 transition-colors active:opacity-80 text-left select-none"
 >
 	<!-- Icon -->
 	<div class="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center">

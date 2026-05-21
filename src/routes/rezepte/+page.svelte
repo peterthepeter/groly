@@ -487,7 +487,7 @@
 					{@const isLast = i === filteredRecipes.length - 1}
 					<button
 						onclick={() => goto(`/rezepte/${recipe.id}`)}
-						class="w-full flex items-center gap-3 px-4 py-2.5 text-left active:opacity-70 transition-opacity"
+						class="w-full flex items-center gap-3 px-4 py-1 text-left active:opacity-70 transition-opacity"
 					>
 						<!-- Thumbnail -->
 						<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"

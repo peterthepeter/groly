@@ -660,42 +660,44 @@
 				{#if pickerFilteredRecipes.length === 0}
 					<div class="py-8 text-center text-sm" style="color: var(--color-on-surface-variant)">{t.meal_plan_no_results}</div>
 				{:else}
-					{#each pickerFilteredRecipes as recipe (recipe.id)}
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+						{#each pickerFilteredRecipes as recipe (recipe.id)}
+							<button
+								onclick={() => selectRecipe(recipe)}
+								class="w-full flex items-center gap-3 px-3 active:opacity-70 transition-opacity text-left"
+								style="height: 44px; background-color: {pickerRecipeId === recipe.id ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'transparent'}"
+							>
+								<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden"
+								     style="background-color: var(--color-surface-high)">
+									{#if recipe.imageUrl}
+										<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
+									{:else}
+										<div class="w-full h-full flex items-center justify-center font-bold text-sm"
+										     style="color: var(--color-primary)">{recipe.title[0]?.toUpperCase()}</div>
+									{/if}
+								</div>
+								<span class="flex-1 text-sm font-semibold truncate" style="color: var(--color-on-surface)">{recipe.title}</span>
+							</button>
+						{/each}
 						<button
-							onclick={() => selectRecipe(recipe)}
-							class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl active:opacity-70 transition-opacity text-left"
-							style="background-color: {pickerRecipeId === recipe.id ? 'color-mix(in srgb, var(--color-primary) 15%, var(--color-surface-card))' : 'var(--color-surface-card)'}; outline: {pickerRecipeId === recipe.id ? '1.5px solid color-mix(in srgb, var(--color-primary) 40%, transparent)' : 'none'}"
+							onclick={() => { pickerIsFreeText = true; pickerRecipeId = null; pickerServings = 2; }}
+							class="w-full flex items-center gap-3 px-3 active:opacity-70 transition-opacity text-left"
+							style="height: 44px"
 						>
-							<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden"
-							     style="background-color: var(--color-surface-container)">
-								{#if recipe.imageUrl}
-									<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
-								{:else}
-									<div class="w-full h-full flex items-center justify-center font-bold text-sm"
-									     style="color: var(--color-primary)">{recipe.title[0]?.toUpperCase()}</div>
-								{/if}
+							<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0">
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+									<polyline points="13 2 13 9 20 9"/>
+								</svg>
 							</div>
-							<span class="flex-1 text-sm font-semibold truncate" style="color: var(--color-on-surface)">{recipe.title}</span>
+							<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.meal_plan_free_text}</span>
 						</button>
-					{/each}
-				{/if}
-				<button
-					onclick={() => { pickerIsFreeText = true; pickerRecipeId = null; pickerServings = 2; }}
-					class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl active:opacity-70 transition-opacity"
-					style="background-color: var(--color-surface-container)"
-				>
-					<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
-							<polyline points="13 2 13 9 20 9"/>
-						</svg>
 					</div>
-					<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.meal_plan_free_text}</span>
-				</button>
+				{/if}
 			{/if}
 		</div>
 
-		<div class="flex-shrink-0 px-4 pt-3 pb-6 space-y-3">
+		<div class="flex-shrink-0 px-4 pt-3 space-y-3" style="padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem)">
 		{#if pickerRecipeId || pickerIsFreeText}
 			<div class="space-y-3">
 				{#if !pickerEntryId}
