@@ -51,7 +51,7 @@
 	});
 
 	const sortedLogs = $derived(logs.slice().sort((a, b) => a.loggedAt - b.loggedAt));
-	const presets = [5, 10, 15, 20];
+	const presets = [10, 15, 20];
 
 	$effect(() => {
 		fetch('/api/meditation-reminders')
@@ -152,14 +152,14 @@
 			{#each presets as min}
 				<button
 					onclick={() => startTimer(min)}
-					class="px-2 py-0.5 rounded-xl text-xs font-semibold active:opacity-70 transition-opacity"
-					style="background-color: var(--color-surface-container); color: #9F7AEA"
-				>{min}m</button>
+					class="px-2 py-0.5 text-xs font-semibold active:opacity-70 transition-opacity"
+					style="color: #9F7AEA"
+				>+{min}m</button>
 			{/each}
 			<button
 				onclick={() => { showCustomInput = !showCustomInput; customTime = '00:10'; }}
-				class="px-2 py-0.5 rounded-xl text-xs font-semibold active:opacity-70 transition-opacity"
-				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+				class="px-2 py-0.5 text-xs font-semibold active:opacity-70 transition-opacity"
+				style="color: var(--color-on-surface-variant)"
 			>{t.water_custom}</button>
 		</div>
 		{#if logs.length > 0}

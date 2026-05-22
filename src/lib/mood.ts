@@ -7,11 +7,11 @@ export type MoodLevel = {
 };
 
 export const MOOD_LEVELS: MoodLevel[] = [
-	{ value: 1, emoji: '😞', labelKey: 'mood_very_bad', color: '#F87171', bgColor: 'rgba(248,113,113,0.15)' },
-	{ value: 2, emoji: '😕', labelKey: 'mood_bad', color: '#FB923C', bgColor: 'rgba(251,146,60,0.15)' },
-	{ value: 3, emoji: '😐', labelKey: 'mood_okay', color: '#FBBF24', bgColor: 'rgba(251,191,36,0.15)' },
-	{ value: 4, emoji: '😊', labelKey: 'mood_good', color: '#60A5FA', bgColor: 'rgba(96,165,250,0.15)' },
-	{ value: 5, emoji: '😄', labelKey: 'mood_great', color: '#A78BFA', bgColor: 'rgba(167,139,250,0.15)' }
+	{ value: 1, emoji: '😞', labelKey: 'mood_very_bad', color: '#E57373', bgColor: 'rgba(229,115,115,0.15)' },
+	{ value: 2, emoji: '😕', labelKey: 'mood_bad', color: '#E89150', bgColor: 'rgba(232,145,80,0.15)' },
+	{ value: 3, emoji: '😐', labelKey: 'mood_okay', color: '#C8956C', bgColor: 'rgba(200,149,108,0.15)' },
+	{ value: 4, emoji: '😊', labelKey: 'mood_good', color: '#9F7AEA', bgColor: 'rgba(159,122,234,0.15)' },
+	{ value: 5, emoji: '😄', labelKey: 'mood_great', color: '#F472B6', bgColor: 'rgba(244,114,182,0.15)' }
 ];
 
 export function getMoodLevel(value: number): MoodLevel {

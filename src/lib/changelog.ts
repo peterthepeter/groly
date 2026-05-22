@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.11',
+		de: [
+			'Tracker-Verlauf komplett überarbeitet — neue Karten mit Adherence-Quoten, Tages-Heatmaps und Verlaufs-Grafiken (Woche & Monat)',
+			'PDF-Export für Tracker-Daten — Zeitraum (7/30/90 Tage oder eigener) und Inhalte (Supplements, Tracker, Stimmung, Nährstoffe) wählbar',
+			'Day-Ansicht zeigt jetzt auch geplante aber noch nicht genommene Supplements'
+		],
+		en: [
+			'Tracker history completely reworked — new cards with adherence rates, daily heatmaps and trend graphs (week & month)',
+			'PDF export for tracker data — selectable time range (7/30/90 days or custom) and sections (supplements, trackers, mood, nutrients)',
+			'Day view now also shows planned supplements that have not been taken yet'
+		]
+	},
+	{
 		version: '0.7.10-2',
 		de: ['Fix: Push-Erinnerungen'],
 		en: ['Fix: push reminders'],

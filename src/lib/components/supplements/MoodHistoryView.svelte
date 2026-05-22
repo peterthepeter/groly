@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import { toLocalDateKey, todayKey } from '$lib/dates';
 	import { getMoodLevel, MOOD_LEVELS, findTag } from '$lib/mood';
 	import MoodDayDetailSheet from './MoodDayDetailSheet.svelte';
 	import MoodEntrySheet from './MoodEntrySheet.svelte';
@@ -17,20 +18,50 @@
 	let {
 		onreload,
 		fixedView = null as 'today' | 'week' | 'month' | null,
-		parentDate = null as string | null
+		parentDate = null as string | null,
+		hasDayEntry = $bindable(false)
 	}: {
 		onreload: () => void;
 		fixedView?: 'today' | 'week' | 'month' | null;
 		parentDate?: string | null;
+		hasDayEntry?: boolean;
 	} = $props();
 
 	type View = 'week' | 'month';
 	let view = $state<View>('week');
-	let referenceDate = $state(todayStr());
+	let referenceDate = $state(todayKey());
 	let logs = $state<MoodLogEntry[]>([]);
 	let loading = $state(false);
 	let detailEntry = $state<{ date: string; mood: number; activities: string[]; note: string | null } | null>(null);
 	let detailOpen = $state(false);
+	// History-view: inline preview of tap-selected day (avoids sheet for every tap)
+	let previewedDate = $state<string | null>(null);
+	let previewEditOpen = $state(false);
+	let previewConfirmDelete = $state(false);
+	let previewDeleting = $state(false);
+	// Reset preview when user navigates to a different week/month
+	$effect(() => {
+		void referenceDate;
+		void view;
+		previewedDate = null;
+		previewConfirmDelete = false;
+	});
+
+	async function deletePreviewedEntry() {
+		if (!previewedDate || previewDeleting) return;
+		previewDeleting = true;
+		try {
+			const res = await fetch(`/api/mood-logs/${previewedDate}`, { method: 'DELETE' });
+			if (res.ok) {
+				previewedDate = null;
+				previewConfirmDelete = false;
+				await load();
+				onreload();
+			}
+		} finally {
+			previewDeleting = false;
+		}
+	}
 	let newEntryDate = $state('');
 	let newEntryOpen = $state(false);
 	let expanded = $state(true);
@@ -42,10 +73,7 @@
 		else if (fixedView === 'month') { view = 'month'; if (parentDate) referenceDate = parentDate; }
 	});
 
-	function todayStr(): string {
-		const d = new Date();
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-	}
+	const todayStr = todayKey;
 
 	function parseLogs(raw: MoodLogEntry[]): Map<string, { mood: number; activities: string[]; note: string | null }> {
 		const map = new Map<string, { mood: number; activities: string[]; note: string | null }>();
@@ -59,6 +87,16 @@
 
 	const logMap = $derived(parseLogs(logs));
 
+	// Sync hasDayEntry for the viewed date (used by parent to decide if empty-state should render)
+	$effect(() => {
+		if (fixedView === 'today') {
+			const d = parentDate ?? todayStr();
+			hasDayEntry = logMap.has(d);
+		} else {
+			hasDayEntry = logs.length > 0;
+		}
+	});
+
 	// Week helpers
 	function weekDays(): string[] {
 		const ref = new Date(referenceDate + 'T12:00:00');
@@ -69,7 +107,7 @@
 		return Array.from({ length: 7 }, (_, i) => {
 			const d = new Date(monday);
 			d.setDate(monday.getDate() + i);
-			return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+			return toLocalDateKey(d);
 		});
 	}
 
@@ -113,7 +151,7 @@
 		const d = new Date(referenceDate + 'T12:00:00');
 		if (view === 'week') d.setDate(d.getDate() + dir * 7);
 		else d.setMonth(d.getMonth() + dir);
-		referenceDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+		referenceDate = toLocalDateKey(d);
 	}
 
 	function getDateRange(): { from: string; to: string } {
@@ -169,6 +207,16 @@
 		}
 	}
 
+	// History-view tap: toggle inline preview for days with entries; for empty days, fall back to add-sheet
+	function handleHistoryDayTap(dateStr: string) {
+		const entry = logMap.get(dateStr);
+		if (entry) {
+			previewedDate = previewedDate === dateStr ? null : dateStr;
+		} else {
+			openDetail(dateStr);
+		}
+	}
+
 	// Summary counts
 	const moodCounts = $derived.by(() => {
 		const counts = new Map<number, number>();
@@ -176,6 +224,27 @@
 			counts.set(l.mood, (counts.get(l.mood) ?? 0) + 1);
 		}
 		return counts;
+	});
+
+	// Average mood + trend (first half vs second half), for fixed week/month view header
+	const moodSummary = $derived.by(() => {
+		if (logs.length === 0) return null;
+		const moods = logs.map(l => l.mood);
+		const avg = moods.reduce((s, v) => s + v, 0) / moods.length;
+		// Trend: sort by date, split in half
+		const sorted = logs.slice().sort((a, b) => a.date.localeCompare(b.date));
+		let trend: 'up' | 'down' | 'flat' = 'flat';
+		if (sorted.length >= 2) {
+			const mid = Math.floor(sorted.length / 2);
+			const a = sorted.slice(0, mid);
+			const b = sorted.slice(mid);
+			const aAvg = a.reduce((s, l) => s + l.mood, 0) / a.length;
+			const bAvg = b.reduce((s, l) => s + l.mood, 0) / b.length;
+			const delta = bAvg - aAvg;
+			if (delta > 0.3) trend = 'up';
+			else if (delta < -0.3) trend = 'down';
+		}
+		return { avg, trend, count: logs.length };
 	});
 
 	function getTagLabel(key: string): string {
@@ -215,29 +284,37 @@
 	{@const dayEntry = logMap.get(viewedDate)}
 	{#if dayEntry}
 		{@const level = getMoodLevel(dayEntry.mood)}
-		<div class="rounded-2xl px-4 py-3 flex flex-col gap-2" style="background-color: var(--color-surface-card)">
-			<div class="flex items-center gap-2">
-				<p class="font-semibold text-sm flex-1" style="color: #F472B6">{t.mood_tracker_label}</p>
-				<button
-					onclick={() => openDetail(viewedDate)}
-					class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold active:opacity-70"
-					style="background-color: {level.bgColor}; color: {level.color}"
-				>
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<button
+				onclick={() => openDetail(viewedDate)}
+				class="w-full flex items-center gap-2 px-4 py-3 active:opacity-60"
+			>
+				<div class="flex items-center gap-2 shrink-0">
+					<span class="rounded-full" style="width: 6px; height: 6px; background-color: #F472B6"></span>
+					<p class="font-semibold text-sm" style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
+				</div>
+				<div class="flex-1"></div>
+				<span class="flex items-center gap-1.5 text-xs font-semibold shrink-0" style="color: {level.color}">
 					<MoodIcon value={level.value} size={15}/>
 					<span>{(t[level.labelKey as keyof typeof t] as string) ?? ''}</span>
-				</button>
-			</div>
-			{#if dayEntry.activities.length > 0}
-				<div class="flex flex-wrap gap-1">
-					{#each dayEntry.activities as key}
-						<span class="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)">
-							<ActivityIcon icon={findTag(key)?.icon ?? ''} size={11} color="var(--color-on-surface-variant)" />{getTagLabel(key)}
-						</span>
-					{/each}
+				</span>
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+			</button>
+			{#if dayEntry.activities.length > 0 || dayEntry.note}
+				<div class="px-4 pb-3 space-y-2">
+					{#if dayEntry.activities.length > 0}
+						<div class="flex flex-wrap gap-1">
+							{#each dayEntry.activities as key}
+								<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium" style="background-color: color-mix(in srgb, #F472B6 12%, transparent); color: var(--color-on-surface)">
+									<ActivityIcon icon={findTag(key)?.icon ?? ''} size={11} color="#F472B6" />{getTagLabel(key)}
+								</span>
+							{/each}
+						</div>
+					{/if}
+					{#if dayEntry.note}
+						<p class="text-xs leading-relaxed italic" style="color: var(--color-on-surface-variant)">"{dayEntry.note}"</p>
+					{/if}
 				</div>
-			{/if}
-			{#if dayEntry.note}
-				<p class="text-xs leading-relaxed" style="color: var(--color-on-surface-variant)">{dayEntry.note}</p>
 			{/if}
 		</div>
 	{/if}
@@ -250,18 +327,32 @@
 		class="w-full flex items-center gap-2 px-4 py-3 active:opacity-70"
 		style=""
 	>
-		<p class="font-semibold text-sm shrink-0" style="color: #F472B6">{t.mood_tracker_label}</p>
+		<div class="flex items-center gap-2 shrink-0">
+			<span class="rounded-full" style="width: 6px; height: 6px; background-color: #F472B6"></span>
+			<p class="font-semibold text-sm" style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
+		</div>
 		<div class="flex-1 flex items-center flex-wrap gap-x-2 gap-y-0.5">
 			{#each MOOD_LEVELS.slice().reverse() as level}
 				{@const count = moodCounts.get(level.value) ?? 0}
 				{#if count > 0}
-					<span class="text-xs font-medium flex items-center gap-0.5" style="color: {level.color}">
+					<span class="text-xs font-medium flex items-center gap-0.5" style="color: var(--color-on-surface-variant)">
 						<MoodIcon value={level.value} size={13}/>
 						<span>{count}×</span>
 					</span>
 				{/if}
 			{/each}
 		</div>
+		{#if moodSummary}
+			{@const avgLevel = getMoodLevel(Math.round(moodSummary.avg))}
+			<div class="flex items-center gap-1 shrink-0 text-xs font-semibold tabular-nums" style="color: {avgLevel.color}">
+				<span>Ø {moodSummary.avg.toFixed(1)}<span style="opacity: 0.6">/5</span></span>
+				{#if moodSummary.trend === 'up'}
+					<svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><polygon points="5,1 9,8 1,8"/></svg>
+				{:else if moodSummary.trend === 'down'}
+					<svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><polygon points="1,2 9,2 5,9"/></svg>
+				{/if}
+			</div>
+		{/if}
 		<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
 			stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
 			style="color: var(--color-on-surface-variant); transition: transform 0.2s; transform: rotate({expanded ? '90' : '0'}deg); flex-shrink: 0">
@@ -311,41 +402,110 @@
 {/snippet}
 
 {#snippet calendarContent()}
+	{#if previewedDate}
+		{@const pEntry = logMap.get(previewedDate)}
+		{#if pEntry}
+			{@const pLevel = getMoodLevel(pEntry.mood)}
+			{@const pLabel = (t[pLevel.labelKey as keyof typeof t] as string | undefined) ?? ''}
+			<div class="mb-3 rounded-xl p-3 space-y-2" style="background-color: color-mix(in srgb, {pLevel.color} 8%, var(--color-surface-container)); border: 1px solid color-mix(in srgb, {pLevel.color} 18%, transparent)">
+				<!-- Header: smiley + date + label + edit/delete icon buttons -->
+				<div class="flex items-center gap-3">
+					<div class="shrink-0" style="color: {pLevel.color}">
+						<MoodIcon value={pLevel.value} size={24}/>
+					</div>
+					<div class="flex-1 min-w-0">
+						<div class="text-[11px] font-medium tabular-nums" style="color: var(--color-on-surface-variant)">
+							{new Date(previewedDate + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+						</div>
+						<div class="text-sm font-bold truncate" style="color: {pLevel.color}">{pLabel}</div>
+					</div>
+					{#if previewConfirmDelete}
+						<div class="shrink-0 flex items-center gap-1">
+							<button onclick={() => previewConfirmDelete = false}
+								class="text-[11px] font-semibold px-2 py-1 rounded-md active:opacity-60"
+								style="color: var(--color-on-surface-variant)">{t.close}</button>
+							<button onclick={deletePreviewedEntry} disabled={previewDeleting}
+								aria-label={t.mood_delete}
+								class="w-7 h-7 rounded-md flex items-center justify-center active:opacity-60 disabled:opacity-40"
+								style="background-color: rgba(239,68,68,0.18); color: #EF4444">
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							</button>
+						</div>
+					{:else}
+						<div class="shrink-0 flex items-center gap-1">
+							<button onclick={() => previewEditOpen = true}
+								aria-label={t.mood_edit}
+								class="w-7 h-7 rounded-md flex items-center justify-center active:opacity-60"
+								style="color: var(--color-on-surface-variant)">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+							</button>
+							<button onclick={() => previewConfirmDelete = true}
+								aria-label={t.mood_delete}
+								class="w-7 h-7 rounded-md flex items-center justify-center active:opacity-60"
+								style="color: var(--color-on-surface-variant)">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+							</button>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Activities/tags -->
+				{#if pEntry.activities.length > 0}
+					<div class="flex flex-wrap gap-1">
+						{#each pEntry.activities as key}
+							<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium" style="background-color: color-mix(in srgb, {pLevel.color} 10%, transparent); color: var(--color-on-surface)">
+								<ActivityIcon icon={findTag(key)?.icon ?? ''} size={10} color="var(--color-on-surface-variant)" />{getTagLabel(key)}
+							</span>
+						{/each}
+					</div>
+				{/if}
+
+				<!-- Note -->
+				{#if pEntry.note}
+					<p class="text-xs leading-relaxed italic" style="color: var(--color-on-surface-variant)">"{pEntry.note}"</p>
+				{/if}
+			</div>
+		{/if}
+	{/if}
 	{#if view === 'week'}
 		{@const days = weekDays()}
 		{@const today = todayStr()}
-		<div class="flex gap-1">
+		<!-- Header: day labels (Mo Di Mi…) -->
+		<div class="flex mb-2">
+			{#each days as dateStr}
+				<span class="flex-1 text-center text-[9px] uppercase tabular-nums" style="color: {dateStr === today ? '#F472B6' : 'var(--color-on-surface-variant)'}; font-weight: {dateStr === today ? '700' : '500'}">{dayOfWeekShort(dateStr)}</span>
+			{/each}
+		</div>
+		<!-- Strip: one pill per day, mood-colored if entry exists -->
+		<div class="flex items-center gap-[3px]" style="height: 22px">
 			{#each days as dateStr}
 				{@const entry = logMap.get(dateStr)}
 				{@const level = entry ? getMoodLevel(entry.mood) : null}
 				{@const isFuture = dateStr > today}
+				{@const isToday = dateStr === today}
+				{@const outline = isToday ? 'outline: 1.5px solid color-mix(in srgb, #F472B6 60%, transparent); outline-offset: 1px' : ''}
 				<button
-					onclick={() => !isFuture && openDetail(dateStr)}
+					onclick={() => !isFuture && handleHistoryDayTap(dateStr)}
 					disabled={isFuture}
-					class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl transition-all active:opacity-60 disabled:cursor-default"
-					style="background-color: {dateStr === today ? 'var(--color-surface-container)' : 'transparent'}"
-				>
-					<span class="text-[9px] font-semibold uppercase" style="color: var(--color-on-surface-variant)">{dayOfWeekShort(dateStr)}</span>
-					<div
-						class="w-9 h-9 rounded-full flex items-center justify-center"
-						style="background-color: transparent; color: {level ? level.color : 'var(--color-on-surface-variant)'}; opacity: {isFuture ? 0.3 : 1}"
-					>
-						{#if level}
-							<MoodIcon value={level.value} size={22}/>
-						{:else if !isFuture}
-							<span style="font-size: 10px">–</span>
-						{/if}
-					</div>
-					<span class="text-[9px]" style="color: {dateStr === today ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">{dayNum(dateStr)}</span>
-				</button>
+					aria-label={dateStr}
+					class="flex-1 active:opacity-70 disabled:cursor-default"
+					style="height: 100%; background-color: {level ? level.color : 'var(--color-surface-container)'}; opacity: {isFuture ? 0.3 : level ? 1 : 0.5}; border-radius: 3px; {previewedDate === dateStr ? 'outline: 2px solid #F472B6; outline-offset: 2px' : outline}"
+				></button>
+			{/each}
+		</div>
+		<!-- Day numbers below -->
+		<div class="flex mt-1">
+			{#each days as dateStr}
+				<span class="flex-1 text-center text-[9px] tabular-nums" style="color: {dateStr === today ? '#F472B6' : 'var(--color-on-surface-variant)'}; font-weight: {dateStr === today ? '700' : '500'}">{dayNum(dateStr)}</span>
 			{/each}
 		</div>
 	{:else}
 		{@const cells = monthDays()}
 		{@const today = todayStr()}
-		<div class="grid grid-cols-7 gap-0.5">
+		<!-- Month: pill-style cells in 7-col grid, mirrors Week strip layout -->
+		<div class="grid grid-cols-7 gap-x-[3px] gap-y-3">
 			{#each ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as day}
-				<div class="text-center text-[9px] font-semibold pb-1" style="color: var(--color-on-surface-variant)">{day}</div>
+				<div class="text-center text-[9px] font-semibold uppercase pb-0.5" style="color: var(--color-on-surface-variant)">{day}</div>
 			{/each}
 			{#each cells as dateStr}
 				{#if dateStr === null}
@@ -354,23 +514,15 @@
 					{@const entry = logMap.get(dateStr)}
 					{@const level = entry ? getMoodLevel(entry.mood) : null}
 					{@const isFuture = dateStr > today}
+					{@const isToday = dateStr === today}
+					{@const outline = isToday ? 'outline: 1.5px solid color-mix(in srgb, #F472B6 60%, transparent); outline-offset: 1px' : ''}
 					<button
-						onclick={() => !isFuture && openDetail(dateStr)}
+						onclick={() => !isFuture && handleHistoryDayTap(dateStr)}
 						disabled={isFuture}
-						class="flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all active:opacity-60 disabled:cursor-default"
-						style="background-color: {dateStr === today ? 'var(--color-surface-container)' : 'transparent'}"
+						class="flex flex-col items-center gap-1 active:opacity-60 disabled:cursor-default"
 					>
-						<div
-							class="w-7 h-7 rounded-full flex items-center justify-center"
-							style="color: {level ? level.color : 'var(--color-on-surface-variant)'}; opacity: {isFuture ? 0.3 : 1}"
-						>
-							{#if level}
-								<MoodIcon value={level.value} size={20}/>
-							{:else if !isFuture}
-								<span style="font-size: 10px">–</span>
-							{/if}
-						</div>
-						<span class="text-[9px]" style="color: {dateStr === today ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}; opacity: {isFuture ? 0.3 : 1}">{dayNum(dateStr)}</span>
+						<span class="text-[9px] leading-none tabular-nums" style="color: {isToday ? '#F472B6' : 'var(--color-on-surface-variant)'}; opacity: {isFuture ? 0.3 : 1}; font-weight: {isToday ? '700' : '400'}">{dayNum(dateStr)}</span>
+						<div class="w-full" style="height: 14px; background-color: {level ? level.color : 'var(--color-surface-container)'}; opacity: {isFuture ? 0.25 : level ? 1 : 0.5}; border-radius: 3px; {previewedDate === dateStr ? 'outline: 2px solid #F472B6; outline-offset: 2px' : outline}"></div>
 					</button>
 				{/if}
 			{/each}
@@ -406,3 +558,15 @@
 	date={newEntryDate}
 	onsaved={() => { newEntryOpen = false; load(); onreload(); }}
 />
+
+{#if previewedDate}
+	{@const pEntry = logMap.get(previewedDate)}
+	<MoodEntrySheet
+		bind:open={previewEditOpen}
+		date={previewedDate}
+		initialMood={pEntry?.mood ?? null}
+		initialActivities={pEntry?.activities ?? []}
+		initialNote={pEntry?.note ?? ''}
+		onsaved={() => { previewEditOpen = false; load(); onreload(); }}
+	/>
+{/if}

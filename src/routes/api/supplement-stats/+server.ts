@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { supplementLogs, supplements, supplementNutrients } from '$lib/db/schema';
+import { supplementLogs, supplements, supplementNutrients, supplementReminderSchedules } from '$lib/db/schema';
 import { eq, and, gte, lte, inArray } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
@@ -60,7 +60,25 @@ export const GET: RequestHandler = async (event) => {
 		)
 		.all();
 
-	if (logs.length === 0) return json({ nutrients: {}, logs: [] });
+	// Load all user supplements + their active schedules (needed for adherence even when nothing logged)
+	const allUserSupplements = db
+		.select({ id: supplements.id, name: supplements.name, unit: supplements.unit })
+		.from(supplements)
+		.where(eq(supplements.userId, user!.id))
+		.all();
+
+	const userSupplementIds = allUserSupplements.map(s => s.id);
+	const allSchedules = userSupplementIds.length > 0
+		? db
+			.select()
+			.from(supplementReminderSchedules)
+			.where(and(inArray(supplementReminderSchedules.supplementId, userSupplementIds), eq(supplementReminderSchedules.active, true)))
+			.all()
+		: [];
+
+	if (logs.length === 0) {
+		return json({ nutrients: {}, supplements: {}, logs: [], schedules: allSchedules, allSupplements: allUserSupplements, period, from, to });
+	}
 
 	// Get nutrients for all involved supplements (filtered in SQL, not in JS)
 	const supplementIds = [...new Set(logs.map(l => l.supplementId))];
@@ -70,11 +88,7 @@ export const GET: RequestHandler = async (event) => {
 		.where(inArray(supplementNutrients.supplementId, supplementIds))
 		.all();
 
-	const allSupplements = db
-		.select({ id: supplements.id, name: supplements.name, unit: supplements.unit })
-		.from(supplements)
-		.where(and(eq(supplements.userId, user!.id), inArray(supplements.id, supplementIds)))
-		.all();
+	const allSupplements = allUserSupplements.filter(s => supplementIds.includes(s.id));
 
 	// Build lookup map to avoid O(n²) find() in loop
 	const nutrientsBySupplementId = new Map<string, typeof allNutrients>();
@@ -116,6 +130,8 @@ export const GET: RequestHandler = async (event) => {
 		nutrients: nutrientTotals,
 		supplements: supplementTotals,
 		logs,
+		schedules: allSchedules,
+		allSupplements: allUserSupplements,
 		period,
 		from,
 		to

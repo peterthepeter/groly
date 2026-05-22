@@ -13,6 +13,7 @@ import {
 } from '$lib/db/schema';
 import { and, eq, gte, sql } from 'drizzle-orm';
 import { sendPushToUser } from './pushNotifications';
+import { toLocalDateKey } from '$lib/dates';
 
 async function checkSupplementReminders() {
 	const now = new Date();
@@ -231,7 +232,7 @@ async function checkMoodReminders() {
 		.where(eq(moodReminderSchedules.active, true))
 		.all();
 
-	const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+	const todayStr = toLocalDateKey(now);
 
 	await Promise.allSettled(
 		activeSchedules.map(async (s) => {

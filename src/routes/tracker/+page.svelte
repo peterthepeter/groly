@@ -19,6 +19,10 @@
 	import MoodTrackerCard from '$lib/components/supplements/MoodTrackerCard.svelte';
 	import MoodEntrySheet from '$lib/components/supplements/MoodEntrySheet.svelte';
 	import HistoryTab from '$lib/components/supplements/HistoryTab.svelte';
+	import ExportSheet from '$lib/components/supplements/ExportSheet.svelte';
+	import { exportReport, type ReportSections } from '$lib/pdfExport';
+	import { findTag } from '$lib/mood';
+	import { toLocalDateKey } from '$lib/dates';
 	import type { WaterLog, CaffeineLog, CaffeineDrink, MeditationLog } from '$lib/db/schema';
 
 	let { data } = $props();
@@ -66,9 +70,7 @@
 	let loading = $state(true);
 	const activeTab = $derived($page.url.searchParams.get('tab') === 'history' ? 'history' : 'today');
 
-	function toLocalDateStr(d: Date): string {
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-	}
+	const toLocalDateStr = toLocalDateKey;
 
 	// History state
 	let scrollContainer = $state<HTMLElement | null>(null);
@@ -77,7 +79,12 @@
 	let historyNutrients = $state<Record<string, NutrientStat>>({});
 	let historySupplements = $state<Record<string, SupplementStat>>({});
 	let historyLogs = $state<Log[]>([]);
+	let historySchedules = $state<{ supplementId: string; days: string; time: string; active: boolean }[]>([]);
+	let historyAllSupplements = $state<{ id: string; name: string; unit: string }[]>([]);
+	let historyRange = $state<{ from: number; to: number }>({ from: 0, to: 0 });
 	let historyLoading = $state(false);
+	let exporting = $state(false);
+	let exportSheetOpen = $state(false);
 
 	// Expand/collapse per supplement card (today tab)
 	let expandedIds = $state(new Set<string>());
@@ -335,6 +342,7 @@
 	async function loadHistory() {
 		historyLoading = true;
 		const { from, to } = getHistoryBounds();
+		historyRange = { from, to };
 		const [statsRes] = await Promise.all([
 			fetch(`/api/supplement-stats?period=${historyPeriod}&from=${from}&to=${to}`),
 			loadHistoryWater(),
@@ -346,8 +354,107 @@
 			historyNutrients = data.nutrients ?? {};
 			historySupplements = data.supplements ?? {};
 			historyLogs = data.logs ?? [];
+			historySchedules = data.schedules ?? [];
+			historyAllSupplements = data.allSupplements ?? [];
 		}
 		historyLoading = false;
+	}
+
+	async function readMoodLogs(res: Response | null): Promise<{ date: string; mood: number; activities?: string[]; note?: string | null }[]> {
+		if (!res || !res.ok) return [];
+		try {
+			const data = await res.json();
+			return (data.logs ?? []).map((l: { date: string; mood: number; activities?: string; note?: string | null }) => ({
+				date: l.date,
+				mood: l.mood,
+				activities: l.activities ? (() => { try { return JSON.parse(l.activities) as string[]; } catch { return []; } })() : [],
+				note: l.note ?? null
+			}));
+		} catch { return []; }
+	}
+
+	async function runExport(opts: { from: number; to: number; name: string; sections: ReportSections }) {
+		if (exporting) return;
+		exporting = true;
+		try {
+			const { from, to, name, sections } = opts;
+			// Fetch data for the selected range (may differ from current History range)
+			const sameRange = from === historyRange.from && to === historyRange.to;
+			let supps = historyAllSupplements;
+			let schedules = historySchedules;
+			let logs = historyLogs;
+			let caffLogs = historyCaffeineLogs;
+			let medLogs = historyMeditationLogs;
+			let nutrients = historyNutrients;
+			// Kick off mood-logs fetch in parallel with the others (independent endpoint)
+			let moodLogs: { date: string; mood: number; activities?: string[]; note?: string | null }[] = [];
+			const moodFetch = (userSettings.moodTrackerEnabled && sections.mood)
+				? fetch(`/api/mood-logs?from=${toLocalDateStr(new Date(from))}&to=${toLocalDateStr(new Date(to))}`).catch(() => null)
+				: Promise.resolve(null);
+
+			if (!sameRange) {
+				const [statsRes, caffRes, medRes, moodRes] = await Promise.all([
+					fetch(`/api/supplement-stats?period=month&from=${from}&to=${to}`),
+					userSettings.caffeineTrackerEnabled ? fetch(`/api/caffeine-logs?from=${from}&to=${to}`) : Promise.resolve(null),
+					userSettings.meditationTrackerEnabled ? fetch(`/api/meditation-logs?from=${from}&to=${to}`) : Promise.resolve(null),
+					moodFetch
+				]);
+				if (statsRes.ok) {
+					const data = await statsRes.json();
+					supps = data.allSupplements ?? [];
+					schedules = data.schedules ?? [];
+					logs = data.logs ?? [];
+					nutrients = data.nutrients ?? {};
+				}
+				if (caffRes && caffRes.ok) caffLogs = (await caffRes.json()).logs ?? [];
+				else caffLogs = [];
+				if (medRes && medRes.ok) medLogs = (await medRes.json()).logs ?? [];
+				else medLogs = [];
+				moodLogs = await readMoodLogs(moodRes);
+			} else {
+				moodLogs = await readMoodLogs(await moodFetch);
+			}
+			// Mood labels (1-5) + activity tag labels for the details section
+			const moodLabels: Record<number, string> = {
+				1: t.mood_very_bad as string,
+				2: t.mood_bad as string,
+				3: t.mood_okay as string,
+				4: t.mood_good as string,
+				5: t.mood_great as string
+			};
+			const moodActivityLabels: Record<string, string> = {};
+			for (const log of moodLogs) {
+				for (const key of log.activities ?? []) {
+					if (!moodActivityLabels[key]) {
+						const tag = findTag(key);
+						if (tag) {
+							moodActivityLabels[key] = (t[tag.labelKey as keyof typeof t] as string) ?? key;
+						} else {
+							moodActivityLabels[key] = key;
+						}
+					}
+				}
+			}
+			const nutrientTotals = Object.values(nutrients).map(n => ({ name: n.name, total: n.total, unit: n.unit }));
+			await exportReport({
+				template: 'full',
+				range: { from, to },
+				lang: currentLang() === 'en' ? 'en' : 'de',
+				name,
+				sections,
+				supplements: supps,
+				schedules,
+				supplementLogs: logs.map(l => ({ supplementId: l.supplementId, amount: l.amount, loggedAt: l.loggedAt })),
+				caffeineLogs: caffLogs.map(l => ({ caffeineMg: l.caffeineMg, loggedAt: l.loggedAt })),
+				meditationLogs: medLogs.map(l => ({ durationSeconds: l.durationSeconds, loggedAt: l.loggedAt })),
+				moodLogs,
+				moodLabels,
+				moodActivityLabels,
+				nutrientTotals
+			});
+		} finally {
+			exporting = false;
+		}
 	}
 
 	async function loadHistoryWater() {
@@ -745,7 +852,21 @@
 </script>
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
-	<AppHeader title={t.supplement_title} onMenuOpen={() => menuOpen = true} />
+	<AppHeader title={t.supplement_title} onMenuOpen={() => menuOpen = true} actions={activeTab === 'history' ? headerExportAction : null} />
+
+	{#snippet headerExportAction()}
+		<button
+			onclick={() => exportSheetOpen = true}
+			disabled={exporting}
+			aria-label="Export PDF"
+			class="w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60 disabled:opacity-40"
+			style="color: var(--color-on-surface-variant)"
+		>
+			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+			</svg>
+		</button>
+	{/snippet}
 	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
 
 	<!-- Tab Bar + Manage row — unified card -->
@@ -920,10 +1041,58 @@
 				userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0 ? 'meditation' : null
 			].filter(Boolean)}
 			<div class="px-4 flex flex-col gap-2">
+			{#if visibleTrackers.includes('mood') && todayMoodEntry !== null}
+				<MoodTrackerCard
+					todayEntry={todayMoodEntry}
+					todayDate={toLocalDateStr(new Date())}
+					onreload={loadTodayMoodEntry}
+				/>
+			{/if}
+			{#if visibleTrackers.filter(v => v !== 'mood').length > 0}
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+					<div class="px-4 pt-3 pb-0 -mb-1 flex items-center gap-2">
+						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
+						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Tracker</p>
+					</div>
+						{#if visibleTrackers.includes('water')}
+							<div>
+								<WaterTrackerCard
+									logs={waterLogsToday}
+									goalMl={userSettings.waterGoalMl ?? 2500}
+									onlogged={loadWaterLogs}
+									ondeleted={deleteWaterLog}
+									embedded={true}
+								/>
+							</div>
+						{/if}
+						{#if visibleTrackers.includes('caffeine')}
+							<div>
+								<CaffeineTrackerCard
+									logs={caffeineLogsToday}
+									limitMg={userSettings.caffeineLimitMg ?? 400}
+									drinks={visibleCaffeineDrinks}
+									onlogged={loadCaffeineLogs}
+									ondeleted={deleteCaffeineLog}
+									embedded={true}
+								/>
+							</div>
+						{/if}
+						{#if visibleTrackers.includes('meditation')}
+							<MeditationTrackerCard
+								logs={meditationLogsToday}
+								goalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
+								onlogged={loadMeditationLogs}
+								ondeleted={deleteMeditationLog}
+								embedded={true}
+							/>
+						{/if}
+				</div>
+			{/if}
 			{#if loggedTodaySupplements.length > 0}
 				<div class="rounded-2xl flex flex-col select-none" style="background-color: var(--color-surface-card)">
-					<div class="px-4 pt-2.5 pb-0.5">
-						<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">Supplements</p>
+					<div class="px-4 pt-3 pb-0.5 flex items-center gap-2">
+						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
+						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Supplements</p>
 					</div>
 					{#each loggedTodaySupplements as supplement, i (supplement.id)}
 						{@const logs = logsForSupplement(supplement.id)}
@@ -1028,53 +1197,6 @@
 						{/each}
 				</div>
 			{/if}
-			{#if visibleTrackers.length > 0}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
-					<div class="px-4 pt-2 pb-0 -mb-1">
-						<p class="text-xs font-semibold tracking-wider" style="color: var(--color-primary)">Tracker</p>
-					</div>
-						{#if visibleTrackers.includes('mood') && todayMoodEntry !== null}
-							<MoodTrackerCard
-								todayEntry={todayMoodEntry}
-								todayDate={toLocalDateStr(new Date())}
-								onreload={loadTodayMoodEntry}
-								embedded={true}
-							/>
-						{/if}
-						{#if visibleTrackers.includes('water')}
-							<div>
-								<WaterTrackerCard
-									logs={waterLogsToday}
-									goalMl={userSettings.waterGoalMl ?? 2500}
-									onlogged={loadWaterLogs}
-									ondeleted={deleteWaterLog}
-									embedded={true}
-								/>
-							</div>
-						{/if}
-						{#if visibleTrackers.includes('caffeine')}
-							<div>
-								<CaffeineTrackerCard
-									logs={caffeineLogsToday}
-									limitMg={userSettings.caffeineLimitMg ?? 400}
-									drinks={visibleCaffeineDrinks}
-									onlogged={loadCaffeineLogs}
-									ondeleted={deleteCaffeineLog}
-									embedded={true}
-								/>
-							</div>
-						{/if}
-						{#if visibleTrackers.includes('meditation')}
-							<MeditationTrackerCard
-								logs={meditationLogsToday}
-								goalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
-								onlogged={loadMeditationLogs}
-								ondeleted={deleteMeditationLog}
-								embedded={true}
-							/>
-						{/if}
-				</div>
-			{/if}
 			</div>
 		{/if}
 
@@ -1083,9 +1205,13 @@
 			loading={historyLoading}
 			period={historyPeriod}
 			date={historyDate}
+			rangeFrom={historyRange.from}
+			rangeTo={historyRange.to}
 			nutrients={historyNutrients}
 			supplementStats={historySupplements}
 			logs={historyLogs}
+			schedules={historySchedules}
+			allSupplements={historyAllSupplements}
 			waterLogs={historyWaterLogs}
 			caffeineLogs={historyCaffeineLogs}
 			meditationLogs={historyMeditationLogs}
@@ -1152,6 +1278,12 @@
 	activeTab="tracker"
 	onFabTap={openQuickLog}
 	fabLabel={t.add}
+/>
+
+<ExportSheet
+	bind:open={exportSheetOpen}
+	currentRange={historyRange}
+	onConfirm={(opts) => runExport(opts)}
 />
 
 <EditLogSheet

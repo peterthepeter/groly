@@ -7,6 +7,7 @@
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { untrack, tick } from 'svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
+	import { todayKey as todayStr } from '$lib/dates';
 
 	type Supplement = {
 		id: string; name: string; unit: string;
@@ -58,11 +59,6 @@
 		logDate?: string | null;
 		initialTab?: 'tracker' | 'supplements' | null;
 	} = $props();
-
-	function todayStr(): string {
-		const d = new Date();
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-	}
 
 	function makeTimestamp(dateStr: string, timeStr: string): number {
 		const [h, m] = timeStr.split(':').map(Number);

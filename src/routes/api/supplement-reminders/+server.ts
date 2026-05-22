@@ -5,6 +5,7 @@ import { db } from '$lib/db';
 import { supplementReminderSchedules, supplements, supplementReminderOverrides } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { toLocalDateKey } from '$lib/dates';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -36,7 +37,7 @@ export const GET: RequestHandler = async (event) => {
 	if (event.url.searchParams.get('today') === '1') {
 		const now = new Date();
 		const todayDay = now.getDay(); // 0=Sun … 6=Sat
-		const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+		const todayDate = toLocalDateKey(now);
 
 		const allActive = db
 			.select({

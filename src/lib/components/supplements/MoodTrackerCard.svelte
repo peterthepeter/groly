@@ -18,7 +18,7 @@
 	} = $props();
 
 	let entrySheetOpen = $state(false);
-	let expanded = $state(false);
+	let expanded = $state(true);
 
 	const moodLevel = $derived(todayEntry ? getMoodLevel(todayEntry.mood) : null);
 	const hasDetails = $derived(
@@ -45,11 +45,15 @@
 	onclick={() => entrySheetOpen = true}
 >
 	<!-- Header row — always visible -->
-	<div class="flex items-center gap-2 px-4 pt-3 pb-2">
-		<p class="font-semibold text-sm flex-1" style="color: #F472B6">{t.mood_tracker_label}</p>
-		<!-- Mood pill (visual indicator) -->
+	<div class="flex items-center gap-2 px-4 pt-3 pb-3">
+		<div class="flex items-center gap-2 shrink-0">
+			<span class="rounded-full" style="width: 6px; height: 6px; background-color: #F472B6"></span>
+			<p class="font-semibold text-sm" style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
+		</div>
+		<div class="flex-1"></div>
+		<!-- Mood pill (smiley + label, mood-tinted) -->
 		<div
-			class="flex items-center gap-1.5 px-1 py-1 text-xs font-semibold shrink-0"
+			class="flex items-center gap-1.5 text-xs font-semibold shrink-0"
 			style="color: {moodLevel.color}"
 		>
 			<MoodIcon value={moodLevel.value} size={16}/>
@@ -74,29 +78,19 @@
 		{/if}
 	</div>
 
-	<!-- Progress bar reflecting mood level (1-5) -->
-	<div class="px-4 pt-2 pb-3">
-		<div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-surface-container)">
-			<div
-				class="h-full rounded-full"
-				style="width: {moodLevel.value * 20}%; background: linear-gradient(90deg, color-mix(in srgb, {moodLevel.color} 28%, transparent), color-mix(in srgb, {moodLevel.color} 65%, transparent)); transition: width 0.4s ease"
-			></div>
-		</div>
-	</div>
-
 	{#if expanded && hasDetails}
-		<div class="px-4 pb-3 flex flex-col gap-2" style="border-top: 1px solid var(--color-outline-variant)">
+		<div class="px-4 pb-3 flex flex-col gap-2">
 			{#if todayEntry.activities.length > 0}
-				<div class="flex flex-wrap gap-1 pt-2">
+				<div class="flex flex-wrap gap-1">
 					{#each todayEntry.activities as key}
-						<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)">
-							<ActivityIcon icon={getTagIcon(key)} size={11} color="var(--color-on-surface-variant)" />{getTagLabel(key)}
+						<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium" style="background-color: color-mix(in srgb, #F472B6 12%, transparent); color: var(--color-on-surface)">
+							<ActivityIcon icon={getTagIcon(key)} size={11} color="#F472B6" />{getTagLabel(key)}
 						</span>
 					{/each}
 				</div>
 			{/if}
 			{#if todayEntry.note}
-				<p class="text-xs leading-relaxed" style="color: var(--color-on-surface-variant)">{todayEntry.note}</p>
+				<p class="text-xs leading-relaxed italic" style="color: var(--color-on-surface-variant)">"{todayEntry.note}"</p>
 			{/if}
 		</div>
 	{/if}
