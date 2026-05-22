@@ -38,9 +38,13 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
   <img src="docs/screenshots/mood_tracker.png" width="140" alt="Mood tracker" />
 </p>
 <p align="center">
-  <img src="docs/screenshots/Supplement History.png" width="140" alt="Supplement history" />
-  <img src="docs/screenshots/Manage Supplement.png" width="140" alt="Manage supplements" />
-  <img src="docs/screenshots/Edit Supplement.png" width="140" alt="Edit supplement" />
+  <img src="docs/screenshots/Supplement History_0.png" width="180" alt="History – day view" />
+  <img src="docs/screenshots/Supplement History_1.png" width="180" alt="History – week view" />
+  <img src="docs/screenshots/Supplement History_2.png" width="180" alt="History – month view" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/Manage Supplement.png" width="160" alt="Manage supplements" />
+  <img src="docs/screenshots/Edit Supplement.png" width="160" alt="Edit supplement" />
 </p>
 
 - **Log supplements** – Track daily intake with a quick-log sheet. Adjust amounts, set the time, and confirm with one tap.
@@ -48,6 +52,8 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Stock tracking** – Track stock levels per supplement. Reorder directly via the built-in shopping cart button, which adds the supplement to any of your lists.
 - **Push reminders** – Set configurable daily reminder times per supplement. Delivered via push notification to your phone.
 - **History** – Day, week, and month views for both supplements taken and nutrients consumed. Navigate back in time to review any period.
+- **Adherence & heatmaps** – Week/month views show per-supplement adherence rates and daily heatmaps so you can see scheduled vs. actually taken doses at a glance.
+- **PDF export** – Export selected sections (supplements, trackers, mood, nutrients) for a chosen period as a PDF for sharing with a doctor or trainer. [Example report](docs/pdf/example-report.pdf).
 - **Active/inactive toggle** – Temporarily disable a supplement without deleting it or its history.
 - **Brand & info** – Optionally store brand and additional information per supplement.
 - **Water tracker** – Log daily water intake with preset quick-add buttons or a custom amount. Set a personal daily goal (ml) and track progress with a fill bar. Configure push reminders at fixed intervals within a time window.
