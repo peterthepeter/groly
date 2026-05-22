@@ -59,7 +59,7 @@
 	}
 
 	function start() {
-		acquireWakeLock();
+		if (userSettings.wakeLockMeditation) acquireWakeLock();
 		preloadMeditationSounds([userSettings.meditationStartSound, userSettings.meditationEndSound]);
 
 		const prep = userSettings.meditationPrepSeconds ?? 20;
@@ -74,7 +74,6 @@
 	function onVisibility() {
 		if (typeof document === 'undefined') return;
 		if (document.visibilityState === 'visible' && (phase === 'prep' || phase === 'meditation')) {
-			acquireWakeLock();
 			tick();
 		}
 	}

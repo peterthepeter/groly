@@ -74,6 +74,39 @@
 
 	// History state
 	let scrollContainer = $state<HTMLElement | null>(null);
+	let headerHidden = $state(false);
+	let lastScrollY = 0;
+	let scrollRaf = 0;
+	let overlayHeight = $state(0);
+	const headerOffsetRem = $derived(headerHidden ? '0rem' : '5.25rem');
+	function onScroll() {
+		if (!scrollContainer || scrollRaf) return;
+		scrollRaf = requestAnimationFrame(() => {
+			scrollRaf = 0;
+			if (!scrollContainer) return;
+			const y = scrollContainer.scrollTop;
+			const max = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+			// Ignore overscroll / bounce zones at top and bottom
+			if (y <= 0) {
+				headerHidden = false;
+				lastScrollY = 0;
+				return;
+			}
+			if (y >= max - 2) {
+				lastScrollY = y;
+				return;
+			}
+			const delta = y - lastScrollY;
+			if (y < 12) {
+				headerHidden = false;
+			} else if (delta > 6) {
+				headerHidden = true;
+			} else if (delta < -6) {
+				headerHidden = false;
+			}
+			lastScrollY = y;
+		});
+	}
 	let historyPeriod = $state<'day' | 'week' | 'month'>('day');
 	let historyDate = $state(toLocalDateStr(new Date()));
 	let historyNutrients = $state<Record<string, NutrientStat>>({});
@@ -851,8 +884,8 @@
 	}
 </script>
 
-<div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
-	<AppHeader title={t.supplement_title} onMenuOpen={() => menuOpen = true} actions={activeTab === 'history' ? headerExportAction : null} />
+<div class="h-[100dvh] relative overflow-hidden" style="background-color: var(--color-bg)">
+	<AppHeader title={t.supplement_title} onMenuOpen={() => menuOpen = true} actions={activeTab === 'history' ? headerExportAction : null} hidden={headerHidden} />
 
 	{#snippet headerExportAction()}
 		<button
@@ -867,10 +900,14 @@
 			</svg>
 		</button>
 	{/snippet}
-	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
+
+	<!-- Sticky overlay: tab bar + date row, with backdrop blur so scrolling content shows through -->
+	<div bind:clientHeight={overlayHeight}
+	     class="absolute left-0 right-0 z-30 pb-3"
+	     style="top: calc(env(safe-area-inset-top) + {headerOffsetRem}); transition: top 0.25s ease; background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
 
 	<!-- Tab Bar + Manage row — unified card -->
-	<div class="flex-shrink-0 px-4 mb-3">
+	<div class="px-4">
 		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
 			<!-- Tab switcher -->
 			<div class="flex gap-1 p-1">
@@ -966,7 +1003,7 @@
 
 	<!-- Date navigation — only on History tab -->
 	{#if activeTab === 'history'}
-		<div class="flex-shrink-0 px-4 mb-3 flex items-center justify-between">
+		<div class="px-4 mt-3 flex items-center justify-between">
 			<button
 				onclick={() => navigateHistory(-1)}
 				aria-label="Vorheriger Zeitraum"
@@ -1003,14 +1040,14 @@
 			</button>
 		</div>
 	{/if}
+	</div><!-- end sticky overlay -->
 
-	<div class="relative flex-1 min-h-0">
 		{#if activeTab === 'today' && userSettings.greetingEnabled}
 			{@const hour = now.getHours()}
 			{@const todayGreeting = hour < 12 ? t.greeting_morning : hour < 18 ? t.greeting_day : hour < 22 ? t.greeting_evening : t.greeting_night}
 			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(now)}
 			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(now)}
-			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px">
+			<div class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4" style="top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; transition: top 0.25s ease;">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user.username}</p>
 				{#if trackerInfoLine}
@@ -1020,8 +1057,9 @@
 		{/if}
 
 		<div bind:this={scrollContainer}
+		     onscroll={onScroll}
 		     class="absolute inset-0 overflow-y-auto {activeTab === 'today' ? 'flex flex-col justify-end' : ''}"
-		     style="padding-bottom: 5.5rem">
+		     style="padding-top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); padding-bottom: 5.5rem; transition: padding-top 0.25s ease;">
 
 	{#if loading}
 		<div class="flex justify-center py-16">
@@ -1221,7 +1259,6 @@
 	{/if}
 
 	</div><!-- end scrollable -->
-	</div><!-- end relative wrapper -->
 </div>
 
 <QuickLogSheet

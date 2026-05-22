@@ -49,6 +49,9 @@ export type UserSettings = {
 	moodTrackerEnabled?: boolean;
 	hiddenMoodTags?: string[];
 	greetingEnabled?: boolean;
+	wakeLockLists?: boolean;
+	wakeLockRecipes?: boolean;
+	wakeLockMeditation?: boolean;
 };
 
 export const DEFAULT_SETTINGS = {

@@ -33,6 +33,12 @@
 					text: 'Long-press the + button to reveal up to 4 shortcuts. Slide your finger to the desired shortcut and release to navigate — or just release over empty space to cancel.',
 					link: { href: '/einstellungen#schnellzugriff', label: 'Set up shortcuts in Settings' },
 					svg: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`
+				},
+				{
+					title: 'Keep screen on',
+					text: 'The screen stays on automatically when you are inside a shopping list, an opened recipe, or a running meditation — so you don\'t have to wake it with sticky fingers while cooking or shopping. Toggle each context individually in Settings → "Keep screen on".',
+					link: { href: '/einstellungen', label: 'Manage in Settings' },
+					svg: `<rect x="2" y="4" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="22" x2="16" y2="22"/><line x1="12" y1="18" x2="12" y2="22"/>`
 				}
 			]
 		},
@@ -184,6 +190,12 @@
 					text: 'Lange auf den + Button drücken, um bis zu 4 Schnellzugriffe anzuzeigen. Finger zum gewünschten Shortcut schieben und loslassen – oder auf einer leeren Stelle loslassen, um abzubrechen.',
 					link: { href: '/einstellungen#schnellzugriff', label: 'Schnellzugriffe in den Einstellungen anlegen' },
 					svg: `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`
+				},
+				{
+					title: 'Bildschirm anlassen',
+					text: 'Der Bildschirm bleibt automatisch an, solange du in einer Einkaufsliste, einem geöffneten Rezept oder einer laufenden Meditation bist – so musst du das Handy beim Kochen oder Einkaufen nicht jedes Mal mit klebrigen Fingern wieder entsperren. Jeden Bereich einzeln umschaltbar unter Einstellungen → „Bildschirm anlassen".',
+					link: { href: '/einstellungen', label: 'In den Einstellungen verwalten' },
+					svg: `<rect x="2" y="4" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="22" x2="16" y2="22"/><line x1="12" y1="18" x2="12" y2="22"/>`
 				}
 			]
 		},

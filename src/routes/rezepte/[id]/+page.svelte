@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { t } from '$lib/i18n.svelte';
@@ -8,6 +8,10 @@
 	import RecipeAddToListModal from '$lib/components/recipe/RecipeAddToListModal.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import { cacheRecipeDetail, getOfflineRecipeDetail } from '$lib/sync/manager';
+	import { userSettings } from '$lib/userSettings.svelte';
+	import { acquireWakeLock, releaseWakeLock } from '$lib/wakeLock';
+
+	let wakeLockHeld = false;
 
 	let recipe = $state<Recipe | null>(null);
 	let loading = $state(true);
@@ -170,7 +174,14 @@
 		if (res.ok) goto('/rezepte');
 	}
 
-	onMount(() => loadRecipe());
+	onMount(() => {
+		void loadRecipe();
+		if (userSettings.wakeLockRecipes) { wakeLockHeld = true; void acquireWakeLock(); }
+	});
+
+	onDestroy(() => {
+		if (wakeLockHeld) void releaseWakeLock();
+	});
 </script>
 
 <div class="h-[100dvh] flex flex-col overflow-hidden max-w-[430px] mx-auto" style="background-color: var(--color-bg)">

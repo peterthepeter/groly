@@ -127,6 +127,7 @@
 	let checkedItemsOpen = $state(false);
 	let favIndicatorOpen = $state(false);
 	let greetingOpen = $state(false);
+	let wakeLockOpen = $state(false);
 	let supplementTabOpen = $state(false);
 	let recipesTabOpen = $state(false);
 	let pushOpen = $state(false);
@@ -526,10 +527,6 @@
 							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 							style="background-color: {userSettings.showAllCheckedItems ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 						>
-							{#if userSettings.showAllCheckedItems}
-								<span class="absolute top-0.5 h-4 w-4 rounded-full"
-								      style="background-color: white; transform: translateX(1.25rem)"></span>
-							{/if}
 						</div>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 						     style="transform: rotate({checkedItemsOpen ? 90 : 0}deg); transition: transform 0.2s">
@@ -564,10 +561,6 @@
 							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 							style="background-color: {userSettings.itemLayout === 'list' ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 						>
-							{#if userSettings.itemLayout === 'list'}
-								<span class="absolute top-0.5 h-4 w-4 rounded-full"
-								      style="background-color: white; transform: translateX(1.25rem)"></span>
-							{/if}
 						</div>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 						     style="transform: rotate({layoutOpen ? 90 : 0}deg); transition: transform 0.2s">
@@ -604,10 +597,6 @@
 							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 							style="background-color: {userSettings.showFavoriteIndicator ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 						>
-							{#if userSettings.showFavoriteIndicator}
-								<span class="absolute top-0.5 h-4 w-4 rounded-full"
-								      style="background-color: white; transform: translateX(1.25rem)"></span>
-							{/if}
 						</div>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 						     style="transform: rotate({favIndicatorOpen ? 90 : 0}deg); transition: transform 0.2s">
@@ -644,10 +633,6 @@
 							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 							style="background-color: {userSettings.greetingEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 						>
-							{#if userSettings.greetingEnabled}
-								<span class="absolute top-0.5 h-4 w-4 rounded-full"
-								      style="background-color: white; transform: translateX(1.25rem)"></span>
-							{/if}
 						</div>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 						     style="transform: rotate({greetingOpen ? 90 : 0}deg); transition: transform 0.2s">
@@ -662,6 +647,75 @@
 								? 'Shows a personalized greeting with date and summary on the Lists, Tracker, and Recipes screens.'
 								: 'Zeigt eine persönliche Begrüßung mit Datum und Zusammenfassung auf den Listen-, Tracker- und Rezepte-Seiten.'}
 						</p>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Bildschirm anlassen -->
+			<div>
+				<button
+					onclick={() => wakeLockOpen = !wakeLockOpen}
+					class="w-full flex items-center justify-between px-5 py-2.5"
+				>
+					<div class="flex items-center gap-3">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="2" y="4" width="20" height="14" rx="2" ry="2"/>
+							<line x1="8" y1="22" x2="16" y2="22"/>
+							<line x1="12" y1="18" x2="12" y2="22"/>
+						</svg>
+						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Keep screen on' : 'Bildschirm anlassen'}</span>
+					</div>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+					     style="transform: rotate({wakeLockOpen ? 90 : 0}deg); transition: transform 0.2s">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</button>
+				{#if wakeLockOpen}
+					<div class="px-5 pb-5 space-y-3">
+						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">
+							{currentLang() === 'en'
+								? 'Prevents the screen from turning off automatically when these pages are open.'
+								: 'Verhindert dass der Bildschirm automatisch ausgeht solange diese Seiten geöffnet sind.'}
+						</p>
+						<div class="flex items-center justify-between pt-1">
+							<span class="text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Shopping lists' : 'Einkaufslisten'}</span>
+							<div
+								role="switch"
+								aria-checked={userSettings.wakeLockLists}
+								onclick={() => userSettings.wakeLockLists = !userSettings.wakeLockLists}
+								onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') userSettings.wakeLockLists = !userSettings.wakeLockLists; }}
+								tabindex="0"
+								class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+								style="background-color: {userSettings.wakeLockLists ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+							>
+							</div>
+						</div>
+						<div class="flex items-center justify-between">
+							<span class="text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Recipes' : 'Rezepte'}</span>
+							<div
+								role="switch"
+								aria-checked={userSettings.wakeLockRecipes}
+								onclick={() => userSettings.wakeLockRecipes = !userSettings.wakeLockRecipes}
+								onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') userSettings.wakeLockRecipes = !userSettings.wakeLockRecipes; }}
+								tabindex="0"
+								class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+								style="background-color: {userSettings.wakeLockRecipes ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+							>
+							</div>
+						</div>
+						<div class="flex items-center justify-between">
+							<span class="text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Meditation' : 'Meditation'}</span>
+							<div
+								role="switch"
+								aria-checked={userSettings.wakeLockMeditation}
+								onclick={() => userSettings.wakeLockMeditation = !userSettings.wakeLockMeditation}
+								onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') userSettings.wakeLockMeditation = !userSettings.wakeLockMeditation; }}
+								tabindex="0"
+								class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+								style="background-color: {userSettings.wakeLockMeditation ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+							>
+							</div>
+						</div>
 					</div>
 				{/if}
 			</div>
@@ -689,10 +743,6 @@
 							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 							style="background-color: {userSettings.showSupplementTracker ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 						>
-							{#if userSettings.showSupplementTracker}
-								<span class="absolute top-0.5 h-4 w-4 rounded-full"
-								      style="background-color: white; transform: translateX(1.25rem)"></span>
-							{/if}
 						</div>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 						     style="transform: rotate({supplementTabOpen ? 90 : 0}deg); transition: transform 0.2s">
@@ -729,10 +779,6 @@
 							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 							style="background-color: {userSettings.showRecipes ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 						>
-							{#if userSettings.showRecipes}
-								<span class="absolute top-0.5 h-4 w-4 rounded-full"
-								      style="background-color: white; transform: translateX(1.25rem)"></span>
-							{/if}
 						</div>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 						     style="transform: rotate({recipesTabOpen ? 90 : 0}deg); transition: transform 0.2s">
@@ -944,10 +990,6 @@
 							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 							style="background-color: {userSettings.categorySortEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 						>
-							{#if userSettings.categorySortEnabled}
-								<span class="absolute top-0.5 h-4 w-4 rounded-full"
-								      style="background-color: white; transform: translateX(1.25rem)"></span>
-							{/if}
 						</div>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 						     style="transform: rotate({categorySortOpen ? 90 : 0}deg); transition: transform 0.2s">
@@ -1035,10 +1077,6 @@
 							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 							style="background-color: {userSettings.locationNavEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 						>
-							{#if userSettings.locationNavEnabled}
-								<span class="absolute top-0.5 h-4 w-4 rounded-full"
-								      style="background-color: white; transform: translateX(1.25rem)"></span>
-							{/if}
 						</div>
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 						     style="transform: rotate({locationOpen ? 90 : 0}deg); transition: transform 0.2s">
@@ -1094,10 +1132,6 @@
 									class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 									style="background-color: {pushSubscribed ? 'var(--color-primary)' : 'var(--color-surface-container)'}; opacity: {pushLoading ? 0.5 : 1}"
 								>
-									{#if pushSubscribed}
-										<span class="absolute top-0.5 h-4 w-4 rounded-full"
-										      style="background-color: white; transform: translateX(1.25rem)"></span>
-									{/if}
 								</div>
 							{/if}
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -1235,9 +1269,6 @@
 									class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 									style="background-color: {exportLogs ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 								>
-									{#if exportLogs}
-										<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
-									{/if}
 								</div>
 							</div>
 							<div class="flex items-center justify-between">
@@ -1251,9 +1282,6 @@
 									class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
 									style="background-color: {exportCatalog ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
 								>
-									{#if exportCatalog}
-										<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
-									{/if}
 								</div>
 							</div>
 							<!-- Zeitraum Toggle -->

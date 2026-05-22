@@ -12,6 +12,9 @@
 	import AddItemModal from '$lib/components/AddItemModal.svelte';
 	import AddItemBar from '$lib/components/AddItemBar.svelte';
 	import { execute, generateClientId, cacheItemsData, getOfflineItems, getOfflineListName, updateOfflineItem, deleteOfflineItem } from '$lib/sync/manager';
+	import { acquireWakeLock, releaseWakeLock } from '$lib/wakeLock';
+
+	let wakeLockHeld = false;
 	import { t, list_items_open } from '$lib/i18n.svelte';
 	import { getCategoryKey } from '$lib/categories';
 	import { userSettings } from '$lib/userSettings.svelte';
@@ -324,6 +327,7 @@
 		const handleVisibility = () => { if (document.visibilityState === 'visible') void loadItems(); };
 		window.addEventListener('online', handleOnline);
 		document.addEventListener('visibilitychange', handleVisibility);
+		if (userSettings.wakeLockLists) { wakeLockHeld = true; void acquireWakeLock(); }
 
 		// Hinweis-Banner für kleine Bildschirme (< 374px), einmalig pro Gerät
 		if (
@@ -417,7 +421,10 @@
 		}),
 	];
 
-	onDestroy(() => offHandlers.forEach(off => off()));
+	onDestroy(() => {
+		offHandlers.forEach(off => off());
+		if (wakeLockHeld) void releaseWakeLock();
+	});
 </script>
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">

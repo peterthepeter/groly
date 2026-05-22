@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.11-1',
+		de: [
+			'UI-Fixes auf der Tracker-Seite',
+			'Bildschirm-anlassen-Toggles in den Einstellungen'
+		],
+		en: [
+			'UI fixes on the tracker page',
+			'Keep-screen-on toggles in Settings'
+		]
+	},
+	{
 		version: '0.7.11',
 		de: [
 			'Tracker-Verlauf komplett überarbeitet — neue Karten mit Adherence-Quoten, Tages-Heatmaps und Verlaufs-Grafiken (Woche & Monat)',

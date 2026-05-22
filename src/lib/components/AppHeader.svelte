@@ -4,17 +4,18 @@
 
 	import type { Snippet } from 'svelte';
 
-	let { title = 'Meine Listen', subtitle = '', onMenuOpen, onSearch = null, actions = null }: {
+	let { title = 'Meine Listen', subtitle = '', onMenuOpen, onSearch = null, actions = null, hidden = false }: {
 		title?: string;
 		subtitle?: string;
 		onMenuOpen: () => void;
 		onSearch?: (() => void) | null;
 		actions?: Snippet | null;
+		hidden?: boolean;
 	} = $props();
 </script>
 
 <header class="fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
-        style="padding-top: calc(env(safe-area-inset-top) + 1rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px)">
+        style="padding-top: calc(env(safe-area-inset-top) + 1rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transform: translateY({hidden ? '-110%' : '0'}); transition: transform 0.25s ease;">
 	<div class="flex items-center justify-between rounded-2xl px-4 py-3"
 	     style="background-color: var(--color-surface-low)">
 		<!-- Left: Hamburger + App Name -->

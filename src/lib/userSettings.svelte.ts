@@ -97,6 +97,9 @@ let _meditationVolume = $state<number>(cache.meditationVolume ?? 70);
 let _moodTrackerEnabled = $state<boolean>(cache.moodTrackerEnabled ?? true);
 let _hiddenMoodTags = $state<string[]>(cache.hiddenMoodTags ?? []);
 let _greetingEnabled = $state<boolean>(cache.greetingEnabled ?? true);
+let _wakeLockLists = $state<boolean>(cache.wakeLockLists ?? true);
+let _wakeLockRecipes = $state<boolean>(cache.wakeLockRecipes ?? true);
+let _wakeLockMeditation = $state<boolean>(cache.wakeLockMeditation ?? true);
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -135,7 +138,10 @@ function scheduleSave() {
 			meditationVolume: _meditationVolume,
 			moodTrackerEnabled: _moodTrackerEnabled,
 			hiddenMoodTags: _hiddenMoodTags,
-			greetingEnabled: _greetingEnabled
+			greetingEnabled: _greetingEnabled,
+			wakeLockLists: _wakeLockLists,
+			wakeLockRecipes: _wakeLockRecipes,
+			wakeLockMeditation: _wakeLockMeditation
 		};
 		saveCache(settings);
 		try {
@@ -291,6 +297,12 @@ export const userSettings = {
 	set hiddenMoodTags(v: string[]) { _hiddenMoodTags = v; scheduleSave(); },
 	get greetingEnabled() { return _greetingEnabled; },
 	set greetingEnabled(v: boolean) { _greetingEnabled = v; scheduleSave(); },
+	get wakeLockLists() { return _wakeLockLists; },
+	set wakeLockLists(v: boolean) { _wakeLockLists = v; scheduleSave(); },
+	get wakeLockRecipes() { return _wakeLockRecipes; },
+	set wakeLockRecipes(v: boolean) { _wakeLockRecipes = v; scheduleSave(); },
+	get wakeLockMeditation() { return _wakeLockMeditation; },
+	set wakeLockMeditation(v: boolean) { _wakeLockMeditation = v; scheduleSave(); },
 
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
@@ -343,6 +355,9 @@ function applySettings(settings: UserSettings) {
 	_moodTrackerEnabled = settings.moodTrackerEnabled ?? true;
 	_hiddenMoodTags = settings.hiddenMoodTags ?? [];
 	_greetingEnabled = settings.greetingEnabled ?? true;
+	_wakeLockLists = settings.wakeLockLists ?? true;
+	_wakeLockRecipes = settings.wakeLockRecipes ?? true;
+	_wakeLockMeditation = settings.wakeLockMeditation ?? true;
 }
 
 export function seedSettings(settings: UserSettings) {
