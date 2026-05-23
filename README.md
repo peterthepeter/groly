@@ -137,7 +137,7 @@ HTTPS is required for the PWA install, push notifications, and secure cookies. I
 
 #### Tailscale — recommended for beginners
 No domain, no router config, no certificate renewal. Tailscale gives every device a real hostname with a valid Let's Encrypt certificate. Free for up to 100 devices.
-1. Install Tailscale on your Unraid server (available as a Community Applications plugin)
+1. Install Tailscale on the host running Groly (native package, Docker container, or your platform's app store — see [tailscale.com/download](https://tailscale.com/download))
 2. Enable HTTPS: Tailscale Admin → DNS → Enable HTTPS
 3. Set `ORIGIN` to your Tailscale hostname, e.g. `https://my-server.tail-xxxxx.ts.net`
 
