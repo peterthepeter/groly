@@ -133,19 +133,19 @@ Only admin accounts can invite users, reset passwords, and manage list sharing.
 
 ### Getting HTTPS without a public domain
 
-If you want to run Groly on your home network without exposing it to the internet, you have a few good options:
+HTTPS is required for the PWA install, push notifications, and secure cookies. If you don't already have a domain pointed at your server, pick one of the options below. Listed from easiest to most flexible:
 
-#### Reverse Proxy
-Run Groly behind Nginx Proxy Manager, Caddy, or Traefik with a real domain and Let's Encrypt. Works well if your server is already reachable from the internet.
-
-#### Tailscale
-Tailscale gives every device a real hostname with a valid Let's Encrypt certificate — no public DNS or port forwarding needed. Free for up to 100 devices.
+#### Tailscale — recommended for beginners
+No domain, no router config, no certificate renewal. Tailscale gives every device a real hostname with a valid Let's Encrypt certificate. Free for up to 100 devices.
 1. Install Tailscale on your Unraid server (available as a Community Applications plugin)
 2. Enable HTTPS: Tailscale Admin → DNS → Enable HTTPS
 3. Set `ORIGIN` to your Tailscale hostname, e.g. `https://my-server.tail-xxxxx.ts.net`
 
 #### Cloudflare Tunnel
-Zero-config HTTPS tunnel to your server, no port forwarding required. Free tier available.
+Zero-config HTTPS tunnel to your server, no port forwarding required. Free tier available. Useful if you already have a Cloudflare account or want a friendlier URL than the Tailscale one.
+
+#### Reverse Proxy
+Run Groly behind Nginx Proxy Manager, Caddy, or Traefik with your own domain and Let's Encrypt. Best fit if your server is already reachable from the internet and you have an existing reverse-proxy setup.
 
 ## Docker Deployment
 
