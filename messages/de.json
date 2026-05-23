@@ -354,6 +354,7 @@
 	"caffeine_limit_label": "Tageslimit",
 	"caffeine_limit_edit": "Limit bearbeiten",
 	"caffeine_visible_drinks": "Sichtbare Getränke",
+	"history_drinks_unit": "Getränke",
 	"caffeine_disabled_hint": "Im Schnell-Log und Heute-Ansicht anzeigen",
 	"caffeine_add": "Erfassen",
 	"caffeine_logged": "Erfasst ✓",

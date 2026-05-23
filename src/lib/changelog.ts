@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.11-2',
+		de: [
+			'Tracker-Verlauf (Woche/Monat): Gesamt-Werte direkt im Header sichtbar (Anzahl Getränke, Gesamt-Minuten)',
+			'Max-Wert pro Tracker als dezente Linie über den Balken eingeblendet'
+		],
+		en: [
+			'Tracker history (week/month): totals now shown directly in the header (drink count, total minutes)',
+			'Peak value per tracker displayed as a subtle line above the bars'
+		]
+	},
+	{
 		version: '0.7.11-1',
 		de: [
 			'UI-Fixes auf der Tracker-Seite',

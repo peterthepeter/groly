@@ -354,6 +354,7 @@
 	"caffeine_limit_label": "Daily limit",
 	"caffeine_limit_edit": "Edit limit",
 	"caffeine_visible_drinks": "Visible drinks",
+	"history_drinks_unit": "drinks",
 	"caffeine_disabled_hint": "Show in quick-log and today view",
 	"caffeine_add": "Log",
 	"caffeine_logged": "Logged ✓",

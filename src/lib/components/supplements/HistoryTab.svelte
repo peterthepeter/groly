@@ -321,22 +321,26 @@
 									</span>
 								{:else}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-										Ø {fmtNumber(cs.avgPerDay)} mg · {cs.min}–{cs.max} · {cs.activeDays}/{cs.totalDays}
+										Ø {fmtNumber(cs.avgPerDay)} mg · {caffeineLogs.length} {t.history_drinks_unit} · {cs.activeDays}/{cs.totalDays}
 									</span>
 								{/if}
 							</div>
-							<div class="flex items-end" style="height: 26px; gap: {period === 'month' ? 2 : 3}px">
-								{#each cs.daily as v, i}
-									{@const pct = v === 0 ? 14 : Math.max(14, (v / maxC) * 100)}
-									{@const isToday = i === todayIdx}
-									{@const isSelected = i === selIdx}
-									<button
-										onclick={() => caffeineSelectedIdx = selIdx === i ? null : i}
-										aria-label={'Tag ' + (i + 1)}
-										class="flex-1 active:opacity-70"
-										style="background-color: #C8956C; opacity: {v === 0 ? 0.18 : (isSelected ? 1 : 0.9)}; height: {pct}%; min-height: 4px; border-radius: 3px; {isSelected ? 'outline: 1.5px solid #C8956C; outline-offset: 2px' : (isToday ? 'outline: 1.5px solid #C8956C; outline-offset: 1px' : '')}"
-									></button>
-								{/each}
+							<div class="relative" style="padding-top: 10px">
+								<span class="absolute right-0 text-[9px] tabular-nums leading-none" style="top: 0; color: var(--color-on-surface-variant); opacity: 0.55">{cs.max} mg</span>
+								<div class="absolute left-0 right-0 pointer-events-none" style="top: 10px; border-top: 1px dashed var(--color-on-surface-variant); opacity: 0.22"></div>
+								<div class="flex items-end" style="height: 26px; gap: {period === 'month' ? 2 : 3}px">
+									{#each cs.daily as v, i}
+										{@const pct = v === 0 ? 14 : Math.max(14, (v / maxC) * 100)}
+										{@const isToday = i === todayIdx}
+										{@const isSelected = i === selIdx}
+										<button
+											onclick={() => caffeineSelectedIdx = selIdx === i ? null : i}
+											aria-label={'Tag ' + (i + 1)}
+											class="flex-1 active:opacity-70"
+											style="background-color: #C8956C; opacity: {v === 0 ? 0.18 : (isSelected ? 1 : 0.9)}; height: {pct}%; min-height: 4px; border-radius: 3px; {isSelected ? 'outline: 1.5px solid #C8956C; outline-offset: 2px' : (isToday ? 'outline: 1.5px solid #C8956C; outline-offset: 1px' : '')}"
+										></button>
+									{/each}
+								</div>
 							</div>
 						</div>
 					{/if}
@@ -354,22 +358,26 @@
 									</span>
 								{:else}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-										Ø {fmtNumber(ms.avgPerDay)} min · {ms.min}–{ms.max} · {ms.activeDays}/{ms.totalDays}
+										Ø {fmtNumber(ms.avgPerDay)} min · {ms.total} min · {ms.activeDays}/{ms.totalDays}
 									</span>
 								{/if}
 							</div>
-							<div class="flex items-end" style="height: 26px; gap: {period === 'month' ? 2 : 3}px">
-								{#each ms.daily as v, i}
-									{@const pct = v === 0 ? 14 : Math.max(14, (v / maxM) * 100)}
-									{@const isToday = i === todayIdx}
-									{@const isSelected = i === selIdxM}
-									<button
-										onclick={() => meditationSelectedIdx = selIdxM === i ? null : i}
-										aria-label={'Tag ' + (i + 1)}
-										class="flex-1 active:opacity-70"
-										style="background-color: #9F7AEA; opacity: {v === 0 ? 0.18 : (isSelected ? 1 : 0.9)}; height: {pct}%; min-height: 4px; border-radius: 3px; {isSelected ? 'outline: 1.5px solid #9F7AEA; outline-offset: 2px' : (isToday ? 'outline: 1.5px solid #9F7AEA; outline-offset: 1px' : '')}"
-									></button>
-								{/each}
+							<div class="relative" style="padding-top: 10px">
+								<span class="absolute right-0 text-[9px] tabular-nums leading-none" style="top: 0; color: var(--color-on-surface-variant); opacity: 0.55">{ms.max} min</span>
+								<div class="absolute left-0 right-0 pointer-events-none" style="top: 10px; border-top: 1px dashed var(--color-on-surface-variant); opacity: 0.22"></div>
+								<div class="flex items-end" style="height: 26px; gap: {period === 'month' ? 2 : 3}px">
+									{#each ms.daily as v, i}
+										{@const pct = v === 0 ? 14 : Math.max(14, (v / maxM) * 100)}
+										{@const isToday = i === todayIdx}
+										{@const isSelected = i === selIdxM}
+										<button
+											onclick={() => meditationSelectedIdx = selIdxM === i ? null : i}
+											aria-label={'Tag ' + (i + 1)}
+											class="flex-1 active:opacity-70"
+											style="background-color: #9F7AEA; opacity: {v === 0 ? 0.18 : (isSelected ? 1 : 0.9)}; height: {pct}%; min-height: 4px; border-radius: 3px; {isSelected ? 'outline: 1.5px solid #9F7AEA; outline-offset: 2px' : (isToday ? 'outline: 1.5px solid #9F7AEA; outline-offset: 1px' : '')}"
+										></button>
+									{/each}
+								</div>
 							</div>
 						</div>
 					{/if}
