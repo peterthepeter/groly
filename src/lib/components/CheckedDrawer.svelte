@@ -109,7 +109,7 @@
 		bind:this={toggleBtn}
 		onclick={toggle}
 		class="w-full flex items-center justify-between px-4 py-3 rounded-2xl"
-		style="background-color: var(--color-surface-container)"
+		style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
 	>
 		<span class="text-xs font-bold tracking-widest uppercase" style="color: var(--color-primary)">{t.items_checked_label}</span>
 		<svg

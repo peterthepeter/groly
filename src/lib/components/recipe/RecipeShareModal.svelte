@@ -50,12 +50,12 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-50 flex items-end justify-center" style="background-color: rgba(0,0,0,0.6)"
 	     onclick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-		<div class="w-full max-w-[430px] rounded-t-3xl px-6 pb-10 pt-4"
-		     style="background-color: var(--color-surface-low)">
-			<div class="flex justify-center mb-5">
+		<div class="w-full max-w-[430px] rounded-t-3xl px-6 pb-6 pt-3"
+		     style="background-color: var(--modal-bg)">
+			<div class="flex justify-center mb-3">
 				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 			</div>
-			<h2 class="text-lg font-bold mb-4" style="color: var(--color-on-surface)">{t.recipe_share_title}</h2>
+			<h2 class="text-lg font-bold mb-3" style="color: var(--color-on-surface)">{t.recipe_share_title}</h2>
 			{#if shareSuccess}
 				<div class="text-center py-6">
 					<div class="text-4xl mb-2">✓</div>
@@ -63,7 +63,7 @@
 				</div>
 			{:else}
 				<div class="flex gap-2">
-					<div class="flex-1 flex items-center px-4 rounded-xl" style="background-color: var(--color-surface-container); height: 52px">
+					<div class="flex-1 flex items-center px-4 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); height: 44px">
 						<input
 							type="text"
 							placeholder={t.recipe_username_placeholder}
@@ -76,8 +76,8 @@
 					<button
 						onclick={shareRecipe}
 						disabled={!shareUsername.trim() || shareLoading}
-						class="px-5 rounded-xl font-semibold text-sm disabled:opacity-40"
-						style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary); height: 52px"
+						class="px-5 rounded-full font-semibold text-sm disabled:opacity-40"
+						style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary); height: 44px"
 					>
 						{shareLoading ? '…' : t.recipe_share_send}
 					</button>

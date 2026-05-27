@@ -80,6 +80,17 @@
 	let lastScrollY = 0;
 	let scrollRaf = 0;
 	let overlayHeight = $state(0);
+	let greetingEl = $state<HTMLElement | null>(null);
+	let bubbleContainerEl = $state<HTMLElement | null>(null);
+	function updateGreetingOpacity() {
+		if (!greetingEl || !bubbleContainerEl) return;
+		const gRect = greetingEl.getBoundingClientRect();
+		const cRect = bubbleContainerEl.getBoundingClientRect();
+		const gap = cRect.top - gRect.bottom;
+		// fade from 1 at gap>=40 to 0 at gap<=-8 (content overlaps by 8px)
+		const opacity = Math.max(0, Math.min(1, (gap + 8) / 48));
+		greetingEl.style.opacity = String(opacity);
+	}
 	const headerOffsetRem = $derived(headerHidden ? '0rem' : '5.25rem');
 	function onScroll() {
 		if (!scrollContainer || scrollRaf) return;
@@ -92,6 +103,7 @@
 			// y<12-Reset zeigt Header → Loop).
 			if (activeTab === 'today') {
 				lastScrollY = scrollContainer.scrollTop;
+				updateGreetingOpacity();
 				return;
 			}
 			const y = scrollContainer.scrollTop;
@@ -843,10 +855,22 @@
 		}
 		document.addEventListener('visibilitychange', onVisibilityChange);
 
+		const onResize = () => updateGreetingOpacity();
+		window.addEventListener('resize', onResize);
+
 		return () => {
 			clearInterval(clockInterval);
 			document.removeEventListener('visibilitychange', onVisibilityChange);
+			window.removeEventListener('resize', onResize);
 		};
+	});
+
+	$effect(() => {
+		if (!bubbleContainerEl) return;
+		const ro = new ResizeObserver(() => updateGreetingOpacity());
+		ro.observe(bubbleContainerEl);
+		updateGreetingOpacity();
+		return () => ro.disconnect();
 	});
 
 	// React to push-triggered deep-links while the app is already open on /supplements
@@ -947,21 +971,21 @@
 	     style="top: calc(env(safe-area-inset-top) + {headerOffsetRem}); transition: top 0.25s ease; background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
 
 	<!-- Tab Bar + Manage row — unified card -->
-	<div class="px-4">
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+	<div class="px-4 pt-1">
+		<div class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<!-- Tab switcher -->
 			<div class="flex gap-1 p-1">
 				<button
 					onclick={() => goto($page.url.pathname, { noScroll: true, keepFocus: true, replaceState: true })}
 					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
-					style="background-color: {activeTab === 'today' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'today' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+					style="background-color: {activeTab === 'today' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'today' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>
 					{t.supplement_tab_today}
 				</button>
 				<button
 					onclick={() => goto(`${$page.url.pathname}?tab=history`, { noScroll: true, keepFocus: true, replaceState: true })}
 					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
-					style="background-color: {activeTab === 'history' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'history' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+					style="background-color: {activeTab === 'history' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'history' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>
 					{t.supplement_tab_history}
 				</button>
@@ -1031,7 +1055,7 @@
 						<button
 							onclick={() => { historyPeriod = period; if (period !== 'day') scrollContainer?.scrollTo({ top: 0 }); }}
 							class="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all"
-							style="background-color: {historyPeriod === period ? 'var(--color-surface-card)' : 'transparent'}; color: {historyPeriod === period ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+							style="background-color: {historyPeriod === period ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {historyPeriod === period ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 						>
 							{period === 'day' ? t.supplement_stats_day : period === 'week' ? t.supplement_stats_week : t.supplement_stats_month}
 						</button>
@@ -1048,7 +1072,7 @@
 				onclick={() => navigateHistory(-1)}
 				aria-label="Vorheriger Zeitraum"
 				class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
-				style="background-color: var(--color-surface-container)"
+				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
 			>
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<polyline points="15 18 9 12 15 6"/>
@@ -1072,7 +1096,7 @@
 				onclick={() => navigateHistory(1)}
 				aria-label="Nächster Zeitraum"
 				class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
-				style="background-color: var(--color-surface-container)"
+				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
 			>
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<polyline points="9 18 15 12 9 6"/>
@@ -1087,7 +1111,7 @@
 			{@const todayGreeting = hour < 12 ? t.greeting_morning : hour < 18 ? t.greeting_day : hour < 22 ? t.greeting_evening : t.greeting_night}
 			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(now)}
 			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(now)}
-			<div class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4" style="top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; transition: top 0.25s ease;">
+			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; transition: top 0.25s ease, opacity 0.15s ease;">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user.username}</p>
 				{#if trackerInfoLine}
@@ -1119,7 +1143,7 @@
 				userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0 ? 'caffeine' : null,
 				userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0 ? 'meditation' : null
 			].filter(Boolean)}
-			<div class="px-4 flex flex-col gap-2">
+			<div bind:this={bubbleContainerEl} class="px-4 flex flex-col gap-2">
 			{#if visibleTrackers.includes('mood') && todayMoodEntry !== null}
 				<MoodTrackerCard
 					todayEntry={todayMoodEntry}
@@ -1128,7 +1152,7 @@
 				/>
 			{/if}
 			{#if visibleTrackers.filter(v => v !== 'mood').length > 0}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<div class="px-4 pt-3 pb-0 -mb-1 flex items-center gap-2">
 						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
 						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Tracker</p>
@@ -1168,7 +1192,7 @@
 				</div>
 			{/if}
 			{#if loggedTodaySupplements.length > 0}
-				<div class="rounded-2xl flex flex-col select-none" style="background-color: var(--color-surface-card)">
+				<div class="rounded-2xl flex flex-col select-none" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<div class="px-4 pt-3 pb-0.5 flex items-center gap-2">
 						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
 						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Supplements</p>

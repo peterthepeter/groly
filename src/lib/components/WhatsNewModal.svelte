@@ -13,7 +13,7 @@
 
 <!-- Modal -->
 <div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 pb-6"
-     style="background-color: var(--color-surface-low)">
+     style="background-color: var(--modal-bg)">
 
 	<!-- Handle -->
 	<div class="flex justify-center mb-4">

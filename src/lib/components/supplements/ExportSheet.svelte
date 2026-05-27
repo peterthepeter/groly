@@ -102,7 +102,7 @@
 	<div class="fixed inset-0 z-50 flex items-end justify-center" style="background-color: rgba(0,0,0,0.6)"
 	     onclick={(e) => { if (e.target === e.currentTarget && !exporting) open = false; }}>
 		<div class="w-full max-w-[430px] rounded-t-3xl px-4 pt-4 flex flex-col"
-		     style="background-color: var(--color-surface-low); max-height: 90vh; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
+		     style="background-color: var(--modal-bg); max-height: 90vh; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
 			<div class="flex justify-center mb-3 flex-shrink-0">
 				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 			</div>
@@ -159,7 +159,7 @@
 				<!-- Sections -->
 				<div>
 					<p class="text-xs font-semibold mb-2 uppercase tracking-wider" style="color: var(--color-on-surface-variant)">{t.export_sections_label}</p>
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						{#each sectionItems as item}
 							{@const indented = 'indent' in item && item.indent}
 							{@const disabled = indented && !sections.mood}

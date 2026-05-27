@@ -123,7 +123,7 @@
 	<!-- Sheet -->
 	<div
 		class="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl flex flex-col max-w-[430px] mx-auto"
-		style="background-color: var(--color-surface); max-height: 92dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)"
+		style="background-color: var(--modal-bg); max-height: 92dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)"
 	>
 		<!-- Handle -->
 		<div class="flex justify-center pt-3 pb-1 shrink-0">
@@ -147,7 +147,7 @@
 						placeholder={t.mood_gratitude_placeholder}
 						rows="3"
 						class="w-full rounded-2xl px-4 py-3 border-0 outline-none resize-none"
-						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; line-height: 1.5"
+						style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); color: var(--color-on-surface); font-size: 16px; line-height: 1.5"
 					></textarea>
 				</div>
 
@@ -158,7 +158,7 @@
 						placeholder={t.mood_note_placeholder}
 						rows="3"
 						class="w-full rounded-2xl px-4 py-3 border-0 outline-none resize-none"
-						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; line-height: 1.5"
+						style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); color: var(--color-on-surface); font-size: 16px; line-height: 1.5"
 					></textarea>
 				</div>
 
@@ -167,7 +167,7 @@
 					<p class="text-xs font-semibold uppercase tracking-widest" style="color: var(--color-on-surface-variant)">{t.mood_activities_label}</p>
 					{#each reversedCategories as cat}
 						{@const collapsed = collapsedCats.has(cat.key)}
-						<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+						<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 							<button
 								onclick={() => toggleCat(cat.key)}
 								class="w-full flex items-center justify-between px-3.5 py-2.5 active:opacity-70"
@@ -206,7 +206,7 @@
 		<!-- Mood selector — fixed above save button, always visible -->
 		<div class="px-5 pt-3 shrink-0">
 			<p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color: #F472B6">{t.mood_tracker_label}</p>
-			<div class="flex rounded-2xl overflow-hidden transition-all" style="background-color: var(--color-surface-container); box-shadow: {!selectedMood ? '0 0 0 1.5px rgba(244,114,182,0.4)' : 'none'}">
+			<div class="flex rounded-2xl overflow-hidden transition-all" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); box-shadow: {!selectedMood ? '0 0 0 1.5px rgba(244,114,182,0.4)' : 'none'}">
 				{#each MOOD_LEVELS as level}
 					{@const active = selectedMood === level.value}
 					<button
@@ -225,8 +225,8 @@
 		<div class="px-5 pt-2 shrink-0 flex gap-2">
 			<button
 				onclick={() => open = false}
-				class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+				class="flex-1 py-3 rounded-full text-sm font-semibold active:opacity-70"
+				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 			>{t.close}</button>
 			<button
 				onclick={save}

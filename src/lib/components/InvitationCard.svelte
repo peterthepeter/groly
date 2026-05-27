@@ -23,7 +23,7 @@
 </script>
 
 <div class="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left"
-     style="background-color: var(--color-surface-card)">
+     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 
 	<!-- Icon -->
 	{#if icon}

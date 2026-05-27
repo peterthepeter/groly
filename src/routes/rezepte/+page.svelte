@@ -54,6 +54,22 @@
 	let sortSheetOpen = $state(false);
 	let activeTagFilters = $state<string[]>([]);
 	let overlayHeight = $state(0);
+	let greetingEl = $state<HTMLElement | null>(null);
+	let bubbleContainerEl = $state<HTMLElement | null>(null);
+	function updateGreetingOpacity() {
+		if (!greetingEl || !bubbleContainerEl) return;
+		const gRect = greetingEl.getBoundingClientRect();
+		const cRect = bubbleContainerEl.getBoundingClientRect();
+		const gap = cRect.top - gRect.bottom;
+		greetingEl.style.opacity = String(Math.max(0, Math.min(1, (gap + 8) / 48)));
+	}
+	$effect(() => {
+		if (!bubbleContainerEl) return;
+		const ro = new ResizeObserver(() => updateGreetingOpacity());
+		ro.observe(bubbleContainerEl);
+		updateGreetingOpacity();
+		return () => ro.disconnect();
+	});
 	const activeTab = $derived($page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
 
 	const todayHour = new Date().getHours();
@@ -295,7 +311,7 @@
 	<div class="relative flex-1 min-h-0">
 		<!-- Greeting hero (background, peeks through above bottom-anchored content) -->
 		{#if activeTab === 'recipes' && !searchOpen && userSettings.greetingEnabled}
-			<div class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4" style="top: calc(env(safe-area-inset-top) + 5.25rem + 3.5rem); height: 22vh; min-height: 100px; max-height: 160px; z-index: 0">
+			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: calc(env(safe-area-inset-top) + 5.25rem + 3.5rem); height: 22vh; min-height: 100px; max-height: 160px; z-index: 0; transition: opacity 0.15s ease">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user?.username ?? ''}</p>
 				{#if recipeInfoLine}
@@ -308,16 +324,16 @@
 		<div class="absolute left-0 right-0 z-10 px-4 pb-3"
 		     bind:clientHeight={overlayHeight}
 		     style="top: calc(env(safe-area-inset-top) + 5.25rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
-			<div class="flex gap-1 p-1 rounded-2xl" style="background-color: var(--color-surface-container)">
+			<div class="flex gap-1 p-1 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<button
 					onclick={() => goto($page.url.pathname, { noScroll: true, keepFocus: true })}
 					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all active:opacity-70"
-					style="background-color: {activeTab === 'recipes' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'recipes' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+					style="background-color: {activeTab === 'recipes' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'recipes' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>{t.recipes_title}</button>
 				<button
 					onclick={() => { goto(`${$page.url.pathname}?tab=mealplan`, { noScroll: true, keepFocus: true }); closeSearch(); }}
 					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all active:opacity-70"
-					style="background-color: {activeTab === 'mealplan' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'mealplan' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+					style="background-color: {activeTab === 'mealplan' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'mealplan' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>{t.meal_plan_tab}</button>
 			</div>
 		</div>
@@ -331,7 +347,7 @@
 
 	<!-- Recipes: content scrolls under sticky overlay -->
 	{:else}
-		<div class="absolute inset-0 overflow-y-auto px-4" style="z-index: 1; padding-top: calc(env(safe-area-inset-top) + 5.25rem + {overlayHeight}px); padding-bottom: 5.5rem">
+		<div onscroll={updateGreetingOpacity} class="absolute inset-0 overflow-y-auto px-4" style="z-index: 1; padding-top: calc(env(safe-area-inset-top) + 5.25rem + {overlayHeight}px); padding-bottom: 5.5rem">
 		<div class="min-h-full flex flex-col justify-end">
 
 		<!-- Pending Shares -->
@@ -448,8 +464,9 @@
 			{/snippet}
 
 			<!-- Bottom-up: non-favorites bubble above, favorites bubble below (near thumb) -->
+			<div bind:this={bubbleContainerEl}>
 			{#if otherRecipes.length > 0}
-				<div class="rounded-2xl overflow-hidden mb-2" style="background-color: var(--color-surface-card)">
+				<div class="rounded-2xl overflow-hidden mb-2" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<div class="px-4 pt-3 pb-1 flex items-center gap-2">
 						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-on-surface-variant)"></span>
 						<p class="text-sm font-semibold" style="color: var(--color-on-surface-variant)">{t.recipes_title}</p>
@@ -461,7 +478,7 @@
 				</div>
 			{/if}
 			{#if favoriteRecipes.length > 0}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<div class="px-4 pt-3 pb-1 flex items-center gap-2">
 						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
 						<p class="text-sm font-semibold" style="color: var(--color-primary)">{t.recipe_favorite}</p>
@@ -472,6 +489,7 @@
 					<div class="h-2"></div>
 				</div>
 			{/if}
+			</div>
 		{/if}
 
 		</div><!-- end inner flex-col -->

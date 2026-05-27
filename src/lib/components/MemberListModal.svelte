@@ -46,7 +46,7 @@
 
 <!-- Modal -->
 <div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-8 pt-4"
-     style="background-color: var(--color-surface-low); bottom: {bottomOffset}px">
+     style="background-color: var(--modal-bg); bottom: {bottomOffset}px">
 	<div class="flex justify-center mb-4">
 		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 	</div>

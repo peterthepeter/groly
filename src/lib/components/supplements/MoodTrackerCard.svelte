@@ -41,7 +41,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="overflow-hidden active:opacity-80 cursor-pointer {embedded ? '' : 'rounded-2xl'}"
-	style={embedded ? '' : 'background-color: var(--color-surface-card)'}
+	style={embedded ? '' : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}
 	onclick={() => entrySheetOpen = true}
 >
 	<!-- Header row — always visible -->

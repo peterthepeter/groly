@@ -440,7 +440,7 @@
 		<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto px-4 py-2"
 		     style="top: calc(env(safe-area-inset-top) + 5.25rem); background-color: var(--color-bg)">
 			<div class="flex items-center gap-2 rounded-xl px-3 py-2.5"
-			     style="background-color: var(--color-surface-low)">
+			     style="background-color: var(--modal-bg)">
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
 				     stroke="var(--color-on-surface-variant)" stroke-width="2"
 				     stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">

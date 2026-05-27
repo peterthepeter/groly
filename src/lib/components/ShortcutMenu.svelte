@@ -54,7 +54,7 @@
 			data-shortcut-id="__settings__"
 			onclick={goToSettings}
 			class="shortcut-btn flex flex-col items-center justify-start gap-1.5 pt-3 pb-2.5 px-3 rounded-2xl shadow-lg"
-			style="background-color: var(--color-surface-container); min-width: 72px; max-width: 92px; --arc-y: 0px; transform: translateY(0px);"
+			style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); min-width: 72px; max-width: 92px; --arc-y: 0px; transform: translateY(0px);"
 		>
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
 				<circle cx="12" cy="12" r="3"/>
@@ -71,8 +71,7 @@
 				data-shortcut-id={sc.id}
 				onclick={() => execute(sc)}
 				class="shortcut-btn flex flex-col items-center justify-start gap-1.5 pt-3 pb-2.5 px-3 rounded-2xl shadow-lg"
-				style="background-color: var(--color-surface-container);
-				       min-width: 72px;
+				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border);				       min-width: 72px;
 				       max-width: 92px;
 				       --arc-y: {offsets[i] ?? 0}px;
 				       transform: translateY({offsets[i] ?? 0}px);

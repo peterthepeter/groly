@@ -95,7 +95,7 @@
 	}
 </script>
 
-<div class={embedded ? 'flex flex-col px-4 py-2' : 'rounded-2xl px-4 py-3 flex flex-col'} style={embedded ? '' : 'background-color: var(--color-surface-card)'}>
+<div class={embedded ? 'flex flex-col px-4 py-2' : 'rounded-2xl px-4 py-3 flex flex-col'} style={embedded ? '' : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}>
 
 	<!-- Header row: title left, buttons right -->
 	<div class="flex items-center gap-2">

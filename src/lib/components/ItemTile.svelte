@@ -103,7 +103,7 @@
 		ontouchmove={handleTouchMove}
 		oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
 		class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
-		style="background-color: var(--color-surface-card); touch-action: pan-y;"
+		style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); touch-action: pan-y;"
 	>
 		<!-- Favorite dot — top left -->
 		{#if isFavorite && userSettings.showFavoriteIndicator}

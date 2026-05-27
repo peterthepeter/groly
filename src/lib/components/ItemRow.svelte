@@ -43,7 +43,7 @@
 	onpointercancel={endPress}
 	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
 	class="w-full flex items-center h-[54px] px-3.5 gap-2.5 active:opacity-70 transition-opacity select-none text-left"
-	style="background-color: var(--color-surface-card); touch-action: pan-y;"
+	style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); touch-action: pan-y;"
 >
 	<!-- Category icon — no background, same as tile -->
 	<div class="relative flex-shrink-0">

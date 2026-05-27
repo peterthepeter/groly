@@ -301,7 +301,7 @@
 			<button
 				onclick={() => goto('/tracker')}
 				class="w-9 h-9 flex items-center justify-center rounded-xl active:opacity-60 transition-opacity"
-				style="background-color: var(--color-surface-high)"
+				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
 				aria-label="Zurück"
 			>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -314,7 +314,7 @@
 
 	<!-- Back chip -->
 	<div class="flex-shrink-0 px-4 mb-3">
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<button
 				onclick={() => goto('/tracker')}
 				class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold active:opacity-70 transition-opacity"
@@ -357,7 +357,7 @@
 			<!-- Supplements group -->
 			{#if supplements.length > 0}
 				<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Supplements</p>
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					{#each supplements as supplement, i (supplement.id)}
 						<div class="px-3 py-2 flex items-center gap-3{!supplement.active ? ' opacity-50' : ''}"
 						     style="border-color: var(--color-outline-variant)">
@@ -419,7 +419,7 @@
 
 			<!-- Tracker group -->
 			<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Tracker</p>
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<!-- Water -->
 				<div class="px-3 py-2 flex items-center gap-3{!userSettings.waterTrackerEnabled ? ' opacity-50' : ''}"
 				     style="border-color: var(--color-outline-variant)">

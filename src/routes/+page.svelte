@@ -44,6 +44,23 @@
 	let showInstallModal = $state(false);
 	let installPrompt = $state<any>(null);
 	let listsLoadVersion = 0;
+	let greetingEl = $state<HTMLElement | null>(null);
+	let bubbleContainerEl = $state<HTMLElement | null>(null);
+	let scrollContainerEl = $state<HTMLElement | null>(null);
+	function updateGreetingOpacity() {
+		if (!greetingEl || !bubbleContainerEl) return;
+		const gRect = greetingEl.getBoundingClientRect();
+		const cRect = bubbleContainerEl.getBoundingClientRect();
+		const gap = cRect.top - gRect.bottom;
+		greetingEl.style.opacity = String(Math.max(0, Math.min(1, (gap + 8) / 48)));
+	}
+	$effect(() => {
+		if (!bubbleContainerEl) return;
+		const ro = new ResizeObserver(() => updateGreetingOpacity());
+		ro.observe(bubbleContainerEl);
+		updateGreetingOpacity();
+		return () => ro.disconnect();
+	});
 
 	const todayHour = new Date().getHours();
 	const todayGreeting = $derived(todayHour < 12 ? t.greeting_morning : todayHour < 18 ? t.greeting_day : todayHour < 22 ? t.greeting_evening : t.greeting_night);
@@ -479,7 +496,7 @@
 	<!-- Hero header + bottom-anchored content -->
 	<div class="relative flex-1 min-h-0">
 		{#if userSettings.greetingEnabled}
-			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: 22vh; min-height: 100px; max-height: 160px; z-index: 0">
+			<div bind:this={greetingEl} class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="height: 22vh; min-height: 100px; max-height: 160px; z-index: 0; transition: opacity 0.15s ease">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user?.username ?? ''}</p>
 				{#if listInfoLine}
@@ -487,7 +504,7 @@
 				{/if}
 			</div>
 		{/if}
-		<div class="absolute inset-0 flex flex-col justify-end overflow-y-auto px-4"
+		<div bind:this={scrollContainerEl} onscroll={updateGreetingOpacity} class="absolute inset-0 flex flex-col justify-end overflow-y-auto px-4"
 		     style="z-index: 1; padding-top: {showInstallBanner ? '4.5rem' : '0'}; padding-bottom: 5.5rem">
 		{#if loading}
 			<div class="flex justify-center py-8">
@@ -568,7 +585,11 @@
 						</div>
 					{/each}
 				{:else}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+					<div bind:this={bubbleContainerEl} class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+						<div class="px-4 pt-3 pb-1 flex items-center gap-2">
+							<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
+							<p class="text-sm font-semibold" style="color: var(--color-on-surface)">{t.nav_lists}</p>
+						</div>
 						{#each displayedLists as list, i (list.id)}
 							<ListCard
 								{list}
@@ -647,7 +668,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={dismissPushPrompt}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-10 pt-4"
-	     style="background-color: var(--color-surface-low)">
+	     style="background-color: var(--modal-bg)">
 		<div class="flex justify-center mb-5">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>

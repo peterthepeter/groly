@@ -259,7 +259,7 @@
 
 <!-- ── Standalone mode (Today tab): collapsible card with own week/month toggle ── -->
 {#if fixedView === null}
-<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 	<button
 		onclick={() => expanded = !expanded}
 		class="w-full flex items-center justify-between px-4 py-3 active:opacity-70"
@@ -286,7 +286,7 @@
 	{@const dayEntry = logMap.get(viewedDate)}
 	{#if dayEntry}
 		{@const level = getMoodLevel(dayEntry.mood)}
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<div class="w-full flex items-center gap-2 px-4 py-3">
 				<button
 					onclick={() => dayCardExpanded = !dayCardExpanded}
@@ -346,7 +346,7 @@
 
 <!-- ── Fixed week/month (History week/month view): no toggle, no own nav ── -->
 {:else if logs.length > 0}
-<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 	<button
 		onclick={() => expanded = !expanded}
 		class="w-full flex items-center gap-2 px-4 py-3 active:opacity-70"
@@ -408,7 +408,7 @@
 
 {#snippet viewToggleAndNav()}
 	<div class="flex items-center gap-2 pt-3">
-		<div class="flex rounded-xl overflow-hidden text-xs font-semibold shrink-0" style="background-color: var(--color-surface-container)">
+		<div class="flex rounded-xl overflow-hidden text-xs font-semibold shrink-0" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<button
 				onclick={() => { view = 'week'; referenceDate = todayStr(); }}
 				class="px-3 py-1.5 transition-colors"

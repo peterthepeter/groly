@@ -420,7 +420,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => open = false}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl flex flex-col"
-	     style="background-color: var(--color-surface-low); max-height: 85vh">
+	     style="background-color: var(--modal-bg); max-height: 85vh">
 		<!-- Scrollable content area -->
 		<div bind:this={sheetEl} class="flex-1 min-h-0 overflow-y-auto">
 			<div class="px-5 pt-4" class:pb-4={trackerList.length > 0 && sortedSupplements.length > 0} class:pb-6={!(trackerList.length > 0 && sortedSupplements.length > 0)}>
@@ -442,7 +442,7 @@
 								onclick={cycleSortOrder}
 								aria-label={t.supplement_sort_label}
 								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl active:opacity-60 transition-opacity"
-								style="background-color: var(--color-surface-container)"
+								style="background-color: var(--bubble-interactive-bg)"
 							>
 								<span class="text-[11px] font-medium" style="color: var(--color-on-surface-variant)">{t.supplement_sort_label}</span>
 								<span class="text-[10px] font-bold" style="color: var(--color-primary)">
@@ -460,7 +460,7 @@
 							onclick={() => open = false}
 							aria-label={t.close}
 							class="w-8 h-8 flex items-center justify-center rounded-xl active:opacity-60 transition-opacity"
-							style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+							style="background-color: var(--bubble-interactive-bg); color: var(--color-on-surface-variant)"
 						>
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 								<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -471,7 +471,7 @@
 
 				<div class="flex flex-col gap-2">
 				{#if activeSheetTab === 'tracker' && trackerList.length > 0}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						{#if caffeineEnabled && caffeineDrinks.length > 0}
 							<div class="px-2 py-2.5">
 								<div class="flex items-center gap-1.5">
@@ -671,7 +671,7 @@
 					</div>
 				{/if}
 				{#if (activeSheetTab === 'supplements' || trackerList.length === 0) && sortedSupplements.length === 0}
-					<div class="rounded-2xl px-4 py-6 flex flex-col items-center gap-3 text-center" style="background-color: var(--color-surface-container)">
+					<div class="rounded-2xl px-4 py-6 flex flex-col items-center gap-3 text-center" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_empty_hint}</p>
 						<button
 							onclick={() => { open = false; goto('/tracker/verwalten'); }}
@@ -681,7 +681,7 @@
 					</div>
 				{/if}
 				{#if (activeSheetTab === 'supplements' || trackerList.length === 0) && sortedSupplements.length > 0}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						{#each sortedSupplements as s, i (s.id)}
 							{@const isSaving = saving[s.id] ?? false}
 							{@const isDone = done[s.id] ?? false}
@@ -782,16 +782,16 @@
 		<!-- Bottom tab bar — always when trackers are available -->
 		{#if trackerList.length > 0}
 			<div class="flex-shrink-0 px-4 pt-2" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom))">
-				<div class="flex gap-1.5 p-1 rounded-2xl" style="background-color: var(--color-surface-container)">
+				<div class="flex gap-1.5 p-1 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<button
 						onclick={() => switchTab('tracker')}
 						class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all active:opacity-70"
-						style="background-color: {activeSheetTab === 'tracker' ? 'var(--color-surface-high)' : 'transparent'}; color: {activeSheetTab === 'tracker' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+						style="background-color: {activeSheetTab === 'tracker' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeSheetTab === 'tracker' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 					>Tracker</button>
 					<button
 						onclick={() => switchTab('supplements')}
 						class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all active:opacity-70"
-						style="background-color: {activeSheetTab === 'supplements' ? 'var(--color-surface-high)' : 'transparent'}; color: {activeSheetTab === 'supplements' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+						style="background-color: {activeSheetTab === 'supplements' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeSheetTab === 'supplements' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 					>Supplements</button>
 				</div>
 			</div>

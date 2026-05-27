@@ -158,7 +158,7 @@
 	<div class="fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
 	     style="padding-top: calc(env(safe-area-inset-top) + 1rem)">
 		<div class="flex items-center justify-between rounded-2xl px-4 py-3"
-		     style="background-color: var(--color-surface-low)">
+		     style="background-color: var(--modal-bg)">
 			<button
 				onclick={() => goto('/rezepte')}
 				class="w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60"
@@ -179,7 +179,7 @@
 		<!-- Bild -->
 		<input bind:this={imageFileInput} type="file" accept="image/*"
 		       style="display:none" onchange={handleImageSelect} />
-		<div class="rounded-2xl overflow-hidden relative" style="background-color: var(--color-surface-container)">
+		<div class="rounded-2xl overflow-hidden relative" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<button type="button" onclick={() => imageFileInput?.click()}
 			        class="w-full text-left active:opacity-75">
 				{#if imagePreview}
@@ -212,7 +212,7 @@
 		</div>
 
 		<!-- Block 1: Name + Beschreibung + Portionen/Zeiten -->
-		<div class="rounded-2xl" style="background-color: var(--color-surface-container)">
+		<div class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<div class="px-4 pt-4 pb-2">
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
@@ -271,7 +271,7 @@
 		</div>
 
 		<!-- Zutaten -->
-		<div class="rounded-2xl" style="background-color: var(--color-surface-container)">
+		<div class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<div class="flex items-center justify-between px-4 pt-3 pb-1">
 				<h2 class="text-sm font-bold" style="color: var(--color-on-surface)">{t.recipe_ingredients}</h2>
 				<button onclick={addIngredient} class="flex items-center gap-1 text-xs font-semibold active:opacity-60" style="color: var(--color-primary)">

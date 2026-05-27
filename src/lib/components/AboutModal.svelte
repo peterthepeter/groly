@@ -17,7 +17,7 @@
 
 <!-- Modal -->
 <div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl flex flex-col"
-     style="background-color: var(--color-surface-low); max-height: 85vh">
+     style="background-color: var(--modal-bg); max-height: 85vh">
 
 	<!-- Handle -->
 	<div class="flex justify-center pt-4 pb-2 flex-shrink-0">
@@ -32,7 +32,7 @@
 		<button
 			onclick={onClose}
 			class="w-8 h-8 flex items-center justify-center rounded-full active:opacity-60 transition-opacity"
-			style="background-color: var(--color-surface-container)"
+			style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
 			aria-label={lang === 'en' ? 'Close' : 'Schließen'}
 		>
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)"
@@ -47,7 +47,7 @@
 	<div class="overflow-y-auto flex-1 px-6 py-2 space-y-3">
 
 		<!-- Single info card -->
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 
 			<!-- App row -->
 			<div class="flex items-center gap-3 px-4 py-3.5">
@@ -73,7 +73,7 @@
 			</div>
 
 			<!-- Divider -->
-			<div class="mx-4 h-px" style="background-color: var(--color-surface-high)"></div>
+			<div class="mx-4 h-px" style="background-color: var(--color-outline-variant)"></div>
 
 			<!-- Links -->
 			<div class="px-4 py-3 flex flex-wrap gap-x-4 gap-y-2">
@@ -116,7 +116,7 @@
 		<button
 			onclick={onClose}
 			class="w-full py-3.5 rounded-full text-sm font-semibold active:opacity-80 transition-opacity"
-			style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+			style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 		>
 			{lang === 'en' ? 'Close' : 'Schließen'}
 		</button>

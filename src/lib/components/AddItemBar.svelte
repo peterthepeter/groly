@@ -170,7 +170,7 @@
 <!-- Bottom sheet -->
 <div class="fixed left-0 right-0 z-[60] max-w-[430px] mx-auto" style="bottom: {bottomOffset}px">
 	<div class="rounded-t-3xl px-4 pb-3 pt-3 shadow-2xl"
-	     style="background-color: var(--color-surface-low)">
+	     style="background-color: var(--modal-bg)">
 
 		<!-- Handle -->
 		<div class="flex justify-center mb-3">
@@ -374,7 +374,7 @@
 
 			<!-- Eingabefelder -->
 			<div class="mb-3">
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					{#if !isMultiItem}
 						<div class="flex items-center gap-2 px-4" style="height: 44px">
 							<input

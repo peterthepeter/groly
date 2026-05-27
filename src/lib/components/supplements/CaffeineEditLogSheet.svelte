@@ -66,7 +66,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => sheet = null}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl"
-	     style="background-color: var(--color-surface-low)">
+	     style="background-color: var(--modal-bg)">
 		<div class="p-6 space-y-5">
 			<div class="flex justify-center">
 				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>

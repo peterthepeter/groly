@@ -223,7 +223,7 @@
 			<p class="text-sm text-center" style="color: var(--color-error)">{error}</p>
 			<button onclick={() => goto(`/rezepte/${recipeId}`)}
 			        class="px-6 py-2.5 rounded-full text-sm font-semibold"
-			        style="background-color: var(--color-surface-container); color: var(--color-on-surface)">Zurück</button>
+			        style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface)">Zurück</button>
 		</div>
 	{:else}
 		<div class="flex-1 overflow-y-auto px-4 space-y-3"
@@ -232,7 +232,7 @@
 			<!-- Bild -->
 			<input bind:this={imageFileInput} type="file" accept="image/*"
 			       style="display:none" onchange={handleImageSelect} />
-			<div class="rounded-2xl overflow-hidden relative" style="background-color: var(--color-surface-container)">
+			<div class="rounded-2xl overflow-hidden relative" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<button type="button" onclick={() => imageFileInput?.click()}
 				        class="w-full text-left active:opacity-75">
 					{#if imagePreview || imageUrl}
@@ -265,7 +265,7 @@
 			</div>
 
 			<!-- Block 1: Name + Beschreibung + Portionen/Zeiten -->
-			<div class="rounded-2xl" style="background-color: var(--color-surface-container)">
+			<div class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<div class="px-4 pt-4 pb-2">
 					<input
 						type="text"
@@ -322,7 +322,7 @@
 			</div>
 
 			<!-- Zutaten -->
-			<div class="rounded-2xl" style="background-color: var(--color-surface-container)">
+			<div class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<div class="flex items-center justify-between px-4 pt-3 pb-1">
 					<h2 class="text-sm font-bold" style="color: var(--color-on-surface)">{t.recipe_ingredients}</h2>
 					<button onclick={addIngredient} class="flex items-center gap-1 text-xs font-semibold active:opacity-60" style="color: var(--color-primary)">

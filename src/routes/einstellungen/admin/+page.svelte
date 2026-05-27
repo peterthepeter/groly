@@ -635,10 +635,11 @@
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader title={t.admin_page_title} onMenuOpen={() => menuOpen = true} />
 
-	<div class="flex-1 overflow-y-auto pb-8 px-4 space-y-3" style="padding-top: calc(env(safe-area-inset-top) + 6rem)">
+	<div class="flex-1 overflow-y-auto pb-8 px-4" style="padding-top: calc(env(safe-area-inset-top) + 6rem)">
 
+	<div class="rounded-2xl overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 		<!-- ── Users Accordion ─────────────────────────────────────────────────── -->
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div>
 			<!-- Header -->
 			<button
 				onclick={() => usersOpen = !usersOpen}
@@ -824,7 +825,7 @@
 		</div>
 
 		<!-- ── Supplement Catalog Accordion ───────────────────────────────────── -->
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div>
 			<!-- Header -->
 			<button
 				onclick={() => { catalogOpen = !catalogOpen; if (catalogOpen) loadCatalog(); }}
@@ -952,7 +953,7 @@
 		</div>
 
 		<!-- ── Caffeine Drinks Accordion ──────────────────────────────────────── -->
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div>
 			<button
 				onclick={() => { caffeineDrinksOpen = !caffeineDrinksOpen; if (caffeineDrinksOpen) loadCaffeineDrinks(); }}
 				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
@@ -1112,6 +1113,7 @@
 				</div>
 			{/if}
 		</div>
+	</div>
 
 	</div><!-- end scroll -->
 </div>
@@ -1125,7 +1127,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => editUser = null}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-8 pt-4"
-	     style="background-color: var(--color-surface-low)">
+	     style="background-color: var(--modal-bg)">
 		<div class="flex justify-center mb-4">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>
@@ -1226,7 +1228,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={closeCatalogForm}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl flex flex-col"
-	     style="background-color: var(--color-surface-low); max-height: 92vh">
+	     style="background-color: var(--modal-bg); max-height: 92vh">
 
 		<!-- Handle + title -->
 		<div class="px-6 pt-5 pb-3 shrink-0">

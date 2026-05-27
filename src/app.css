@@ -38,6 +38,15 @@
     --radius-xl: 20px;
     --radius-2xl: 24px;
     --radius-full: 9999px;
+
+    /* Bubble system — two tiers sharing one outline */
+    --bubble-container-bg: rgba(0,0,0,0.025);
+    --bubble-container-border: rgba(0,0,0,0.08);
+    --bubble-interactive-bg: rgba(0,0,0,0.045);
+    --bubble-interactive-border: rgba(0,0,0,0.09);
+
+    /* Modal layer (sheets, drawers) — neutral dark, no tint */
+    --modal-bg: #ffffff;
   }
 
   :root[data-theme="dark"], .dark {
@@ -69,6 +78,13 @@
     --color-outline-variant: rgba(255, 255, 255, 0.08);
 
     --color-error: #ff6b6b;
+
+    --bubble-container-bg: rgba(255,255,255,0.015);
+    --bubble-container-border: rgba(255,255,255,0.07);
+    --bubble-interactive-bg: rgba(255,255,255,0.04);
+    --bubble-interactive-border: rgba(255,255,255,0.07);
+
+    --modal-bg: var(--color-bg);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -100,6 +116,13 @@
       --color-outline-variant: rgba(255, 255, 255, 0.08);
 
       --color-error: #ff6b6b;
+
+      --bubble-container-bg: rgba(255,255,255,0.015);
+      --bubble-container-border: rgba(255,255,255,0.07);
+      --bubble-interactive-bg: rgba(255,255,255,0.04);
+      --bubble-interactive-border: rgba(255,255,255,0.07);
+
+      --modal-bg: var(--color-bg);
     }
   }
 

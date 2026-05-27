@@ -146,7 +146,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={onclose}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl flex flex-col"
-	     style="background-color: var(--color-surface-low); max-height: 90vh">
+	     style="background-color: var(--modal-bg); max-height: 90vh">
 
 		<!-- Handle + title (fixed) -->
 		<div class="px-6 pt-5 pb-3 shrink-0">
@@ -195,7 +195,7 @@
 			</div>
 
 			<!-- Sticky unten: Enter manually + Suchfeld direkt über der Tastatur, eine Bubble -->
-			<div class="shrink-0 px-6 pt-1 pb-3" style="background-color: var(--color-surface-low)">
+			<div class="shrink-0 px-6 pt-1 pb-3" style="background-color: var(--modal-bg)">
 				<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
 					<button
 						type="button"
@@ -480,7 +480,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-60" style="background-color: rgba(0,0,0,0.4)" onclick={closePicker}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-60 max-w-[430px] mx-auto rounded-t-3xl"
-	     style="background-color: var(--color-surface-low)">
+	     style="background-color: var(--modal-bg)">
 
 		<div class="px-6 pt-5 pb-2 shrink-0">
 			<div class="flex justify-center mb-3">

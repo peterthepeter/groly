@@ -82,7 +82,7 @@
 	<div class="fixed inset-0 z-50 flex items-end justify-center" style="background-color: rgba(0,0,0,0.6)"
 	     onclick={(e) => { if (e.target === e.currentTarget && !adding) supplementId = null; }}>
 		<div class="w-full max-w-[430px] rounded-t-3xl px-4 pt-4"
-		     style="background-color: var(--color-surface-low); max-height: 80vh; display: flex; flex-direction: column; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
+		     style="background-color: var(--modal-bg); max-height: 80vh; display: flex; flex-direction: column; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
 			<div class="flex justify-center mb-4 flex-shrink-0">
 				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 			</div>
@@ -101,7 +101,7 @@
 			{/if}
 
 			<div class="overflow-y-auto flex-1">
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					{#if newMode}
 						<div class="flex items-center gap-2 px-4" style="height: 56px; background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-container))">
 							<!-- svelte-ignore a11y_autofocus -->

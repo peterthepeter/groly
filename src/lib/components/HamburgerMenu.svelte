@@ -48,7 +48,7 @@
 <!-- Drawer -->
 <div
 	class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl transition-transform duration-300"
-	style="background-color: var(--color-surface-low); transform: translateY({open ? '0' : '100%'})"
+	style="background-color: var(--modal-bg); transform: translateY({open ? '0' : '100%'})"
 >
 	<!-- Handle -->
 	<div class="flex justify-center pt-3 pb-1">
@@ -72,138 +72,159 @@
 	{/if}
 
 	<!-- Menu Items -->
-	<nav class="px-4 pb-4 space-y-1">
-		<button
-			onclick={() => navigate('/')}
-			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-			style="background-color: {$page.url.pathname === '/' ? 'var(--color-surface-container)' : 'transparent'}"
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-				<line x1="3" y1="6" x2="21" y2="6"/>
-				<path d="M16 10a4 4 0 0 1-8 0"/>
-			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_lists}</span>
-		</button>
-
-		{#if userSettings.showSupplementTracker}
+	<nav class="px-4 pb-4 space-y-3">
+		<!-- Main nav group -->
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<button
-				onclick={() => navigate('/tracker')}
-				class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-				style="background-color: {$page.url.pathname.startsWith('/tracker') ? 'var(--color-surface-container)' : 'transparent'}"
+				onclick={() => navigate('/')}
+				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+				style="height: 44px; background-color: {$page.url.pathname === '/' ? 'rgba(255,255,255,0.06)' : 'transparent'}"
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
-					<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
+					<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+					<line x1="3" y1="6" x2="21" y2="6"/>
+					<path d="M16 10a4 4 0 0 1-8 0"/>
 				</svg>
-				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_supplements}</span>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_lists}</span>
 			</button>
-		{/if}
 
-		{#if userSettings.showRecipes}
+			{#if userSettings.showSupplementTracker}
+				<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+				<button
+					onclick={() => navigate('/tracker')}
+					class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+					style="height: 44px; background-color: {$page.url.pathname.startsWith('/tracker') ? 'rgba(255,255,255,0.06)' : 'transparent'}"
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
+						<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
+					</svg>
+					<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_supplements}</span>
+				</button>
+			{/if}
+
+			{#if userSettings.showRecipes}
+				<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+				<button
+					onclick={() => navigate('/rezepte')}
+					class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+					style="height: 44px; background-color: {$page.url.pathname.startsWith('/rezepte') ? 'rgba(255,255,255,0.06)' : 'transparent'}"
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+					</svg>
+					<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_recipes}</span>
+				</button>
+			{/if}
+
+			{#if user?.role === 'admin'}
+				<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+				<button
+					onclick={() => navigate('/einstellungen/admin')}
+					class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+					style="height: 44px; background-color: {$page.url.pathname.startsWith('/einstellungen/admin') ? 'rgba(255,255,255,0.06)' : 'transparent'}"
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+						<circle cx="9" cy="7" r="4"/>
+						<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+						<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+					</svg>
+					<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.admin_nav_label}</span>
+				</button>
+			{/if}
+
+			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
 			<button
-				onclick={() => navigate('/rezepte')}
-				class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-				style="background-color: {$page.url.pathname.startsWith('/rezepte') ? 'var(--color-surface-container)' : 'transparent'}"
+				onclick={() => navigate('/einstellungen')}
+				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+				style="height: 44px; background-color: {$page.url.pathname === '/einstellungen' ? 'rgba(255,255,255,0.06)' : 'transparent'}"
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+					<circle cx="12" cy="12" r="3"/>
+					<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
 				</svg>
-				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_recipes}</span>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_settings}</span>
 			</button>
-		{/if}
-
-		{#if user?.role === 'admin'}
-			<button
-				onclick={() => navigate('/einstellungen/admin')}
-				class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-				style="background-color: {$page.url.pathname.startsWith('/einstellungen/admin') ? 'var(--color-surface-container)' : 'transparent'}"
-			>
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-					<circle cx="9" cy="7" r="4"/>
-					<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-					<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-				</svg>
-				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.admin_nav_label}</span>
-			</button>
-		{/if}
-
-		<button
-			onclick={() => navigate('/einstellungen')}
-			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-			style="background-color: {$page.url.pathname === '/einstellungen' ? 'var(--color-surface-container)' : 'transparent'}"
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<circle cx="12" cy="12" r="3"/>
-				<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_settings}</span>
-		</button>
-
-		<!-- Section label -->
-		<div class="px-4 pt-2 pb-0.5">
-			<span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--color-on-surface-variant); opacity: 0.6">{currentLang() === 'en' ? 'Info' : 'Infos'}</span>
 		</div>
 
-		<button
-			onclick={() => { close(); infoOpen = true; }}
-			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<circle cx="12" cy="12" r="10"/>
-				<line x1="12" y1="8" x2="12" y2="12"/>
-				<line x1="12" y1="16" x2="12.01" y2="16"/>
-			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'How to use' : 'Bedienung'}</span>
-		</button>
+		<!-- Section label -->
+		<div class="px-2 pt-1">
+			<span class="text-[10px] font-semibold uppercase tracking-widest" style="color: var(--color-on-surface-variant); opacity: 0.6">{currentLang() === 'en' ? 'Info' : 'Infos'}</span>
+		</div>
 
-		<button
-			onclick={() => { close(); pwaOpen = true; }}
-			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-				<line x1="12" y1="18" x2="12.01" y2="18"/>
-				<polyline points="8 10 12 6 16 10"/>
-				<line x1="12" y1="6" x2="12" y2="14"/>
-			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Install App' : 'App installieren'}</span>
-		</button>
+		<!-- Info nav group -->
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+			<button
+				onclick={() => { close(); infoOpen = true; }}
+				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+				style="height: 44px"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="12" cy="12" r="10"/>
+					<line x1="12" y1="8" x2="12" y2="12"/>
+					<line x1="12" y1="16" x2="12.01" y2="16"/>
+				</svg>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'How to use' : 'Bedienung'}</span>
+			</button>
 
-		<button
-			onclick={() => { close(); changelogOpen = true; }}
-			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? "What's new" : 'Was ist neu'}</span>
-		</button>
+			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+			<button
+				onclick={() => { close(); pwaOpen = true; }}
+				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+				style="height: 44px"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+					<line x1="12" y1="18" x2="12.01" y2="18"/>
+					<polyline points="8 10 12 6 16 10"/>
+					<line x1="12" y1="6" x2="12" y2="14"/>
+				</svg>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Install App' : 'App installieren'}</span>
+			</button>
 
-		<button
-			onclick={() => { close(); aboutOpen = true; }}
-			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<circle cx="12" cy="12" r="10"/>
-				<line x1="12" y1="8" x2="12" y2="8"/>
-				<path d="M11 12h1v4h1"/>
-			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'About' : 'Über Groly'}</span>
-		</button>
+			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+			<button
+				onclick={() => { close(); changelogOpen = true; }}
+				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+				style="height: 44px"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+				</svg>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? "What's new" : 'Was ist neu'}</span>
+			</button>
 
-		<button
-			onclick={logout}
-			class="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-colors active:opacity-70 text-left"
-		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-				<polyline points="16 17 21 12 16 7"/>
-				<line x1="21" y1="12" x2="9" y2="12"/>
-			</svg>
-			<span class="font-medium text-sm" style="color: var(--color-error)">{t.nav_logout}</span>
-		</button>
+			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+			<button
+				onclick={() => { close(); aboutOpen = true; }}
+				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+				style="height: 44px"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="12" cy="12" r="10"/>
+					<line x1="12" y1="8" x2="12" y2="8"/>
+					<path d="M11 12h1v4h1"/>
+				</svg>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'About' : 'Über Groly'}</span>
+			</button>
+		</div>
+
+		<!-- Logout (own bubble, destructive action stands apart) -->
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+			<button
+				onclick={logout}
+				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
+				style="height: 44px"
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+					<polyline points="16 17 21 12 16 7"/>
+					<line x1="21" y1="12" x2="9" y2="12"/>
+				</svg>
+				<span class="font-medium text-sm" style="color: var(--color-error)">{t.nav_logout}</span>
+			</button>
+		</div>
 	</nav>
 
 	<!-- Safe area padding -->

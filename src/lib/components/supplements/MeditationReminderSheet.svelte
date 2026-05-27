@@ -103,7 +103,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => open = false}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl overflow-y-auto"
-	     style="background-color: var(--color-surface-low); max-height: 90vh">
+	     style="background-color: var(--modal-bg); max-height: 90vh">
 		<div class="p-6 space-y-4">
 			<div class="flex justify-center mb-1">
 				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
@@ -130,7 +130,7 @@
 
 				<div class="space-y-3">
 					{#each entries as entry}
-						<div class="rounded-2xl p-4 space-y-3" style="background-color: var(--color-surface-card)">
+						<div class="rounded-2xl p-4 space-y-3" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 
 							<div>
 								<p class="text-xs font-medium mb-1.5" style="color: var(--color-on-surface-variant)">{t.meditation_reminder_time}</p>

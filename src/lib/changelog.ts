@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.16',
+		de: [
+			'Neues Design: einheitliche transparente Bubbles mit dünnen Outlines'
+		],
+		en: [
+			'New design: unified transparent bubbles with thin outlines'
+		]
+	},
+	{
 		version: '0.7.15',
 		de: [
 			'Rezepte: Favoriten, Bewertung, Tags und „Heute gekocht"-Verlauf',

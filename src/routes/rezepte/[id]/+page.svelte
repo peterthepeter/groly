@@ -412,7 +412,7 @@
 							aria-label={t.recipe_cooked_today}
 							title={t.recipe_cooked_today}
 							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-40 active:scale-95 transition-transform"
-							style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+							style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 						>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
@@ -492,7 +492,7 @@
 								disabled={selectedCount === 0}
 								aria-label="Auf Einkaufsliste"
 								class="flex items-center gap-1.5 px-2.5 h-8 rounded-full text-xs font-semibold active:opacity-60 disabled:opacity-40 active:scale-95 transition-transform"
-								style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
+								style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface)"
 							>
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
@@ -513,7 +513,7 @@
 								onclick={() => editingTags && removeTag(tag)}
 								disabled={isOfflineFallback}
 								class="h-7 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1 active:opacity-60 disabled:opacity-40"
-								style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
+								style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface)"
 							>
 								<span>{tag}</span>
 								{#if editingTags}
@@ -530,7 +530,7 @@
 								placeholder={t.recipe_tags_placeholder}
 								onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
 								class="h-7 px-2.5 rounded-full text-xs outline-none"
-								style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; min-width: 6rem"
+								style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface); font-size: 16px; min-width: 6rem"
 							/>
 							<button
 								onclick={async () => { if (tagInput.trim()) await addTag(); editingTags = false; tagInput = ''; }}
@@ -554,16 +554,16 @@
 				</div>
 
 				<!-- Tabs -->
-				<div class="flex gap-1 mt-3 mb-3 p-1 rounded-xl" style="background-color: var(--color-surface-container)">
+				<div class="flex gap-1 mt-3 mb-3 p-1 rounded-xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<button
 						onclick={() => activeTab = 'zutaten'}
 						class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-						style="background-color: {activeTab === 'zutaten' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'zutaten' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+						style="background-color: {activeTab === 'zutaten' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'zutaten' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
 					>{t.recipe_ingredients} ({recipe.ingredients.length})</button>
 					<button
 						onclick={() => activeTab = 'anleitung'}
 						class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-						style="background-color: {activeTab === 'anleitung' ? 'var(--color-surface-card)' : 'transparent'}; color: {activeTab === 'anleitung' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+						style="background-color: {activeTab === 'anleitung' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'anleitung' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
 					>{t.recipe_instructions} ({recipe.steps.length})</button>
 				</div>
 
@@ -602,7 +602,7 @@
 
 						<!-- Active ingredients -->
 						{#if activeIngs.length > 0}
-							<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-card)">
+							<div class="rounded-xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 								{#each activeIngs as ing, i}
 									{@render ingRow(ing, i)}
 								{/each}
@@ -612,7 +612,7 @@
 						<!-- Excluded ingredients -->
 						{#if excludedIngs.length > 0}
 							<div class="mt-3">
-<div class="rounded-xl overflow-hidden opacity-60" style="background-color: var(--color-surface-card)">
+<div class="rounded-xl overflow-hidden opacity-60" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 									{#each excludedIngs as ing, i}
 										{@render ingRow(ing, i)}
 									{/each}
@@ -630,7 +630,7 @@
 						<div class="space-y-3">
 							{#each recipe.steps as step (step.id)}
 								<div class="flex gap-3 px-4 py-4 rounded-xl"
-								     style="background-color: var(--color-surface-card)">
+								     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 									<div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
 									     style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))">
 										<span class="text-xs font-bold" style="color: var(--color-on-primary)">{step.stepNumber}</span>
@@ -667,11 +667,11 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => actionMenuOpen = false}></div>
 	<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pt-3"
-	     style="background-color: var(--color-surface-low); bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
+	     style="background-color: var(--modal-bg); bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
 		<div class="flex justify-center mb-3">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<button
 				onclick={() => { actionMenuOpen = false; goto(`/rezepte/${recipeId}/bearbeiten`); }}
 				class="w-full flex items-center gap-3 px-4 py-3 active:opacity-60"

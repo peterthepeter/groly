@@ -164,7 +164,7 @@
 			<button
 				onclick={() => open = false}
 				class="w-9 h-9 flex items-center justify-center rounded-full active:opacity-60"
-				style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
+				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface)"
 				aria-label="Abbrechen"
 			>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -187,7 +187,7 @@
 			<!-- Address / hint -->
 			<div
 				class="rounded-xl px-3 py-2.5 mb-3 min-h-[44px] flex items-center gap-2"
-				style="background-color: var(--color-surface-container)"
+				style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
 			>
 				{#if resolving}
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-on-surface-variant); animation: spin 1s linear infinite; flex-shrink:0">

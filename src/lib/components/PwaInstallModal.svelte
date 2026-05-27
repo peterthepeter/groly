@@ -35,7 +35,7 @@
 
 <!-- Modal -->
 <div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 pb-6"
-     style="background-color: var(--color-surface-low)">
+     style="background-color: var(--modal-bg)">
 
 	<!-- Handle -->
 	<div class="flex justify-center mb-4">
@@ -57,11 +57,11 @@
 
 	<!-- Platform Toggle -->
 	<div class="px-4 mb-4">
-		<div class="flex rounded-xl p-1 gap-1" style="background-color: var(--color-surface-container)">
+		<div class="flex rounded-xl p-1 gap-1" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<button
 				onclick={() => activePlatform = 'ios'}
 				class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors"
-				style="background-color: {activePlatform === 'ios' ? 'var(--color-surface-low)' : 'transparent'}; color: {activePlatform === 'ios' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+				style="background-color: {activePlatform === 'ios' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activePlatform === 'ios' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
 			>
 				<!-- Apple icon -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -72,7 +72,7 @@
 			<button
 				onclick={() => activePlatform = 'android'}
 				class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors"
-				style="background-color: {activePlatform === 'android' ? 'var(--color-surface-low)' : 'transparent'}; color: {activePlatform === 'android' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+				style="background-color: {activePlatform === 'android' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activePlatform === 'android' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
 			>
 				<!-- Android icon -->
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -93,7 +93,7 @@
 					{ n: 3, text: 'Scroll down in the Share menu and tap "Add to Home Screen".' },
 					{ n: 4, text: 'Tap "Add" in the top right corner. Groly will appear on your home screen like a native app.' }
 				]}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+				<div class="rounded-2xl overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					{#each steps as s}
 						<div class="flex items-start gap-3 px-3 py-2.5">
 							<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
@@ -111,7 +111,7 @@
 					{ n: 3, text: 'Scrolle im Teilen-Menü nach unten und wähle „Zum Home-Bildschirm".' },
 					{ n: 4, text: 'Tippe oben rechts auf „Hinzufügen". Groly erscheint wie eine native App auf deinem Startbildschirm.' }
 				]}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+				<div class="rounded-2xl overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					{#each steps as s}
 						<div class="flex items-start gap-3 px-3 py-2.5">
 							<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
@@ -159,7 +159,7 @@
 						{ n: 3, text: 'Tap "Add to Home screen" or "Install app".' },
 						{ n: 4, text: 'Confirm with "Add". Groly will appear on your home screen and runs in its own window.' }
 					]}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					<div class="rounded-2xl overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						{#each steps as s}
 							<div class="flex items-start gap-3 px-3 py-2.5">
 								<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
@@ -177,7 +177,7 @@
 						{ n: 3, text: 'Wähle „Zum Startbildschirm hinzufügen" oder „App installieren".' },
 						{ n: 4, text: 'Bestätige mit „Hinzufügen". Groly erscheint auf dem Startbildschirm und läuft im eigenen Fenster.' }
 					]}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					<div class="rounded-2xl overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						{#each steps as s}
 							<div class="flex items-start gap-3 px-3 py-2.5">
 								<div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
@@ -198,7 +198,7 @@
 		<button
 			onclick={onClose}
 			class="w-full py-3.5 rounded-full text-sm font-semibold"
-			style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+			style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 		>
 			{lang === 'en' ? 'Done' : 'Fertig'}
 		</button>

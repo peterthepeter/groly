@@ -444,7 +444,7 @@
 		     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 	</div>
 {:else}
-	<div class="rounded-2xl overflow-hidden select-none" bind:this={weekListEl} style="background-color: var(--color-surface-card); -webkit-user-select: none">
+	<div class="rounded-2xl overflow-hidden select-none" bind:this={weekListEl} style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); -webkit-user-select: none">
 		{#each weekDays as day, i (toISO(day))}
 			{@const date = toISO(day)}
 			{@const dayEntries = entries[date] ?? []}
@@ -600,7 +600,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => longPressEntry = null}></div>
 	<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 pb-8 px-4 select-none"
-	     style="background-color: var(--color-surface-low); -webkit-user-select: none">
+	     style="background-color: var(--modal-bg); -webkit-user-select: none">
 		<div class="flex justify-center mb-4">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>
@@ -631,7 +631,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => { if (!pickerSaving) pickerOpen = false; }}></div>
 	<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 flex flex-col"
-	     style="background-color: var(--color-surface-low); max-height: 90dvh">
+	     style="background-color: var(--modal-bg); max-height: 90dvh">
 		<div class="flex justify-center mb-3 flex-shrink-0">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>
@@ -647,7 +647,7 @@
 				<button onclick={() => { pickerIsFreeText = false; pickerRecipeId = null; }}
 				        class="w-full text-left px-1 py-1 text-xs font-medium active:opacity-60"
 				        style="color: var(--color-primary)">← {currentLang() === 'en' ? 'Back to recipes' : 'Zurück zu Rezepten'}</button>
-				<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-container)">
+				<div class="rounded-2xl px-4 py-3" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<input
 						type="text"
 						placeholder={t.meal_plan_free_text_placeholder}
@@ -660,7 +660,7 @@
 				{#if pickerFilteredRecipes.length === 0}
 					<div class="py-8 text-center text-sm" style="color: var(--color-on-surface-variant)">{t.meal_plan_no_results}</div>
 				{:else}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						{#each pickerFilteredRecipes as recipe (recipe.id)}
 							<button
 								onclick={() => selectRecipe(recipe)}
@@ -721,7 +721,7 @@
 				{/if}
 
 				<div class="flex items-center gap-3">
-					<div class="flex items-center gap-2 px-3 py-2 rounded-xl" style="background-color: var(--color-surface-container)">
+					<div class="flex items-center gap-2 px-3 py-2 rounded-xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.meal_plan_servings}</span>
 						<button onclick={() => pickerServings = Math.max(1, pickerServings - 1)}
 						        aria-label="Portionen verringern"
@@ -755,7 +755,7 @@
 			</div>
 		{/if}
 			{#if !pickerIsFreeText}
-				<div class="flex items-center gap-2 px-3 rounded-xl" style="background-color: var(--color-surface-container); height: 44px">
+				<div class="flex items-center gap-2 px-3 rounded-xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); height: 44px">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
 					</svg>
@@ -778,7 +778,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => { if (!listSheetAdding) listSheetOpen = false; }}></div>
 	<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 flex flex-col"
-	     style="background-color: var(--color-surface-low); max-height: 70dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
+	     style="background-color: var(--modal-bg); max-height: 70dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem)">
 		<div class="flex justify-center mb-3 flex-shrink-0">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>
@@ -790,7 +790,7 @@
 					     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 				</div>
 			{:else}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					{#if listSheetNewMode}
 						<div class="flex items-center gap-2 px-4"
 						     style="height: 56px; background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-container))">

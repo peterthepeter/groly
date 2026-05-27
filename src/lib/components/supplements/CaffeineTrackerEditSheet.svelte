@@ -64,7 +64,7 @@
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => open = false}></div>
 
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl"
-	     style="background-color: var(--color-surface-low)">
+	     style="background-color: var(--modal-bg)">
 		<div class="p-6 space-y-4" style="max-height: 85dvh; overflow-y: auto">
 
 			<div class="flex justify-center">
@@ -83,7 +83,7 @@
 			</div>
 
 			<!-- Daily limit -->
-			<div class="rounded-2xl p-4 space-y-2" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl p-4 space-y-2" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<p class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.caffeine_limit_label}</p>
 				<div class="flex items-center gap-2">
 					<input
@@ -101,7 +101,7 @@
 			</div>
 
 			<!-- Drink list: visibility toggle + custom default ml -->
-			<div class="rounded-2xl p-4" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl p-4" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<p class="text-xs font-medium mb-3" style="color: var(--color-on-surface-variant)">{t.caffeine_visible_drinks}</p>
 
 				{#if loading}

@@ -122,7 +122,7 @@
 
 			<!-- Preview (erscheint nach erfolgreichem Import) -->
 			{#if parsed}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					{#if parsed.imageUrl}
 						<img src={parsed.imageUrl} alt={parsed.title} class="w-full h-40 object-cover" />
 					{/if}

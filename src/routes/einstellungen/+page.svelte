@@ -446,7 +446,7 @@
 
 	{#if mustChange}
 		<!-- ── Fokus-Modus: Nur Passwort ändern ───────────────────────── -->
-		<div class="rounded-2xl overflow-hidden mb-4" style="background-color: var(--color-surface-card)">
+		<div class="rounded-2xl overflow-hidden mb-4 divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<div class="px-5 pb-5 pt-4">
 				<div class="rounded-lg px-3 py-2 mb-4 text-xs"
 				     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
@@ -505,7 +505,7 @@
 		   style="color: var(--color-on-surface-variant); opacity: 0.5">
 			{currentLang() === 'en' ? 'Display' : 'Darstellung'}
 		</p>
-		<div class="rounded-2xl mb-6 overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div class="rounded-2xl mb-6 overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 
 			<!-- Erledigte Items -->
 			<div>
@@ -1055,7 +1055,7 @@
 		   style="color: var(--color-on-surface-variant); opacity: 0.5">
 			{currentLang() === 'en' ? 'Notifications & Location' : 'Benachrichtigungen & Standort'}
 		</p>
-		<div class="rounded-2xl mb-6 overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div class="rounded-2xl mb-6 overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 
 			<!-- Standorterkennung -->
 			<div>
@@ -1233,7 +1233,7 @@
 			{currentLang() === 'en' ? 'Account' : 'Konto'}
 		</p>
 
-		<div class="rounded-2xl mb-6 overflow-hidden" style="background-color: var(--color-surface-card)">
+		<div class="rounded-2xl mb-6 overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 
 			<!-- Daten exportieren & importieren -->
 			<div>
@@ -1557,7 +1557,7 @@
 			</div>
 
 			<!-- Color scheme -->
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<div>
 				<button
 					onclick={() => colorSchemeOpen = !colorSchemeOpen}
 					class="w-full flex items-center justify-between px-5 py-2.5"
@@ -1619,7 +1619,7 @@
 
 	<!-- Sheet -->
 	<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-8 pt-4"
-	     style="background-color: var(--color-surface-low)">
+	     style="background-color: var(--modal-bg)">
 		<div class="flex justify-center mb-5">
 			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 		</div>

@@ -92,7 +92,7 @@
 			{#if entry.activities.length > 0}
 				<div class="flex flex-wrap gap-1.5">
 					{#each entry.activities as key}
-						<span class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style="background-color: var(--color-surface-container); color: var(--color-on-surface)">
+						<span class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface)">
 							<ActivityIcon icon={getTagIcon(key)} size={12} color="var(--color-on-surface-variant)" />{getTagLabel(key)}
 						</span>
 					{/each}
@@ -103,13 +103,13 @@
 			{#if entry.gratitude}
 				<div>
 					<p class="text-[11px] font-semibold uppercase tracking-widest mb-1.5" style="color: #F472B6">{t.mood_gratitude_label}</p>
-					<p class="text-sm leading-relaxed px-3 py-2.5 rounded-xl whitespace-pre-wrap" style="background-color: var(--color-surface-container); color: var(--color-on-surface)">{entry.gratitude}</p>
+					<p class="text-sm leading-relaxed px-3 py-2.5 rounded-xl whitespace-pre-wrap" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); color: var(--color-on-surface)">{entry.gratitude}</p>
 				</div>
 			{/if}
 
 			<!-- Note -->
 			{#if entry.note}
-				<p class="text-sm leading-relaxed px-3 py-2.5 rounded-xl whitespace-pre-wrap" style="background-color: var(--color-surface-container); color: var(--color-on-surface)">{entry.note}</p>
+				<p class="text-sm leading-relaxed px-3 py-2.5 rounded-xl whitespace-pre-wrap" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); color: var(--color-on-surface)">{entry.note}</p>
 			{/if}
 
 			<!-- Delete + Edit -->
@@ -118,7 +118,7 @@
 					<button
 						onclick={() => confirmDelete = false}
 						class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-						style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+						style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 					>{t.close}</button>
 					<button
 						onclick={deleteEntry}

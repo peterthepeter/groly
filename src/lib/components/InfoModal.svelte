@@ -360,7 +360,7 @@
 
 <!-- Modal -->
 <div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 pb-6"
-     style="background-color: var(--color-surface-low)">
+     style="background-color: var(--modal-bg)">
 
 	<!-- Handle -->
 	<div class="flex justify-center mb-4">
@@ -379,8 +379,9 @@
 
 	<!-- Sections -->
 	<div class="px-4 overflow-y-auto" style="max-height: 65vh">
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+		<div class="rounded-2xl overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			{#each sections as sec, i (i)}
+				<div>
 				<!-- Section header -->
 				<button
 					onclick={() => toggleSection(i)}
@@ -402,7 +403,7 @@
 
 				<!-- Section items (expanded) -->
 				{#if openSections.has(i)}
-					<div style="background-color: color-mix(in srgb, var(--color-outline-variant) 30%, transparent)">
+					<div>
 						{#each sec.items as item}
 							<div class="flex items-start gap-3 px-3 py-2">
 								<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -425,6 +426,7 @@
 						{/each}
 					</div>
 				{/if}
+				</div>
 			{/each}
 		</div>
 	</div>
@@ -434,7 +436,7 @@
 		<button
 			onclick={onClose}
 			class="w-full py-3.5 rounded-full text-sm font-semibold"
-			style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+			style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 		>
 			{lang === 'en' ? 'Done' : 'Fertig'}
 		</button>

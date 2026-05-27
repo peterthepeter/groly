@@ -15,7 +15,7 @@
 
 <!-- Modal -->
 <div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl flex flex-col"
-     style="background-color: var(--color-surface-low); max-height: 85vh">
+     style="background-color: var(--modal-bg); max-height: 85vh">
 
 	<!-- Handle -->
 	<div class="flex justify-center pt-4 pb-2 flex-shrink-0">
@@ -31,7 +31,7 @@
 				target="_blank"
 				rel="noopener noreferrer"
 				class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium active:opacity-70"
-				style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 				aria-label="GitHub Issues"
 			>
 				<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0">
@@ -43,7 +43,7 @@
 		<button
 			onclick={onClose}
 			class="w-8 h-8 flex items-center justify-center rounded-full active:opacity-60 transition-opacity"
-			style="background-color: var(--color-surface-container)"
+			style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
 			aria-label={lang === 'en' ? 'Close' : 'Schließen'}
 		>
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)"
@@ -79,7 +79,7 @@
 			</div>
 
 			{#if i < entries.length - 1}
-				<div class="h-px" style="background-color: var(--color-surface-container)"></div>
+				<div class="h-px" style="background-color: var(--color-outline-variant)"></div>
 			{/if}
 		{/each}
 	</div>
@@ -89,7 +89,7 @@
 		<button
 			onclick={onClose}
 			class="w-full py-3.5 rounded-full text-sm font-semibold active:opacity-80 transition-opacity"
-			style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+			style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 		>
 			{lang === 'en' ? 'Close' : 'Schließen'}
 		</button>

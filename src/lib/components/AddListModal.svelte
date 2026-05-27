@@ -181,7 +181,7 @@
 
 <!-- Modal -->
 <div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-4 pt-3"
-     style="background-color: var(--color-surface-low); bottom: {bottomOffset}px">
+     style="background-color: var(--modal-bg); bottom: {bottomOffset}px">
 	<div class="flex justify-center mb-2">
 		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 	</div>
@@ -207,7 +207,7 @@
 
 	<div class="space-y-2 mb-2">
 		<!-- Optionen-Bubble: Share/Notif + Category Sort (edit) + Icon-Picker -->
-		<div class="rounded-2xl overflow-visible" style="background-color: var(--color-surface-container)">
+		<div class="rounded-2xl overflow-visible" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			{#if !list}
 				<button
 					type="button"
@@ -349,7 +349,7 @@
 
 		<!-- Standorterkennung -->
 		{#if userSettings.locationNavEnabled}
-			<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+			<div class="rounded-xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<!-- Header -->
 				<button
 					type="button"
@@ -525,7 +525,7 @@
 			</div>
 		{/if}
 
-<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				type="text"

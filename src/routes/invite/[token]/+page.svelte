@@ -86,7 +86,7 @@
 
 				<!-- Username (read-only) -->
 				<div class="rounded-xl px-4 py-3.5 flex items-center gap-3"
-				     style="background-color: var(--color-surface-container); opacity: 0.7">
+				     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); opacity: 0.7">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
 						<circle cx="12" cy="7" r="4"/>
@@ -102,7 +102,7 @@
 
 				<!-- New password -->
 				<div class="rounded-xl px-4 py-3.5 flex items-center gap-3"
-				     style="background-color: var(--color-surface-container)">
+				     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
 						<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -121,7 +121,7 @@
 
 				<!-- Confirm -->
 				<div class="rounded-xl px-4 py-3.5 flex items-center gap-3"
-				     style="background-color: var(--color-surface-container)">
+				     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<polyline points="20 6 9 17 4 12"/>
 					</svg>
@@ -156,7 +156,7 @@
 			</form>
 		{:else}
 			<div class="rounded-2xl px-5 py-6 text-center"
-			     style="background-color: var(--color-surface-container)">
+			     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<div class="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4"
 				     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent)">
 					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

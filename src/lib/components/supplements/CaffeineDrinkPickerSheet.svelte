@@ -95,7 +95,7 @@
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={close}></div>
 
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl"
-	     style="background-color: var(--color-surface-low)">
+	     style="background-color: var(--modal-bg)">
 		<div class="px-6 pt-5 pb-5 flex flex-col gap-4">
 
 			<div class="flex justify-center">
@@ -105,7 +105,7 @@
 			<p class="font-semibold text-base" style="color: var(--color-on-surface)">{t.caffeine_drink_picker_title}</p>
 
 			<!-- Amount + Time bar — always visible -->
-			<div class="flex items-center gap-2 px-3 rounded-2xl" style="background-color: var(--color-surface-card); height: 3rem">
+			<div class="flex items-center gap-2 px-3 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); height: 3rem">
 				<!-- − input + -->
 				<button
 					onclick={() => adjustAmount(-10)}

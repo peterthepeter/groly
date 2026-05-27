@@ -122,7 +122,7 @@
 			{/if}
 
 			<div class="overflow-y-auto flex-1">
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<!-- Neue Liste -->
 					{#if newListMode}
 						<div class="flex items-center gap-2 px-4" style="height: 56px; background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-container))">

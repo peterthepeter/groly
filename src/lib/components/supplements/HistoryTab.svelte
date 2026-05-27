@@ -346,7 +346,7 @@
 		{#if !otherEmpty}
 		<!-- Week/Month: stat-style tracker card with Ø/Min-Max/active + sparkline -->
 		{#if period !== 'day' && (caffeineStats || meditationStats || waterStats)}
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<button
 					onclick={() => trackerCardExpanded = !trackerCardExpanded}
 					class="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
@@ -525,7 +525,7 @@
 			userSettings.waterTrackerEnabled && period === 'day' && waterTotal > 0 ? 'water' : null,
 		].filter(Boolean)}
 		{#if period === 'day' && visibleHistoryTrackers.length > 0}
-			<div class="rounded-2xl px-4 py-3" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl px-4 py-3" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<div class="flex items-center gap-2 mb-2">
 					<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
 					<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Tracker</p>
@@ -785,7 +785,7 @@
 		{/if}
 		<!-- Supplements taken -->
 		{#if period !== 'day' && adherence.length > 0}
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<button
 					onclick={() => supplementsCardExpanded = !supplementsCardExpanded}
 					class="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
@@ -886,7 +886,7 @@
 				{/if}
 			</div>
 		{:else if period === 'day' && dayCombinedSupplements.length > 0}
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<button
 					onclick={() => supplementsCardExpanded = !supplementsCardExpanded}
 					class="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
@@ -992,7 +992,7 @@
 
 		<!-- Nutrients (at the bottom — informational total per period) -->
 		{#if nutrientEntries.length > 0}
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<button
 					onclick={() => nutrientsCardExpanded = !nutrientsCardExpanded}
 					class="w-full flex items-center justify-between px-4 py-3 active:opacity-60"

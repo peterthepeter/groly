@@ -31,7 +31,7 @@
 	<div class="flex items-center gap-3 pointer-events-auto">
 
 		<!-- Left pill -->
-		<div class="flex items-center rounded-full gap-0.5" style="height: 52px; padding-left: 1.5px; padding-right: 1.5px; background-color: var(--color-surface-card)"
+		<div class="flex items-center rounded-full gap-0.5" style="height: 52px; padding-left: 1.5px; padding-right: 1.5px; background-color: color-mix(in srgb, var(--color-bg) 60%, transparent); border: 1px solid var(--bubble-interactive-border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px)"
 		>
 
 			<!-- Lists -->
@@ -134,7 +134,7 @@
 			<button
 				onclick={onFavorites}
 				class="rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform select-none"
-				style="width: 48px; height: 48px; background-color: var(--color-surface-card)"
+				style="width: 48px; height: 48px; background-color: color-mix(in srgb, var(--color-bg) 60%, transparent); border: 1px solid var(--bubble-interactive-border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px)"
 				aria-label="Favourites"
 			>
 				<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
