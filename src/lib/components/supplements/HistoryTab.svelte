@@ -2,6 +2,7 @@
 	import { t, currentLang, nutrients_show_more } from '$lib/i18n.svelte';
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import MoodHistoryView from './MoodHistoryView.svelte';
 	import type { CaffeineLog, MeditationLog } from '$lib/db/schema';
 	import { computeAdherence, computeTrackerStats, eachDayInRange, parseDaysMask, type ScheduleLite, type SupplementMeta } from '$lib/trackerStats';
@@ -27,7 +28,9 @@
 		caffeineLogs,
 		meditationLogs,
 		onMoodReload,
-		onEditLog
+		onEditLog,
+		onEditCaffeineLog,
+		onEditWaterLog
 	}: {
 		loading: boolean;
 		period: 'day' | 'week' | 'month';
@@ -44,6 +47,8 @@
 		meditationLogs: MeditationLog[];
 		onMoodReload: () => void;
 		onEditLog: (log: Log, sup: SuppEntry) => void;
+		onEditCaffeineLog?: (log: CaffeineLog) => void;
+		onEditWaterLog?: (log: { id: string; amountMl: number; loggedAt: number }) => void;
 	} = $props();
 
 	const NUTRIENTS_VISIBLE = 10;
@@ -59,7 +64,30 @@
 	let expandedSuppIds = $state(new Set<string>());
 	let caffeineSelectedIdx = $state<number | null>(null);
 	let meditationSelectedIdx = $state<number | null>(null);
+	let waterSelectedIdx = $state<number | null>(null);
 	let supplementSelectedIdx = $state<number | null>(null);
+	let focusedLogId = $state<string | null>(null);
+
+	// Now-marker (updates every minute) for the 24h timelines
+	let nowTs = $state(Date.now());
+	let nowTimer: ReturnType<typeof setInterval> | null = null;
+	onMount(() => { nowTimer = setInterval(() => { nowTs = Date.now(); }, 60_000); });
+	onDestroy(() => { if (nowTimer) clearInterval(nowTimer); });
+	const isToday = $derived(date === todayKey());
+	const nowPercent = $derived.by(() => {
+		const d = new Date(nowTs);
+		return ((d.getHours() + d.getMinutes() / 60) / 24) * 100;
+	});
+
+	function focusLog(id: string, isExpanded: boolean, expandSetter: (v: boolean) => void) {
+		if (focusedLogId === id && isExpanded) {
+			focusedLogId = null;
+			expandSetter(false);
+		} else {
+			focusedLogId = id;
+			expandSetter(true);
+		}
+	}
 
 	// Reset per-supplement expand state + tracker selection when period/date changes
 	$effect(() => {
@@ -68,6 +96,7 @@
 		expandedSuppIds = new Set();
 		caffeineSelectedIdx = null;
 		meditationSelectedIdx = null;
+		waterSelectedIdx = null;
 		supplementSelectedIdx = null;
 	});
 
@@ -95,6 +124,21 @@
 		const next = new Set(expandedSuppIds);
 		if (next.has(id)) next.delete(id); else next.add(id);
 		expandedSuppIds = next;
+	}
+
+	function focusSupplementLog(log: Log) {
+		const isExpanded = expandedSuppIds.has(log.supplementId);
+		if (focusedLogId === log.id && isExpanded) {
+			focusedLogId = null;
+			const next = new Set(expandedSuppIds);
+			next.delete(log.supplementId);
+			expandedSuppIds = next;
+		} else {
+			focusedLogId = log.id;
+			const next = new Set(expandedSuppIds);
+			next.add(log.supplementId);
+			expandedSuppIds = next;
+		}
 	}
 
 	const logsBySuppId = $derived.by(() => {
@@ -183,6 +227,14 @@
 		);
 	});
 
+	const waterStats = $derived.by(() => {
+		if (period === 'day' || rangeFrom === 0) return null;
+		return computeTrackerStats(
+			waterLogs.map(l => ({ value: l.amountMl, loggedAt: l.loggedAt })),
+			{ from: rangeFrom, to: rangeTo }
+		);
+	});
+
 	// Day labels + today-index for the current range (used by tracker bars + supplement dots)
 	const rangeDays = $derived.by(() => {
 		if (period === 'day' || rangeFrom === 0 || rangeTo === 0) return [] as string[];
@@ -260,6 +312,18 @@
 	});
 </script>
 
+{#snippet timelineGuides()}
+	<!-- 0 / 6 / 12 / 18 / 24h grid ticks -->
+	<div class="absolute pointer-events-none" style="left: 0; top: 0; bottom: 0; width: 1px; background-color: var(--color-on-surface-variant); opacity: 0.15"></div>
+	<div class="absolute pointer-events-none" style="left: 25%; top: 0; bottom: 0; width: 1px; background-color: var(--color-on-surface-variant); opacity: 0.15"></div>
+	<div class="absolute pointer-events-none" style="left: 50%; top: 0; bottom: 0; width: 1px; background-color: var(--color-on-surface-variant); opacity: 0.15"></div>
+	<div class="absolute pointer-events-none" style="left: 75%; top: 0; bottom: 0; width: 1px; background-color: var(--color-on-surface-variant); opacity: 0.15"></div>
+	<div class="absolute pointer-events-none" style="right: 0; top: 0; bottom: 0; width: 1px; background-color: var(--color-on-surface-variant); opacity: 0.15"></div>
+	{#if isToday}
+		<div class="absolute pointer-events-none" style="left: calc({nowPercent}% - 0.5px); top: -2px; bottom: -2px; width: 1.5px; background-color: var(--color-primary); opacity: 0.7"></div>
+	{/if}
+{/snippet}
+
 <div class="px-4 space-y-4">
 	{#if loading}
 		<div class="flex justify-center py-8">
@@ -281,7 +345,7 @@
 		{/if}
 		{#if !otherEmpty}
 		<!-- Week/Month: stat-style tracker card with Ø/Min-Max/active + sparkline -->
-		{#if period !== 'day' && (caffeineStats || meditationStats)}
+		{#if period !== 'day' && (caffeineStats || meditationStats || waterStats)}
 			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
 				<button
 					onclick={() => trackerCardExpanded = !trackerCardExpanded}
@@ -300,7 +364,7 @@
 				<div class="px-4 pb-3 space-y-3">
 					{#if dayLabels.length > 0}
 						<!-- Shared day-header (Mo Di Mi … or 1 5 10 … for month) -->
-						{@const selAny = caffeineSelectedIdx ?? meditationSelectedIdx}
+						{@const selAny = caffeineSelectedIdx ?? meditationSelectedIdx ?? waterSelectedIdx}
 						<div class="flex" style="gap: {period === 'month' ? 2 : 3}px">
 							{#each dayLabels as label, i}
 								<span class="flex-1 text-center text-[9px] uppercase tabular-nums" style="color: {i === selAny || i === todayIdx ? '#C8956C' : 'var(--color-on-surface-variant)'}; font-weight: {i === selAny || i === todayIdx ? '700' : '500'}">{label}</span>
@@ -342,6 +406,24 @@
 									{/each}
 								</div>
 							</div>
+							{#if selDate}
+								{@const selCaffeineLogs = caffeineLogs
+									.filter(l => tsToDateKey(l.loggedAt) === selDate)
+									.sort((x, y) => x.loggedAt - y.loggedAt)}
+								{#if selCaffeineLogs.length > 0}
+									<div class="mt-2 space-y-0.5">
+										{#each selCaffeineLogs as log}
+											<div class="flex items-baseline justify-between text-xs">
+												<span style="color: var(--color-on-surface)">
+													<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{formatTime(log.loggedAt)}</span>
+													<span class="ml-2">{log.drinkName}</span>
+												</span>
+												<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{log.amountMl} ml · {log.caffeineMg} mg</span>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							{/if}
 						</div>
 					{/if}
 					{#if userSettings.meditationTrackerEnabled && meditationStats && meditationStats.activeDays > 0}
@@ -349,12 +431,18 @@
 						{@const maxM = Math.max(...ms.daily, 1)}
 						{@const selIdxM = meditationSelectedIdx}
 						{@const selDateM = selIdxM !== null ? rangeDays[selIdxM] : null}
+						{@const selMedLogs = selDateM ? meditationLogs
+							.filter(l => tsToDateKey(l.loggedAt) === selDateM)
+							.sort((x, y) => x.loggedAt - y.loggedAt) : []}
 						<div>
 							<div class="flex items-center justify-between text-sm mb-1.5">
 								<span class="font-semibold" style="color: #9F7AEA">{t.meditation_title}</span>
 								{#if selDateM}
 									<span class="text-xs tabular-nums" style="color: #9F7AEA">
 										{new Date(selDateM + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ms.daily[selIdxM!]} min
+										{#if selMedLogs.length > 0}
+											<span style="color: var(--color-on-surface-variant)"> · {selMedLogs.map(l => formatTime(l.loggedAt)).join(', ')}</span>
+										{/if}
 									</span>
 								{:else}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
@@ -381,6 +469,51 @@
 							</div>
 						</div>
 					{/if}
+					{#if userSettings.waterTrackerEnabled && waterStats && waterStats.activeDays > 0}
+						{@const ws = waterStats}
+						{@const maxW = Math.max(...ws.daily, 1)}
+						{@const selIdxW = waterSelectedIdx}
+						{@const selDateW = selIdxW !== null ? rangeDays[selIdxW] : null}
+						{@const selWaterLogs = selDateW ? waterLogs
+							.filter(l => tsToDateKey(l.loggedAt) === selDateW)
+							.sort((x, y) => x.loggedAt - y.loggedAt) : []}
+						<div>
+							<div class="flex items-center justify-between text-sm mb-1.5">
+								<span class="font-semibold" style="color: #60A5FA">{t.water_title}</span>
+								{#if selDateW}
+									<span class="text-xs tabular-nums" style="color: #60A5FA">
+										{new Date(selDateW + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ws.daily[selIdxW!]} ml
+									</span>
+								{:else}
+									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
+										Ø {fmtNumber(ws.avgPerDay)} ml · {ws.total} ml · {ws.activeDays}/{ws.totalDays}
+									</span>
+								{/if}
+							</div>
+							<div class="relative" style="padding-top: 10px">
+								<span class="absolute right-0 text-[9px] tabular-nums leading-none" style="top: 0; color: var(--color-on-surface-variant); opacity: 0.55">{ws.max} ml</span>
+								<div class="absolute left-0 right-0 pointer-events-none" style="top: 10px; border-top: 1px dashed var(--color-on-surface-variant); opacity: 0.22"></div>
+								<div class="flex items-end" style="height: 26px; gap: {period === 'month' ? 2 : 3}px">
+									{#each ws.daily as v, i}
+										{@const pct = v === 0 ? 14 : Math.max(14, (v / maxW) * 100)}
+										{@const isToday = i === todayIdx}
+										{@const isSelected = i === selIdxW}
+										<button
+											onclick={() => waterSelectedIdx = selIdxW === i ? null : i}
+											aria-label={'Tag ' + (i + 1)}
+											class="flex-1 active:opacity-70"
+											style="background-color: #60A5FA; opacity: {v === 0 ? 0.18 : (isSelected ? 1 : 0.9)}; height: {pct}%; min-height: 4px; border-radius: 3px; {isSelected ? 'outline: 1.5px solid #60A5FA; outline-offset: 2px' : (isToday ? 'outline: 1.5px solid #60A5FA; outline-offset: 1px' : '')}"
+										></button>
+									{/each}
+								</div>
+							</div>
+							{#if selWaterLogs.length > 0}
+								<div class="mt-2 text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
+									{selWaterLogs.map(l => l.amountMl + ' ml').join(' · ')}
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 				{/if}
 			</div>
@@ -398,8 +531,12 @@
 					<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Tracker</p>
 				</div>
 				<!-- Shared hour scale -->
-				<div class="flex justify-between text-[9px] tabular-nums mb-2" style="color: var(--color-on-surface-variant)">
-					<span>0</span><span>6</span><span>12</span><span>18</span><span>24</span>
+				<div class="relative text-[9px] tabular-nums mb-2" style="color: var(--color-on-surface-variant); height: 12px">
+					<span class="absolute" style="left: 0">0</span>
+					<span class="absolute" style="left: 25%; transform: translateX(-50%)">6</span>
+					<span class="absolute" style="left: 50%; transform: translateX(-50%)">12</span>
+					<span class="absolute" style="left: 75%; transform: translateX(-50%)">18</span>
+					<span class="absolute" style="right: 0">24</span>
 				</div>
 				<div class="space-y-4">
 					<!-- Caffeine -->
@@ -435,8 +572,13 @@
 								<!-- 24h timeline with log markers -->
 								<div class="relative mt-2" style="height: 14px">
 									<div class="absolute inset-x-0 rounded-full" style="top: 6px; height: 1.5px; background-color: color-mix(in srgb, var(--color-on-surface-variant) 22%, transparent)"></div>
+									{@render timelineGuides()}
 									{#each caffeineLogs as log}
-										<div class="absolute rounded-full" style="left: calc({hourPos(log.loggedAt)}% - 3px); top: 1px; width: 6px; height: 12px; background-color: #C8956C; opacity: 0.95"></div>
+										<button onclick={() => focusLog(log.id, caffeineHistoryCardExpanded, v => caffeineHistoryCardExpanded = v)}
+											aria-label="Eintrag"
+											class="absolute rounded-full active:opacity-60"
+											style="left: calc({hourPos(log.loggedAt)}% - 3px); top: 1px; width: 6px; height: 12px; background-color: #C8956C; opacity: 0.95; {focusedLogId === log.id ? 'box-shadow: 0 0 0 2px var(--color-surface-card), 0 0 0 3.5px #C8956C' : ''}"
+										></button>
 									{/each}
 								</div>
 							{/if}
@@ -444,9 +586,23 @@
 								{#if period === 'day'}
 									<div class="space-y-1 mt-1.5">
 										{#each caffeineLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
-											<div class="flex justify-between items-center text-xs">
-												<span style="color: var(--color-on-surface)">{log.drinkName} · {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-												<span class="font-semibold" style="color: #C8956C">{log.caffeineMg} mg</span>
+											<div class="flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
+											     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, #C8956C 18%, transparent)' : ''}>
+												<span class="flex-1 min-w-0" style="color: var(--color-on-surface)">{log.drinkName} · {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+												<span class="font-semibold shrink-0" style="color: #C8956C">{log.caffeineMg} mg</span>
+												{#if onEditCaffeineLog}
+													<button
+														onclick={() => onEditCaffeineLog?.(log)}
+														class="shrink-0 p-1 rounded active:opacity-50"
+														aria-label="Bearbeiten"
+														style="color: var(--color-on-surface-variant)"
+													>
+														<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+															<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+															<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+														</svg>
+													</button>
+												{/if}
 											</div>
 										{/each}
 									</div>
@@ -507,13 +663,18 @@
 								<!-- 24h timeline: sessions as wider pills spanning start→end -->
 								<div class="relative mt-2" style="height: 14px">
 									<div class="absolute inset-x-0 rounded-full" style="top: 6px; height: 1.5px; background-color: color-mix(in srgb, var(--color-on-surface-variant) 22%, transparent)"></div>
+									{@render timelineGuides()}
 									{#each meditationLogs as log}
 										{@const endTs = log.loggedAt}
 										{@const startTs = endTs - log.durationSeconds * 1000}
 										{@const lp = hourPos(startTs)}
 										{@const rp = hourPos(endTs)}
 										{@const w = Math.max(0.8, rp - lp)}
-										<div class="absolute rounded-full" style="left: {lp}%; top: 1px; width: {w}%; min-width: 4px; height: 12px; background-color: #9F7AEA; opacity: 0.95"></div>
+										<button onclick={() => focusLog(log.id, meditationHistoryCardExpanded, v => meditationHistoryCardExpanded = v)}
+											aria-label="Sitzung"
+											class="absolute rounded-full active:opacity-60"
+											style="left: {lp}%; top: 1px; width: {w}%; min-width: 4px; height: 12px; background-color: #9F7AEA; opacity: 0.95; {focusedLogId === log.id ? 'box-shadow: 0 0 0 2px var(--color-surface-card), 0 0 0 3.5px #9F7AEA' : ''}"
+										></button>
 									{/each}
 								</div>
 							{/if}
@@ -523,7 +684,8 @@
 										{#each meditationLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
 											{@const endTs = log.loggedAt}
 											{@const startTs = endTs - log.durationSeconds * 1000}
-											<div class="flex justify-between items-center text-xs">
+											<div class="flex justify-between items-center text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
+											     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, #9F7AEA 18%, transparent)' : ''}>
 												<span style="color: var(--color-on-surface)">
 													{new Date(startTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(endTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 												</span>
@@ -562,7 +724,10 @@
 						{@const wPct = Math.min(100, (waterTotal / wGoal) * 100)}
 						<div>
 							<div class="flex items-center justify-between text-sm">
-								<span class="font-semibold" style="color: #60A5FA">{t.water_title}</span>
+								<div class="flex items-baseline gap-1.5 min-w-0 flex-1">
+									<span class="font-semibold shrink-0" style="color: #60A5FA">{t.water_title}</span>
+									<span class="text-xs" style="color: var(--color-on-surface-variant)">{waterLogs.length}×</span>
+								</div>
 								<div class="flex items-center gap-1.5 shrink-0">
 									<span class="font-semibold" style="color: #60A5FA">{waterTotal} / {wGoal} ml</span>
 									<button onclick={() => waterHistoryCardExpanded = !waterHistoryCardExpanded} class="active:opacity-60" aria-label={waterHistoryCardExpanded ? 'Einklappen' : 'Aufklappen'}>
@@ -580,16 +745,35 @@
 							<!-- 24h timeline -->
 							<div class="relative mt-2" style="height: 14px">
 								<div class="absolute inset-x-0 rounded-full" style="top: 6px; height: 1.5px; background-color: color-mix(in srgb, var(--color-on-surface-variant) 22%, transparent)"></div>
+								{@render timelineGuides()}
 								{#each waterLogs as log}
-									<div class="absolute rounded-full" style="left: calc({hourPos(log.loggedAt)}% - 3px); top: 1px; width: 6px; height: 12px; background-color: #60A5FA; opacity: 0.95"></div>
+									<button onclick={() => focusLog(log.id, waterHistoryCardExpanded, v => waterHistoryCardExpanded = v)}
+										aria-label="Eintrag"
+										class="absolute rounded-full active:opacity-60"
+										style="left: calc({hourPos(log.loggedAt)}% - 3px); top: 1px; width: 6px; height: 12px; background-color: #60A5FA; opacity: 0.95; {focusedLogId === log.id ? 'box-shadow: 0 0 0 2px var(--color-surface-card), 0 0 0 3.5px #60A5FA' : ''}"
+									></button>
 								{/each}
 							</div>
 							{#if waterHistoryCardExpanded}
 								<div class="space-y-1 mt-1.5">
 									{#each waterLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
-										<div class="flex justify-between items-center text-xs">
-											<span style="color: var(--color-on-surface)">{new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-											<span class="font-semibold" style="color: #60A5FA">{log.amountMl} ml</span>
+										<div class="flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
+										     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, #60A5FA 18%, transparent)' : ''}>
+											<span class="flex-1 min-w-0" style="color: var(--color-on-surface)">{new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+											<span class="font-semibold shrink-0" style="color: #60A5FA">{log.amountMl} ml</span>
+											{#if onEditWaterLog}
+												<button
+													onclick={() => onEditWaterLog?.(log)}
+													class="shrink-0 p-1 rounded active:opacity-50"
+													aria-label="Bearbeiten"
+													style="color: var(--color-on-surface-variant)"
+												>
+													<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+														<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+													</svg>
+												</button>
+											{/if}
 										</div>
 									{/each}
 								</div>
@@ -631,6 +815,10 @@
 							{@const selIdx = supplementSelectedIdx}
 							{@const selDate = selIdx !== null ? rangeDays[selIdx] : null}
 							{@const selFill = selIdx !== null ? a.daily[selIdx] : null}
+							{@const selTimes = selDate ? logs
+								.filter(l => l.supplementId === a.supplementId && tsToDateKey(l.loggedAt) === selDate)
+								.sort((x, y) => x.loggedAt - y.loggedAt)
+								.map(l => formatTime(l.loggedAt)) : []}
 							<div>
 								<div class="flex items-center justify-between text-sm mb-1.5">
 									<span class="truncate pr-2" style="color: var(--color-on-surface)">{a.name}</span>
@@ -639,6 +827,9 @@
 											{new Date(selDate + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })}
 											·
 											{#if selFill === 'full'}✓{:else if selFill === 'partial'}◐{:else if selFill === 'none'}✗{:else}—{/if}
+											{#if selTimes.length > 0}
+												<span style="color: var(--color-on-surface-variant)"> · {selTimes.join(', ')}</span>
+											{/if}
 										</span>
 									{:else}
 										<div class="flex items-baseline gap-1 shrink-0 tabular-nums text-xs">
@@ -712,8 +903,12 @@
 				{#if supplementsCardExpanded}
 					<div class="px-4 pb-3 space-y-2.5">
 						<!-- Hour scale (shared) -->
-						<div class="flex justify-between text-[9px] tabular-nums" style="color: var(--color-on-surface-variant); padding-top: 2px">
-							<span>0</span><span>6</span><span>12</span><span>18</span><span>24</span>
+						<div class="relative text-[9px] tabular-nums" style="color: var(--color-on-surface-variant); padding-top: 2px; height: 14px">
+							<span class="absolute" style="left: 0; top: 2px">0</span>
+							<span class="absolute" style="left: 25%; top: 2px; transform: translateX(-50%)">6</span>
+							<span class="absolute" style="left: 50%; top: 2px; transform: translateX(-50%)">12</span>
+							<span class="absolute" style="left: 75%; top: 2px; transform: translateX(-50%)">18</span>
+							<span class="absolute" style="right: 0; top: 2px">24</span>
 						</div>
 						{#each dayCombinedSupplements as sup}
 							{@const suppLogs = logsBySuppId.get(sup.id) ?? []}
@@ -747,17 +942,23 @@
 								<!-- Per-supplement 24h timeline: hollow circles for scheduled, filled for taken -->
 								<div class="relative mt-1.5" style="height: 16px">
 									<div class="absolute inset-x-0 rounded-full" style="top: 7px; height: 1.5px; background-color: color-mix(in srgb, var(--color-on-surface-variant) 22%, transparent)"></div>
+									{@render timelineGuides()}
 									{#each scheduledTimes as time}
 										<div class="absolute rounded-full" style="left: calc({timePos(time)}% - 3.5px); top: 1px; width: 7px; height: 14px; background-color: transparent; border: 1.5px solid color-mix(in srgb, var(--color-primary-dim) 55%, transparent)"></div>
 									{/each}
 									{#each suppLogs as log}
-										<div class="absolute rounded-full" style="left: calc({hourPos(log.loggedAt)}% - 3.5px); top: 1px; width: 7px; height: 14px; background-color: var(--color-primary-dim); box-shadow: 0 0 0 2.5px var(--color-surface-card), 0 0 0 4px color-mix(in srgb, var(--color-primary-dim) 18%, transparent)"></div>
+										<button onclick={() => focusSupplementLog(log)}
+											aria-label="Eintrag"
+											class="absolute rounded-full active:opacity-60"
+											style="left: calc({hourPos(log.loggedAt)}% - 3.5px); top: 1px; width: 7px; height: 14px; background-color: var(--color-primary-dim); {focusedLogId === log.id ? 'box-shadow: 0 0 0 2.5px var(--color-surface-card), 0 0 0 4.5px var(--color-primary)' : 'box-shadow: 0 0 0 2.5px var(--color-surface-card), 0 0 0 4px color-mix(in srgb, var(--color-primary-dim) 18%, transparent)'}"
+										></button>
 									{/each}
 								</div>
 								{#if expandable && suppExpanded}
 									<div class="mt-1.5 space-y-1.5 pt-1.5 border-t" style="border-color: var(--color-outline-variant)">
 										{#each suppLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
-											<div class="flex items-start gap-2 text-xs">
+											<div class="flex items-start gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
+											     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, var(--color-primary) 18%, transparent)' : ''}>
 												<div class="flex-1 min-w-0">
 													<span class="tabular-nums" style="color: var(--color-on-surface-variant)">
 														{formatTime(log.loggedAt)} ·

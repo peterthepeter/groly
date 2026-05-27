@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.15',
+		de: [
+			'Rezepte: Favoriten, Bewertung, Tags und „Heute gekocht"-Verlauf',
+			'Stimmung: optionale Dankbarkeits-Notiz pro Eintrag',
+			'Kleinere Fixes in Rezept-Suche und Tracker-Verlauf'
+		],
+		en: [
+			'Recipes: favorites, rating, tags and "Cooked today" history',
+			'Mood: optional gratitude note per entry',
+			'Minor fixes in recipe search and tracker history'
+		]
+	},
+	{
 		version: '0.7.11-2',
 		de: [
 			'Tracker-Verlauf (Woche/Monat): Gesamt-Werte direkt im Header sichtbar (Anzahl Getränke, Gesamt-Minuten)',

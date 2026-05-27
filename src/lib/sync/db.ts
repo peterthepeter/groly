@@ -73,6 +73,11 @@ interface OfflineRecipe {
 	prepTime: number | null;
 	cookTime: number | null;
 	updatedAt: number;
+	isFavorite?: boolean;
+	rating?: number | null;
+	cookCount?: number;
+	lastCookedAt?: number | null;
+	tags?: string[];
 }
 
 interface OfflineRecipeDetail extends OfflineRecipe {

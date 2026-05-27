@@ -39,6 +39,7 @@
 		trackers: true,
 		mood: true,
 		moodDetails: false,
+		moodGratitude: false,
 		nutrients: true
 	});
 	let exporting = $state(false);
@@ -90,6 +91,7 @@
 		{ key: 'trackers' as const, label: t.export_section_trackers },
 		{ key: 'mood' as const, label: t.export_section_mood },
 		{ key: 'moodDetails' as const, label: t.export_section_mood_details, indent: true },
+		{ key: 'moodGratitude' as const, label: t.export_section_mood_gratitude, indent: true },
 		{ key: 'nutrients' as const, label: t.export_section_nutrients }
 	]);
 </script>

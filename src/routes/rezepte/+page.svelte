@@ -22,7 +22,15 @@
 		prepTime: number | null;
 		cookTime: number | null;
 		updatedAt: number;
+		isFavorite?: boolean;
+		rating?: number | null;
+		cookCount?: number;
+		lastCookedAt?: number | null;
+		tags?: string[];
 	};
+
+	type SortKey = 'updated' | 'cooked' | 'cookCount' | 'rating' | 'title';
+	const SORT_STORAGE_KEY = 'groly_recipe_sort';
 	type PendingShare = {
 		id: string;
 		recipeId: string;
@@ -31,8 +39,6 @@
 		senderUsername: string;
 		createdAt: number;
 	};
-
-	const STORAGE_KEY = 'groly_recipe_order';
 
 	let recipes = $state<Recipe[]>([]);
 	let limit = $state(50);
@@ -44,9 +50,10 @@
 	let searchOpen = $state(false);
 	let keyboardOpen = $state(false);
 	let sharesLoading = $state<Record<string, boolean>>({});
-	let sortMode = $state(false);
-	let customOrder = $state<string[]>([]);
-	let dragId = $state<string | null>(null);
+	let sortKey = $state<SortKey>('updated');
+	let sortSheetOpen = $state(false);
+	let activeTagFilters = $state<string[]>([]);
+	let overlayHeight = $state(0);
 	const activeTab = $derived($page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
 
 	const todayHour = new Date().getHours();
@@ -64,92 +71,75 @@
 	function closeSearch() {
 		searchOpen = false;
 		searchQuery = '';
+		activeTagFilters = [];
 	}
 
-	// Apply custom order to recipes
-	const orderedRecipes = $derived(
-		customOrder.length > 0
-			? (() => {
-				const mapped = customOrder.map(id => recipes.find(r => r.id === id)).filter(Boolean) as Recipe[];
-				const missing = recipes.filter(r => !customOrder.includes(r.id));
-				return [...mapped, ...missing];
-			})()
-			: recipes
+	const sortedRecipes = $derived.by(() => {
+		const arr = [...recipes];
+		switch (sortKey) {
+			case 'cooked':
+				return arr.sort((a, b) => (b.lastCookedAt ?? 0) - (a.lastCookedAt ?? 0));
+			case 'cookCount':
+				return arr.sort((a, b) => (b.cookCount ?? 0) - (a.cookCount ?? 0));
+			case 'rating':
+				return arr.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+			case 'title':
+				return arr.sort((a, b) => a.title.localeCompare(b.title, currentLang() === 'de' ? 'de' : 'en'));
+			case 'updated':
+			default:
+				return arr.sort((a, b) => b.updatedAt - a.updatedAt);
+		}
+	});
+
+	const allTags = $derived(
+		Array.from(new Set(recipes.flatMap((r) => r.tags ?? []))).sort((a, b) =>
+			a.localeCompare(b, currentLang() === 'de' ? 'de' : 'en')
+		)
 	);
 
-	const filteredRecipes = $derived(
-		sortMode
-			? orderedRecipes
-			: searchQuery.trim()
-				? orderedRecipes.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()))
-				: orderedRecipes
-	);
+	const filteredRecipes = $derived.by(() => {
+		let arr = sortedRecipes;
+		if (activeTagFilters.length > 0) {
+			arr = arr.filter((r) => activeTagFilters.every((tag) => (r.tags ?? []).includes(tag)));
+		}
+		const q = searchQuery.trim().toLowerCase();
+		if (q) arr = arr.filter((r) => r.title.toLowerCase().includes(q));
+		return arr;
+	});
+
+	const favoriteRecipes = $derived(filteredRecipes.filter((r) => r.isFavorite));
+	const otherRecipes = $derived(filteredRecipes.filter((r) => !r.isFavorite));
+
+	function loadSortPref() {
+		try {
+			const stored = localStorage.getItem(SORT_STORAGE_KEY);
+			if (stored === 'updated' || stored === 'cooked' || stored === 'cookCount' || stored === 'rating' || stored === 'title') {
+				sortKey = stored;
+			}
+		} catch {}
+	}
+
+	function setSortKey(k: SortKey) {
+		sortKey = k;
+		sortSheetOpen = false;
+		try { localStorage.setItem(SORT_STORAGE_KEY, k); } catch {}
+	}
+
+	function toggleTagFilter(tag: string) {
+		activeTagFilters = activeTagFilters.includes(tag)
+			? activeTagFilters.filter((t) => t !== tag)
+			: [...activeTagFilters, tag];
+	}
+
+	function formatLastCooked(ts: number | null | undefined): string {
+		if (!ts) return '';
+		return new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'short' }).format(new Date(ts));
+	}
 
 	const totalTime = (r: Recipe) => {
 		const mins = (r.prepTime ?? 0) + (r.cookTime ?? 0);
 		return mins > 0 ? `${mins} ${t.recipe_minutes}` : null;
 	};
-
-	function loadCustomOrder() {
-		try {
-			const stored = localStorage.getItem(STORAGE_KEY);
-			customOrder = stored ? JSON.parse(stored) : [];
-		} catch { customOrder = []; }
-	}
-
-	function saveCustomOrder() {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(customOrder));
-	}
-
-	function enterSortMode() {
-		closeSearch();
-		customOrder = orderedRecipes.map(r => r.id);
-		sortMode = true;
-	}
-
-	function exitSortMode() {
-		saveCustomOrder();
-		sortMode = false;
-	}
-
-	function moveUp(index: number) {
-		if (index === 0) return;
-		const next = [...customOrder];
-		[next[index - 1], next[index]] = [next[index], next[index - 1]];
-		customOrder = next;
-	}
-
-	function moveDown(index: number) {
-		if (index === customOrder.length - 1) return;
-		const next = [...customOrder];
-		[next[index], next[index + 1]] = [next[index + 1], next[index]];
-		customOrder = next;
-	}
-
-	function startDrag(e: PointerEvent, id: string) {
-		e.preventDefault();
-		(e.target as HTMLElement).setPointerCapture(e.pointerId);
-		dragId = id;
-		let lastY = e.clientY;
-
-		const onMove = (ev: PointerEvent) => {
-			const delta = ev.clientY - lastY;
-			if (Math.abs(delta) >= 34) {
-				const idx = customOrder.indexOf(id);
-				if (delta < 0 && idx > 0) { moveUp(idx); lastY = ev.clientY; }
-				else if (delta > 0 && idx < customOrder.length - 1) { moveDown(idx); lastY = ev.clientY; }
-			}
-		};
-		const onEnd = () => {
-			dragId = null;
-			document.removeEventListener('pointermove', onMove);
-			document.removeEventListener('pointerup', onEnd);
-			document.removeEventListener('pointercancel', onEnd);
-		};
-		document.addEventListener('pointermove', onMove);
-		document.addEventListener('pointerup', onEnd);
-		document.addEventListener('pointercancel', onEnd);
-	}
 
 	async function loadRecipes() {
 		try {
@@ -221,7 +211,7 @@
 	});
 
 	onMount(() => {
-		loadCustomOrder();
+		loadSortPref();
 		loadRecipes();
 		loadShares();
 
@@ -237,25 +227,17 @@
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader
-		title={sortMode ? t.sort_mode_title : activeTab === 'mealplan' ? t.meal_plan_tab : t.recipes_title}
-		subtitle={sortMode ? t.sort_mode_subtitle : activeTab === 'recipes' ? `${recipes.length} / ${limit}` : ''}
-		onMenuOpen={() => { if (!sortMode) menuOpen = true; }}
-		onSearch={!sortMode && activeTab === 'recipes' && !searchOpen ? () => searchOpen = true : null}
+		title={activeTab === 'mealplan' ? t.meal_plan_tab : t.recipes_title}
+		subtitle={activeTab === 'recipes' ? `${recipes.length} / ${limit}` : ''}
+		onMenuOpen={() => menuOpen = true}
+		onSearch={activeTab === 'recipes' && !searchOpen ? () => searchOpen = true : null}
 	>
 		{#snippet actions()}
-			{#if sortMode}
+			{#if activeTab === 'recipes'}
 				<button
-					onclick={exitSortMode}
-					class="px-4 py-1.5 rounded-full text-sm font-semibold"
-					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-				>
-					{t.sort_mode_done}
-				</button>
-			{:else if activeTab === 'recipes'}
-				<button
-					onclick={enterSortMode}
+					onclick={() => sortSheetOpen = true}
 					class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
-					aria-label={t.sort_mode_title}
+					aria-label={t.recipes_sort_label}
 				>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<line x1="3" y1="6" x2="21" y2="6"/>
@@ -266,9 +248,6 @@
 			{/if}
 		{/snippet}
 	</AppHeader>
-
-	<!-- Spacer that clears the fixed AppHeader (same height calculation as Settings page) -->
-	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
 
 	<!-- Search bar (fixed, below header, only when open) -->
 	{#if searchOpen && activeTab === 'recipes'}
@@ -296,14 +275,39 @@
 					</svg>
 				</button>
 			</div>
+			{#if allTags.length > 0}
+				<div class="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1" style="scrollbar-width: none">
+					{#each allTags as tag (tag)}
+						{@const active = activeTagFilters.includes(tag)}
+						<button
+							onclick={() => toggleTagFilter(tag)}
+							class="flex-shrink-0 h-7 px-3 rounded-full text-xs font-semibold active:opacity-60 transition-colors"
+							style="background-color: {active ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {active ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+						>{tag}</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
-		<!-- Extra spacer for the search bar height -->
-		<div class="flex-shrink-0 h-14"></div>
 	{/if}
 
-	<!-- Tab switcher — outside scroll area, always visible -->
-	{#if !sortMode}
-		<div class="flex-shrink-0 px-4 mb-3">
+
+	<!-- Hero header + sticky tab overlay + scroll area -->
+	<div class="relative flex-1 min-h-0">
+		<!-- Greeting hero (background, peeks through above bottom-anchored content) -->
+		{#if activeTab === 'recipes' && !searchOpen && userSettings.greetingEnabled}
+			<div class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4" style="top: calc(env(safe-area-inset-top) + 5.25rem + 3.5rem); height: 22vh; min-height: 100px; max-height: 160px; z-index: 0">
+				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
+				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user?.username ?? ''}</p>
+				{#if recipeInfoLine}
+					<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant); opacity: 0.65">{recipeInfoLine}</p>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- Sticky overlay: tab switcher, always visible at top, content scrolls under -->
+		<div class="absolute left-0 right-0 z-10 px-4 pb-3"
+		     bind:clientHeight={overlayHeight}
+		     style="top: calc(env(safe-area-inset-top) + 5.25rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
 			<div class="flex gap-1 p-1 rounded-2xl" style="background-color: var(--color-surface-container)">
 				<button
 					onclick={() => goto($page.url.pathname, { noScroll: true, keepFocus: true })}
@@ -317,30 +321,18 @@
 				>{t.meal_plan_tab}</button>
 			</div>
 		</div>
-	{/if}
 
-	<!-- Hero header + scroll area -->
-	<div class="relative flex-1 min-h-0">
-		{#if activeTab === 'recipes' && !searchOpen && !sortMode && userSettings.greetingEnabled}
-			<div class="absolute left-0 right-0 top-0 flex flex-col justify-end px-6 pb-4" style="height: 22vh; min-height: 100px; max-height: 160px; z-index: 0">
-				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
-				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user?.username ?? ''}</p>
-				{#if recipeInfoLine}
-					<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant); opacity: 0.65">{recipeInfoLine}</p>
-				{/if}
-			</div>
-		{/if}
 
-	<!-- Meal plan: bottom-anchored scroll (same as recipes) -->
+	<!-- Meal plan -->
 	{#if activeTab === 'mealplan'}
-		<div class="absolute inset-0 flex flex-col justify-end overflow-y-auto px-4" style="z-index: 1">
+		<div class="absolute inset-0 overflow-y-auto px-4" style="z-index: 1; padding-top: calc(env(safe-area-inset-top) + 5.25rem + {overlayHeight}px); padding-bottom: 5.5rem">
 			<MealPlanner {recipes} bind:editMode={mealPlanEditMode} />
-			<div class="flex-shrink-0" style="height: 5rem"></div>
 		</div>
 
-	<!-- Recipes: bottom-anchored scroll (list builds upward), top-anchored when searching -->
+	<!-- Recipes: content scrolls under sticky overlay -->
 	{:else}
-		<div class="absolute inset-0 flex flex-col overflow-y-auto px-4" class:justify-end={!searchQuery.trim() || !keyboardOpen} style="z-index: 1; padding-bottom: 5.5rem">
+		<div class="absolute inset-0 overflow-y-auto px-4" style="z-index: 1; padding-top: calc(env(safe-area-inset-top) + 5.25rem + {overlayHeight}px); padding-bottom: 5.5rem">
+		<div class="min-h-full flex flex-col justify-end">
 
 		<!-- Pending Shares -->
 		{#each pendingShares as share (share.id)}
@@ -402,139 +394,95 @@
 					>{t.disable_hint_recipes}</button>
 				{/if}
 			</div>
-		{:else if sortMode}
-			<!-- Sort Mode -->
-			<div class="space-y-2" style="touch-action: pan-y">
-				{#each filteredRecipes as recipe, i (recipe.id)}
-					<div class="flex items-center gap-2 transition-opacity" style="user-select: none; -webkit-user-select: none; {dragId === recipe.id ? 'opacity: 0.45' : ''}">
-						<!-- Sort controls -->
-						<div class="flex flex-col gap-0.5 flex-shrink-0">
-							<button
-								onclick={() => moveUp(i)}
-								disabled={i === 0}
-								class="w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-20 active:opacity-60"
-								style="color: var(--color-on-surface-variant)"
-								aria-label="Nach oben"
-							>
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-									<polyline points="18 15 12 9 6 15"/>
-								</svg>
-							</button>
-							<button
-								onclick={() => moveDown(i)}
-								disabled={i === filteredRecipes.length - 1}
-								class="w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-20 active:opacity-60"
-								style="color: var(--color-on-surface-variant)"
-								aria-label="Nach unten"
-							>
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-									<polyline points="6 9 12 15 18 9"/>
-								</svg>
-							</button>
-						</div>
-
-						<!-- Card (nicht navigierbar im Sort-Modus) -->
-						<div class="flex-1 min-w-0 flex items-center gap-3 px-4 rounded-2xl transition-all"
-						     style="background-color: var(--color-surface-card); min-height: 3.75rem; padding-top: 0.875rem; padding-bottom: 0.875rem; {dragId === recipe.id ? 'box-shadow: 0 6px 20px rgba(0,0,0,0.25)' : ''}">
-							<!-- Thumbnail -->
-							<div class="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
-							     style="background-color: {recipe.imageUrl ? 'var(--color-surface-container)' : 'transparent'}">
-								{#if recipe.imageUrl}
-									<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
-								{:else}
-									<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M8 2v4a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2"/>
-										<line x1="10" y1="8" x2="10" y2="22"/>
-										<line x1="7" y1="2" x2="7" y2="6"/>
-										<line x1="13" y1="2" x2="13" y2="6"/>
-										<path d="M17 2c0 0 2 1.5 2 5s-2 5-2 5v10"/>
-									</svg>
-								{/if}
-							</div>
-
-							<!-- Info -->
-							<div class="flex-1 min-w-0 flex flex-col justify-center">
-								<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{recipe.title}</div>
-								{#if totalTime(recipe) || recipe.description}
-									<div class="text-xs mt-0.5 truncate" style="color: var(--color-primary)">
-										{totalTime(recipe) || recipe.description}
-									</div>
-								{/if}
-							</div>
-
-							<!-- Drag handle -->
-							<div
-								onpointerdown={(e) => startDrag(e, recipe.id)}
-								class="flex-shrink-0 flex items-center justify-center w-8 h-8 -mr-1 rounded-lg"
-								style="touch-action: none; cursor: grab"
-								role="button"
-								tabindex="-1"
-								aria-label="Verschieben"
-							>
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<line x1="3" y1="8" x2="21" y2="8"/>
-									<line x1="3" y1="16" x2="21" y2="16"/>
-								</svg>
-							</div>
-						</div>
-					</div>
-				{/each}
-			</div>
 		{:else}
-			<!-- Normal Mode -->
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
-				{#each filteredRecipes as recipe, i (recipe.id)}
-					{@const isLast = i === filteredRecipes.length - 1}
-					<button
-						onclick={() => goto(`/rezepte/${recipe.id}`)}
-						class="w-full flex items-center gap-3 px-4 py-1 text-left active:opacity-70 transition-opacity"
-					>
-						<!-- Thumbnail -->
-						<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
-						     style="background-color: var(--color-surface-container)">
-							{#if recipe.imageUrl}
-								<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
-							{:else}
-								<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M8 2v4a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2"/>
-									<line x1="10" y1="8" x2="10" y2="22"/>
-									<line x1="7" y1="2" x2="7" y2="6"/>
-									<line x1="13" y1="2" x2="13" y2="6"/>
-									<path d="M17 2c0 0 2 1.5 2 5s-2 5-2 5v10"/>
-								</svg>
-							{/if}
-						</div>
-
-						<!-- Info -->
-						<div class="flex-1 min-w-0 flex flex-col justify-center">
-							<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{recipe.title}</div>
-							{#if totalTime(recipe) || recipe.description}
-								<div class="text-xs mt-0.5 truncate" style="color: var(--color-on-surface-variant)">
-									{totalTime(recipe) || recipe.description}
-								</div>
-							{/if}
-						</div>
-
-						<!-- Servings -->
-						<div class="flex-shrink-0 flex items-center gap-1">
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+			{#snippet recipeRow(recipe: Recipe)}
+				{@const metaText = totalTime(recipe) || recipe.description}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					onclick={() => goto(`/rezepte/${recipe.id}`)}
+					class="w-full flex items-center gap-3 px-4 py-1 text-left active:opacity-70 transition-opacity cursor-pointer"
+				>
+					<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
+					     style="background-color: var(--color-surface-container)">
+						{#if recipe.imageUrl}
+							<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
+						{:else}
+							<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M8 2v4a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2"/>
+								<line x1="10" y1="8" x2="10" y2="22"/>
+								<line x1="7" y1="2" x2="7" y2="6"/>
+								<line x1="13" y1="2" x2="13" y2="6"/>
+								<path d="M17 2c0 0 2 1.5 2 5s-2 5-2 5v10"/>
 							</svg>
-							<span class="text-xs font-medium" style="color: var(--color-primary)">{recipe.servings}</span>
+						{/if}
+					</div>
+					<div class="flex-1 min-w-0 flex flex-col justify-center">
+						<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{recipe.title}</div>
+						{#if recipe.rating || metaText}
+							<div class="text-xs mt-0.5 truncate flex items-center gap-1" style="color: var(--color-on-surface-variant)">
+								{#if recipe.rating}
+									<svg width="11" height="11" viewBox="0 0 24 24" fill="var(--color-primary)" stroke="var(--color-primary)" stroke-width="1.5" stroke-linejoin="round" class="flex-shrink-0">
+										<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+									</svg>
+									<span style="color: var(--color-primary)">{recipe.rating}</span>
+									{#if metaText}<span aria-hidden="true">·</span>{/if}
+								{/if}
+								{#if metaText}<span class="truncate">{metaText}</span>{/if}
+							</div>
+						{/if}
+					</div>
+					{#if sortKey === 'cookCount' && (recipe.cookCount ?? 0) > 0}
+						<div class="flex-shrink-0 flex items-center gap-1 -mr-1">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+							</svg>
+							<span class="text-xs font-medium" style="color: var(--color-primary)">{recipe.cookCount}×</span>
 						</div>
-					</button>
-				{/each}
-			</div>
+					{:else if sortKey === 'cooked' && recipe.lastCookedAt}
+						<div class="flex-shrink-0 -mr-1">
+							<span class="text-xs font-medium" style="color: var(--color-primary)">{formatLastCooked(recipe.lastCookedAt)}</span>
+						</div>
+					{/if}
+				</div>
+			{/snippet}
+
+			<!-- Bottom-up: non-favorites bubble above, favorites bubble below (near thumb) -->
+			{#if otherRecipes.length > 0}
+				<div class="rounded-2xl overflow-hidden mb-2" style="background-color: var(--color-surface-card)">
+					<div class="px-4 pt-3 pb-1 flex items-center gap-2">
+						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-on-surface-variant)"></span>
+						<p class="text-sm font-semibold" style="color: var(--color-on-surface-variant)">{t.recipes_title}</p>
+					</div>
+					{#each otherRecipes as recipe (recipe.id)}
+						{@render recipeRow(recipe)}
+					{/each}
+					<div class="h-2"></div>
+				</div>
+			{/if}
+			{#if favoriteRecipes.length > 0}
+				<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
+					<div class="px-4 pt-3 pb-1 flex items-center gap-2">
+						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
+						<p class="text-sm font-semibold" style="color: var(--color-primary)">{t.recipe_favorite}</p>
+					</div>
+					{#each favoriteRecipes as recipe (recipe.id)}
+						{@render recipeRow(recipe)}
+					{/each}
+					<div class="h-2"></div>
+				</div>
+			{/if}
 		{/if}
 
+		</div><!-- end inner flex-col -->
 		</div><!-- end recipes scroll -->
 	{/if}<!-- end tab switch -->
 	</div><!-- end relative wrapper -->
 
 	<AppBottomNav
 		activeTab="recipes"
-		onFabTap={activeTab === 'mealplan' ? () => { mealPlanEditMode = !mealPlanEditMode; } : (activeTab === 'recipes' && !sortMode ? () => addSheetOpen = true : null)}
-		showFab={activeTab === 'mealplan' || (activeTab === 'recipes' && !sortMode)}
+		onFabTap={activeTab === 'mealplan' ? () => { mealPlanEditMode = !mealPlanEditMode; } : (activeTab === 'recipes' ? () => addSheetOpen = true : null)}
+		showFab={activeTab === 'mealplan' || activeTab === 'recipes'}
 		fabLabel={activeTab === 'mealplan' ? t.meal_plan_edit : t.recipe_add}
 		fabVariant={activeTab === 'mealplan' ? 'edit' : 'add'}
 	/>
@@ -586,6 +534,43 @@
 					<div class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_create_manual_hint}</div>
 				</div>
 			</button>
+		</div>
+	</div>
+{/if}
+
+
+<!-- Sort Sheet -->
+{#if sortSheetOpen}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => sortSheetOpen = false}></div>
+	<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pt-3"
+	     style="background-color: var(--color-surface-low); bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
+		<div class="flex justify-center mb-2">
+			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
+		</div>
+		<h2 class="text-lg font-bold mb-3" style="color: var(--color-on-surface)">{t.recipes_sort_label}</h2>
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+			{#each [
+				{ key: 'updated' as SortKey, label: t.recipes_sort_updated },
+				{ key: 'cooked' as SortKey, label: t.recipes_sort_cooked },
+				{ key: 'cookCount' as SortKey, label: t.recipes_sort_cook_count },
+				{ key: 'rating' as SortKey, label: t.recipes_sort_rating },
+				{ key: 'title' as SortKey, label: t.recipes_sort_title }
+			] as opt}
+				<button
+					onclick={() => setSortKey(opt.key)}
+					class="w-full flex items-center justify-between px-4 py-2 text-left active:opacity-60"
+					style="color: {sortKey === opt.key ? 'var(--color-primary)' : 'var(--color-on-surface)'}"
+				>
+					<span class="text-sm" style="font-weight: {sortKey === opt.key ? 600 : 500}">{opt.label}</span>
+					{#if sortKey === opt.key}
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<polyline points="20 6 9 17 4 12"/>
+						</svg>
+					{/if}
+				</button>
+			{/each}
 		</div>
 	</div>
 {/if}

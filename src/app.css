@@ -41,14 +41,14 @@
   }
 
   :root[data-theme="dark"], .dark {
-    /* Dark Mode – neutral gray surfaces, Stitch mint palette */
-    --color-bg: #121212;
-    --color-surface: #161616;
-    --color-surface-low: #1a1a1a;
-    --color-surface-container: #1e1e1e;
-    --color-surface-high: #222222;
-    --color-surface-card: #262626;
-    --color-surface-elevated: #2a2a2a;
+    /* Dark Mode – mint-tinted surfaces (Default theme) */
+    --color-bg: #111513;
+    --color-surface: #141816;
+    --color-surface-low: #181c1a;
+    --color-surface-container: #1c201e;
+    --color-surface-high: #202422;
+    --color-surface-card: #242826;
+    --color-surface-elevated: #282c2a;
 
     --color-primary: #81C784;
     --color-primary-container: #1B3920;
@@ -73,13 +73,13 @@
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --color-bg: #121212;
-      --color-surface: #161616;
-      --color-surface-low: #1a1a1a;
-      --color-surface-container: #1e1e1e;
-      --color-surface-high: #222222;
-      --color-surface-card: #262626;
-      --color-surface-elevated: #2a2a2a;
+      --color-bg: #111513;
+      --color-surface: #141816;
+      --color-surface-low: #181c1a;
+      --color-surface-container: #1c201e;
+      --color-surface-high: #202422;
+      --color-surface-card: #242826;
+      --color-surface-elevated: #282c2a;
 
       --color-primary: #81C784;
       --color-primary-container: #1B3920;
@@ -115,6 +115,13 @@
   }
   :root[data-theme="dark"][data-color-scheme="classic"],
   .dark[data-color-scheme="classic"] {
+    --color-bg: #101513;
+    --color-surface: #131816;
+    --color-surface-low: #171c1a;
+    --color-surface-container: #1b201e;
+    --color-surface-high: #1f2422;
+    --color-surface-card: #232826;
+    --color-surface-elevated: #272c2a;
     --color-primary: #00C49A;
     --color-primary-container: #003d2f;
     --color-primary-dim: #00a882;
@@ -123,6 +130,13 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"])[data-color-scheme="classic"] {
+      --color-bg: #101513;
+      --color-surface: #131816;
+      --color-surface-low: #171c1a;
+      --color-surface-container: #1b201e;
+      --color-surface-high: #1f2422;
+      --color-surface-card: #232826;
+      --color-surface-elevated: #272c2a;
       --color-primary: #00C49A;
       --color-primary-container: #003d2f;
       --color-primary-dim: #00a882;
@@ -141,6 +155,13 @@
   }
   :root[data-theme="dark"][data-color-scheme="indigo"],
   .dark[data-color-scheme="indigo"] {
+    --color-bg: #111217;
+    --color-surface: #14151b;
+    --color-surface-low: #18191f;
+    --color-surface-container: #1c1d24;
+    --color-surface-high: #202128;
+    --color-surface-card: #24252c;
+    --color-surface-elevated: #282930;
     --color-primary: #9FA8DA;
     --color-primary-container: #1A2257;
     --color-primary-dim: #7986CB;
@@ -149,6 +170,13 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"])[data-color-scheme="indigo"] {
+      --color-bg: #111217;
+      --color-surface: #14151b;
+      --color-surface-low: #18191f;
+      --color-surface-container: #1c1d24;
+      --color-surface-high: #202128;
+      --color-surface-card: #24252c;
+      --color-surface-elevated: #282930;
       --color-primary: #9FA8DA;
       --color-primary-container: #1A2257;
       --color-primary-dim: #7986CB;

@@ -11,6 +11,7 @@
 		initialMood = null as number | null,
 		initialActivities = [] as string[],
 		initialNote = '' as string,
+		initialGratitude = '' as string,
 		onsaved
 	}: {
 		open: boolean;
@@ -18,12 +19,14 @@
 		initialMood?: number | null;
 		initialActivities?: string[];
 		initialNote?: string;
+		initialGratitude?: string;
 		onsaved: () => void;
 	} = $props();
 
 	let selectedMood = $state<number | null>(null);
 	let selectedActivities = $state<Set<string>>(new Set());
 	let note = $state('');
+	let gratitude = $state('');
 	let saving = $state(false);
 	let collapsedCats = $state<Set<string>>(new Set());
 	let scrollEl = $state<HTMLElement | null>(null);
@@ -33,6 +36,7 @@
 			selectedMood = initialMood ?? null;
 			selectedActivities = new Set(initialActivities);
 			note = initialNote ?? '';
+			gratitude = initialGratitude ?? '';
 			// Scroll to bottom so Sport category is visible first
 			Promise.resolve().then(() => {
 				if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
@@ -77,7 +81,8 @@
 					date,
 					mood: selectedMood,
 					activities: [...selectedActivities],
-					note: note.trim() || null
+					note: note.trim() || null,
+					gratitude: gratitude.trim() || null
 				})
 			});
 			if (res.ok) {
@@ -134,6 +139,17 @@
 		<!-- Scrollable content — categories reversed, note at top, Sport at bottom -->
 		<div bind:this={scrollEl} class="flex-1 overflow-y-auto px-5 pt-2 pb-2">
 			<div class="space-y-5">
+
+				<!-- Gratitude journal -->
+				<div>
+					<textarea
+						bind:value={gratitude}
+						placeholder={t.mood_gratitude_placeholder}
+						rows="3"
+						class="w-full rounded-2xl px-4 py-3 border-0 outline-none resize-none"
+						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; line-height: 1.5"
+					></textarea>
+				</div>
 
 				<!-- Note (at top, scroll all the way up to see) -->
 				<div>

@@ -11,6 +11,8 @@
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
 	import EditLogSheet from '$lib/components/supplements/EditLogSheet.svelte';
+	import CaffeineEditLogSheet from '$lib/components/supplements/CaffeineEditLogSheet.svelte';
+	import WaterEditLogSheet from '$lib/components/supplements/WaterEditLogSheet.svelte';
 	import WaterTrackerCard from '$lib/components/supplements/WaterTrackerCard.svelte';
 	import CaffeineTrackerCard from '$lib/components/supplements/CaffeineTrackerCard.svelte';
 	import CaffeineDrinkPickerSheet from '$lib/components/supplements/CaffeineDrinkPickerSheet.svelte';
@@ -48,7 +50,7 @@
 	let meditationLogsToday = $state<MeditationLog[]>([]);
 	let meditationTimerOpen = $state(false);
 	let meditationTimerDuration = $state(10);
-	type MoodEntry = { date: string; mood: number; activities: string[]; note: string | null };
+	type MoodEntry = { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null };
 	let todayMoodEntry = $state<MoodEntry | null>(null);
 	let moodEntryOpen = $state(false);
 
@@ -84,9 +86,16 @@
 		scrollRaf = requestAnimationFrame(() => {
 			scrollRaf = 0;
 			if (!scrollContainer) return;
+			// Today-Tab: kein Auto-Hide. Bottom-Anchor (min-h-full + justify-end)
+			// würde sonst bei knapp überlaufendem Inhalt mit dem Header-Hide
+			// flip-floppen (Inhalt passt → scrollTop wird auf 0 geklemmt →
+			// y<12-Reset zeigt Header → Loop).
+			if (activeTab === 'today') {
+				lastScrollY = scrollContainer.scrollTop;
+				return;
+			}
 			const y = scrollContainer.scrollTop;
 			const max = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-			// Ignore overscroll / bounce zones at top and bottom
 			if (y <= 0) {
 				headerHidden = false;
 				lastScrollY = 0;
@@ -393,15 +402,16 @@
 		historyLoading = false;
 	}
 
-	async function readMoodLogs(res: Response | null): Promise<{ date: string; mood: number; activities?: string[]; note?: string | null }[]> {
+	async function readMoodLogs(res: Response | null): Promise<{ date: string; mood: number; activities?: string[]; note?: string | null; gratitude?: string | null }[]> {
 		if (!res || !res.ok) return [];
 		try {
 			const data = await res.json();
-			return (data.logs ?? []).map((l: { date: string; mood: number; activities?: string; note?: string | null }) => ({
+			return (data.logs ?? []).map((l: { date: string; mood: number; activities?: string; note?: string | null; gratitude?: string | null }) => ({
 				date: l.date,
 				mood: l.mood,
 				activities: l.activities ? (() => { try { return JSON.parse(l.activities) as string[]; } catch { return []; } })() : [],
-				note: l.note ?? null
+				note: l.note ?? null,
+				gratitude: l.gratitude ?? null
 			}));
 		} catch { return []; }
 	}
@@ -420,7 +430,7 @@
 			let medLogs = historyMeditationLogs;
 			let nutrients = historyNutrients;
 			// Kick off mood-logs fetch in parallel with the others (independent endpoint)
-			let moodLogs: { date: string; mood: number; activities?: string[]; note?: string | null }[] = [];
+			let moodLogs: { date: string; mood: number; activities?: string[]; note?: string | null; gratitude?: string | null }[] = [];
 			const moodFetch = (userSettings.moodTrackerEnabled && sections.mood)
 				? fetch(`/api/mood-logs?from=${toLocalDateStr(new Date(from))}&to=${toLocalDateStr(new Date(to))}`).catch(() => null)
 				: Promise.resolve(null);
@@ -643,7 +653,7 @@
 				if (log) {
 					let acts: string[] = [];
 					try { acts = log.activities ? JSON.parse(log.activities) : []; } catch {}
-					todayMoodEntry = { date: log.date, mood: log.mood, activities: acts, note: log.note };
+					todayMoodEntry = { date: log.date, mood: log.mood, activities: acts, note: log.note, gratitude: log.gratitude ?? null };
 				} else {
 					todayMoodEntry = null;
 				}
@@ -760,6 +770,9 @@
 	$effect(() => {
 		if (activeTab === 'history') {
 			loadHistory();
+		} else if (headerHidden) {
+			// Tab-Wechsel zurück zu Today: Header wieder sichtbar
+			headerHidden = false;
 		}
 	});
 
@@ -881,6 +894,33 @@
 			time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
 			note: log.note ?? null
 		};
+	}
+
+	type CaffeineEditSheetType = { id: string; drinkName: string; amountMl: number; caffeineMg: number; defaultMl: number; defaultCaffeineMg: number; time: string };
+	let caffeineEditSheet = $state<CaffeineEditSheetType | null>(null);
+	type WaterEditSheetType = { id: string; amountMl: number; time: string };
+	let waterEditSheet = $state<WaterEditSheetType | null>(null);
+
+	function toHHMM(ts: number): string {
+		const d = new Date(ts);
+		return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+	}
+
+	function openHistoryEditCaffeineLog(log: CaffeineLog) {
+		const drink = caffeineDrinks.find(d => d.name === log.drinkName);
+		caffeineEditSheet = {
+			id: log.id,
+			drinkName: log.drinkName,
+			amountMl: log.amountMl,
+			caffeineMg: log.caffeineMg,
+			defaultMl: drink?.defaultMl ?? log.amountMl,
+			defaultCaffeineMg: drink?.caffeineMg ?? log.caffeineMg,
+			time: toHHMM(log.loggedAt)
+		};
+	}
+
+	function openHistoryEditWaterLog(log: { id: string; amountMl: number; loggedAt: number }) {
+		waterEditSheet = { id: log.id, amountMl: log.amountMl, time: toHHMM(log.loggedAt) };
 	}
 </script>
 
@@ -1058,15 +1098,16 @@
 
 		<div bind:this={scrollContainer}
 		     onscroll={onScroll}
-		     class="absolute inset-0 overflow-y-auto {activeTab === 'today' ? 'flex flex-col justify-end' : ''}"
-		     style="padding-top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); padding-bottom: 5.5rem; transition: padding-top 0.25s ease;">
+		     class="absolute inset-0 overflow-y-auto"
+		     style="padding-top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); padding-bottom: 5.5rem; transition: padding-top 0.25s ease; overscroll-behavior: none;">
 
 	{#if loading}
 		<div class="flex justify-center py-16">
 			<div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
 		</div>
 	{:else if activeTab === 'today'}
-		<!-- TODAY TAB -->
+		<!-- TODAY TAB — bottom-anchor via min-h-full + justify-end (gleiches Pattern wie Einkaufsliste) -->
+		<div class="min-h-full flex flex-col justify-end">
 		{#if loggedTodaySupplements.length === 0 && !hasVisibleTrackerCards}
 			<div class="px-4 py-8 text-center">
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_today_empty}</p>
@@ -1237,6 +1278,7 @@
 			{/if}
 			</div>
 		{/if}
+		</div>
 
 	{:else}
 		<HistoryTab
@@ -1255,6 +1297,8 @@
 			meditationLogs={historyMeditationLogs}
 			onMoodReload={loadTodayMoodEntry}
 			onEditLog={openHistoryEditLog}
+			onEditCaffeineLog={openHistoryEditCaffeineLog}
+			onEditWaterLog={openHistoryEditWaterLog}
 		/>
 	{/if}
 
@@ -1294,6 +1338,7 @@
 		...(todayLogs.length > 0 ? ['supplements'] : [])
 	]}
 	initialNote={todayMoodEntry?.note ?? ''}
+	initialGratitude={todayMoodEntry?.gratitude ?? ''}
 	onsaved={() => { moodEntryOpen = false; loadTodayMoodEntry(); if (activeTab === 'history') loadHistory(); }}
 />
 
@@ -1330,6 +1375,22 @@
 	onreload={() => {
 		if (activeTab === 'history') loadHistory();
 		else Promise.all([loadTodayLogs(), loadSupplements()]);
+	}}
+/>
+
+<CaffeineEditLogSheet
+	bind:sheet={caffeineEditSheet}
+	onreload={() => {
+		if (activeTab === 'history') loadHistory();
+		else loadCaffeineLogs();
+	}}
+/>
+
+<WaterEditLogSheet
+	bind:sheet={waterEditSheet}
+	onreload={() => {
+		if (activeTab === 'history') loadHistory();
+		else loadWaterLogs();
 	}}
 />
 

@@ -2,8 +2,8 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { recipes, recipeIngredients, recipeSteps } from '$lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { recipes, recipeIngredients, recipeSteps, recipeTags } from '$lib/db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 const RECIPE_LIMIT = 50;
@@ -22,6 +22,10 @@ export const GET: RequestHandler = async (event) => {
 			servings: recipes.servings,
 			prepTime: recipes.prepTime,
 			cookTime: recipes.cookTime,
+			isFavorite: recipes.isFavorite,
+			rating: recipes.rating,
+			cookCount: recipes.cookCount,
+			lastCookedAt: recipes.lastCookedAt,
 			createdAt: recipes.createdAt,
 			updatedAt: recipes.updatedAt
 		})
@@ -30,7 +34,19 @@ export const GET: RequestHandler = async (event) => {
 		.orderBy(recipes.updatedAt)
 		.all();
 
-	return json({ recipes: userRecipes, limit: RECIPE_LIMIT });
+	const ids = userRecipes.map((r) => r.id);
+	const tagRows = ids.length
+		? db.select().from(recipeTags).where(inArray(recipeTags.recipeId, ids)).all()
+		: [];
+	const tagsByRecipe = new Map<string, string[]>();
+	for (const t of tagRows) {
+		const arr = tagsByRecipe.get(t.recipeId) ?? [];
+		arr.push(t.tag);
+		tagsByRecipe.set(t.recipeId, arr);
+	}
+	const withTags = userRecipes.map((r) => ({ ...r, tags: tagsByRecipe.get(r.id) ?? [] }));
+
+	return json({ recipes: withTags, limit: RECIPE_LIMIT });
 };
 
 export const POST: RequestHandler = async (event) => {

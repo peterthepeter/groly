@@ -110,7 +110,7 @@
 					onclick={save}
 					disabled={saving}
 					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50"
-					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+					style="background: linear-gradient(135deg, #60A5FA, #3B82F6); color: white"
 				>{saving ? '…' : t.supplement_reminders_save}</button>
 			</div>
 		</div>

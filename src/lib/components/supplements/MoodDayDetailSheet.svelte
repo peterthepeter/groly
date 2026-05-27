@@ -7,12 +7,12 @@
 
 	let {
 		open = $bindable(false),
-		entry = null as { date: string; mood: number; activities: string[]; note: string | null } | null,
+		entry = null as { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null,
 		onsaved,
 		ondeleted
 	}: {
 		open: boolean;
-		entry: { date: string; mood: number; activities: string[]; note: string | null } | null;
+		entry: { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null;
 		onsaved: () => void;
 		ondeleted?: () => void;
 	} = $props();
@@ -99,9 +99,17 @@
 				</div>
 			{/if}
 
+			<!-- Gratitude -->
+			{#if entry.gratitude}
+				<div>
+					<p class="text-[11px] font-semibold uppercase tracking-widest mb-1.5" style="color: #F472B6">{t.mood_gratitude_label}</p>
+					<p class="text-sm leading-relaxed px-3 py-2.5 rounded-xl whitespace-pre-wrap" style="background-color: var(--color-surface-container); color: var(--color-on-surface)">{entry.gratitude}</p>
+				</div>
+			{/if}
+
 			<!-- Note -->
 			{#if entry.note}
-				<p class="text-sm leading-relaxed px-3 py-2.5 rounded-xl" style="background-color: var(--color-surface-container); color: var(--color-on-surface)">{entry.note}</p>
+				<p class="text-sm leading-relaxed px-3 py-2.5 rounded-xl whitespace-pre-wrap" style="background-color: var(--color-surface-container); color: var(--color-on-surface)">{entry.note}</p>
 			{/if}
 
 			<!-- Delete + Edit -->
@@ -154,5 +162,6 @@
 	initialMood={entry?.mood ?? null}
 	initialActivities={entry?.activities ?? []}
 	initialNote={entry?.note ?? ''}
+	initialGratitude={entry?.gratitude ?? ''}
 	onsaved={() => { editOpen = false; open = false; onsaved(); }}
 />

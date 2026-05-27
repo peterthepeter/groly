@@ -13,6 +13,7 @@
 		mood: number;
 		activities: string | null;
 		note: string | null;
+		gratitude: string | null;
 	};
 
 	let {
@@ -32,7 +33,7 @@
 	let referenceDate = $state(todayKey());
 	let logs = $state<MoodLogEntry[]>([]);
 	let loading = $state(false);
-	let detailEntry = $state<{ date: string; mood: number; activities: string[]; note: string | null } | null>(null);
+	let detailEntry = $state<{ date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null>(null);
 	let detailOpen = $state(false);
 	// History-view: inline preview of tap-selected day (avoids sheet for every tap)
 	let previewedDate = $state<string | null>(null);
@@ -65,6 +66,7 @@
 	let newEntryDate = $state('');
 	let newEntryOpen = $state(false);
 	let expanded = $state(true);
+	let dayCardExpanded = $state(true);
 
 	// Sync view and date from parent when in fixed mode
 	$effect(() => {
@@ -75,12 +77,12 @@
 
 	const todayStr = todayKey;
 
-	function parseLogs(raw: MoodLogEntry[]): Map<string, { mood: number; activities: string[]; note: string | null }> {
-		const map = new Map<string, { mood: number; activities: string[]; note: string | null }>();
+	function parseLogs(raw: MoodLogEntry[]): Map<string, { mood: number; activities: string[]; note: string | null; gratitude: string | null }> {
+		const map = new Map<string, { mood: number; activities: string[]; note: string | null; gratitude: string | null }>();
 		for (const l of raw) {
 			let acts: string[] = [];
 			try { acts = l.activities ? JSON.parse(l.activities) : []; } catch {}
-			map.set(l.date, { mood: l.mood, activities: acts, note: l.note });
+			map.set(l.date, { mood: l.mood, activities: acts, note: l.note, gratitude: l.gratitude });
 		}
 		return map;
 	}
@@ -285,22 +287,42 @@
 	{#if dayEntry}
 		{@const level = getMoodLevel(dayEntry.mood)}
 		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-card)">
-			<button
-				onclick={() => openDetail(viewedDate)}
-				class="w-full flex items-center gap-2 px-4 py-3 active:opacity-60"
-			>
-				<div class="flex items-center gap-2 shrink-0">
-					<span class="rounded-full" style="width: 6px; height: 6px; background-color: #F472B6"></span>
+			<div class="w-full flex items-center gap-2 px-4 py-3">
+				<button
+					onclick={() => dayCardExpanded = !dayCardExpanded}
+					class="flex items-center gap-2 flex-1 min-w-0 active:opacity-60 text-left"
+					aria-label={dayCardExpanded ? 'Einklappen' : 'Aufklappen'}
+				>
+					<span class="rounded-full shrink-0" style="width: 6px; height: 6px; background-color: #F472B6"></span>
 					<p class="font-semibold text-sm" style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
-				</div>
-				<div class="flex-1"></div>
+				</button>
 				<span class="flex items-center gap-1.5 text-xs font-semibold shrink-0" style="color: {level.color}">
 					<MoodIcon value={level.value} size={15}/>
 					<span>{(t[level.labelKey as keyof typeof t] as string) ?? ''}</span>
 				</span>
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-			</button>
-			{#if dayEntry.activities.length > 0 || dayEntry.note}
+				<button
+					onclick={() => openDetail(viewedDate)}
+					class="shrink-0 p-1 rounded active:opacity-50"
+					aria-label="Bearbeiten"
+					style="color: var(--color-on-surface-variant)"
+				>
+					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+					</svg>
+				</button>
+				<button
+					onclick={() => dayCardExpanded = !dayCardExpanded}
+					class="shrink-0 active:opacity-60"
+					aria-label={dayCardExpanded ? 'Einklappen' : 'Aufklappen'}
+				>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+					     style="transition: transform 0.2s; transform: rotate({dayCardExpanded ? '90' : '0'}deg)">
+						<polyline points="9 18 15 12 9 6"/>
+					</svg>
+				</button>
+			</div>
+			{#if dayCardExpanded && (dayEntry.activities.length > 0 || dayEntry.note || dayEntry.gratitude)}
 				<div class="px-4 pb-3 space-y-2">
 					{#if dayEntry.activities.length > 0}
 						<div class="flex flex-wrap gap-1">
@@ -311,8 +333,11 @@
 							{/each}
 						</div>
 					{/if}
+					{#if dayEntry.gratitude}
+						<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={dayEntry.gratitude}>{dayEntry.gratitude.replace(/\s*\n+\s*/g, ' · ')}</p>
+					{/if}
 					{#if dayEntry.note}
-						<p class="text-xs leading-relaxed italic" style="color: var(--color-on-surface-variant)">"{dayEntry.note}"</p>
+						<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={dayEntry.note}>{dayEntry.note.replace(/\s*\n+\s*/g, ' · ')}</p>
 					{/if}
 				</div>
 			{/if}
@@ -460,9 +485,14 @@
 					</div>
 				{/if}
 
+				<!-- Gratitude -->
+				{#if pEntry.gratitude}
+					<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={pEntry.gratitude}>{pEntry.gratitude.replace(/\s*\n+\s*/g, ' · ')}</p>
+				{/if}
+
 				<!-- Note -->
 				{#if pEntry.note}
-					<p class="text-xs leading-relaxed italic" style="color: var(--color-on-surface-variant)">"{pEntry.note}"</p>
+					<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={pEntry.note}>{pEntry.note.replace(/\s*\n+\s*/g, ' · ')}</p>
 				{/if}
 			</div>
 		{/if}
@@ -567,6 +597,7 @@
 		initialMood={pEntry?.mood ?? null}
 		initialActivities={pEntry?.activities ?? []}
 		initialNote={pEntry?.note ?? ''}
+		initialGratitude={pEntry?.gratitude ?? ''}
 		onsaved={() => { previewEditOpen = false; load(); onreload(); }}
 	/>
 {/if}

@@ -94,9 +94,21 @@ export const recipes = sqliteTable('recipes', {
 	servings: integer('servings').notNull().default(4),
 	prepTime: integer('prep_time'),
 	cookTime: integer('cook_time'),
+	isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
+	rating: integer('rating'),
+	cookCount: integer('cook_count').notNull().default(0),
+	lastCookedAt: integer('last_cooked_at'),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull()
 });
+
+export const recipeTags = sqliteTable('recipe_tags', {
+	recipeId: text('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+	tag: text('tag').notNull()
+}, (t) => [
+	primaryKey({ columns: [t.recipeId, t.tag] }),
+	index('recipe_tags_recipe_id_idx').on(t.recipeId)
+]);
 
 export const recipeIngredients = sqliteTable('recipe_ingredients', {
 	id: text('id').primaryKey(),
@@ -216,6 +228,7 @@ export type Recipe = typeof recipes.$inferSelect;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type RecipeStep = typeof recipeSteps.$inferSelect;
 export type RecipeShare = typeof recipeShares.$inferSelect;
+export type RecipeTag = typeof recipeTags.$inferSelect;
 export type BarcodeCache = typeof barcodeCache.$inferSelect;
 export type RecipeIngredientExclusion = typeof recipeIngredientExclusions.$inferSelect;
 export type ItemHistory = typeof itemHistory.$inferSelect;
@@ -354,6 +367,7 @@ export const moodLogs = sqliteTable('mood_logs', {
 	mood: integer('mood').notNull(), // 1–5
 	activities: text('activities'), // JSON array of tag keys
 	note: text('note'),
+	gratitude: text('gratitude'),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull()
 }, (t) => [

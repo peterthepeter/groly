@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { recipes, recipeIngredients, recipeSteps } from '$lib/db/schema';
+import { recipes, recipeIngredients, recipeSteps, recipeTags } from '$lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -25,7 +25,12 @@ export const GET: RequestHandler = async (event) => {
 		.orderBy(asc(recipeSteps.stepNumber))
 		.all();
 
-	return json({ ...recipe, ingredients, steps });
+	const tags = db.select({ tag: recipeTags.tag }).from(recipeTags)
+		.where(eq(recipeTags.recipeId, event.params.id))
+		.all()
+		.map((r) => r.tag);
+
+	return json({ ...recipe, ingredients, steps, tags });
 };
 
 export const PUT: RequestHandler = async (event) => {
@@ -38,11 +43,17 @@ export const PUT: RequestHandler = async (event) => {
 	if (!recipe) return json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const body = await event.request.json();
-	const { title, description, imageUrl, sourceUrl, servings, prepTime, cookTime, ingredients, steps } = body;
+	const { title, description, imageUrl, sourceUrl, servings, prepTime, cookTime, ingredients, steps, isFavorite, rating, tags } = body;
 
 	if (!title?.trim()) return json({ error: 'Titel erforderlich' }, { status: 400 });
 
 	const now = Date.now();
+
+	const ratingValue = typeof rating === 'number' && rating >= 1 && rating <= 5
+		? Math.round(rating)
+		: rating === null
+			? null
+			: recipe.rating;
 
 	db.update(recipes).set({
 		title: title.trim(),
@@ -52,8 +63,21 @@ export const PUT: RequestHandler = async (event) => {
 		servings: servings ?? recipe.servings,
 		prepTime: prepTime ?? null,
 		cookTime: cookTime ?? null,
+		isFavorite: typeof isFavorite === 'boolean' ? isFavorite : recipe.isFavorite,
+		rating: ratingValue,
 		updatedAt: now
 	}).where(eq(recipes.id, event.params.id)).run();
+
+	if (Array.isArray(tags)) {
+		db.delete(recipeTags).where(eq(recipeTags.recipeId, event.params.id)).run();
+		const seen = new Set<string>();
+		for (const raw of tags) {
+			const t = typeof raw === 'string' ? raw.trim() : '';
+			if (!t || seen.has(t.toLowerCase())) continue;
+			seen.add(t.toLowerCase());
+			db.insert(recipeTags).values({ recipeId: event.params.id, tag: t }).run();
+		}
+	}
 
 	if (Array.isArray(ingredients)) {
 		const existing = db.select({ id: recipeIngredients.id })

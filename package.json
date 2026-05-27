@@ -1,7 +1,7 @@
 {
 	"name": "groly",
 	"private": true,
-	"version": "0.7.11-2",
+	"version": "0.7.15",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",

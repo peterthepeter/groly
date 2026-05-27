@@ -33,7 +33,7 @@ export const POST: RequestHandler = async (event) => {
 
 	try {
 		const body = await event.request.json();
-		const { date, mood, activities, note } = body;
+		const { date, mood, activities, note, gratitude } = body;
 
 		if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
 			return json({ error: 'Ungültiges Datum' }, { status: 400 });
@@ -53,7 +53,7 @@ export const POST: RequestHandler = async (event) => {
 
 		if (existing) {
 			db.update(moodLogs)
-				.set({ mood, activities: activitiesJson, note: note ?? null, updatedAt: now })
+				.set({ mood, activities: activitiesJson, note: note ?? null, gratitude: gratitude ?? null, updatedAt: now })
 				.where(eq(moodLogs.id, existing.id))
 				.run();
 			return json({ id: existing.id });
@@ -67,6 +67,7 @@ export const POST: RequestHandler = async (event) => {
 			mood,
 			activities: activitiesJson,
 			note: note ?? null,
+			gratitude: gratitude ?? null,
 			createdAt: now,
 			updatedAt: now
 		}).run();

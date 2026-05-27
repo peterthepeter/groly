@@ -11,6 +11,11 @@ export type Recipe = {
 	cookTime: number | null;
 	ingredients: Ingredient[];
 	steps: Step[];
+	isFavorite?: boolean;
+	rating?: number | null;
+	cookCount?: number;
+	lastCookedAt?: number | null;
+	tags?: string[];
 };
 
 export function scaleAmount(raw: string | null, currentServings: number, originalServings: number): string | null {

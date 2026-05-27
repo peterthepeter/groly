@@ -144,7 +144,7 @@
 				},
 				{
 					title: 'Mood Journal',
-					text: 'Enable the Mood Journal under Manage. Each day, rate how you felt on a 5-point scale — from Very bad to Great. Add activity tags (Sport, Hobbies, Emotions, Social, Health, Work, Weather) and an optional free-text note. In the History tab, the Mood section shows a weekly view (7 circles) and a monthly calendar — tap any day to see details or add a missing entry for a past day. Tags you never use can be hidden via the gear icon in the entry sheet.',
+					text: 'Enable the Mood Journal under Manage. Each day, rate how you felt on a 5-point scale — from Very bad to Great. Add activity tags (Sport, Hobbies, Emotions, Social, Health, Work, Weather), a gratitude journal entry (what am I grateful for today?), and an optional free-text note. In the History tab, the Mood section shows a weekly view (7 circles) and a monthly calendar — tap any day to see details (including gratitude entries) or add a missing entry for a past day. Tags you never use can be hidden via the gear icon in the entry sheet. The gratitude journal can be included in the PDF export via the optional "Mood — gratitude journal" section.',
 					svg: `<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>`
 				}
 			]
@@ -162,6 +162,16 @@
 					title: 'Meal Plan',
 					text: 'Switch to the "Meal Plan" tab on the Recipes page to plan your meals for the week. Tap the date column on the left to add a meal — multiple meals per day are supported. Tap a meal to open the recipe or edit it in edit mode. Adjust serving counts with the stepper. Tap the cart icon to add a meal\'s ingredients to a shopping list, or use "Shop entire week" for all planned meals at once.',
 					svg: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`
+				},
+				{
+					title: 'Favorites, rating & tags',
+					text: 'Tap the star icon on a recipe card to mark it as a favorite. In the recipe view you can rate it from 1 to 5 stars and add tags (e.g. Pasta, Vegan, Quick) — tags appear as filter chips at the top of the recipe list. The sort dropdown lets you sort by last updated, last cooked, most cooked, rating, title A–Z, or your custom drag order.',
+					svg: `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+				},
+				{
+					title: 'Cooking history',
+					text: 'Tap "Cooked today" in the recipe view to log that you made it — the counter and last-cooked date update immediately. The small back-arrow next to the counter undoes the last entry if you tapped by accident. Sort recipes by "Most cooked" or "Last cooked" to quickly find your go-to dishes.',
+					svg: `<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>`
 				}
 			]
 		}
@@ -301,7 +311,7 @@
 				},
 				{
 					title: 'Stimmungstagebuch',
-					text: 'Aktiviere das Stimmungstagebuch unter Verwalten. Bewerte jeden Tag deine Stimmung auf einer 5-Stufen-Skala – von „Sehr schlecht" bis „Super". Füge Aktivitäts-Tags aus den Kategorien Sport, Hobbies, Emotionen, Soziales, Gesundheit, Arbeit und Wetter hinzu sowie eine optionale Freitext-Notiz. Im Verlauf-Tab zeigt der Stimmungsbereich eine Wochen- und Monatsansicht – tippe auf einen Tag, um Details zu sehen oder einen vergangenen Tag nachzutragen. Tags, die du nie nutzt, lassen sich über das Zahnrad-Icon im Eingabe-Sheet ausblenden.',
+					text: 'Aktiviere das Stimmungstagebuch unter Verwalten. Bewerte jeden Tag deine Stimmung auf einer 5-Stufen-Skala – von „Sehr schlecht" bis „Super". Füge Aktivitäts-Tags aus den Kategorien Sport, Hobbies, Emotionen, Soziales, Gesundheit, Arbeit und Wetter hinzu, einen Eintrag im Dankbarkeitsjournal („Wofür bin ich heute dankbar?") sowie eine optionale Freitext-Notiz. Im Verlauf-Tab zeigt der Stimmungsbereich eine Wochen- und Monatsansicht – tippe auf einen Tag, um Details (inkl. Dankbarkeitseintrag) zu sehen oder einen vergangenen Tag nachzutragen. Tags, die du nie nutzt, lassen sich über das Zahnrad-Icon im Eingabe-Sheet ausblenden. Das Dankbarkeitsjournal kann beim PDF-Export über den optionalen Abschnitt „Stimmung — Dankbarkeitsjournal" mit exportiert werden.',
 					svg: `<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>`
 				}
 			]
@@ -319,6 +329,16 @@
 					title: 'Wochenplan',
 					text: 'Wechsle auf den Tab „Wochenplan" auf der Rezepte-Seite, um deine Mahlzeiten für die Woche zu planen. Tippe auf die Datumsspalte links, um eine Mahlzeit hinzuzufügen – pro Tag sind mehrere Mahlzeiten möglich. Tippe auf eine Mahlzeit, um das Rezept zu öffnen oder es im Bearbeitungsmodus zu ändern. Mit dem Stepper passt du die Portionenzahl an. Tippe das Warenkorb-Icon, um die Zutaten in eine Einkaufsliste zu übertragen, oder nutze „Ganze Woche einkaufen".',
 					svg: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`
+				},
+				{
+					title: 'Favoriten, Bewertung & Tags',
+					text: 'Tippe auf den Stern an einer Rezeptkarte, um es als Favorit zu markieren. In der Rezept-Ansicht kannst du es mit 1–5 Sternen bewerten und Tags vergeben (z.B. Pasta, Vegan, Schnell) – die Tags erscheinen oben in der Liste als Filter-Chips. Im Sortier-Dropdown wählst du zwischen Zuletzt geändert, Zuletzt gekocht, Am häufigsten gekocht, Bewertung, Titel A–Z oder deiner eigenen Reihenfolge.',
+					svg: `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`
+				},
+				{
+					title: 'Kochhistorie',
+					text: 'Tippe in der Rezept-Ansicht auf „Heute gekocht", um zu protokollieren, dass du es zubereitet hast – Zähler und letztes Kochdatum aktualisieren sich sofort. Der kleine Pfeil daneben macht den letzten Eintrag rückgängig, falls du dich vertippt hast. Sortiere nach „Am häufigsten gekocht" oder „Zuletzt gekocht", um deine Klassiker schnell zu finden.',
+					svg: `<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>`
 				}
 			]
 		}

@@ -6,12 +6,12 @@
 	import ActivityIcon from './ActivityIcon.svelte';
 
 	let {
-		todayEntry = null as { date: string; mood: number; activities: string[]; note: string | null } | null,
+		todayEntry = null as { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null,
 		todayDate,
 		onreload,
 		embedded = false
 	}: {
-		todayEntry: { date: string; mood: number; activities: string[]; note: string | null } | null;
+		todayEntry: { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null;
 		todayDate: string;
 		onreload: () => void;
 		embedded?: boolean;
@@ -22,7 +22,7 @@
 
 	const moodLevel = $derived(todayEntry ? getMoodLevel(todayEntry.mood) : null);
 	const hasDetails = $derived(
-		!!todayEntry && (todayEntry.activities.length > 0 || !!todayEntry.note)
+		!!todayEntry && (todayEntry.activities.length > 0 || !!todayEntry.note || !!todayEntry.gratitude)
 	);
 
 	function getTagLabel(key: string): string {
@@ -89,8 +89,11 @@
 					{/each}
 				</div>
 			{/if}
+			{#if todayEntry.gratitude}
+				<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={todayEntry.gratitude}>{todayEntry.gratitude.replace(/\s*\n+\s*/g, ' · ')}</p>
+			{/if}
 			{#if todayEntry.note}
-				<p class="text-xs leading-relaxed italic" style="color: var(--color-on-surface-variant)">"{todayEntry.note}"</p>
+				<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={todayEntry.note}>{todayEntry.note.replace(/\s*\n+\s*/g, ' · ')}</p>
 			{/if}
 		</div>
 	{/if}
@@ -103,5 +106,6 @@
 	initialMood={todayEntry?.mood ?? null}
 	initialActivities={todayEntry?.activities ?? []}
 	initialNote={todayEntry?.note ?? ''}
+	initialGratitude={todayEntry?.gratitude ?? ''}
 	onsaved={() => { entrySheetOpen = false; onreload(); }}
 />

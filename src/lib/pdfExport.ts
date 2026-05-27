@@ -25,6 +25,7 @@ export type ReportSections = {
 	trackers: boolean;
 	mood: boolean;
 	moodDetails: boolean;
+	moodGratitude: boolean;
 	nutrients: boolean;
 };
 
@@ -40,7 +41,7 @@ export type ReportOptions = {
 	supplementLogs: SupplementLogLite[];
 	caffeineLogs: { caffeineMg: number; loggedAt: number }[];
 	meditationLogs: { durationSeconds: number; loggedAt: number }[];
-	moodLogs: { date: string; mood: number; activities?: string[]; note?: string | null }[];
+	moodLogs: { date: string; mood: number; activities?: string[]; note?: string | null; gratitude?: string | null }[];
 	moodLabels?: Record<number, string>; // 1→"Very bad", 5→"Great" (i18n strings from caller)
 	moodActivityLabels?: Record<string, string>; // tag-key → translated label
 	nutrientTotals: { name: string; total: number; unit: string }[];
@@ -53,6 +54,7 @@ const ALL_SECTIONS: ReportSections = {
 	trackers: true,
 	mood: true,
 	moodDetails: false,
+	moodGratitude: false,
 	nutrients: true
 };
 
@@ -143,7 +145,7 @@ function buildDocument(opts: ReportOptions): TDocumentDefinitions {
 		content.push(...buildTrackersSection(opts));
 	}
 	if (sections.mood) {
-		content.push(...buildMoodSection(opts, sections.moodDetails));
+		content.push(...buildMoodSection(opts, sections.moodDetails, sections.moodGratitude));
 	}
 	if (sections.nutrients) {
 		content.push(...buildNutrientsSection(opts));
@@ -390,7 +392,7 @@ function trackerRow(name: string, color: string, statsLine: string, values: numb
 }
 
 
-function buildMoodSection(opts: ReportOptions, includeDetails: boolean): any[] {
+function buildMoodSection(opts: ReportOptions, includeDetails: boolean, includeGratitude: boolean): any[] {
 	const { lang, moodLogs, range } = opts;
 	if (moodLogs.length === 0) return [];
 	const sum = moodLogs.reduce((s, l) => s + l.mood, 0);
@@ -515,6 +517,22 @@ function buildMoodSection(opts: ReportOptions, includeDetails: boolean): any[] {
 			table: { widths: [60, 70, '*'], body: rows },
 			layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingTop: () => 3, paddingBottom: () => 3 }
 		});
+	}
+
+	// Gratitude journal entries
+	if (includeGratitude) {
+		const gratitudeEntries = sorted.filter(l => l.gratitude && l.gratitude.trim());
+		if (gratitudeEntries.length > 0) {
+			const rows = gratitudeEntries.map((l) => [
+				{ text: formatAxisLabel(l.date, lang), fontSize: 9, color: COLORS.muted },
+				{ text: l.gratitude!, fontSize: 9, color: COLORS.text }
+			]);
+			result.push({ text: tx(lang, 'Dankbarkeitsjournal', 'Gratitude journal'), style: 'h3' });
+			result.push({
+				table: { widths: [60, '*'], body: rows as any[] },
+				layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingTop: () => 3, paddingBottom: () => 3 }
+			});
+		}
 	}
 
 	return result;

@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
 	import { scaleAmount, type Recipe } from '$lib/recipeUtils';
 	import RecipeShareModal from '$lib/components/recipe/RecipeShareModal.svelte';
 	import RecipeAddToListModal from '$lib/components/recipe/RecipeAddToListModal.svelte';
@@ -24,6 +24,125 @@
 	let isOfflineFallback = $state(false);
 
 	let excludedIngredients = $state(new Set<string>());
+	let cookSaving = $state(false);
+	let tagInput = $state('');
+	let editingTags = $state(false);
+	let actionMenuOpen = $state(false);
+
+	function formatLastCooked(ts: number | null | undefined): string {
+		if (!ts) return '';
+		return new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'short' }).format(new Date(ts));
+	}
+
+	function buildPutBody(overrides: Record<string, unknown> = {}) {
+		if (!recipe) return null;
+		return {
+			title: recipe.title,
+			description: recipe.description,
+			imageUrl: recipe.imageUrl,
+			sourceUrl: recipe.sourceUrl,
+			servings: recipe.servings,
+			prepTime: recipe.prepTime,
+			cookTime: recipe.cookTime,
+			isFavorite: recipe.isFavorite ?? false,
+			rating: recipe.rating ?? null,
+			tags: recipe.tags ?? [],
+			...overrides
+		};
+	}
+
+	async function toggleFavorite() {
+		if (!recipe) return;
+		const next = !recipe.isFavorite;
+		recipe = { ...recipe, isFavorite: next };
+		try {
+			await fetch(`/api/recipes/${recipeId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(buildPutBody({ isFavorite: next }))
+			});
+		} catch {
+			recipe = recipe ? { ...recipe, isFavorite: !next } : recipe;
+		}
+	}
+
+	async function setRating(value: number) {
+		if (!recipe) return;
+		const next = recipe.rating === value ? null : value;
+		const prev = recipe.rating;
+		recipe = { ...recipe, rating: next };
+		try {
+			await fetch(`/api/recipes/${recipeId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(buildPutBody({ rating: next }))
+			});
+		} catch {
+			recipe = recipe ? { ...recipe, rating: prev ?? null } : recipe;
+		}
+	}
+
+	async function logCooked() {
+		if (!recipe || cookSaving) return;
+		cookSaving = true;
+		try {
+			const res = await fetch(`/api/recipes/${recipeId}/cook`, { method: 'POST' });
+			if (res.ok) {
+				const data = await res.json();
+				recipe = { ...recipe, cookCount: data.cookCount ?? (recipe.cookCount ?? 0) + 1, lastCookedAt: data.lastCookedAt ?? Date.now() };
+			}
+		} catch {} finally {
+			cookSaving = false;
+		}
+	}
+
+	async function undoCooked() {
+		if (!recipe || cookSaving || !(recipe.cookCount && recipe.cookCount > 0)) return;
+		cookSaving = true;
+		try {
+			const res = await fetch(`/api/recipes/${recipeId}/cook`, { method: 'DELETE' });
+			if (res.ok) {
+				const data = await res.json();
+				recipe = { ...recipe, cookCount: data.cookCount ?? Math.max((recipe.cookCount ?? 1) - 1, 0) };
+			}
+		} catch {} finally {
+			cookSaving = false;
+		}
+	}
+
+	async function addTag() {
+		if (!recipe) return;
+		const value = tagInput.trim();
+		if (!value) return;
+		const current = recipe.tags ?? [];
+		if (current.some((t) => t.toLowerCase() === value.toLowerCase())) {
+			tagInput = '';
+			return;
+		}
+		const nextTags = [...current, value];
+		recipe = { ...recipe, tags: nextTags };
+		tagInput = '';
+		try {
+			await fetch(`/api/recipes/${recipeId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(buildPutBody({ tags: nextTags }))
+			});
+		} catch {}
+	}
+
+	async function removeTag(tag: string) {
+		if (!recipe) return;
+		const nextTags = (recipe.tags ?? []).filter((t) => t !== tag);
+		recipe = { ...recipe, tags: nextTags };
+		try {
+			await fetch(`/api/recipes/${recipeId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(buildPutBody({ tags: nextTags }))
+			});
+		} catch {}
+	}
 
 	async function loadExclusions() {
 		try {
@@ -233,70 +352,147 @@
 						style="color: var(--color-on-surface); font-size: 16px; border-color: var(--color-primary)"
 					/>
 				{:else}
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-					<h1
-						class="text-xl font-bold mb-1 cursor-text"
-						style="color: var(--color-on-surface)"
-						onclick={startEditTitle}
-					>{recipe.title}</h1>
-				{/if}
-				{#if recipe.sourceUrl}
-					<a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer"
-					   class="text-xs underline" style="color: var(--color-primary); text-decoration-color: var(--color-primary)">
-						{t.recipe_original_link}
-					</a>
+					<div class="flex items-start gap-2 mb-1">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+						<h1
+							class="text-xl font-bold cursor-text flex-1 min-w-0"
+							style="color: var(--color-on-surface)"
+							onclick={startEditTitle}
+						>{recipe.title}</h1>
+						{#if recipe.sourceUrl}
+							<a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer"
+							   class="flex-shrink-0 w-7 h-7 mt-1 rounded-full flex items-center justify-center active:opacity-60"
+							   aria-label={t.recipe_original_link}
+							   title={t.recipe_original_link}>
+								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+									<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+								</svg>
+							</a>
+						{/if}
+					</div>
 				{/if}
 				{#if recipe.description}
-					<p class="text-sm mt-2" style="color: var(--color-on-surface-variant)">{recipe.description}</p>
+					<p class="text-sm mt-1" style="color: var(--color-on-surface-variant)">{recipe.description}</p>
 				{/if}
 
-				<!-- Action row -->
-				<div class="flex items-center justify-between mt-4">
-					<!-- Links: Portionen Stepper -->
-					<div class="flex items-center gap-2">
+				<!-- Rating + meta line -->
+				<div class="flex items-center gap-1.5 mt-1 flex-wrap" aria-label={t.recipe_rating}>
+					{#each [1, 2, 3, 4, 5] as n}
 						<button
-							onclick={() => changeServings(-1)}
-							disabled={currentServings <= 1}
-							aria-label="Portionen verringern"
-							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
+							onclick={() => setRating(n)}
+							disabled={isOfflineFallback}
+							aria-label="{n}/5"
+							class="w-6 h-6 -mx-0.5 flex items-center justify-center active:opacity-60 disabled:opacity-40"
 						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
-								<line x1="5" y1="12" x2="19" y2="12"/>
+							<svg width="17" height="17" viewBox="0 0 24 24"
+							     fill={(recipe.rating ?? 0) >= n ? 'var(--color-primary)' : 'none'}
+							     stroke={(recipe.rating ?? 0) >= n ? 'var(--color-primary)' : 'var(--color-outline)'}
+							     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
 							</svg>
 						</button>
-						<div class="flex items-center gap-1 relative">
-							{#if servingsSaved}
-								<svg class="absolute -top-2 -right-2 w-3 h-3" viewBox="0 0 24 24" fill="none"
-								     stroke="var(--color-primary)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"
-								     style="animation: fadeInOut 1.5s ease-in-out forwards">
-									<polyline points="20 6 9 17 4 12"/>
-								</svg>
-							{/if}
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-							</svg>
-							<span class="text-sm font-bold w-5 text-center" style="color: var(--color-on-surface)">{currentServings}</span>
-						</div>
+					{/each}
+					<div class="ml-auto flex items-center gap-2">
+						{#if recipe.lastCookedAt || recipe.prepTime || recipe.cookTime}
+							<span class="text-xs" style="color: var(--color-on-surface-variant)">
+								{#if recipe.prepTime || recipe.cookTime}
+									{((recipe.prepTime ?? 0) + (recipe.cookTime ?? 0))} {t.recipe_minutes}
+								{/if}
+								{#if recipe.lastCookedAt}
+									{#if recipe.prepTime || recipe.cookTime}<span aria-hidden="true"> · </span>{/if}
+									{#if recipe.cookCount && recipe.cookCount > 0}{recipe.cookCount}× · {/if}{formatLastCooked(recipe.lastCookedAt)}
+								{/if}
+							</span>
+						{/if}
 						<button
-							onclick={() => changeServings(1)}
-							aria-label="Portionen erhöhen"
-							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+							onclick={logCooked}
+							disabled={isOfflineFallback || cookSaving}
+							aria-label={t.recipe_cooked_today}
+							title={t.recipe_cooked_today}
+							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-40 active:scale-95 transition-transform"
+							style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
 						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
-								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
 							</svg>
 						</button>
 					</div>
-					<!-- Rechts: Auf Liste + Delete/Share/Edit -->
-					<div class="flex items-center gap-1">
+				</div>
+
+				<!-- Action row: stepper · favorite · overflow · cart · cooked -->
+				<div class="flex items-center gap-1 mt-1">
+					<!-- Servings stepper -->
+					<button
+						onclick={() => changeServings(-1)}
+						disabled={currentServings <= 1}
+						aria-label="Portionen verringern"
+						class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
+					>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
+							<line x1="5" y1="12" x2="19" y2="12"/>
+						</svg>
+					</button>
+					<div class="flex items-center gap-1 relative">
+						{#if servingsSaved}
+							<svg class="absolute -top-2 -right-2 w-3 h-3" viewBox="0 0 24 24" fill="none"
+							     stroke="var(--color-primary)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"
+							     style="animation: fadeInOut 1.5s ease-in-out forwards">
+								<polyline points="20 6 9 17 4 12"/>
+							</svg>
+						{/if}
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+						</svg>
+						<span class="text-sm font-bold w-5 text-center" style="color: var(--color-on-surface)">{currentServings}</span>
+					</div>
+					<button
+						onclick={() => changeServings(1)}
+						aria-label="Portionen erhöhen"
+						class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
+					>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
+							<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+						</svg>
+					</button>
+
+					<div class="ml-auto flex items-center gap-1">
+						<!-- Favorite -->
+						<button
+							onclick={toggleFavorite}
+							disabled={isOfflineFallback}
+							aria-label={recipe.isFavorite ? t.recipe_favorite_remove : t.recipe_favorite_add}
+							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
+						>
+							<svg width="16" height="16" viewBox="0 0 24 24"
+							     fill={recipe.isFavorite ? 'var(--color-primary)' : 'none'}
+							     stroke={recipe.isFavorite ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}
+							     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+							</svg>
+						</button>
+
+						<!-- Overflow menu (edit / share / delete) -->
+						<button
+							onclick={() => actionMenuOpen = true}
+							disabled={isOfflineFallback}
+							aria-label="Mehr"
+							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
+						>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="var(--color-on-surface-variant)">
+								<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
+							</svg>
+						</button>
+
+						<!-- Cart pill -->
 						{#if recipe.ingredients.length > 0}
 							<button
 								onclick={() => listModalOpen = true}
 								disabled={selectedCount === 0}
 								aria-label="Auf Einkaufsliste"
-								class="flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold active:opacity-60 disabled:opacity-40 active:scale-95 transition-transform mr-1"
-								style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+								class="flex items-center gap-1.5 px-2.5 h-8 rounded-full text-xs font-semibold active:opacity-60 disabled:opacity-40 active:scale-95 transition-transform"
+								style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
 							>
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
@@ -304,66 +500,61 @@
 								<span>{selectedCount}/{recipe.ingredients.length}</span>
 							</button>
 						{/if}
-						<button
-							onclick={deleteRecipe}
-							disabled={isOfflineFallback}
-							aria-label="Rezept löschen"
-							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
-						>
-							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-							</svg>
-						</button>
-						<button
-							onclick={() => shareModalOpen = true}
-							disabled={isOfflineFallback}
-							aria-label="Teilen"
-							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
-						>
-							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-								<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-							</svg>
-						</button>
-						<button
-							onclick={() => !isOfflineFallback && goto(`/rezepte/${recipeId}/bearbeiten`)}
-							disabled={isOfflineFallback}
-							aria-label="Bearbeiten"
-							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
-						>
-							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-								<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-							</svg>
-						</button>
 					</div>
 				</div>
-				<!-- Meta row (prep/cook times) -->
-				{#if recipe.prepTime || recipe.cookTime}
-					<div class="flex items-center gap-2 mt-2">
-						{#if recipe.prepTime}
-							<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-							     style="background-color: var(--color-surface-container)">
-								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+
+				<!-- Tags -->
+				<div class="mt-1 flex flex-col gap-2">
+
+					<!-- Tags row -->
+					<div class="flex items-center gap-1.5 flex-wrap">
+						{#each (recipe.tags ?? []) as tag (tag)}
+							<button
+								onclick={() => editingTags && removeTag(tag)}
+								disabled={isOfflineFallback}
+								class="h-7 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1 active:opacity-60 disabled:opacity-40"
+								style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
+							>
+								<span>{tag}</span>
+								{#if editingTags}
+									<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round">
+										<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+									</svg>
+								{/if}
+							</button>
+						{/each}
+						{#if editingTags}
+							<input
+								type="text"
+								bind:value={tagInput}
+								placeholder={t.recipe_tags_placeholder}
+								onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+								class="h-7 px-2.5 rounded-full text-xs outline-none"
+								style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; min-width: 6rem"
+							/>
+							<button
+								onclick={async () => { if (tagInput.trim()) await addTag(); editingTags = false; tagInput = ''; }}
+								class="h-7 px-2.5 rounded-full text-xs font-semibold active:opacity-60"
+								style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+							>{t.sort_mode_done}</button>
+						{:else}
+							<button
+								onclick={() => editingTags = true}
+								disabled={isOfflineFallback}
+								class="h-7 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1 active:opacity-60 disabled:opacity-40"
+								style="background-color: transparent; color: var(--color-primary); border: 1px dashed var(--color-outline)"
+							>
+								<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+									<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
 								</svg>
-								<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_prep_time} {recipe.prepTime} {t.recipe_minutes}</span>
-							</div>
-						{/if}
-						{#if recipe.cookTime}
-							<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-							     style="background-color: var(--color-surface-container)">
-								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
-								</svg>
-								<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.recipe_cook_time} {recipe.cookTime} {t.recipe_minutes}</span>
-							</div>
+								<span>{recipe.tags && recipe.tags.length > 0 ? t.recipe_tags_add : t.recipe_tags}</span>
+							</button>
 						{/if}
 					</div>
-				{/if}
+				</div>
 
 				<!-- Tabs -->
-				<div class="flex gap-1 mt-4 mb-4 p-1 rounded-xl" style="background-color: var(--color-surface-container)">
+				<div class="flex gap-1 mt-3 mb-3 p-1 rounded-xl" style="background-color: var(--color-surface-container)">
 					<button
 						onclick={() => activeTab = 'zutaten'}
 						class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
@@ -468,4 +659,59 @@
 		open={listModalOpen}
 		onClose={() => listModalOpen = false}
 	/>
+{/if}
+
+<!-- Overflow action sheet -->
+{#if actionMenuOpen}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => actionMenuOpen = false}></div>
+	<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pt-3"
+	     style="background-color: var(--color-surface-low); bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem)">
+		<div class="flex justify-center mb-3">
+			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
+		</div>
+		<div class="rounded-2xl overflow-hidden" style="background-color: var(--color-surface-container)">
+			<button
+				onclick={() => { actionMenuOpen = false; goto(`/rezepte/${recipeId}/bearbeiten`); }}
+				class="w-full flex items-center gap-3 px-4 py-3 active:opacity-60"
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+					<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+				</svg>
+				<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.recipe_edit_title}</span>
+			</button>
+			<button
+				onclick={() => { actionMenuOpen = false; shareModalOpen = true; }}
+				class="w-full flex items-center gap-3 px-4 py-3 active:opacity-60"
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+					<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+				</svg>
+				<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.recipe_share_title}</span>
+			</button>
+			{#if recipe?.cookCount && recipe.cookCount > 0}
+				<button
+					onclick={() => { actionMenuOpen = false; undoCooked(); }}
+					class="w-full flex items-center gap-3 px-4 py-3 active:opacity-60"
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+					</svg>
+					<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.recipe_cooked_undo}</span>
+				</button>
+			{/if}
+			<button
+				onclick={() => { actionMenuOpen = false; deleteRecipe(); }}
+				class="w-full flex items-center gap-3 px-4 py-3 active:opacity-60"
+			>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+				</svg>
+				<span class="text-sm font-medium" style="color: var(--color-error)">{t.recipe_delete}</span>
+			</button>
+		</div>
+	</div>
 {/if}
