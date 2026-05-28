@@ -301,7 +301,7 @@
 					<span>{(t[level.labelKey as keyof typeof t] as string) ?? ''}</span>
 				</span>
 				<button
-					onclick={() => openDetail(viewedDate)}
+					onclick={() => { previewedDate = viewedDate; previewEditOpen = true; }}
 					class="shrink-0 p-1 rounded active:opacity-50"
 					aria-label="Bearbeiten"
 					style="color: var(--color-on-surface-variant)"
@@ -334,10 +334,10 @@
 						</div>
 					{/if}
 					{#if dayEntry.gratitude}
-						<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={dayEntry.gratitude}>{dayEntry.gratitude.replace(/\s*\n+\s*/g, ' · ')}</p>
+						<p class="text-xs leading-relaxed italic whitespace-pre-wrap" style="color: var(--color-on-surface-variant); overflow-wrap: anywhere">{dayEntry.gratitude}</p>
 					{/if}
 					{#if dayEntry.note}
-						<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={dayEntry.note}>{dayEntry.note.replace(/\s*\n+\s*/g, ' · ')}</p>
+						<p class="text-xs leading-relaxed italic whitespace-pre-wrap" style="color: var(--color-on-surface-variant); overflow-wrap: anywhere">{dayEntry.note}</p>
 					{/if}
 				</div>
 			{/if}
@@ -487,12 +487,12 @@
 
 				<!-- Gratitude -->
 				{#if pEntry.gratitude}
-					<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={pEntry.gratitude}>{pEntry.gratitude.replace(/\s*\n+\s*/g, ' · ')}</p>
+					<p class="text-xs leading-relaxed italic whitespace-pre-wrap" style="color: var(--color-on-surface-variant); overflow-wrap: anywhere">{pEntry.gratitude}</p>
 				{/if}
 
 				<!-- Note -->
 				{#if pEntry.note}
-					<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={pEntry.note}>{pEntry.note.replace(/\s*\n+\s*/g, ' · ')}</p>
+					<p class="text-xs leading-relaxed italic whitespace-pre-wrap" style="color: var(--color-on-surface-variant); overflow-wrap: anywhere">{pEntry.note}</p>
 				{/if}
 			</div>
 		{/if}

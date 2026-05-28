@@ -200,10 +200,10 @@
 									oncontextmenu={(e) => { e.preventDefault(); removeTarget = fav.name; }}
 									onclick={() => handleFavAdd(fav)}
 									class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
-									style="background-color: var(--color-surface-card); touch-action: pan-y;"
+									style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); touch-action: pan-y;"
 								>
 									{#if activeItemNames.has(fav.name.toLowerCase())}
-										<span class="absolute top-2.5 left-2.5 w-2 h-2 rounded-full z-10"
+										<span class="absolute top-3 left-3 w-2 h-2 rounded-full z-10"
 										      style="background-color: var(--color-primary)" aria-hidden="true"></span>
 									{/if}
 									<div class="absolute inset-0 flex items-start justify-center pt-[30px] max-[374px]:pt-[22px]">

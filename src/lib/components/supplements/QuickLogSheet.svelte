@@ -705,7 +705,7 @@
 											{/if}
 										{/if}
 									</button>
-									<div class="shrink-0 flex items-center gap-0 rounded-lg overflow-hidden" style="background-color: var(--color-surface-high)">
+									<div class="shrink-0 flex items-center gap-0 rounded-lg overflow-hidden">
 										<button
 											onclick={() => adjustAmount(s.id, -0.5)}
 											class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
@@ -742,7 +742,7 @@
 										type="time"
 										bind:value={times[s.id]}
 										class="w-16 h-8 shrink-0 px-1 rounded-lg border-0 outline-none text-center"
-										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 13px; font-family: inherit"
+										style="background-color: transparent; color: var(--color-on-surface); font-size: 13px; font-family: inherit"
 									/>
 									<button
 										onclick={() => logOne(s.id)}

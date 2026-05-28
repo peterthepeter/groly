@@ -90,10 +90,10 @@
 				</div>
 			{/if}
 			{#if todayEntry.gratitude}
-				<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={todayEntry.gratitude}>{todayEntry.gratitude.replace(/\s*\n+\s*/g, ' · ')}</p>
+				<p class="text-xs leading-relaxed italic whitespace-pre-wrap" style="color: var(--color-on-surface-variant); overflow-wrap: anywhere">{todayEntry.gratitude}</p>
 			{/if}
 			{#if todayEntry.note}
-				<p class="text-xs leading-relaxed italic truncate" style="color: var(--color-on-surface-variant)" title={todayEntry.note}>{todayEntry.note.replace(/\s*\n+\s*/g, ' · ')}</p>
+				<p class="text-xs leading-relaxed italic whitespace-pre-wrap" style="color: var(--color-on-surface-variant); overflow-wrap: anywhere">{todayEntry.note}</p>
 			{/if}
 		</div>
 	{/if}

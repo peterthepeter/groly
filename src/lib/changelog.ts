@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.7.16-1',
+		de: [
+			'Design-Feinschliff und übersichtlichere Stimmungs-Ansicht'
+		],
+		en: [
+			'Design polish and clearer mood view'
+		]
+	},
+	{
 		version: '0.7.16',
 		de: [
 			'Neues Design: einheitliche transparente Bubbles mit dünnen Outlines'
