@@ -65,6 +65,7 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 
 <p align="center">
   <img src="docs/screenshots/Recipes.png" width="180" alt="Recipes" />
+  <img src="docs/screenshots/Recipes_detail.png" width="180" alt="Recipe detail" />
   <img src="docs/screenshots/Meal Planner.png" width="180" alt="Weekly meal planner" />
 </p>
 
