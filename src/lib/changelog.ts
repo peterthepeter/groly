@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.0',
+		de: [
+			'Neuer Nutrition Tracker: Kalorien- & Makro-Tagebuch mit Produktsuche, Tageszielen und Rezept-Tracking'
+		],
+		en: [
+			'New nutrition tracker: calorie & macro diary with product search, daily goals and recipe tracking'
+		]
+	},
+	{
 		version: '0.7.16-1',
 		de: [
 			'Design-Feinschliff und übersichtlichere Stimmungs-Ansicht'

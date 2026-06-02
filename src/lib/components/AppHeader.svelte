@@ -4,13 +4,15 @@
 
 	import type { Snippet } from 'svelte';
 
-	let { title = 'Meine Listen', subtitle = '', onMenuOpen, onSearch = null, actions = null, hidden = false }: {
+	let { title = 'Meine Listen', subtitle = '', eyebrow = '', onMenuOpen, onSearch = null, actions = null, hidden = false, onBack = null }: {
 		title?: string;
 		subtitle?: string;
+		eyebrow?: string;
 		onMenuOpen: () => void;
 		onSearch?: (() => void) | null;
 		actions?: Snippet | null;
 		hidden?: boolean;
+		onBack?: (() => void) | null;
 	} = $props();
 </script>
 
@@ -20,17 +22,29 @@
 	     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 		<!-- Left: Hamburger + App Name -->
 		<div class="flex items-center gap-3 min-w-0">
-			<button
-				onclick={onMenuOpen}
-				class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60 transition-opacity"
-				aria-label={t.menu_open}
-			>
-				<svg width="16" height="14" viewBox="0 0 16 14" fill="none">
-					<rect width="16" height="2" rx="1" fill="var(--color-on-surface)"/>
-					<rect y="6" width="16" height="2" rx="1" fill="var(--color-on-surface)"/>
-					<rect y="12" width="16" height="2" rx="1" fill="var(--color-on-surface)"/>
-				</svg>
-			</button>
+			{#if onBack}
+				<button
+					onclick={onBack}
+					class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60 transition-opacity"
+					aria-label={t.nutrition_back}
+				>
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="15 18 9 12 15 6"/>
+					</svg>
+				</button>
+			{:else}
+				<button
+					onclick={onMenuOpen}
+					class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60 transition-opacity"
+					aria-label={t.menu_open}
+				>
+					<svg width="16" height="14" viewBox="0 0 16 14" fill="none">
+						<rect width="16" height="2" rx="1" fill="var(--color-on-surface)"/>
+						<rect y="6" width="16" height="2" rx="1" fill="var(--color-on-surface)"/>
+						<rect y="12" width="16" height="2" rx="1" fill="var(--color-on-surface)"/>
+					</svg>
+				</button>
+			{/if}
 			<div class="flex items-center gap-2 min-w-0">
 				<span class="text-xl font-bold shrink-0" style="color: var(--color-primary); font-family: 'Plus Jakarta Sans', sans-serif">Groly</span>
 				{#if !networkStore.online}
@@ -71,7 +85,10 @@
 				</button>
 			{/if}
 <div class="text-right">
-				<div class="text-sm font-semibold truncate max-w-28" style="color: var(--color-on-surface)">{title}</div>
+				{#if eyebrow}
+					<div class="text-[11px] leading-tight truncate max-w-32" style="color: var(--color-on-surface-variant)">{eyebrow}</div>
+				{/if}
+				<div class="text-sm font-semibold truncate max-w-32" style="color: var(--color-on-surface)">{title}</div>
 				{#if subtitle}
 					<div class="text-xs truncate max-w-28" style="color: var(--color-on-surface-variant)">{subtitle}</div>
 				{/if}

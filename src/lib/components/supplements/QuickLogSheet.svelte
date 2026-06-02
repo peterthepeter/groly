@@ -35,6 +35,10 @@
 		moodEnabled = false,
 		moodHasEntry = false,
 		onrateMood = null,
+		nutritionEnabled = false,
+		nutritionTotalKcal = 0,
+		nutritionGoalKcal = null as number | null,
+		onaddmeal = null as (() => void) | null,
 		logDate = null as string | null,
 		initialTab = null as 'tracker' | 'supplements' | null
 	}: {
@@ -56,6 +60,10 @@
 		moodEnabled?: boolean;
 		moodHasEntry?: boolean;
 		onrateMood?: (() => void) | null;
+		nutritionEnabled?: boolean;
+		nutritionTotalKcal?: number;
+		nutritionGoalKcal?: number | null;
+		onaddmeal?: (() => void) | null;
 		logDate?: string | null;
 		initialTab?: 'tracker' | 'supplements' | null;
 	} = $props();
@@ -153,7 +161,8 @@
 			caffeineEnabled && caffeineDrinks.length > 0 ? 'caffeine' : null,
 			waterEnabled ? 'water' : null,
 			meditationEnabled ? 'meditation' : null,
-			moodEnabled ? 'mood' : null
+			moodEnabled ? 'mood' : null,
+			nutritionEnabled ? 'nutrition' : null
 		] as (string | null)[]).filter((x): x is string => x !== null)
 	);
 
@@ -487,7 +496,7 @@
 												onclick={() => onCaffeineShortcutClick ? onCaffeineShortcutClick(drink) : logCaffeine(drink)}
 												disabled={!!caffeineSaving}
 												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity shrink-0"
-												style="background-color: {isThisDone ? 'color-mix(in srgb, #C8956C 20%, transparent)' : 'var(--color-surface-high)'}; color: {isThisDone ? '#C8956C' : 'var(--color-on-surface)'}; box-shadow: {isThisDone ? 'inset 0 0 0 1px #C8956C' : 'none'}"
+												style="background-color: transparent; color: #C8956C"
 											>
 												{#if isThisSaving}…{:else if isThisDone}✓ {drink.name}{:else}{drink.name}{/if}
 											</button>
@@ -512,7 +521,7 @@
 											<button
 												onclick={() => waterRetroOpen = !waterRetroOpen}
 												class="px-2.5 py-1.5 rounded-lg text-xs font-semibold active:opacity-70 shrink-0"
-												style="background-color: var(--color-surface-high); color: #60A5FA"
+												style="background-color: transparent; color: #60A5FA"
 											>+ {t.water_add}</button>
 										{:else}
 											<div class="shrink-0 flex items-center gap-1">
@@ -521,14 +530,14 @@
 														onclick={() => logWater(ml)}
 														disabled={waterSaving}
 														class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50"
-														style="background-color: var(--color-surface-high); color: #60A5FA"
+														style="background-color: transparent; color: #60A5FA"
 													>+{ml}</button>
 												{/each}
 												<button
 													onclick={() => { waterShowCustom = !waterShowCustom; waterCustomAmount = ''; }}
 													disabled={waterSaving}
 													class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50"
-													style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+													style="background-color: transparent; color: var(--color-on-surface-variant)"
 												>{t.water_custom}</button>
 											</div>
 										{/if}
@@ -577,7 +586,7 @@
 										<button
 											onclick={() => meditationRetroOpen = !meditationRetroOpen}
 											class="px-2.5 py-1.5 rounded-lg text-xs font-semibold active:opacity-70 shrink-0"
-											style="background-color: var(--color-surface-high); color: #9F7AEA"
+											style="background-color: transparent; color: #9F7AEA"
 										>+ {t.water_add}</button>
 									{:else}
 										<div class="shrink-0 flex items-center gap-1">
@@ -585,13 +594,13 @@
 												<button
 													onclick={() => startMeditation(min)}
 													class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
-													style="background-color: var(--color-surface-high); color: #9F7AEA"
+													style="background-color: transparent; color: #9F7AEA"
 												>{min}m</button>
 											{/each}
 											<button
 												onclick={() => { meditationShowCustom = !meditationShowCustom; meditationCustomTime = '00:10'; }}
 												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
-												style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+												style="background-color: transparent; color: var(--color-on-surface-variant)"
 											>{t.water_custom}</button>
 										</div>
 									{/if}
@@ -610,13 +619,13 @@
 												<button
 													onclick={() => { meditationRetroDuration = min; meditationRetroShowCustom = false; }}
 													class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
-													style="background-color: {meditationRetroDuration === min ? 'rgba(159,122,234,0.25)' : 'var(--color-surface-high)'}; color: #9F7AEA; outline: {meditationRetroDuration === min ? '1.5px solid #9F7AEA' : 'none'}"
+													style="background-color: transparent; color: #9F7AEA"
 												>{min}m</button>
 											{/each}
 											<button
 												onclick={() => { meditationRetroShowCustom = !meditationRetroShowCustom; meditationRetroCustomTime = '00:10'; }}
 												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
-												style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+												style="background-color: transparent; color: var(--color-on-surface-variant)"
 											>{t.water_custom}</button>
 										</div>
 										{#if meditationRetroShowCustom}
@@ -627,7 +636,7 @@
 												<button
 													onclick={() => { const [h,m] = meditationRetroCustomTime.split(':').map(Number); const mins = h*60+m; if (mins>0) { meditationRetroDuration = mins; meditationRetroShowCustom = false; } }}
 													class="h-8 px-2 rounded-xl text-xs font-semibold active:opacity-70 shrink-0"
-													style="background-color: var(--color-surface-high); color: #9F7AEA"
+													style="background-color: transparent; color: #9F7AEA"
 												>OK</button>
 											</div>
 										{/if}
@@ -662,9 +671,33 @@
 									</div>
 									<button
 										onclick={() => onrateMood?.()}
-										class="px-3 py-1.5 rounded-lg text-xs font-semibold active:opacity-70 shrink-0"
-										style="background-color: {moodHasEntry ? 'rgba(244,114,182,0.15)' : 'var(--color-surface-high)'}; color: #F472B6; box-shadow: {moodHasEntry ? 'inset 0 0 0 1px #F472B6' : 'none'}"
+										class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 shrink-0"
+										style="background-color: transparent; color: #F472B6"
 									>{moodHasEntry ? t.mood_edit : t.mood_bewerten}</button>
+								</div>
+							</div>
+						{/if}
+						{#if nutritionEnabled}
+							<div class="px-2 py-2.5">
+								<div class="flex items-center gap-1.5">
+									<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
+										<span class="text-sm font-semibold" style="color: #FB923C">{t.nutrition_label}</span>
+										<span class="text-[10px]" style="color: var(--color-on-surface-variant)">
+											{Math.round(nutritionTotalKcal).toLocaleString(currentLang())}{nutritionGoalKcal ? ` / ${nutritionGoalKcal.toLocaleString(currentLang())}` : ''} kcal
+										</span>
+									</div>
+									<div class="flex items-center gap-1 shrink-0">
+										<button
+											onclick={() => onaddmeal?.()}
+											class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+											style="background-color: transparent; color: #FB923C"
+										>{t.nutrition_add_meal}</button>
+										<button
+											onclick={() => { open = false; goto('/tracker/nutrition'); }}
+											class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+											style="background-color: transparent; color: var(--color-on-surface-variant)"
+										>{t.nutrition_open}</button>
+									</div>
 								</div>
 							</div>
 						{/if}

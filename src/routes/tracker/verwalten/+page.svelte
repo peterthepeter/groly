@@ -16,6 +16,7 @@
 	import MeditationTrackerEditSheet from '$lib/components/supplements/MeditationTrackerEditSheet.svelte';
 	import MeditationReminderSheet from '$lib/components/supplements/MeditationReminderSheet.svelte';
 	import MoodReminderSheet from '$lib/components/supplements/MoodReminderSheet.svelte';
+	import NutritionGoalSheet from '$lib/components/supplements/NutritionGoalSheet.svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
 
 	let { data } = $props();
@@ -74,6 +75,30 @@
 	let moodHasReminders = $state(false);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 
+	// Nutrition
+	let nutritionGoalOpen = $state(false);
+	let nutritionGoalKcal = $state<number | null>(null);
+	let nutritionGoalProtein = $state<number | null>(null);
+	let nutritionGoalFat = $state<number | null>(null);
+	let nutritionGoalCarbs = $state<number | null>(null);
+	let nutritionGoalFiber = $state<number | null>(null);
+
+	async function loadNutritionGoals() {
+		try {
+			const res = await fetch('/api/nutrition/goals');
+			if (res.ok) {
+				const d = await res.json();
+				nutritionGoalKcal = d.goals?.dailyKcal ?? null;
+				nutritionGoalProtein = d.goals?.dailyProtein ?? null;
+				nutritionGoalFat = d.goals?.dailyFat ?? null;
+				nutritionGoalCarbs = d.goals?.dailyCarbs ?? null;
+				nutritionGoalFiber = d.goals?.dailyFiber ?? null;
+			}
+		} catch {
+			// offline tolerance
+		}
+	}
+
 	beforeNavigate(({ type, cancel }) => {
 		if (type === 'popstate') {
 			if (confirmDeleteId) { confirmDeleteId = null; cancel(); return; }
@@ -128,6 +153,7 @@
 			const data = await moodRemRes.json();
 			moodHasReminders = (data.schedules?.length ?? 0) > 0;
 		}
+		void loadNutritionGoals();
 		loading = false;
 	}
 
@@ -568,6 +594,43 @@
 						</svg>
 					</button>
 				</div>
+				<!-- Nutrition -->
+				<div class="px-3 py-2 flex items-center gap-3{!userSettings.nutritionTrackerEnabled ? ' opacity-50' : ''}">
+					<button
+						onclick={() => userSettings.nutritionTrackerEnabled = !userSettings.nutritionTrackerEnabled}
+						class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
+						style="background-color: {userSettings.nutritionTrackerEnabled ? '#FB923C' : 'var(--color-surface-container)'}"
+						aria-label={t.nutrition_toggle_label}
+					>
+						{#if userSettings.nutritionTrackerEnabled}
+							<span class="absolute top-0.5 h-4 w-4 rounded-full" style="background-color: white; transform: translateX(1.25rem)"></span>
+						{/if}
+					</button>
+					<div class="flex-1 min-w-0">
+						<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{t.nutrition_label}</p>
+						<p class="text-xs leading-snug" style="color: var(--color-on-surface-variant)">
+							{#if !userSettings.nutritionTrackerEnabled}
+								{t.nutrition_disabled_hint}
+							{:else if nutritionGoalKcal}
+								{t.nutrition_daily_goal}: {nutritionGoalKcal} kcal
+							{:else}
+								{t.nutrition_set_goal_cta}
+							{/if}
+						</p>
+					</div>
+					<button
+						onclick={() => nutritionGoalOpen = true}
+						disabled={!userSettings.nutritionTrackerEnabled}
+						class="shrink-0 p-1.5 rounded-xl active:opacity-60 disabled:opacity-40"
+						style="color: var(--color-on-surface-variant)"
+						aria-label={t.nutrition_goal_edit}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+						</svg>
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -630,5 +693,17 @@
 <MeditationTrackerEditSheet bind:open={meditationEditOpen} />
 <MeditationReminderSheet bind:open={meditationReminderOpen} />
 <MoodReminderSheet bind:open={moodReminderOpen} />
+
+{#if nutritionGoalOpen}
+	<NutritionGoalSheet
+		initialKcal={nutritionGoalKcal}
+		initialProtein={nutritionGoalProtein}
+		initialFat={nutritionGoalFat}
+		initialCarbs={nutritionGoalCarbs}
+		initialFiber={nutritionGoalFiber}
+		onclose={() => nutritionGoalOpen = false}
+		onsaved={() => { nutritionGoalOpen = false; void loadNutritionGoals(); }}
+	/>
+{/if}
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />

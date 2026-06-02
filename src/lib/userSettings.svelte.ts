@@ -95,6 +95,7 @@ let _meditationStartSound = $state<string>(cache.meditationStartSound ?? 'zen-to
 let _meditationEndSound = $state<string>(cache.meditationEndSound ?? 'auk-zen-gong.mp3');
 let _meditationVolume = $state<number>(cache.meditationVolume ?? 70);
 let _moodTrackerEnabled = $state<boolean>(cache.moodTrackerEnabled ?? true);
+let _nutritionTrackerEnabled = $state<boolean>(cache.nutritionTrackerEnabled ?? true);
 let _hiddenMoodTags = $state<string[]>(cache.hiddenMoodTags ?? []);
 let _greetingEnabled = $state<boolean>(cache.greetingEnabled ?? true);
 let _wakeLockLists = $state<boolean>(cache.wakeLockLists ?? true);
@@ -137,6 +138,7 @@ function scheduleSave() {
 			meditationEndSound: _meditationEndSound,
 			meditationVolume: _meditationVolume,
 			moodTrackerEnabled: _moodTrackerEnabled,
+			nutritionTrackerEnabled: _nutritionTrackerEnabled,
 			hiddenMoodTags: _hiddenMoodTags,
 			greetingEnabled: _greetingEnabled,
 			wakeLockLists: _wakeLockLists,
@@ -293,6 +295,8 @@ export const userSettings = {
 	// Mood tracker
 	get moodTrackerEnabled() { return _moodTrackerEnabled; },
 	set moodTrackerEnabled(v: boolean) { _moodTrackerEnabled = v; scheduleSave(); },
+	get nutritionTrackerEnabled() { return _nutritionTrackerEnabled; },
+	set nutritionTrackerEnabled(v: boolean) { _nutritionTrackerEnabled = v; scheduleSave(); },
 	get hiddenMoodTags() { return _hiddenMoodTags; },
 	set hiddenMoodTags(v: string[]) { _hiddenMoodTags = v; scheduleSave(); },
 	get greetingEnabled() { return _greetingEnabled; },
@@ -353,6 +357,7 @@ function applySettings(settings: UserSettings) {
 	_meditationEndSound = settings.meditationEndSound ?? 'auk-zen-gong.mp3';
 	_meditationVolume = settings.meditationVolume ?? 70;
 	_moodTrackerEnabled = settings.moodTrackerEnabled ?? true;
+	_nutritionTrackerEnabled = settings.nutritionTrackerEnabled ?? true;
 	_hiddenMoodTags = settings.hiddenMoodTags ?? [];
 	_greetingEnabled = settings.greetingEnabled ?? true;
 	_wakeLockLists = settings.wakeLockLists ?? true;

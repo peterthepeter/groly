@@ -3,6 +3,7 @@
 	import { displayUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { onMount, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
 	import MoodHistoryView from './MoodHistoryView.svelte';
 	import type { CaffeineLog, MeditationLog } from '$lib/db/schema';
 	import { computeAdherence, computeTrackerStats, eachDayInRange, parseDaysMask, type ScheduleLite, type SupplementMeta } from '$lib/trackerStats';
@@ -27,6 +28,9 @@
 		waterLogs,
 		caffeineLogs,
 		meditationLogs,
+		meals = [] as { id: string; name: string; time: string; components: { kcal: number }[] }[],
+		rangeMeals = [] as { id: string; date: string; time: string; name: string; totalKcal: number }[],
+		nutritionGoalKcal = null as number | null,
 		onMoodReload,
 		onEditLog,
 		onEditCaffeineLog,
@@ -45,6 +49,9 @@
 		waterLogs: { id: string; amountMl: number; loggedAt: number }[];
 		caffeineLogs: CaffeineLog[];
 		meditationLogs: MeditationLog[];
+		meals?: { id: string; name: string; time: string; components: { kcal: number }[] }[];
+		rangeMeals?: { id: string; date: string; time: string; name: string; totalKcal: number }[];
+		nutritionGoalKcal?: number | null;
 		onMoodReload: () => void;
 		onEditLog: (log: Log, sup: SuppEntry) => void;
 		onEditCaffeineLog?: (log: CaffeineLog) => void;
@@ -61,6 +68,7 @@
 	let waterHistoryCardExpanded = $state(false);
 	let caffeineHistoryCardExpanded = $state(false);
 	let meditationHistoryCardExpanded = $state(false);
+	let nutritionHistoryCardExpanded = $state(false);
 	let expandedSuppIds = $state(new Set<string>());
 	let caffeineSelectedIdx = $state<number | null>(null);
 	let meditationSelectedIdx = $state<number | null>(null);
@@ -235,6 +243,20 @@
 		);
 	});
 
+	const nutritionStats = $derived.by(() => {
+		if (period === 'day' || rangeFrom === 0) return null;
+		return computeTrackerStats(
+			rangeMeals.map(m => {
+				const [h, mn] = m.time.split(':').map(Number);
+				const ts = new Date(m.date + 'T00:00:00').setHours(h, mn || 0, 0, 0);
+				return { value: Math.round(m.totalKcal), loggedAt: ts };
+			}),
+			{ from: rangeFrom, to: rangeTo }
+		);
+	});
+
+	let nutritionSelectedIdx = $state<number | null>(null);
+
 	// Day labels + today-index for the current range (used by tracker bars + supplement dots)
 	const rangeDays = $derived.by(() => {
 		if (period === 'day' || rangeFrom === 0 || rangeTo === 0) return [] as string[];
@@ -345,7 +367,7 @@
 		{/if}
 		{#if !otherEmpty}
 		<!-- Week/Month: stat-style tracker card with Ø/Min-Max/active + sparkline -->
-		{#if period !== 'day' && (caffeineStats || meditationStats || waterStats)}
+		{#if period !== 'day' && (caffeineStats || meditationStats || waterStats || nutritionStats)}
 			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<button
 					onclick={() => trackerCardExpanded = !trackerCardExpanded}
@@ -514,6 +536,70 @@
 							{/if}
 						</div>
 					{/if}
+					{#if userSettings.nutritionTrackerEnabled && nutritionStats && nutritionStats.activeDays > 0}
+						{@const ns = nutritionStats}
+						{@const goalN = nutritionGoalKcal ?? 0}
+						{@const maxN = Math.max(...ns.daily, goalN, 1)}
+						{@const selIdxN = nutritionSelectedIdx}
+						{@const selDateN = selIdxN !== null ? rangeDays[selIdxN] : null}
+						{@const selDayMeals = selDateN ? rangeMeals
+							.filter(m => m.date === selDateN)
+							.sort((a, b) => a.time.localeCompare(b.time)) : []}
+						<div>
+							<div class="flex items-center justify-between text-sm mb-1.5">
+								<span class="font-semibold" style="color: #FB923C">{t.nutrition_label}</span>
+								{#if selDateN}
+									<span class="text-xs tabular-nums" style="color: #FB923C">
+										{new Date(selDateN + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ns.daily[selIdxN!]} kcal
+									</span>
+								{:else}
+									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
+										Ø {fmtNumber(ns.avgPerDay)} kcal · {ns.activeDays}/{ns.totalDays}
+									</span>
+								{/if}
+							</div>
+							<div class="relative" style="padding-top: 10px">
+								<span class="absolute right-0 text-[9px] tabular-nums leading-none" style="top: 0; color: var(--color-on-surface-variant); opacity: 0.55">
+									{goalN > 0 ? goalN.toLocaleString(currentLang() === 'en' ? 'en-US' : 'de-DE') : ns.max.toLocaleString(currentLang() === 'en' ? 'en-US' : 'de-DE')} kcal
+								</span>
+								{#if goalN > 0}
+									<!-- Goal line as dashed line at goal position -->
+									<div class="absolute left-0 right-0 pointer-events-none"
+									     style="top: calc(10px + (100% - 10px - 26px) + (26px * (1 - {goalN / maxN}))); border-top: 1px dashed #FB923C; opacity: 0.5"></div>
+								{:else}
+									<div class="absolute left-0 right-0 pointer-events-none" style="top: 10px; border-top: 1px dashed var(--color-on-surface-variant); opacity: 0.22"></div>
+								{/if}
+								<div class="flex items-end" style="height: 26px; gap: {period === 'month' ? 2 : 3}px">
+									{#each ns.daily as v, i}
+										{@const pct = v === 0 ? 14 : Math.max(14, (v / maxN) * 100)}
+										{@const isToday = i === todayIdx}
+										{@const isSelected = i === selIdxN}
+										{@const isOver = goalN > 0 && v > goalN}
+										<button
+											onclick={() => nutritionSelectedIdx = selIdxN === i ? null : i}
+											aria-label={'Tag ' + (i + 1)}
+											class="flex-1 active:opacity-70"
+											style="background-color: {isOver ? '#EF4444' : '#FB923C'}; opacity: {v === 0 ? 0.18 : (isSelected ? 1 : 0.9)}; height: {pct}%; min-height: 4px; border-radius: 3px; {isSelected ? `outline: 1.5px solid ${isOver ? '#EF4444' : '#FB923C'}; outline-offset: 2px` : (isToday ? 'outline: 1.5px solid #FB923C; outline-offset: 1px' : '')}"
+										></button>
+									{/each}
+								</div>
+							</div>
+							{#if selDayMeals.length > 0}
+								<div class="mt-2 space-y-0.5">
+									{#each selDayMeals as m (m.id)}
+										<button onclick={() => goto(`/tracker/nutrition?date=${m.date}`)}
+										        class="w-full flex items-baseline justify-between text-xs active:opacity-60">
+											<span style="color: var(--color-on-surface)">
+												<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{m.time}</span>
+												<span class="ml-2">{m.name}</span>
+											</span>
+											<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{Math.round(m.totalKcal)} kcal</span>
+										</button>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 				{/if}
 			</div>
@@ -523,6 +609,7 @@
 			userSettings.caffeineTrackerEnabled && caffeineTotalMg > 0 ? 'caffeine' : null,
 			userSettings.meditationTrackerEnabled && meditationTotalSeconds > 0 ? 'meditation' : null,
 			userSettings.waterTrackerEnabled && period === 'day' && waterTotal > 0 ? 'water' : null,
+			userSettings.nutritionTrackerEnabled && period === 'day' && meals.length > 0 ? 'nutrition' : null
 		].filter(Boolean)}
 		{#if period === 'day' && visibleHistoryTrackers.length > 0}
 			<div class="rounded-2xl px-4 py-3" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
@@ -539,6 +626,65 @@
 					<span class="absolute" style="right: 0">24</span>
 				</div>
 				<div class="space-y-4">
+					<!-- Nutrition -->
+					{#if userSettings.nutritionTrackerEnabled && meals.length > 0 && period === 'day'}
+						{@const totalKcal = meals.reduce((s, m) => s + m.components.reduce((cs, c) => cs + (c.kcal ?? 0), 0), 0)}
+						{@const goal = nutritionGoalKcal ?? 0}
+						{@const nPct = goal > 0 ? Math.min(100, (totalKcal / goal) * 100) : 0}
+						{@const nOver = goal > 0 && totalKcal > goal}
+						<div>
+							<div class="flex items-center justify-between text-sm">
+								<div class="flex items-baseline gap-1.5 min-w-0 flex-1">
+									<span class="font-semibold shrink-0" style="color: #FB923C">{t.nutrition_label}</span>
+									<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">({meals.length})</span>
+								</div>
+								<div class="flex items-center gap-1.5 shrink-0">
+									<span class="font-semibold" style="color: {nOver ? '#EF4444' : '#FB923C'}">
+										{Math.round(totalKcal).toLocaleString(currentLang())}{goal > 0 ? ` / ${goal.toLocaleString(currentLang())}` : ''} kcal
+									</span>
+									<button onclick={() => nutritionHistoryCardExpanded = !nutritionHistoryCardExpanded}
+									        class="active:opacity-60"
+									        aria-label={nutritionHistoryCardExpanded ? 'Einklappen' : 'Aufklappen'}>
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+										     style="transition: transform 0.2s; transform: rotate({nutritionHistoryCardExpanded ? '90' : '0'}deg)">
+											<polyline points="9 6 15 12 9 18"/>
+										</svg>
+									</button>
+								</div>
+							</div>
+							{#if goal > 0}
+								<div class="relative mt-2 rounded-full overflow-hidden" style="background-color: var(--color-surface-container); height: 6px">
+									<div style="width: {nPct}%; height: 100%; background-color: {nOver ? '#EF4444' : '#FB923C'}; border-radius: 9999px"></div>
+								</div>
+							{/if}
+							<!-- 24h timeline with meal markers -->
+							<div class="relative mt-2" style="height: 14px">
+								<div class="absolute inset-x-0 rounded-full" style="top: 6px; height: 1.5px; background-color: color-mix(in srgb, var(--color-on-surface-variant) 22%, transparent)"></div>
+								{@render timelineGuides()}
+								{#each meals as m (m.id)}
+									<button onclick={() => { nutritionHistoryCardExpanded = true; }}
+									        aria-label={m.name}
+									        class="absolute rounded-full active:opacity-60"
+									        style="left: calc({timePos(m.time)}% - 3px); top: 1px; width: 6px; height: 12px; background-color: #FB923C; opacity: 0.95"
+									></button>
+								{/each}
+							</div>
+							{#if nutritionHistoryCardExpanded}
+								<div class="space-y-1 mt-2">
+									{#each meals.slice().sort((a, b) => a.time.localeCompare(b.time)) as m (m.id)}
+										{@const mKcal = Math.round(m.components.reduce((s, c) => s + (c.kcal ?? 0), 0))}
+										<button onclick={() => goto(`/tracker/nutrition?date=${date}`)}
+										        class="w-full flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5 active:opacity-60">
+											<span class="tabular-nums shrink-0" style="color: var(--color-on-surface-variant); min-width: 38px">{m.time}</span>
+											<span class="flex-1 truncate text-left" style="color: var(--color-on-surface)">{m.name}</span>
+											<span class="font-semibold shrink-0" style="color: #FB923C">{mKcal} kcal</span>
+										</button>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
+
 					<!-- Caffeine -->
 					{#if userSettings.caffeineTrackerEnabled && caffeineTotalMg > 0}
 						{@const cLimit = userSettings.caffeineLimitMg ?? 400}

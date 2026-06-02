@@ -6,6 +6,8 @@
 	import { scaleAmount, type Recipe } from '$lib/recipeUtils';
 	import RecipeShareModal from '$lib/components/recipe/RecipeShareModal.svelte';
 	import RecipeAddToListModal from '$lib/components/recipe/RecipeAddToListModal.svelte';
+	import RecipeNutritionSheet from '$lib/components/recipe/RecipeNutritionSheet.svelte';
+	import RecipeTrackSheet from '$lib/components/recipe/RecipeTrackSheet.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import { cacheRecipeDetail, getOfflineRecipeDetail } from '$lib/sync/manager';
 	import { userSettings } from '$lib/userSettings.svelte';
@@ -25,6 +27,69 @@
 
 	let excludedIngredients = $state(new Set<string>());
 	let cookSaving = $state(false);
+
+	// Nutrition-Tracking
+	type NutComp = {
+		productBarcode: string | null; genericFoodId: string | null; customName: string | null;
+		displayName: string; imageUrl: string | null; amount: number; unit: 'g' | 'ml' | 'piece';
+		gramsPerPiece: number | null; kcalPer100: number | null; proteinPer100: number | null;
+		fatPer100: number | null; carbsPer100: number | null; sugarPer100: number | null;
+		fiberPer100: number | null; saltPer100: number | null; skipped?: boolean;
+	};
+	let nutMapped = $state(false);
+	let nutStale = $state(false);
+	let nutComponents = $state<NutComp[]>([]);
+	let nutMappedServings = $state(4);
+	let nutritionSheetOpen = $state(false);
+	let trackSheetOpen = $state(false);
+	let nutToast = $state<string | null>(null);
+	let nutToastTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const usableComponents = $derived(nutComponents.filter((c) => !c.skipped));
+	const nutPerPortionKcal = $derived.by(() => {
+		if (!nutMapped || nutMappedServings <= 0) return 0;
+		const total = usableComponents.reduce((s, c) => {
+			const grams = c.unit === 'piece' ? c.amount * (c.gramsPerPiece ?? 0) : c.amount;
+			return s + ((c.kcalPer100 ?? 0) * grams) / 100;
+		}, 0);
+		return Math.round(total / nutMappedServings);
+	});
+
+	async function loadNutrition() {
+		if (isOfflineFallback || !userSettings.nutritionTrackerEnabled) return;
+		try {
+			const res = await fetch(`/api/nutrition/recipe-components?recipeId=${recipeId}`);
+			if (!res.ok) return;
+			const d = await res.json();
+			nutMapped = !!d.mapped;
+			nutStale = !!d.stale;
+			nutMappedServings = d.mappedServings ?? recipe?.servings ?? 4;
+			nutComponents = (d.components ?? []).map((c: NutComp) => ({ ...c }));
+		} catch { /* offline */ }
+	}
+
+	// Topf-Button ist kontextabhängig, wenn der Nutrition-Tracker an ist:
+	//  - Nährwerte hinterlegt → Portionen tracken (zählt beim Bestätigen auch „gekocht")
+	//  - noch nicht hinterlegt → Zuordnung öffnen („Nährwerte hinterlegen")
+	// Tracker aus → reines „gekocht" wie bisher.
+	const nutTrackerActive = $derived(!isOfflineFallback && userSettings.nutritionTrackerEnabled);
+	function onCookButton() {
+		if (!nutTrackerActive) { void logCooked(); return; }
+		if (nutMapped && usableComponents.length > 0) trackSheetOpen = true;
+		else nutritionSheetOpen = true;
+	}
+	const cookLabel = $derived(
+		!nutTrackerActive
+			? t.recipe_cooked_today
+			: (nutMapped && usableComponents.length > 0 ? t.recipe_track_button : t.recipe_nutrition_title)
+	);
+
+	function onTracked(kcal: number) {
+		void logCooked();
+		if (nutToastTimer) clearTimeout(nutToastTimer);
+		nutToast = `${t.recipe_nutrition_tracked} · ${kcal} kcal`;
+		nutToastTimer = setTimeout(() => (nutToast = null), 2600);
+	}
 	let tagInput = $state('');
 	let editingTags = $state(false);
 	let actionMenuOpen = $state(false);
@@ -294,7 +359,7 @@
 	}
 
 	onMount(() => {
-		void loadRecipe();
+		void loadRecipe().then(() => loadNutrition());
 		if (userSettings.wakeLockRecipes) { wakeLockHeld = true; void acquireWakeLock(); }
 	});
 
@@ -407,16 +472,28 @@
 							</span>
 						{/if}
 						<button
-							onclick={logCooked}
+							onclick={onCookButton}
 							disabled={isOfflineFallback || cookSaving}
-							aria-label={t.recipe_cooked_today}
-							title={t.recipe_cooked_today}
-							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-40 active:scale-95 transition-transform"
-							style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
+							aria-label={cookLabel}
+							title={cookLabel}
+							class="h-8 rounded-full flex items-center justify-center gap-1 active:opacity-70 disabled:opacity-40 active:scale-95 transition-transform {nutTrackerActive ? 'px-2.5' : 'w-8'}"
+							style={nutTrackerActive
+								? 'background-color: color-mix(in srgb, #FB923C 14%, transparent); border: 1px solid #FB923C; color: #FB923C'
+								: 'background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)'}
 						>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
 							</svg>
+							{#if nutTrackerActive}
+								<span class="text-xs font-semibold whitespace-nowrap flex items-center gap-1">
+									{#if nutMapped && usableComponents.length > 0}
+										{nutPerPortionKcal} kcal
+										{#if nutStale}
+											<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+										{/if}
+									{:else}{t.recipe_nutrition_button}{/if}
+								</span>
+							{/if}
 						</button>
 					</div>
 				</div>
@@ -661,6 +738,41 @@
 	/>
 {/if}
 
+<!-- Nutrition: Nährwerte zuordnen -->
+{#if recipe && nutritionSheetOpen}
+	<RecipeNutritionSheet
+		recipeId={recipeId}
+		ingredients={recipe.ingredients}
+		servings={recipe.servings}
+		onclose={() => (nutritionSheetOpen = false)}
+		onsaved={() => { void loadNutrition(); }}
+	/>
+{/if}
+
+<!-- Nutrition: Portionen tracken -->
+{#if recipe && trackSheetOpen}
+	<RecipeTrackSheet
+		recipeTitle={recipe.title}
+		recipeImageUrl={recipe.imageUrl}
+		components={usableComponents}
+		mappedServings={nutMappedServings}
+		onclose={() => (trackSheetOpen = false)}
+		onsaved={onTracked}
+	/>
+{/if}
+
+<!-- Tracking-Bestätigung -->
+{#if nutToast}
+	<div class="fixed left-0 right-0 z-[70] flex justify-center px-4 pointer-events-none"
+	     style="bottom: calc(env(safe-area-inset-bottom) + 5.5rem)">
+		<div class="px-4 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg"
+		     style="background: #FB923C; color: #fff">
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+			{nutToast}
+		</div>
+	</div>
+{/if}
+
 <!-- Overflow action sheet -->
 {#if actionMenuOpen}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -692,6 +804,17 @@
 				</svg>
 				<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.recipe_share_title}</span>
 			</button>
+			{#if nutTrackerActive && nutMapped}
+				<button
+					onclick={() => { actionMenuOpen = false; nutritionSheetOpen = true; }}
+					class="w-full flex items-center gap-3 px-4 py-3 active:opacity-60"
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M3 11h18"/><path d="M12 11a7 7 0 0 1-7 7h14a7 7 0 0 1-7-7Z"/><path d="M9 7c0-1 .5-1.5 1-2"/><path d="M13 7c0-1 .5-1.5 1-2"/>
+					</svg>
+					<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.recipe_nutrition_edit}</span>
+				</button>
+			{/if}
 			{#if recipe?.cookCount && recipe.cookCount > 0}
 				<button
 					onclick={() => { actionMenuOpen = false; undoCooked(); }}

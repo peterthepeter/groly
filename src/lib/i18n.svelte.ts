@@ -78,6 +78,18 @@ export function nutrients_show_more(count: number): string {
 	return `${count} weitere anzeigen`;
 }
 
+export function nutrition_kcal_remaining(kcal: string): string {
+	void _lang;
+	if (_lang === 'en') return `${kcal} kcal remaining`;
+	return `Noch ${kcal} kcal frei`;
+}
+
+export function nutrition_kcal_over(kcal: string): string {
+	void _lang;
+	if (_lang === 'en') return `${kcal} kcal over goal`;
+	return `${kcal} kcal über dem Ziel`;
+}
+
 export function today_reminders_label(count: number): string {
 	void _lang;
 	if (_lang === 'en') return count === 1 ? '1 reminder today' : `${count} reminders today`;

@@ -98,6 +98,11 @@ export const recipes = sqliteTable('recipes', {
 	rating: integer('rating'),
 	cookCount: integer('cook_count').notNull().default(0),
 	lastCookedAt: integer('last_cooked_at'),
+	// Nutrition-Tracking: einmalige Zuordnung der Zutaten zu Nährwerten lebt am Rezept
+	// (Komponenten in recipe_nutrition_components). mappedServings = servings beim Zuordnen
+	// (Teiler für „pro Portion"). snapshot = Zutaten-Namen beim Zuordnen, um „veraltet" zu erkennen.
+	nutritionMappedServings: integer('nutrition_mapped_servings'),
+	nutritionIngredientsSnapshot: text('nutrition_ingredients_snapshot'),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull()
 });
@@ -156,6 +161,21 @@ export const appMeta = sqliteTable('app_meta', {
 export const barcodeCache = sqliteTable('barcode_cache', {
 	barcode: text('barcode').primaryKey(),
 	name: text('name').notNull(),
+	brand: text('brand'),
+	imageUrl: text('image_url'),
+	servingSize: text('serving_size'), // z.B. "150g"
+	servingQuantity: real('serving_quantity'), // numerischer Wert der Portion in g/ml
+	nutriscoreGrade: text('nutriscore_grade'), // "a" - "e"
+	novaGroup: integer('nova_group'), // 1 - 4
+	kcalPer100: real('kcal_per_100'),
+	proteinPer100: real('protein_per_100'),
+	fatPer100: real('fat_per_100'),
+	carbsPer100: real('carbs_per_100'),
+	sugarPer100: real('sugar_per_100'),
+	fiberPer100: real('fiber_per_100'),
+	saltPer100: real('salt_per_100'),
+	nutrimentsJson: text('nutriments_json'), // komplettes OFF-Nutriment-Objekt als JSON (für zukünftige Mikronährstoffe)
+	fetchedAt: integer('fetched_at'), // wann zuletzt von OFF aktualisiert
 	lastSeenAt: integer('last_seen_at').notNull()
 });
 
@@ -415,3 +435,199 @@ export const userInvites = sqliteTable('user_invites', {
 ]);
 
 export type UserInvite = typeof userInvites.$inferSelect;
+
+// =========================================================================
+// Nutrition / Ernährungs-Tracker
+// =========================================================================
+
+// Kuratierte Grundlebensmittel (Apfel, Kartoffel, Milch, ...). Wird beim
+// Startup geseedet aus data/genericFoods.json. Sucht in name+keywords (de+en).
+export const genericFoods = sqliteTable('generic_foods', {
+	id: text('id').primaryKey(), // stable slug, z.B. "apple-raw"
+	category: text('category').notNull(), // "fruit", "vegetable", "grain", ...
+	nameDe: text('name_de').notNull(),
+	nameEn: text('name_en').notNull(),
+	keywordsDe: text('keywords_de'), // komma-separierte Synonyme
+	keywordsEn: text('keywords_en'),
+	kcalPer100: real('kcal_per_100').notNull(),
+	proteinPer100: real('protein_per_100'),
+	fatPer100: real('fat_per_100'),
+	carbsPer100: real('carbs_per_100'),
+	sugarPer100: real('sugar_per_100'),
+	fiberPer100: real('fiber_per_100'),
+	saltPer100: real('salt_per_100'),
+	defaultPieceWeight: real('default_piece_weight'), // g pro Stück, falls "piece" sinnvoll
+	defaultUnit: text('default_unit', { enum: ['g', 'ml', 'piece'] }).notNull().default('g'),
+	sortOrder: integer('sort_order').notNull().default(0)
+}, (t) => [
+	index('generic_foods_category_idx').on(t.category)
+]);
+
+// Eine geloggte Mahlzeit (Container)
+export const meals = sqliteTable('meals', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(), // "Frühstück", "Mittag", "Mein Müsli", ...
+	date: text('date').notNull(), // YYYY-MM-DD
+	time: text('time').notNull(), // HH:MM
+	imageUrl: text('image_url'), // optionales Bild, wenn aus Vorlage getrackt
+	favoriteName: text('favorite_name'), // Gericht-Name aus Vorlage (z.B. "Müsli"), nur wenn aus Vorlage
+	createdAt: integer('created_at').notNull(),
+	updatedAt: integer('updated_at').notNull()
+}, (t) => [
+	index('meals_user_date_idx').on(t.userId, t.date)
+]);
+
+// Komponenten einer Mahlzeit (Skyr, Haferflocken, Banane, ...)
+// Snapshots der Nährwerte fix beim Loggen, damit Historie stabil bleibt.
+export const mealComponents = sqliteTable('meal_components', {
+	id: text('id').primaryKey(),
+	mealId: text('meal_id').notNull().references(() => meals.id, { onDelete: 'cascade' }),
+	sortOrder: integer('sort_order').notNull().default(0),
+	// Quelle:
+	productBarcode: text('product_barcode'), // → barcodeCache
+	genericFoodId: text('generic_food_id'), // → genericFoods
+	customName: text('custom_name'), // freier Name wenn keine Quelle
+	// Anzeige (Snapshot):
+	displayName: text('display_name').notNull(),
+	imageUrl: text('image_url'),
+	// Menge:
+	amount: real('amount').notNull(),
+	unit: text('unit', { enum: ['g', 'ml', 'piece'] }).notNull(),
+	gramsPerPiece: real('grams_per_piece'), // nur wenn unit='piece'
+	// Snapshot per 100g (für späteres Editieren ohne erneutes Lookup):
+	kcalPer100: real('kcal_per_100'),
+	proteinPer100: real('protein_per_100'),
+	fatPer100: real('fat_per_100'),
+	carbsPer100: real('carbs_per_100'),
+	sugarPer100: real('sugar_per_100'),
+	fiberPer100: real('fiber_per_100'),
+	saltPer100: real('salt_per_100'),
+	// Total für diese Komponente (kcal/protein/... gesamt):
+	kcal: real('kcal').notNull().default(0),
+	protein: real('protein').notNull().default(0),
+	fat: real('fat').notNull().default(0),
+	carbs: real('carbs').notNull().default(0),
+	sugar: real('sugar').notNull().default(0),
+	fiber: real('fiber').notNull().default(0),
+	salt: real('salt').notNull().default(0)
+}, (t) => [
+	index('meal_components_meal_id_idx').on(t.mealId)
+]);
+
+// Favoriten: einzelne Produkte/Items, die der User oft loggt
+export const nutritionFavorites = sqliteTable('nutrition_favorites', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	displayName: text('display_name').notNull(),
+	imageUrl: text('image_url'),
+	// genau eines davon:
+	productBarcode: text('product_barcode'),
+	genericFoodId: text('generic_food_id'),
+	// für custom-Favoriten (kein OFF, kein generic):
+	customKcalPer100: real('custom_kcal_per_100'),
+	customProteinPer100: real('custom_protein_per_100'),
+	customFatPer100: real('custom_fat_per_100'),
+	customCarbsPer100: real('custom_carbs_per_100'),
+	customSugarPer100: real('custom_sugar_per_100'),
+	customFiberPer100: real('custom_fiber_per_100'),
+	customSaltPer100: real('custom_salt_per_100'),
+	// Default-Portion:
+	defaultAmount: real('default_amount').notNull().default(100),
+	defaultUnit: text('default_unit', { enum: ['g', 'ml', 'piece'] }).notNull().default('g'),
+	defaultGramsPerPiece: real('default_grams_per_piece'),
+	useCount: integer('use_count').notNull().default(0),
+	lastUsedAt: integer('last_used_at'),
+	createdAt: integer('created_at').notNull()
+}, (t) => [
+	index('nutrition_favorites_user_id_idx').on(t.userId)
+]);
+
+// Mahlzeit-Favoriten: ganze Mahlzeit als Template ("Mein Müsli")
+export const nutritionMealFavorites = sqliteTable('nutrition_meal_favorites', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	displayName: text('display_name').notNull(),
+	defaultMealName: text('default_meal_name'), // optionaler Name für die erzeugte Mahlzeit
+	imageUrl: text('image_url'), // eigenes Bild der Vorlage
+	// Optionale Verknüpfung zu einem Koffein-Getränk: beim Loggen dieser Vorlage
+	// wird zusätzlich ein Koffein-Log erzeugt (Nutrition → Koffein, eine Richtung).
+	caffeineDrinkId: text('caffeine_drink_id'),
+	useCount: integer('use_count').notNull().default(0),
+	lastUsedAt: integer('last_used_at'),
+	createdAt: integer('created_at').notNull()
+}, (t) => [
+	index('nutrition_meal_favorites_user_id_idx').on(t.userId)
+]);
+
+// Komponenten eines Mahlzeit-Favoriten (selbe Struktur wie mealComponents)
+export const nutritionMealFavoriteComponents = sqliteTable('nutrition_meal_favorite_components', {
+	id: text('id').primaryKey(),
+	mealFavoriteId: text('meal_favorite_id').notNull().references(() => nutritionMealFavorites.id, { onDelete: 'cascade' }),
+	sortOrder: integer('sort_order').notNull().default(0),
+	productBarcode: text('product_barcode'),
+	genericFoodId: text('generic_food_id'),
+	customName: text('custom_name'),
+	displayName: text('display_name').notNull(),
+	imageUrl: text('image_url'),
+	amount: real('amount').notNull(),
+	unit: text('unit', { enum: ['g', 'ml', 'piece'] }).notNull(),
+	gramsPerPiece: real('grams_per_piece'),
+	kcalPer100: real('kcal_per_100'),
+	proteinPer100: real('protein_per_100'),
+	fatPer100: real('fat_per_100'),
+	carbsPer100: real('carbs_per_100'),
+	sugarPer100: real('sugar_per_100'),
+	fiberPer100: real('fiber_per_100'),
+	saltPer100: real('salt_per_100')
+}, (t) => [
+	index('nutrition_meal_favorite_components_parent_idx').on(t.mealFavoriteId)
+]);
+
+// Nährwert-Zuordnung der Zutaten eines Rezepts (selbe Struktur wie mealComponents).
+// Erfasst die ganze Rezeptmenge (für recipes.nutritionMappedServings Portionen).
+// ingredientId verlinkt locker auf recipe_ingredients (kann veralten); skipped = bewusst „zählt nicht".
+export const recipeNutritionComponents = sqliteTable('recipe_nutrition_components', {
+	id: text('id').primaryKey(),
+	recipeId: text('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+	ingredientId: text('ingredient_id'),
+	sortOrder: integer('sort_order').notNull().default(0),
+	skipped: integer('skipped', { mode: 'boolean' }).notNull().default(false),
+	productBarcode: text('product_barcode'),
+	genericFoodId: text('generic_food_id'),
+	customName: text('custom_name'),
+	displayName: text('display_name').notNull(),
+	imageUrl: text('image_url'),
+	amount: real('amount').notNull().default(0),
+	unit: text('unit', { enum: ['g', 'ml', 'piece'] }).notNull().default('g'),
+	gramsPerPiece: real('grams_per_piece'),
+	kcalPer100: real('kcal_per_100'),
+	proteinPer100: real('protein_per_100'),
+	fatPer100: real('fat_per_100'),
+	carbsPer100: real('carbs_per_100'),
+	sugarPer100: real('sugar_per_100'),
+	fiberPer100: real('fiber_per_100'),
+	saltPer100: real('salt_per_100')
+}, (t) => [
+	index('recipe_nutrition_components_recipe_id_idx').on(t.recipeId)
+]);
+
+// Tagesziele (kcal + optional Makros)
+export const nutritionGoals = sqliteTable('nutrition_goals', {
+	userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+	dailyKcal: integer('daily_kcal'),
+	dailyProtein: real('daily_protein'),
+	dailyFat: real('daily_fat'),
+	dailyCarbs: real('daily_carbs'),
+	dailyFiber: real('daily_fiber'),
+	updatedAt: integer('updated_at').notNull()
+});
+
+export type GenericFood = typeof genericFoods.$inferSelect;
+export type Meal = typeof meals.$inferSelect;
+export type MealComponent = typeof mealComponents.$inferSelect;
+export type NutritionFavorite = typeof nutritionFavorites.$inferSelect;
+export type NutritionMealFavorite = typeof nutritionMealFavorites.$inferSelect;
+export type NutritionMealFavoriteComponent = typeof nutritionMealFavoriteComponents.$inferSelect;
+export type RecipeNutritionComponent = typeof recipeNutritionComponents.$inferSelect;
+export type NutritionGoal = typeof nutritionGoals.$inferSelect;

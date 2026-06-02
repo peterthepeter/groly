@@ -8,6 +8,7 @@ import { subsSize } from './userEvents';
 import { attemptsSize } from './loginRateLimit';
 import { cleanupBarcodeCache, cleanupOldData } from './cleanup';
 import { scheduleNextReminderCheck } from './reminders';
+import { GENERIC_FOODS } from './genericFoodsSeed';
 
 let initialized = false;
 
@@ -34,6 +35,53 @@ function ensureSupplementLogNoteColumn() {
 	const cols = sqlite.prepare(`PRAGMA table_info(supplement_logs)`).all() as Array<{ name: string }>;
 	if (!cols.some((c) => c.name === 'note')) {
 		sqlite.exec(`ALTER TABLE supplement_logs ADD COLUMN note text`);
+	}
+}
+
+function ensureMealFavoriteCaffeineColumn() {
+	// Safety net für Migration 0043, falls deren Journal-`when`-Timestamp übersprungen
+	// wurde (siehe ensureSupplementLogNoteColumn). PRAGMA + ALTER ist idempotent.
+	const cols = sqlite.prepare(`PRAGMA table_info(nutrition_meal_favorites)`).all() as Array<{ name: string }>;
+	if (!cols.some((c) => c.name === 'caffeine_drink_id')) {
+		sqlite.exec(`ALTER TABLE nutrition_meal_favorites ADD COLUMN caffeine_drink_id text`);
+	}
+}
+
+function bootstrapRecipeNutrition() {
+	// Safety net für Migration 0044 (Rezept→Nutrition), falls deren Journal-`when`-Timestamp
+	// übersprungen wird (siehe ensureSupplementLogNoteColumn). Alles idempotent.
+	sqlite.exec(`
+		CREATE TABLE IF NOT EXISTS recipe_nutrition_components (
+			id TEXT PRIMARY KEY NOT NULL,
+			recipe_id TEXT NOT NULL,
+			ingredient_id TEXT,
+			sort_order INTEGER NOT NULL DEFAULT 0,
+			skipped INTEGER NOT NULL DEFAULT 0,
+			product_barcode TEXT,
+			generic_food_id TEXT,
+			custom_name TEXT,
+			display_name TEXT NOT NULL,
+			image_url TEXT,
+			amount REAL NOT NULL DEFAULT 0,
+			unit TEXT NOT NULL DEFAULT 'g',
+			grams_per_piece REAL,
+			kcal_per_100 REAL,
+			protein_per_100 REAL,
+			fat_per_100 REAL,
+			carbs_per_100 REAL,
+			sugar_per_100 REAL,
+			fiber_per_100 REAL,
+			salt_per_100 REAL,
+			FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE cascade
+		)
+	`);
+	sqlite.exec(`CREATE INDEX IF NOT EXISTS recipe_nutrition_components_recipe_id_idx ON recipe_nutrition_components (recipe_id)`);
+	const cols = sqlite.prepare(`PRAGMA table_info(recipes)`).all() as Array<{ name: string }>;
+	if (!cols.some((c) => c.name === 'nutrition_mapped_servings')) {
+		sqlite.exec(`ALTER TABLE recipes ADD COLUMN nutrition_mapped_servings integer`);
+	}
+	if (!cols.some((c) => c.name === 'nutrition_ingredients_snapshot')) {
+		sqlite.exec(`ALTER TABLE recipes ADD COLUMN nutrition_ingredients_snapshot text`);
 	}
 }
 
@@ -163,15 +211,86 @@ async function notifyOnNewVersion() {
 		.run();
 }
 
+// Bei jeder Änderung am Seed (GENERIC_FOODS) Version hochzählen, damit beim
+// nächsten Startup die neuen/aktualisierten Einträge upserted werden.
+const GENERIC_FOODS_VERSION = '2';
+
+function bootstrapGenericFoods() {
+	const meta = db.select().from(appMeta).where(eq(appMeta.key, 'generic_foods_version')).get();
+	if (meta?.value === GENERIC_FOODS_VERSION) return;
+
+	const insert = sqlite.prepare(`
+		INSERT INTO generic_foods (
+			id, category, name_de, name_en, keywords_de, keywords_en,
+			kcal_per_100, protein_per_100, fat_per_100, carbs_per_100,
+			sugar_per_100, fiber_per_100, salt_per_100,
+			default_piece_weight, default_unit, sort_order
+		) VALUES (
+			@id, @category, @name_de, @name_en, @keywords_de, @keywords_en,
+			@kcal, @protein, @fat, @carbs, @sugar, @fiber, @salt,
+			@piece_weight, @default_unit, @sort_order
+		)
+		ON CONFLICT(id) DO UPDATE SET
+			category = excluded.category,
+			name_de = excluded.name_de,
+			name_en = excluded.name_en,
+			keywords_de = excluded.keywords_de,
+			keywords_en = excluded.keywords_en,
+			kcal_per_100 = excluded.kcal_per_100,
+			protein_per_100 = excluded.protein_per_100,
+			fat_per_100 = excluded.fat_per_100,
+			carbs_per_100 = excluded.carbs_per_100,
+			sugar_per_100 = excluded.sugar_per_100,
+			fiber_per_100 = excluded.fiber_per_100,
+			salt_per_100 = excluded.salt_per_100,
+			default_piece_weight = excluded.default_piece_weight,
+			default_unit = excluded.default_unit,
+			sort_order = excluded.sort_order
+	`);
+
+	const tx = sqlite.transaction((items: typeof GENERIC_FOODS) => {
+		for (let i = 0; i < items.length; i++) {
+			const f = items[i];
+			insert.run({
+				id: f.id,
+				category: f.category,
+				name_de: f.nameDe,
+				name_en: f.nameEn,
+				keywords_de: f.keywordsDe ?? null,
+				keywords_en: f.keywordsEn ?? null,
+				kcal: f.kcalPer100,
+				protein: f.proteinPer100 ?? null,
+				fat: f.fatPer100 ?? null,
+				carbs: f.carbsPer100 ?? null,
+				sugar: f.sugarPer100 ?? null,
+				fiber: f.fiberPer100 ?? null,
+				salt: f.saltPer100 ?? null,
+				piece_weight: f.defaultPieceWeight ?? null,
+				default_unit: f.defaultUnit ?? 'g',
+				sort_order: i
+			});
+		}
+	});
+	tx(GENERIC_FOODS);
+
+	db.insert(appMeta)
+		.values({ key: 'generic_foods_version', value: GENERIC_FOODS_VERSION })
+		.onConflictDoUpdate({ target: appMeta.key, set: { value: GENERIC_FOODS_VERSION } })
+		.run();
+}
+
 export async function init() {
 	if (initialized) return;
 	initialized = true; // set synchronously before any await to prevent concurrent init
 	runMigrations();
 	ensureSupplementLogNoteColumn();
+	ensureMealFavoriteCaffeineColumn();
+	bootstrapRecipeNutrition();
 	bootstrapAdmin();
 	migrateItemHistory();
 	bootstrapCaffeineTables();
 	bootstrapMoodTables();
+	bootstrapGenericFoods();
 	await notifyOnNewVersion();
 	cleanupBarcodeCache();
 	cleanupOldData();

@@ -20,6 +20,7 @@
 	import MeditationTimerSheet from '$lib/components/supplements/MeditationTimerSheet.svelte';
 	import MoodTrackerCard from '$lib/components/supplements/MoodTrackerCard.svelte';
 	import MoodEntrySheet from '$lib/components/supplements/MoodEntrySheet.svelte';
+	import EatTrackerCard from '$lib/components/supplements/EatTrackerCard.svelte';
 	import HistoryTab from '$lib/components/supplements/HistoryTab.svelte';
 	import ExportSheet from '$lib/components/supplements/ExportSheet.svelte';
 	import { exportReport, type ReportSections } from '$lib/pdfExport';
@@ -53,6 +54,12 @@
 	type MoodEntry = { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null };
 	let todayMoodEntry = $state<MoodEntry | null>(null);
 	let moodEntryOpen = $state(false);
+	type MealSummary = { id: string; name: string; time: string; components: { kcal: number }[] };
+	type RangeMeal = { id: string; date: string; time: string; name: string; totalKcal: number };
+	let todayMeals = $state<MealSummary[]>([]);
+	let historyMeals = $state<MealSummary[]>([]);
+	let historyRangeMeals = $state<RangeMeal[]>([]);
+	let nutritionGoalKcal = $state<number | null>(null);
 
 	function startMeditation(minutes: number) {
 		meditationTimerDuration = minutes;
@@ -62,7 +69,8 @@
 		(userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday)) ||
 		(userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0) ||
 		(userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0) ||
-		(userSettings.moodTrackerEnabled && todayMoodEntry !== null)
+		(userSettings.moodTrackerEnabled && todayMoodEntry !== null) ||
+		(userSettings.nutritionTrackerEnabled && todayMeals.length > 0)
 	);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 	const visibleCaffeineDrinks = $derived(
@@ -393,6 +401,39 @@
 		return { from, to };
 	}
 
+	async function loadHistoryNutrition() {
+		if (!userSettings.nutritionTrackerEnabled) { historyMeals = []; historyRangeMeals = []; return; }
+		try {
+			if (historyPeriod === 'day') {
+				const res = await fetch(`/api/nutrition/meals?date=${historyDate}`);
+				if (res.ok) {
+					const d = await res.json();
+					historyMeals = (d.meals ?? []).map((m: { id: string; name: string; time: string; components: { kcal: number }[] }) => ({
+						id: m.id, name: m.name, time: m.time,
+						components: (m.components ?? []).map((c) => ({ kcal: c.kcal ?? 0 }))
+					}));
+				}
+				historyRangeMeals = [];
+			} else {
+				const { from, to } = getHistoryBounds();
+				const fromKey = toLocalDateStr(new Date(from));
+				const toKey = toLocalDateStr(new Date(to));
+				const res = await fetch(`/api/nutrition/meals?from=${fromKey}&to=${toKey}`);
+				if (res.ok) {
+					const d = await res.json();
+					historyRangeMeals = (d.meals ?? []).map((m: { id: string; date: string; time: string; name: string; components: { kcal: number }[] }) => ({
+						id: m.id,
+						date: m.date,
+						time: m.time,
+						name: m.name,
+						totalKcal: (m.components ?? []).reduce((s, c) => s + (c.kcal ?? 0), 0)
+					}));
+				}
+				historyMeals = [];
+			}
+		} catch { historyMeals = []; historyRangeMeals = []; }
+	}
+
 	async function loadHistory() {
 		historyLoading = true;
 		const { from, to } = getHistoryBounds();
@@ -401,7 +442,8 @@
 			fetch(`/api/supplement-stats?period=${historyPeriod}&from=${from}&to=${to}`),
 			loadHistoryWater(),
 			loadHistoryCaffeine(),
-			loadHistoryMeditation()
+			loadHistoryMeditation(),
+			loadHistoryNutrition()
 		]);
 		if (statsRes.ok) {
 			const data = await statsRes.json();
@@ -654,6 +696,30 @@
 		} catch {}
 	}
 
+	async function loadTodayNutrition() {
+		if (!userSettings.nutritionTrackerEnabled) { todayMeals = []; nutritionGoalKcal = null; return; }
+		try {
+			const dateStr = toLocalDateStr(new Date());
+			const [mealsRes, goalsRes] = await Promise.all([
+				fetch(`/api/nutrition/meals?date=${dateStr}`),
+				fetch('/api/nutrition/goals')
+			]);
+			if (mealsRes.ok) {
+				const data = await mealsRes.json();
+				todayMeals = (data.meals ?? []).map((m: { id: string; name: string; time: string; components: { kcal: number }[] }) => ({
+					id: m.id, name: m.name, time: m.time,
+					components: (m.components ?? []).map((c) => ({ kcal: c.kcal ?? 0 }))
+				}));
+			}
+			if (goalsRes.ok) {
+				const data = await goalsRes.json();
+				nutritionGoalKcal = data.goals?.dailyKcal ?? null;
+			}
+		} catch {
+			// silently ignore — offline tolerance
+		}
+	}
+
 	async function loadTodayMoodEntry() {
 		if (!userSettings.moodTrackerEnabled) { todayMoodEntry = null; return; }
 		try {
@@ -839,11 +905,12 @@
 
 	$effect(() => {
 		if (userSettings.moodTrackerEnabled) void loadTodayMoodEntry();
+		if (userSettings.nutritionTrackerEnabled) void loadTodayNutrition();
 		else todayMoodEntry = null;
 	});
 
 	onMount(() => {
-		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]).then(() => { loading = false; });
+		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadTodayNutrition()]).then(() => { loading = false; });
 		handleActionParam();
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
 
@@ -1151,6 +1218,9 @@
 					onreload={loadTodayMoodEntry}
 				/>
 			{/if}
+			{#if userSettings.nutritionTrackerEnabled && todayMeals.length > 0}
+				<EatTrackerCard meals={todayMeals} goalKcal={nutritionGoalKcal} />
+			{/if}
 			{#if visibleTrackers.filter(v => v !== 'mood').length > 0}
 				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<div class="px-4 pt-3 pb-0 -mb-1 flex items-center gap-2">
@@ -1319,6 +1389,9 @@
 			waterLogs={historyWaterLogs}
 			caffeineLogs={historyCaffeineLogs}
 			meditationLogs={historyMeditationLogs}
+			meals={historyMeals}
+			rangeMeals={historyRangeMeals}
+			nutritionGoalKcal={nutritionGoalKcal}
 			onMoodReload={loadTodayMoodEntry}
 			onEditLog={openHistoryEditLog}
 			onEditCaffeineLog={openHistoryEditCaffeineLog}
@@ -1344,6 +1417,10 @@
 	meditationGoalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
 	moodEnabled={userSettings.moodTrackerEnabled}
 	moodHasEntry={todayMoodEntry !== null}
+	nutritionEnabled={userSettings.nutritionTrackerEnabled}
+	nutritionTotalKcal={todayMeals.reduce((s, m) => s + m.components.reduce((cs, c) => cs + (c.kcal ?? 0), 0), 0)}
+	nutritionGoalKcal={nutritionGoalKcal}
+	onaddmeal={() => { quickLogOpen = false; goto('/tracker/nutrition?new=1'); }}
 	onstartmeditation={startMeditation}
 	onrateMood={() => { quickLogOpen = false; moodEntryOpen = true; }}
 	onlogged={() => { Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]); if (activeTab === 'history') loadHistory(); }}

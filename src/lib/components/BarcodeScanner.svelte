@@ -10,9 +10,10 @@
 		getSupportedFormats(): Promise<string[]>;
 	}
 
-	let { onFound, onClose }: {
-		onFound: (name: string) => void;
+	let { onFound, onClose, rawMode = false }: {
+		onFound: (value: string) => void;
 		onClose: () => void;
+		rawMode?: boolean;
 	} = $props();
 
 	type ScanPhase = 'requesting' | 'scanning' | 'loading' | 'feedback' | 'not_found' | 'denied' | 'error';
@@ -145,6 +146,13 @@
 	}
 
 	async function handleBarcode(code: string) {
+		if (rawMode) {
+			onFound(code);
+			feedbackText = code;
+			phase = 'feedback';
+			setTimeout(() => { phase = 'scanning'; }, 1200);
+			return;
+		}
 		phase = 'loading';
 		try {
 			const res = await fetch(`/api/barcode/${encodeURIComponent(code)}`);

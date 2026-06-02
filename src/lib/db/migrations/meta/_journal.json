@@ -274,6 +274,48 @@
       "when": 1780617600000,
       "tag": "0038_recipe_favorites_rating_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
+      "when": 1781308800000,
+      "tag": "0039_nutrition_tracker",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1781395200000,
+      "tag": "0040_favorite_image_url",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1781481600000,
+      "tag": "0041_nutrition_goal_fiber",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "6",
+      "when": 1781568000000,
+      "tag": "0042_meal_template_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1781654400000,
+      "tag": "0043_meal_favorite_caffeine_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1781740800000,
+      "tag": "0044_recipe_nutrition",
+      "breakpoints": true
     }
   ]
 }

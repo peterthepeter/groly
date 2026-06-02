@@ -4,7 +4,7 @@
   <img src="static/icons/icon.svg" width="96" alt="Groly" />
 </p>
 
-A mobile-first **grocery list, health & lifestyle tracker, and meal planner** built for self-hosting — designed for your phone, not adapted to it. Every interaction is touch-optimized: bottom navigation, large tap targets, swipe gestures, and offline support so it works without signal in the store. Also fully usable in a desktop browser.
+A mobile-first **grocery list, health & nutrition tracker, and meal planner** built for self-hosting — designed for your phone, not adapted to it. Every interaction is touch-optimized: bottom navigation, large tap targets, swipe gestures, and offline support so it works without signal in the store. Also fully usable in a desktop browser.
 
 Groly is a **PWA (Progressive Web App)**. Install it to your home screen on iOS or Android to unlock the full experience: offline mode, push notifications, barcode scanner, and location-based list opening all require the installed PWA.
 
@@ -47,19 +47,37 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
   <img src="docs/screenshots/Edit Supplement.png" width="160" alt="Edit supplement" />
 </p>
 
-- **Log supplements** – Track daily intake with a quick-log sheet. Adjust amounts, set the time, and confirm with one tap.
-- **Nutrient tracking** – Define nutrients per unit for each supplement (e.g. 500 mcg Vitamin B12 per capsule). Groly automatically sums up your total daily nutrient intake across all supplements.
-- **Stock tracking** – Track stock levels per supplement. Reorder directly via the built-in shopping cart button, which adds the supplement to any of your lists.
-- **Push reminders** – Set configurable daily reminder times per supplement. Delivered via push notification to your phone.
-- **History** – Day, week, and month views for both supplements taken and nutrients consumed. Navigate back in time to review any period.
-- **Adherence & heatmaps** – Week/month views show per-supplement adherence rates and daily heatmaps so you can see scheduled vs. actually taken doses at a glance.
-- **PDF export** – Export selected sections (supplements, trackers, mood, nutrients) for a chosen period as a PDF for sharing with a doctor or trainer. [Example report](docs/pdf/example-report.pdf).
-- **Active/inactive toggle** – Temporarily disable a supplement without deleting it or its history.
-- **Brand & info** – Optionally store brand and additional information per supplement.
-- **Water tracker** – Log daily water intake with preset quick-add buttons or a custom amount. Set a personal daily goal (ml) and track progress with a fill bar. Configure push reminders at fixed intervals within a time window.
-- **Caffeine tracker** – Log caffeine intake by selecting from a built-in drink catalog (10 pre-seeded drinks: Espresso, Filter Coffee, Cold Brew, and more). Per-drink default amounts are individually adjustable per user. Set a daily limit with a visual fill bar — exceeding the limit is highlighted in red. Hide drinks you don't use from the picker.
-- **Meditation tracker** – Start a full-screen meditation timer with 5/10/15/20 min quick-start presets or a custom duration via a picker wheel. Includes a configurable preparation phase, Zen circle progress animation, and configurable start/end sounds. Set a daily goal and track your session history in day, week, and month views. Optional daily push reminders.
-- **Mood tracker** – Log your daily mood on a 1–5 scale with an optional note. Track patterns over time in day, week, and month views. Set an optional daily push reminder to check in.
+A unified health & lifestyle tracker — supplements, water, caffeine, meditation, and mood — each with a quick-log sheet and day/week/month history.
+
+- **Supplements** – Quick-log intake (amount + time, one tap). Define nutrients per unit (e.g. 500 µg B12 per capsule) and Groly sums your total daily intake. Track stock and reorder to any list via the cart button. Per-supplement push reminders, active/inactive toggle, optional brand & info.
+- **Water** – Log with quick-add presets or a custom amount, set a daily goal (ml) with a fill bar, and schedule interval reminders within a time window.
+- **Caffeine** – Log from a built-in drink catalog (10 drinks, per-user default amounts), set a daily limit with a fill bar (red when exceeded), and hide drinks you don't use.
+- **Meditation** – Full-screen timer with quick-start presets or a custom duration, preparation phase, Zen progress animation, start/end sounds, daily goal, and optional reminders.
+- **Mood** – Log daily mood on a 1–5 scale with an optional gratitude note and optional check-in reminder.
+- **History & adherence** – Day, week, and month views for every tracker, with per-supplement adherence rates and heatmaps (scheduled vs. actually taken).
+- **PDF export** – Export selected sections (supplements, trackers, mood, nutrients) for any period as a PDF to share with a doctor or trainer. [Example report](docs/pdf/example-report.pdf).
+
+### Nutrition Tracker
+
+<p align="center">
+  <img src="docs/screenshots/Nutrition Today.png" width="140" alt="Nutrition – daily food diary" />
+  <img src="docs/screenshots/Nutrition Goal.png" width="140" alt="Daily calorie & macro goal" />
+  <img src="docs/screenshots/Nutrition Log Meal.png" width="140" alt="Add a food with amount" />
+  <img src="docs/screenshots/Nutrition Favorites.png" width="140" alt="Food & meal favorites" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/Recipe Nutrition.png" width="180" alt="Map recipe ingredients to nutrition" />
+  <img src="docs/screenshots/Recipe Track Meal.png" width="180" alt="Track a recipe as a meal" />
+</p>
+
+A full food diary with calorie and macro tracking, built on the same [Open Food Facts](https://world.openfoodfacts.org/) integration as the barcode scanner.
+
+- **Daily food diary** – Log meals across the day and see total calories plus protein, fat, carbs, and fiber as progress rings against your goal, with a per-meal and per-component breakdown.
+- **Two food sources** – Search 160+ built-in generic foods (fruit, veg, grains, dairy, meat, …, bilingual), or look up any branded product by name or barcode via Open Food Facts — with image, nutrition values, and Nutri-Score. Lookups are cached in SQLite.
+- **Daily goals** – Set calorie and macro targets manually, or let Groly estimate them from your sex, age, height, weight, and activity level (Mifflin-St Jeor).
+- **Favorites** – Save single foods or whole meals (with photo) you log often and re-add them in one tap. A meal favorite can optionally be linked to a caffeine drink so logging it also logs caffeine.
+- **From recipes** – Map a recipe's ingredients to nutrition data once; Groly then shows per-serving calories on the recipe and lets you track any number of servings straight into your food diary.
+- **Units & thumbnails** – Track in grams, millilitres, or pieces (with per-piece weight); products and meals carry thumbnails for quick recognition.
 
 ### Recipes & Meal Planning
 
@@ -171,6 +189,7 @@ services:
       - ADMIN_PASSWORD=secure-password
       - ORIGIN=https://your-domain.com
       # - ADDRESS_HEADER=X-Forwarded-For  # only set this when running behind a reverse proxy (Caddy, Nginx, Traefik)
+      # - OFF_COUNTRY=germany  # optional: restrict nutrition product search to one country (default: worldwide)
       # Optional: push notifications (see Push Notifications section below)
       # - VAPID_PUBLIC_KEY=<publicKey>
       # - VAPID_PRIVATE_KEY=<privateKey>
@@ -214,6 +233,7 @@ The volume `/app/data` contains the SQLite database. An admin user is created on
 | `PUBLIC_VAPID_PUBLIC_KEY` | Optional | Same value as `VAPID_PUBLIC_KEY` |
 | `VAPID_SUBJECT` | Optional | `https://` URL or `mailto:` address for VAPID |
 | `ADDRESS_HEADER` | Optional | Set to `X-Forwarded-For` **only** when running behind a reverse proxy (Caddy, Nginx, Traefik). **Do not set this if you're accessing Groly directly** — it will cause login failures. Enables accurate per-client IP rate limiting. |
+| `OFF_COUNTRY` | Optional | Restricts the nutrition tracker's Open Food Facts product search to a single country for more locally relevant results, e.g. `germany`, `france`, `switzerland`. Leave unset to search worldwide (default). |
 
 ### Admin password recovery
 
