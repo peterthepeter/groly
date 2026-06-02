@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.0-1',
+		de: [
+			'Nährwerte (Eiweiß/Fett/KH) jetzt direkt beim Anlegen einer Mahlzeit sichtbar',
+			'Standard-Lebensmittel haben jetzt farbige Kategorie-Icons'
+		],
+		en: [
+			'Macros (protein/fat/carbs) now shown directly when creating a meal',
+			'Standard foods now have colored category icons'
+		]
+	},
+	{
 		version: '0.8.0',
 		de: [
 			'Neuer Nutrition Tracker: Kalorien- & Makro-Tagebuch mit Produktsuche, Tageszielen und Rezept-Tracking'

@@ -9,6 +9,7 @@ import { sql, or, like } from 'drizzle-orm';
 type GenericResult = {
 	type: 'generic';
 	id: string;
+	category: string;
 	name: string;
 	kcalPer100: number;
 	proteinPer100: number | null;
@@ -79,6 +80,7 @@ function searchGenerics(query: string, lang: 'de' | 'en'): GenericResult[] {
 		.map(({ r }) => ({
 			type: 'generic' as const,
 			id: r.id,
+			category: r.category,
 			name: lang === 'de' ? r.nameDe : r.nameEn,
 			kcalPer100: r.kcalPer100,
 			proteinPer100: r.proteinPer100,

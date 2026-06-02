@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import BarcodeScanner from '$lib/components/BarcodeScanner.svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
+	import { getNutritionCategoryIcon } from '$lib/nutritionCategoryIcons';
 
 	type Component = {
 		productBarcode: string | null;
@@ -25,6 +26,7 @@
 	type GenericResult = {
 		type: 'generic';
 		id: string;
+		category: string;
 		name: string;
 		kcalPer100: number;
 		proteinPer100: number | null;
@@ -59,6 +61,7 @@
 		imageUrl: string | null;
 		productBarcode: string | null;
 		genericFoodId: string | null;
+		category?: string | null;
 		customKcalPer100: number | null;
 		customProteinPer100: number | null;
 		customFatPer100: number | null;
@@ -116,6 +119,9 @@
 	let view = $state<'picker' | 'amount' | 'custom'>(initial ? 'amount' : 'picker');
 	// svelte-ignore state_referenced_locally
 	let selected = $state<Component | null>(initial ? { ...initial } : null);
+	// Kategorie des ausgewählten generischen Lebensmittels (für das Vorschau-Icon).
+	// Nur gesetzt, wenn die Auswahl ein generic ist – sonst greift der Buchstaben-Fallback.
+	let selectedCategory = $state<string | null>(null);
 
 	// Picker state
 	let query = $state('');
@@ -371,6 +377,7 @@
 			fiberPer100: g.fiberPer100,
 			saltPer100: g.saltPer100
 		};
+		selectedCategory = g.category;
 		view = 'amount';
 	}
 
@@ -392,6 +399,7 @@
 			fiberPer100: p.fiberPer100,
 			saltPer100: p.saltPer100
 		};
+		selectedCategory = null;
 		view = 'amount';
 	}
 
@@ -416,6 +424,7 @@
 			fiberPer100: f.customFiberPer100,
 			saltPer100: f.customSaltPer100
 		};
+		selectedCategory = f.genericFoodId ? (f.category ?? null) : null;
 		// Wenn Favorit auf Produkt/Generic verweist und keine eigenen per100-Werte hat → nachladen
 		if (selected.kcalPer100 == null) {
 			if (f.productBarcode) {
@@ -590,6 +599,15 @@
 	}
 </script>
 
+<!-- Kategorie-Icon für generische Lebensmittel (gleicher Stroke-Stil wie die Listen-Icons). -->
+{#snippet catIcon(category: string | null | undefined, px: number)}
+	{@const ic = getNutritionCategoryIcon(category)}
+	<svg width={px} height={px} viewBox="0 0 24 24" fill="none" stroke={ic.color}
+	     stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+		{@html ic.svgContent}
+	</svg>
+{/snippet}
+
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="fixed inset-0 z-[62]" style="background: rgba(0,0,0,0.5)" onclick={onclose}></div>
@@ -677,6 +695,10 @@
 								</svg>
 								{#if f.imageUrl}
 									<img src={f.imageUrl} alt="" class="w-6 h-6 rounded object-cover bg-black/5 shrink-0" />
+								{:else if f.genericFoodId && f.category}
+									<div class="w-6 h-6 shrink-0 flex items-center justify-center">
+										{@render catIcon(f.category, 24)}
+									</div>
 								{:else}
 									<div class="w-6 h-6 rounded shrink-0 flex items-center justify-center text-[10px] font-semibold"
 									     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
@@ -693,9 +715,8 @@
 							<button onclick={() => selectGeneric(g)}
 							        class="w-full text-left px-3 py-2 flex items-center gap-2 active:opacity-60 min-w-0">
 								<div class="w-[14px] shrink-0"></div>
-								<div class="w-6 h-6 rounded shrink-0 flex items-center justify-center text-[10px] font-semibold"
-								     style="background: color-mix(in srgb, var(--color-on-surface) 6%, transparent); color: var(--color-on-surface-variant)">
-									{g.name.slice(0, 1).toUpperCase()}
+								<div class="w-6 h-6 shrink-0 flex items-center justify-center">
+									{@render catIcon(g.category, 24)}
 								</div>
 								<span class="flex-1 truncate text-sm" style="color: var(--color-on-surface)">{g.name}</span>
 								<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">
@@ -802,6 +823,10 @@
 				<div class="px-3 py-2.5 flex gap-2.5 items-center">
 					{#if selected.imageUrl}
 						<img src={selected.imageUrl} alt="" class="w-10 h-10 rounded-lg object-cover bg-black/5 shrink-0" />
+					{:else if selectedCategory}
+						<div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+							{@render catIcon(selectedCategory, 32)}
+						</div>
 					{:else}
 						<div class="w-10 h-10 rounded-lg flex items-center justify-center text-base shrink-0"
 						     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">

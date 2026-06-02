@@ -130,7 +130,15 @@
 		return ((c.kcalPer100 ?? 0) * grams) / 100;
 	}
 
+	function compMacro(c: Component, per100: number | null): number {
+		return ((per100 ?? 0) * effectiveGrams(c)) / 100;
+	}
+	function fmtG(v: number): string { return v < 10 ? v.toFixed(1) : Math.round(v).toString(); }
+
 	const totalKcal = $derived(Math.round(components.reduce((s, c) => s + compKcal(c), 0)));
+	const totalProtein = $derived(components.reduce((s, c) => s + compMacro(c, c.proteinPer100), 0));
+	const totalFat = $derived(components.reduce((s, c) => s + compMacro(c, c.fatPer100), 0));
+	const totalCarbs = $derived(components.reduce((s, c) => s + compMacro(c, c.carbsPer100), 0));
 
 	// Entwurf laufend zwischenspeichern, sobald mindestens eine Zutat drin ist
 	$effect(() => {
@@ -384,7 +392,14 @@
 					</button>
 				{/if}
 			</div>
-			<span class="text-sm font-semibold" style="color: #FB923C">{totalKcal} kcal</span>
+			<div class="flex flex-col items-end leading-tight">
+				<span class="text-sm font-semibold" style="color: #FB923C">{totalKcal} kcal</span>
+				{#if components.length > 0}
+					<span class="text-[11px] tabular-nums" style="color: var(--color-on-surface-variant)">
+						{t.nutrition_protein.charAt(0)} {fmtG(totalProtein)}g · {t.nutrition_fat.charAt(0)} {fmtG(totalFat)}g · {t.nutrition_carbs.charAt(0)} {fmtG(totalCarbs)}g
+					</span>
+				{/if}
+			</div>
 		</div>
 
 		<div class="rounded-2xl overflow-hidden"

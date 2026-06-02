@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
-import { nutritionFavorites } from '$lib/db/schema';
+import { nutritionFavorites, genericFoods } from '$lib/db/schema';
 import { and, eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -10,10 +10,14 @@ export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
 
-	const favs = db.select().from(nutritionFavorites)
+	// Kategorie des verknüpften generischen Lebensmittels mitliefern (für das Listen-Icon).
+	const rows = db.select({ fav: nutritionFavorites, category: genericFoods.category })
+		.from(nutritionFavorites)
+		.leftJoin(genericFoods, eq(nutritionFavorites.genericFoodId, genericFoods.id))
 		.where(eq(nutritionFavorites.userId, user.id))
 		.orderBy(desc(nutritionFavorites.useCount), desc(nutritionFavorites.lastUsedAt))
 		.all();
+	const favs = rows.map((r) => ({ ...r.fav, category: r.category }));
 	return json({ favorites: favs });
 };
 

@@ -5,7 +5,8 @@
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import MealFavoriteEditSheet from '$lib/components/supplements/MealFavoriteEditSheet.svelte';
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import { getNutritionCategoryIcon } from '$lib/nutritionCategoryIcons';
 
 	type Favorite = {
 		id: string;
@@ -13,7 +14,11 @@
 		imageUrl: string | null;
 		productBarcode: string | null;
 		genericFoodId: string | null;
+		category?: string | null;
 		customKcalPer100: number | null;
+		customProteinPer100: number | null;
+		customFatPer100: number | null;
+		customCarbsPer100: number | null;
 		defaultAmount: number;
 		defaultUnit: 'g' | 'ml' | 'piece';
 		defaultGramsPerPiece: number | null;
@@ -111,6 +116,39 @@
 		editAmount = String(f.defaultAmount);
 		editUnit = f.defaultUnit;
 		editGpp = f.defaultGramsPerPiece != null ? String(f.defaultGramsPerPiece) : '';
+		// Kein gespeicherter Nährwert-Snapshot (z.B. Produkt vor dem Laden favorisiert)?
+		// Dann live nachladen – wie die Amount-Ansicht – damit kcal + Makros auch hier erscheinen.
+		if (f.customKcalPer100 == null) void hydrateNutrition(f);
+	}
+
+	async function hydrateNutrition(f: Favorite) {
+		try {
+			let n: { kcalPer100: number | null; proteinPer100: number | null; fatPer100: number | null; carbsPer100: number | null } | null = null;
+			if (f.productBarcode) {
+				const res = await fetch(`/api/nutrition/product/${encodeURIComponent(f.productBarcode)}`);
+				if (res.ok) n = (await res.json()).product ?? null;
+			} else if (f.genericFoodId) {
+				const res = await fetch(`/api/nutrition/search?q=${encodeURIComponent(f.genericFoodId)}&lang=${currentLang()}&source=local`);
+				if (res.ok) n = ((await res.json()).generic ?? []).find((x: { id: string }) => x.id === f.genericFoodId) ?? null;
+			}
+			// Nur übernehmen, wenn noch dieselbe Favoritenkarte offen ist.
+			if (!n || !editing || editing.id !== f.id) return;
+			editing = {
+				...editing,
+				customKcalPer100: editing.customKcalPer100 ?? n.kcalPer100,
+				customProteinPer100: editing.customProteinPer100 ?? n.proteinPer100,
+				customFatPer100: editing.customFatPer100 ?? n.fatPer100,
+				customCarbsPer100: editing.customCarbsPer100 ?? n.carbsPer100
+			};
+		} catch { /* noop */ }
+	}
+
+	// Effektive Gramm der aktuellen Eingabe (bei Stück = Menge × Gramm/Stück) –
+	// für die Live-kcal-/Makro-Anzeige in der Edit-Bubble.
+	function editEffectiveGrams(): number {
+		const amt = parseFloat(String(editAmount).replace(',', '.')) || 0;
+		if (editUnit === 'piece') return amt * (parseFloat(String(editGpp).replace(',', '.')) || 0);
+		return amt;
 	}
 
 	async function saveEdit() {
@@ -150,6 +188,15 @@
 	}
 </script>
 
+<!-- Kategorie-Icon für generische Lebensmittel (gleicher Stroke-Stil wie die Listen-Icons). -->
+{#snippet catIcon(category: string | null | undefined, px: number)}
+	{@const ic = getNutritionCategoryIcon(category)}
+	<svg width={px} height={px} viewBox="0 0 24 24" fill="none" stroke={ic.color}
+	     stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+		{@html ic.svgContent}
+	</svg>
+{/snippet}
+
 <AppHeader title={t.nutrition_favorites_label} eyebrow={t.nutrition_label_short} onMenuOpen={() => (menuOpen = true)} onBack={() => goto('/tracker/nutrition')} />
 <HamburgerMenu bind:open={menuOpen} user={data?.user ?? null} />
 
@@ -175,6 +222,10 @@
 				<div class="px-3 py-2.5 flex items-center gap-3 cursor-pointer active:opacity-80" onclick={() => startEdit(f)}>
 					{#if f.imageUrl}
 						<img src={f.imageUrl} alt="" class="w-9 h-9 rounded-lg object-cover bg-black/5 shrink-0" />
+					{:else if f.genericFoodId && f.category}
+						<div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0">
+							{@render catIcon(f.category, 28)}
+						</div>
 					{:else}
 						<div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0"
 						     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
@@ -280,52 +331,79 @@
 			<p class="font-bold text-lg" style="color: #FB923C">{t.nutrition_edit}</p>
 		</div>
 		<div class="overflow-y-auto px-5 py-2" style="min-height: 0">
-			<div class="rounded-2xl mb-3 px-3 py-2.5 flex gap-2.5 items-center"
+			<div class="rounded-2xl mb-3"
 			     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-				{#if editing.imageUrl}
-					<img src={editing.imageUrl} alt="" class="w-10 h-10 rounded-lg object-cover bg-black/5 shrink-0" />
-				{:else}
-					<div class="w-10 h-10 rounded-lg flex items-center justify-center text-base shrink-0"
-					     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-						{editing.displayName.slice(0, 1).toUpperCase()}
-					</div>
-				{/if}
-				<div class="flex-1 min-w-0">
-					<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{editing.displayName}</div>
-					<div class="text-xs" style="color: var(--color-on-surface-variant)">
-						{editing.customKcalPer100 != null ? `${Math.round(editing.customKcalPer100)} kcal/100g` : t.nutrition_no_kcal_data}
+				<!-- Kopf: Bild/Icon + Name + kcal/100 -->
+				<div class="px-3 py-2.5 flex gap-2.5 items-center">
+					{#if editing.imageUrl}
+						<img src={editing.imageUrl} alt="" class="w-10 h-10 rounded-lg object-cover bg-black/5 shrink-0" />
+					{:else if editing.genericFoodId && editing.category}
+						<div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+							{@render catIcon(editing.category, 32)}
+						</div>
+					{:else}
+						<div class="w-10 h-10 rounded-lg flex items-center justify-center text-base shrink-0"
+						     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
+							{editing.displayName.slice(0, 1).toUpperCase()}
+						</div>
+					{/if}
+					<div class="flex-1 min-w-0">
+						<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{editing.displayName}</div>
+						<div class="text-xs" style="color: var(--color-on-surface-variant)">
+							{editing.customKcalPer100 != null ? `${Math.round(editing.customKcalPer100)} kcal/100g` : t.nutrition_no_kcal_data}
+						</div>
 					</div>
 				</div>
-			</div>
-			<label class="block mb-3">
-				<span class="block text-xs uppercase tracking-wide mb-1" style="color: var(--color-on-surface-variant)">{t.nutrition_name}</span>
-				<input type="text" bind:value={editName}
-				       class="w-full px-4 rounded-xl bg-transparent outline-none"
-				       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 42px" />
-			</label>
-			<div class="flex items-end gap-2 mb-3">
-				<label class="flex-1 block">
-					<span class="block text-xs uppercase tracking-wide mb-1" style="color: var(--color-on-surface-variant)">{t.nutrition_amount}</span>
+
+				<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
+
+				<!-- Name -->
+				<div class="px-3 py-2.5 flex items-center gap-2">
+					<span class="text-[11px] uppercase tracking-wide shrink-0" style="color: var(--color-on-surface-variant)">{t.nutrition_name}</span>
+					<input type="text" bind:value={editName}
+					       class="flex-1 min-w-0 px-2.5 rounded-xl bg-transparent outline-none"
+					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px" />
+				</div>
+
+				<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
+
+				<!-- Menge + Einheit + kcal-Ergebnis -->
+				<div class="px-3 py-2.5 flex items-center gap-2">
+					<span class="text-[11px] uppercase tracking-wide shrink-0" style="color: var(--color-on-surface-variant)">{t.nutrition_amount}</span>
 					<input type="number" inputmode="decimal" bind:value={editAmount} min="0" step="any"
-					       class="w-full px-4 rounded-xl bg-transparent outline-none"
-					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 42px" />
-				</label>
-				<select bind:value={editUnit}
-				        class="px-3 rounded-xl bg-transparent outline-none appearance-none"
-				        style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 42px">
-					<option value="g">g</option>
-					<option value="ml">ml</option>
-					<option value="piece">{t.nutrition_unit_piece}</option>
-				</select>
+					       class="flex-1 min-w-0 px-2.5 rounded-xl bg-transparent outline-none tabular-nums"
+					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px" />
+					<select bind:value={editUnit}
+					        class="px-2 rounded-xl bg-transparent outline-none appearance-none shrink-0"
+					        style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px">
+						<option value="g">g</option>
+						<option value="ml">ml</option>
+						<option value="piece">{t.nutrition_unit_piece}</option>
+					</select>
+					{#if editing.customKcalPer100 != null}
+						<span class="text-base font-semibold tabular-nums shrink-0" style="color: #FB923C">
+							= {Math.round((editing.customKcalPer100 ?? 0) * editEffectiveGrams() / 100)} kcal
+						</span>
+					{/if}
+				</div>
+
+				{#if editUnit === 'piece'}
+					<div class="px-3 pb-2 -mt-1 flex items-center gap-2">
+						<span class="text-[11px] uppercase tracking-wide shrink-0" style="color: var(--color-on-surface-variant)">{t.nutrition_grams_per_piece}</span>
+						<input type="number" inputmode="decimal" bind:value={editGpp} min="0" step="any"
+						       class="flex-1 min-w-0 px-2.5 rounded-xl bg-transparent outline-none tabular-nums"
+						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px" />
+					</div>
+				{/if}
+
+				{#if editing.customKcalPer100 != null}
+					<div class="px-3 pb-2.5 text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
+						{t.nutrition_protein} {((editing.customProteinPer100 ?? 0) * editEffectiveGrams() / 100).toFixed(1)}g
+						· {t.nutrition_fat} {((editing.customFatPer100 ?? 0) * editEffectiveGrams() / 100).toFixed(1)}g
+						· {t.nutrition_carbs} {((editing.customCarbsPer100 ?? 0) * editEffectiveGrams() / 100).toFixed(1)}g
+					</div>
+				{/if}
 			</div>
-			{#if editUnit === 'piece'}
-				<label class="block mb-3">
-					<span class="block text-xs uppercase tracking-wide mb-1" style="color: var(--color-on-surface-variant)">{t.nutrition_grams_per_piece}</span>
-					<input type="number" inputmode="decimal" bind:value={editGpp} min="0" step="any"
-					       class="w-full px-4 rounded-xl bg-transparent outline-none"
-					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 42px" />
-				</label>
-			{/if}
 		</div>
 		<div class="px-5 pt-2 shrink-0 flex gap-2" style="padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)">
 			<button onclick={() => (editing = null)}
