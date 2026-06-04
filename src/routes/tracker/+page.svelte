@@ -54,12 +54,16 @@
 	type MoodEntry = { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null };
 	let todayMoodEntry = $state<MoodEntry | null>(null);
 	let moodEntryOpen = $state(false);
-	type MealSummary = { id: string; name: string; time: string; components: { kcal: number }[] };
+	type MealSummary = { id: string; name: string; time: string; components: { kcal: number; protein?: number; fat?: number; carbs?: number; fiber?: number }[] };
 	type RangeMeal = { id: string; date: string; time: string; name: string; totalKcal: number };
 	let todayMeals = $state<MealSummary[]>([]);
 	let historyMeals = $state<MealSummary[]>([]);
 	let historyRangeMeals = $state<RangeMeal[]>([]);
 	let nutritionGoalKcal = $state<number | null>(null);
+	let nutritionGoalProtein = $state<number | null>(null);
+	let nutritionGoalFat = $state<number | null>(null);
+	let nutritionGoalCarbs = $state<number | null>(null);
+	let nutritionGoalFiber = $state<number | null>(null);
 
 	function startMeditation(minutes: number) {
 		meditationTimerDuration = minutes;
@@ -697,7 +701,11 @@
 	}
 
 	async function loadTodayNutrition() {
-		if (!userSettings.nutritionTrackerEnabled) { todayMeals = []; nutritionGoalKcal = null; return; }
+		if (!userSettings.nutritionTrackerEnabled) {
+			todayMeals = [];
+			nutritionGoalKcal = nutritionGoalProtein = nutritionGoalFat = nutritionGoalCarbs = nutritionGoalFiber = null;
+			return;
+		}
 		try {
 			const dateStr = toLocalDateStr(new Date());
 			const [mealsRes, goalsRes] = await Promise.all([
@@ -706,14 +714,24 @@
 			]);
 			if (mealsRes.ok) {
 				const data = await mealsRes.json();
-				todayMeals = (data.meals ?? []).map((m: { id: string; name: string; time: string; components: { kcal: number }[] }) => ({
+				todayMeals = (data.meals ?? []).map((m: { id: string; name: string; time: string; components: { kcal: number; protein?: number; fat?: number; carbs?: number; fiber?: number }[] }) => ({
 					id: m.id, name: m.name, time: m.time,
-					components: (m.components ?? []).map((c) => ({ kcal: c.kcal ?? 0 }))
+					components: (m.components ?? []).map((c) => ({
+						kcal: c.kcal ?? 0,
+						protein: c.protein ?? 0,
+						fat: c.fat ?? 0,
+						carbs: c.carbs ?? 0,
+						fiber: c.fiber ?? 0
+					}))
 				}));
 			}
 			if (goalsRes.ok) {
 				const data = await goalsRes.json();
 				nutritionGoalKcal = data.goals?.dailyKcal ?? null;
+				nutritionGoalProtein = data.goals?.dailyProtein ?? null;
+				nutritionGoalFat = data.goals?.dailyFat ?? null;
+				nutritionGoalCarbs = data.goals?.dailyCarbs ?? null;
+				nutritionGoalFiber = data.goals?.dailyFiber ?? null;
 			}
 		} catch {
 			// silently ignore — offline tolerance
@@ -1219,7 +1237,14 @@
 				/>
 			{/if}
 			{#if userSettings.nutritionTrackerEnabled && todayMeals.length > 0}
-				<EatTrackerCard meals={todayMeals} goalKcal={nutritionGoalKcal} />
+				<EatTrackerCard
+					meals={todayMeals}
+					goalKcal={nutritionGoalKcal}
+					goalProtein={nutritionGoalProtein}
+					goalFat={nutritionGoalFat}
+					goalCarbs={nutritionGoalCarbs}
+					goalFiber={nutritionGoalFiber}
+				/>
 			{/if}
 			{#if visibleTrackers.filter(v => v !== 'mood').length > 0}
 				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">

@@ -213,7 +213,7 @@ async function notifyOnNewVersion() {
 
 // Bei jeder Änderung am Seed (GENERIC_FOODS) Version hochzählen, damit beim
 // nächsten Startup die neuen/aktualisierten Einträge upserted werden.
-const GENERIC_FOODS_VERSION = '2';
+const GENERIC_FOODS_VERSION = '3';
 
 function bootstrapGenericFoods() {
 	const meta = db.select().from(appMeta).where(eq(appMeta.key, 'generic_foods_version')).get();

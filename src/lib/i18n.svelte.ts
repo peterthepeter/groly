@@ -90,6 +90,12 @@ export function nutrition_kcal_over(kcal: string): string {
 	return `${kcal} kcal über dem Ziel`;
 }
 
+export function nutrition_meals_count(count: number): string {
+	void _lang;
+	if (_lang === 'en') return count === 1 ? '1 meal' : `${count} meals`;
+	return count === 1 ? '1 Mahlzeit' : `${count} Mahlzeiten`;
+}
+
 export function today_reminders_label(count: number): string {
 	void _lang;
 	if (_lang === 'en') return count === 1 ? '1 reminder today' : `${count} reminders today`;

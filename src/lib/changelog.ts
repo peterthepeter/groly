@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.0-2',
+		de: [
+			'Überarbeitete Nutrition-Karte in der Tracker-Übersicht'
+		],
+		en: [
+			'Reworked nutrition card on the tracker overview'
+		]
+	},
+	{
 		version: '0.8.0-1',
 		de: [
 			'Nährwerte (Eiweiß/Fett/KH) jetzt direkt beim Anlegen einer Mahlzeit sichtbar',
