@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { t } from '$lib/i18n.svelte';
+	import { parseIngredientText } from '$lib/recipeIngredientParser';
 
 	type Ingredient = { id: string; amount: string; unit: string; name: string };
 	type Step = { id: string; text: string };
@@ -23,6 +24,63 @@
 	let loading = $state(true);
 	let saving = $state(false);
 	let error = $state('');
+
+	// Quick ingredient entry
+	let ingredientsEl = $state<HTMLElement | null>(null);
+	let showBulk = $state(false);
+	let bulkText = $state('');
+
+	function isEmptyIngredient(i: Ingredient) {
+		return !i.amount.trim() && !i.unit.trim() && !i.name.trim();
+	}
+
+	// Keep exactly one empty trailing row so the user never has to reach for "+".
+	$effect(() => {
+		const last = ingredients[ingredients.length - 1];
+		if (last && !isEmptyIngredient(last)) {
+			ingredients = [...ingredients, { id: uid(), amount: '', unit: '', name: '' }];
+		}
+	});
+
+	async function focusAmount(index: number) {
+		await tick();
+		const inputs = ingredientsEl?.querySelectorAll<HTMLInputElement>('[data-ing-amount]');
+		inputs?.[index]?.focus();
+	}
+
+	function onNameKeydown(e: KeyboardEvent, index: number) {
+		if (e.key !== 'Enter') return;
+		e.preventDefault();
+		if (index === ingredients.length - 1) addIngredient();
+		focusAmount(index + 1);
+	}
+
+	function insertParsed(text: string, index: number): boolean {
+		const parsed = parseIngredientText(text);
+		if (parsed.length === 0) return false;
+		const rows = parsed.map(p => ({ id: uid(), ...p }));
+		ingredients = [...ingredients.slice(0, index), ...rows, ...ingredients.slice(index + 1)];
+		focusAmount(index + rows.length);
+		return true;
+	}
+
+	function onNamePaste(e: ClipboardEvent, index: number) {
+		const text = e.clipboardData?.getData('text') ?? '';
+		if (!/\r?\n/.test(text.trim())) return; // single line → let the browser paste normally
+		e.preventDefault();
+		insertParsed(text, index);
+	}
+
+	function applyBulk() {
+		const parsed = parseIngredientText(bulkText);
+		if (parsed.length > 0) {
+			const rows = parsed.map(p => ({ id: uid(), ...p }));
+			const hasContent = ingredients.some(i => !isEmptyIngredient(i));
+			ingredients = hasContent ? [...ingredients, ...rows] : rows;
+		}
+		bulkText = '';
+		showBulk = false;
+	}
 
 	// Image state
 	let imageFileInput = $state<HTMLInputElement | null>(null);
@@ -322,28 +380,62 @@
 			</div>
 
 			<!-- Zutaten -->
-			<div class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+			<div bind:this={ingredientsEl} class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<div class="flex items-center justify-between px-4 pt-3 pb-1">
 					<h2 class="text-sm font-bold" style="color: var(--color-on-surface)">{t.recipe_ingredients}</h2>
-					<button onclick={addIngredient} class="flex items-center gap-1 text-xs font-semibold active:opacity-60" style="color: var(--color-primary)">
-						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-							<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-						</svg>
-						{t.recipe_add_ingredient}
-					</button>
+					<div class="flex items-center gap-3.5">
+						<button onclick={() => showBulk = !showBulk} class="flex items-center gap-1 text-xs font-semibold active:opacity-60" style="color: {showBulk ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+							</svg>
+							{t.recipe_bulk_paste}
+						</button>
+						<button onclick={addIngredient} class="flex items-center gap-1 text-xs font-semibold active:opacity-60" style="color: var(--color-primary)">
+							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+							</svg>
+							{t.recipe_add_ingredient}
+						</button>
+					</div>
 				</div>
-				{#each ingredients as ing (ing.id)}
+				{#if showBulk}
+					<div class="px-4 pt-2 pb-1">
+						<!-- svelte-ignore a11y_autofocus -->
+						<textarea
+							bind:value={bulkText}
+							placeholder={t.recipe_bulk_placeholder}
+							rows="4"
+							autofocus
+							class="w-full rounded-xl px-3 py-2.5 outline-none resize-none"
+							style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; border: none"
+						></textarea>
+						<div class="flex items-center justify-end gap-2 mt-2 mb-1">
+							<button onclick={() => { showBulk = false; bulkText = ''; }}
+							        class="text-xs font-semibold px-3.5 py-2 rounded-xl active:opacity-60"
+							        style="color: var(--color-on-surface-variant); background-color: var(--color-surface-high)">
+								{t.recipe_bulk_cancel}
+							</button>
+							<button onclick={applyBulk} disabled={!bulkText.trim()}
+							        class="text-xs font-semibold px-3.5 py-2 rounded-xl active:opacity-60 disabled:opacity-40"
+							        style="color: var(--color-on-primary); background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))">
+								{t.recipe_bulk_apply}
+							</button>
+						</div>
+					</div>
+				{/if}
+				{#each ingredients as ing, i (ing.id)}
 					<div style="display:grid;grid-template-columns:52px 56px 1fr auto;align-items:center;gap:0;padding:0 12px 0 16px">
-						<input type="text" placeholder={t.recipe_amount_placeholder} bind:value={ing.amount}
+						<input type="text" placeholder={t.recipe_amount_placeholder} bind:value={ing.amount} data-ing-amount
 						       class="bg-transparent outline-none text-right pr-3"
 						       style="color:var(--color-on-surface);font-size:15px;height:38px;border:none;min-width:0" />
 						<input type="text" placeholder={t.recipe_unit_placeholder} bind:value={ing.unit}
 						       class="bg-transparent outline-none"
 						       style="color:var(--color-on-surface-variant);font-size:15px;height:38px;border:none;min-width:0" />
 						<input type="text" placeholder={t.recipe_ingredient_placeholder} bind:value={ing.name}
+						       onkeydown={(e) => onNameKeydown(e, i)} onpaste={(e) => onNamePaste(e, i)}
 						       class="bg-transparent outline-none"
 						       style="color:var(--color-on-surface);font-size:15px;height:38px;border:none;min-width:0" />
-						{#if ingredients.length > 1}
+						{#if !(i === ingredients.length - 1 && isEmptyIngredient(ing))}
 							<button onclick={() => removeIngredient(ing.id)} aria-label="Zutat entfernen"
 							        class="flex items-center justify-center active:opacity-60"
 							        style="width:28px;height:38px;flex-shrink:0">

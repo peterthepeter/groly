@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.1',
+		de: [
+			'Schnellere Zutaten-Eingabe bei Rezepten: mit Enter zur nächsten Zeile, leere Zeile wächst automatisch nach',
+			'Ganze Zutatenliste auf einmal einfügen – wird automatisch in Menge, Einheit und Name zerlegt',
+			'Rezept-Detailansicht aufgeräumt: Bewertung per Tipp-Popup, Nährwerte und Zeiten in einer kompakten Info-Zeile'
+		],
+		en: [
+			'Faster ingredient entry for recipes: press Enter for the next row, empty row grows in automatically',
+			'Paste a whole ingredient list at once – split into amount, unit and name automatically',
+			'Tidier recipe detail view: tap-to-rate popup, nutrition and times in one compact meta line'
+		]
+	},
+	{
 		version: '0.8.0-2',
 		de: [
 			'Überarbeitete Nutrition-Karte in der Tracker-Übersicht'
