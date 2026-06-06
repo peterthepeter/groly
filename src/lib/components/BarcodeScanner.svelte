@@ -24,13 +24,14 @@
 	let stream = $state<MediaStream | null>(null);
 	let isOnline = $state(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
-	// Duplikat-Schutz: Es werden NUR Codes gesperrt, die tatsächlich gefunden und
-	// hinzugefügt wurden (pro Code der Zeitpunkt). „Nicht gefunden"-Codes landen NICHT
-	// hier – sonst würde ein zweiter Scan desselben Artikels (nötig, wenn die OFF-Abfrage
-	// beim ersten Mal kurz hakte) blockiert. Ein gesperrter Code bleibt gesperrt, solange
-	// er im Bild ist, plus 3 s Nachlauf. Mehrere Codes (echter EAN + zweiter Barcode auf
-	// der Packung) werden alle einzeln gemerkt, damit sie sich nicht gegenseitig freischalten.
-	const addedCodes = new Map<string, number>();
+	// Pro kürzlich verarbeitetem Code: Zeitpunkt + ob er hinzugefügt wurde.
+	// - hinzugefügte Codes (added) → bei erneuter Sicht „schon hinzugefügt" zeigen.
+	// - „nicht gefunden"-Codes (z.B. Fehl-Lesungen der Kamera) → still merken, damit
+	//   sie nicht ständig neu abgefragt werden und „nicht gefunden" wiederholt aufblitzt.
+	// Jeder Code bleibt gesperrt, solange er im Bild ist, plus 3 s Nachlauf. So schalten
+	// sich mehrere Codes nicht gegenseitig frei. Echtes Nachscannen klappt nach der
+	// kurzen Sperre wieder; transiente OFF-Fehler fängt schon der Server-Retry ab.
+	const handledCodes = new Map<string, { at: number; added: boolean }>();
 	const DEDUP_WINDOW = 3000;
 	let pauseStart = 0;
 	let duplicateHint = $state(false);
@@ -153,12 +154,12 @@
 					return; // erste Lesung – auf Bestätigung warten
 				}
 
-				const blockedAt = addedCodes.get(result);
-				if (blockedAt !== undefined && now - blockedAt < DEDUP_WINDOW) {
+				const entry = handledCodes.get(result);
+				if (entry && now - entry.at < DEDUP_WINDOW) {
 					// Bereits hinzugefügter Code → ignorieren. Zeitstempel mitziehen,
 					// damit er gesperrt bleibt, solange er sichtbar ist.
-					addedCodes.set(result, now);
-					showDuplicateHint();
+					entry.at = now;
+					if (entry.added) showDuplicateHint();
 					return; // weiterscannen, nicht erneut hinzufügen
 				}
 				// Nicht gesperrt → verarbeiten. Gesperrt wird erst bei ERFOLG (siehe resumeScanning).
@@ -182,17 +183,19 @@
 		stream = null;
 	}
 
-	// Zurück ins Scannen. `blockCode` gesetzt = dieser Code wurde gefunden+hinzugefügt
-	// und wird ab jetzt gesperrt. Während der Pause (Lookup + Häkchen) kann gar nicht
-	// gescannt werden, also darf diese Zeit nicht gegen bestehende Sperren zählen –
+	// Zurück ins Scannen. `handledCode` = gerade verarbeiteter Code, `added` = ob er
+	// hinzugefügt wurde (added-Codes zeigen später „schon hinzugefügt", not-found-Codes
+	// werden still gemerkt). Während der Pause (Lookup + Häkchen) kann gar nicht gescannt
+	// werden, also darf diese Zeit nicht gegen bestehende Sperren zählen –
 	// deshalb alle Zeitstempel um die Pausendauer nach vorne schieben (= Uhr anhalten).
-	function resumeScanning(blockCode?: string) {
+	function resumeScanning(handledCode?: string, added = false) {
 		const now = Date.now();
 		const delta = now - pauseStart;
-		for (const [c, t] of addedCodes) addedCodes.set(c, t + delta);
-		if (blockCode) addedCodes.set(blockCode, now);
-		// alte Sperren aufräumen, damit die Map nicht unbegrenzt wächst
-		for (const [c, t] of addedCodes) if (now - t >= DEDUP_WINDOW) addedCodes.delete(c);
+		// Pause anhalten: bestehende Eintraege um die Pausendauer nach vorne schieben
+		for (const e of handledCodes.values()) e.at += delta;
+		if (handledCode) handledCodes.set(handledCode, { at: now, added });
+		// alte Eintraege aufraeumen, damit die Map nicht unbegrenzt waechst
+		for (const [c, e] of handledCodes) if (now - e.at >= DEDUP_WINDOW) handledCodes.delete(c);
 		phase = 'scanning';
 	}
 
@@ -213,17 +216,17 @@
 				onFound(data.name);
 				feedbackText = data.name;
 				phase = 'feedback';
-				setTimeout(() => resumeScanning(code), 1500); // gefunden+hinzugefügt → sperren
+				setTimeout(() => resumeScanning(code, true), 1500); // gefunden+hinzugefügt → sperren
 			} else {
 				phase = 'not_found';
-				setTimeout(() => resumeScanning(), 2000); // NICHT sperren → erneuter Scan möglich
+				setTimeout(() => resumeScanning(code, false), 2000); // kurz merken, damit "nicht gefunden" nicht staendig neu aufblitzt
 			}
 		} catch {
 			if (!navigator.onLine) {
 				resumeScanning();
 			} else {
 				phase = 'not_found';
-				setTimeout(() => resumeScanning(), 2000);
+				setTimeout(() => resumeScanning(code, false), 2000);
 			}
 		}
 	}

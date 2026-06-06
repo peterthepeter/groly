@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.2-1',
+		de: [
+			'Weiterer Scanner-Fix'
+		],
+		en: [
+			'Another scanner fix'
+		]
+	},
+	{
 		version: '0.8.2',
 		de: [
 			'Barcode-Scanner: doppeltes Scannen desselben Artikels wird vermieden'
