@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.1-2',
+		de: [
+			'Nutrition-Verlauf: Einträge wurden nicht angezeigt, wenn nur Mahlzeiten und keine anderen Tracker genutzt wurden – behoben'
+		],
+		en: [
+			'Nutrition history: entries were hidden when only meals and no other trackers were used – fixed'
+		]
+	},
+	{
 		version: '0.8.1-1',
 		de: [
 			'Push-Erinnerungen: Fix'

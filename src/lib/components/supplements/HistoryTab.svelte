@@ -353,7 +353,8 @@
 		</div>
 	{:else}
 		{@const suppsForCheck = period === 'day' ? dayCombinedSupplements.length : adherence.length || supplementStatEntries.length}
-		{@const otherEmpty = nutrientEntries.length === 0 && suppsForCheck === 0 && waterTotal === 0 && caffeineTotalMg === 0 && meditationTotalSeconds === 0}
+		{@const nutritionEmpty = !userSettings.nutritionTrackerEnabled || (meals.length === 0 && rangeMeals.length === 0)}
+		{@const otherEmpty = nutrientEntries.length === 0 && suppsForCheck === 0 && waterTotal === 0 && caffeineTotalMg === 0 && meditationTotalSeconds === 0 && nutritionEmpty}
 		{#if userSettings.moodTrackerEnabled}
 			<MoodHistoryView bind:hasDayEntry={moodHasDayEntry} onreload={onMoodReload} fixedView={period === 'day' ? 'today' : period} parentDate={date} />
 		{/if}
