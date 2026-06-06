@@ -6,6 +6,14 @@ import { eq } from 'drizzle-orm';
 
 const USER_AGENT = 'Groly/0.2.6 (self-hosted grocery list app)';
 
+const OFF_HOSTS = [
+	'world.openfoodfacts.org',      // Lebensmittel (95% aller Scans)
+	'world.openproductsfacts.org',  // sonstige Produkte
+	'world.openbeautyfacts.org'     // Kosmetik
+];
+const OFF_TIMEOUT_MS = 4000;
+const OFF_MAX_ATTEMPTS = 3;
+
 // Produktname aus einer Open*Facts API-Antwort extrahieren
 function extractName(data: Record<string, unknown>): string | null {
 	if (data.status !== 1 || !data.product) return null;
@@ -21,11 +29,44 @@ function extractName(data: Record<string, unknown>): string | null {
 		: productName;
 }
 
-async function queryApi(url: string, signal: AbortSignal): Promise<string | null> {
+// Wirft bei vorübergehenden Fehlern (→ wiederholen), gibt null zurück, wenn das
+// Produkt in dieser DB definitiv nicht existiert (→ nicht wiederholen).
+async function queryApi(host: string, code: string, signal: AbortSignal): Promise<string | null> {
+	const url = `https://${host}/api/v2/product/${code}?fields=product_name,product_name_de,brands`;
 	const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal });
-	if (!res.ok) return null;
+	if (res.status === 404) return null; // definitiv nicht in dieser DB
+	if (!res.ok) throw new Error(`OFF ${res.status}`); // vorübergehend → wiederholen
 	const data = await res.json();
 	return extractName(data);
+}
+
+// Name über alle Open*Facts-Hosts suchen. Eine einzelne fehlgeschlagene Anfrage
+// (Rate-Limit/5xx/Timeout) führt NICHT mehr zu „nicht gefunden", sondern zu einem
+// erneuten Versuch – das war die Ursache fürs „zweimal scannen".
+async function lookupName(code: string): Promise<string | null> {
+	for (let attempt = 1; attempt <= OFF_MAX_ATTEMPTS; attempt++) {
+		const abort = new AbortController();
+		const timer = setTimeout(() => abort.abort(), OFF_TIMEOUT_MS);
+		let transient = false;
+		try {
+			for (const host of OFF_HOSTS) {
+				try {
+					const name = await queryApi(host, code, abort.signal);
+					if (name) return name;
+					// null = in diesem Host nicht vorhanden → nächster Host
+				} catch {
+					transient = true; // Netzwerkfehler/Timeout/5xx → vorübergehend
+				}
+			}
+		} finally {
+			clearTimeout(timer);
+		}
+		if (!transient) return null; // sauber durchgelaufen → wirklich nicht gefunden
+		if (attempt < OFF_MAX_ATTEMPTS) {
+			await new Promise((r) => setTimeout(r, 250 * attempt));
+		}
+	}
+	return null;
 }
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -45,44 +86,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		return json({ name: cached.name });
 	}
 
-	const abort = new AbortController();
-	const { signal } = abort;
-
-	// Open Food Facts sofort abfragen (95% aller Scans sind Lebensmittel)
-	const foodPromise = queryApi(
-		`https://world.openfoodfacts.org/api/v2/product/${code}?fields=product_name,product_name_de,brands`,
-		signal
-	).catch(() => null);
-
-	// Nach 1 Sekunde Open Products Facts + Open Beauty Facts parallel nachschießen
-	const fallbackPromise = new Promise<string | null>((resolve) => {
-		const timer = setTimeout(async () => {
-			const result = await Promise.any([
-				queryApi(
-					`https://world.openproductsfacts.org/api/v2/product/${code}?fields=product_name,product_name_de,brands`,
-					signal
-				),
-				queryApi(
-					`https://world.openbeautyfacts.org/api/v2/product/${code}?fields=product_name,product_name_de,brands`,
-					signal
-				),
-			]).catch(() => null);
-			resolve(result);
-		}, 1000);
-
-		// Timer aufräumen wenn Signal abgebrochen wird
-		signal.addEventListener('abort', () => clearTimeout(timer));
-	});
-
-	let name: string | null = null;
-	try {
-		name = await Promise.any([
-			foodPromise.then(r => { if (r) { abort.abort(); return r; } return Promise.reject(); }),
-			fallbackPromise.then(r => { if (r) { abort.abort(); return r; } return Promise.reject(); }),
-		]);
-	} catch {
-		name = null;
-	}
+	const name = await lookupName(code);
 
 	if (!name) return json({ name: null });
 

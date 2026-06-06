@@ -244,6 +244,7 @@
 	"barcode_not_found": "Produkt nicht gefunden",
 	"barcode_camera_denied": "Kamera-Zugriff verweigert. Bitte erlaube den Kamera-Zugriff in den Browser-Einstellungen.",
 	"barcode_added": "hinzugefügt",
+	"barcode_duplicate": "bereits hinzugefügt",
 	"barcode_unsupported": "Barcode-Scan wird von diesem Browser nicht unterstützt.",
 	"barcode_offline": "Kein Internet – Produkte können nicht gesucht werden",
 	"shortcut_setup_hint": "Schnellzugriff ?",

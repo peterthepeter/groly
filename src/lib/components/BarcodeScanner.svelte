@@ -24,6 +24,18 @@
 	let stream = $state<MediaStream | null>(null);
 	let isOnline = $state(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
+	// Duplikat-Schutz: Es werden NUR Codes gesperrt, die tatsächlich gefunden und
+	// hinzugefügt wurden (pro Code der Zeitpunkt). „Nicht gefunden"-Codes landen NICHT
+	// hier – sonst würde ein zweiter Scan desselben Artikels (nötig, wenn die OFF-Abfrage
+	// beim ersten Mal kurz hakte) blockiert. Ein gesperrter Code bleibt gesperrt, solange
+	// er im Bild ist, plus 3 s Nachlauf. Mehrere Codes (echter EAN + zweiter Barcode auf
+	// der Packung) werden alle einzeln gemerkt, damit sie sich nicht gegenseitig freischalten.
+	const addedCodes = new Map<string, number>();
+	const DEDUP_WINDOW = 3000;
+	let pauseStart = 0;
+	let duplicateHint = $state(false);
+	let duplicateTimer: ReturnType<typeof setTimeout> | null = null;
+
 	$effect(() => {
 		function setOnline() { isOnline = true; }
 		function setOffline() { isOnline = false; }
@@ -73,6 +85,13 @@
 		let frameScanning = false;
 		let lastScanTime = 0;
 		const SCAN_INTERVAL = 150; // ms zwischen Scans
+
+		// Fehl-Lesungs-Filter: ein Code wird erst akzeptiert, wenn er zweimal innerhalb
+		// dieses Fensters gleich gelesen wurde (leere Bilder dazwischen sind egal).
+		// Einzelne Fehl-Lesungen (zufällig andere Zahl) werden so verworfen.
+		let confirmCode: string | null = null;
+		let confirmFirstAt = 0;
+		const CONFIRM_WINDOW = 600; // ms
 
 		let scanFrame: (() => Promise<string | null>) | null = null;
 
@@ -125,10 +144,28 @@
 			lastScanTime = timestamp;
 			scanFrame().then(result => {
 				frameScanning = false;
-				if (result && active) {
-					active = false;
-					void handleBarcode(result);
+				if (!result || !active) return;
+				const now = Date.now();
+				// Bestätigung: erst bei der zweiten gleichen Lesung im Fenster handeln.
+				if (result !== confirmCode || now - confirmFirstAt > CONFIRM_WINDOW) {
+					confirmCode = result;
+					confirmFirstAt = now;
+					return; // erste Lesung – auf Bestätigung warten
 				}
+
+				const blockedAt = addedCodes.get(result);
+				if (blockedAt !== undefined && now - blockedAt < DEDUP_WINDOW) {
+					// Bereits hinzugefügter Code → ignorieren. Zeitstempel mitziehen,
+					// damit er gesperrt bleibt, solange er sichtbar ist.
+					addedCodes.set(result, now);
+					showDuplicateHint();
+					return; // weiterscannen, nicht erneut hinzufügen
+				}
+				// Nicht gesperrt → verarbeiten. Gesperrt wird erst bei ERFOLG (siehe resumeScanning).
+				duplicateHint = false;
+				pauseStart = now; // ab hier pausiert das Scannen (Lookup + Häkchen)
+				active = false;
+				void handleBarcode(result);
 			}).catch(() => { frameScanning = false; });
 		}
 
@@ -145,12 +182,27 @@
 		stream = null;
 	}
 
+	// Zurück ins Scannen. `blockCode` gesetzt = dieser Code wurde gefunden+hinzugefügt
+	// und wird ab jetzt gesperrt. Während der Pause (Lookup + Häkchen) kann gar nicht
+	// gescannt werden, also darf diese Zeit nicht gegen bestehende Sperren zählen –
+	// deshalb alle Zeitstempel um die Pausendauer nach vorne schieben (= Uhr anhalten).
+	function resumeScanning(blockCode?: string) {
+		const now = Date.now();
+		const delta = now - pauseStart;
+		for (const [c, t] of addedCodes) addedCodes.set(c, t + delta);
+		if (blockCode) addedCodes.set(blockCode, now);
+		// alte Sperren aufräumen, damit die Map nicht unbegrenzt wächst
+		for (const [c, t] of addedCodes) if (now - t >= DEDUP_WINDOW) addedCodes.delete(c);
+		phase = 'scanning';
+	}
+
 	async function handleBarcode(code: string) {
 		if (rawMode) {
+			// rawMode (z.B. Nutrition) schließt den Scanner sofort selbst → nicht sperren.
 			onFound(code);
 			feedbackText = code;
 			phase = 'feedback';
-			setTimeout(() => { phase = 'scanning'; }, 1200);
+			setTimeout(() => resumeScanning(), 1200);
 			return;
 		}
 		phase = 'loading';
@@ -161,22 +213,29 @@
 				onFound(data.name);
 				feedbackText = data.name;
 				phase = 'feedback';
-				setTimeout(() => { phase = 'scanning'; }, 1500);
+				setTimeout(() => resumeScanning(code), 1500); // gefunden+hinzugefügt → sperren
 			} else {
 				phase = 'not_found';
-				setTimeout(() => { phase = 'scanning'; }, 2000);
+				setTimeout(() => resumeScanning(), 2000); // NICHT sperren → erneuter Scan möglich
 			}
 		} catch {
 			if (!navigator.onLine) {
-				phase = 'scanning';
+				resumeScanning();
 			} else {
 				phase = 'not_found';
-				setTimeout(() => { phase = 'scanning'; }, 2000);
+				setTimeout(() => resumeScanning(), 2000);
 			}
 		}
 	}
 
+	function showDuplicateHint() {
+		duplicateHint = true;
+		if (duplicateTimer) clearTimeout(duplicateTimer);
+		duplicateTimer = setTimeout(() => { duplicateHint = false; }, 1200);
+	}
+
 	function handleClose() {
+		if (duplicateTimer) clearTimeout(duplicateTimer);
 		stopCamera();
 		onClose();
 	}
@@ -254,7 +313,17 @@
 			<div class="w-8 h-8 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
 
 		{:else if phase === 'scanning'}
-			<p class="text-white text-sm font-medium opacity-80">{t.barcode_scan}</p>
+			{#if duplicateHint}
+				<div class="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold"
+				     style="background-color: rgba(255,255,255,0.22); color: white">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="20 6 9 17 4 12"/>
+					</svg>
+					{t.barcode_duplicate}
+				</div>
+			{:else}
+				<p class="text-white text-sm font-medium opacity-80">{t.barcode_scan}</p>
+			{/if}
 
 		{:else if phase === 'loading'}
 			<div class="w-6 h-6 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>

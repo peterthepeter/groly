@@ -102,10 +102,18 @@ function toProductData(barcode: string, product: OffProduct): ProductData | null
 	};
 }
 
+// Pro Versuch: bis Abbruch warten, dann neuer Versuch. Verhindert „nicht gefunden"
+// durch eine einzelne fehlgeschlagene OFF-Anfrage (Rate-Limit/5xx/Timeout).
+const OFF_TIMEOUT_MS = 4000;
+const OFF_MAX_ATTEMPTS = 3;
+
+// Wirft bei vorübergehenden Fehlern (→ wiederholen), gibt null zurück, wenn das
+// Produkt in dieser DB definitiv nicht existiert (→ nicht wiederholen).
 async function queryOff(host: string, code: string, signal: AbortSignal): Promise<OffProduct | null> {
 	const url = `https://${host}/api/v2/product/${code}?fields=${OFF_FIELDS}`;
 	const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal });
-	if (!res.ok) return null;
+	if (res.status === 404) return null; // definitiv nicht in dieser DB
+	if (!res.ok) throw new Error(`OFF ${res.status}`); // vorübergehend → wiederholen
 	const data = await res.json();
 	if (data.status !== 1 || !data.product) return null;
 	return data.product as OffProduct;
@@ -156,24 +164,36 @@ export async function lookupProduct(code: string): Promise<ProductData | null> {
 }
 
 async function refreshFromOff(code: string): Promise<ProductData | null> {
-	const abort = new AbortController();
-	try {
-		for (const host of OFF_HOSTS) {
-			try {
-				const product = await queryOff(host, code, abort.signal);
-				if (product) {
-					const data = toProductData(code, product);
-					if (data) {
-						persistCache(data, product);
-						return data;
+	for (let attempt = 1; attempt <= OFF_MAX_ATTEMPTS; attempt++) {
+		const abort = new AbortController();
+		const timer = setTimeout(() => abort.abort(), OFF_TIMEOUT_MS);
+		let transient = false;
+		try {
+			for (const host of OFF_HOSTS) {
+				try {
+					const product = await queryOff(host, code, abort.signal);
+					if (product) {
+						const data = toProductData(code, product);
+						if (data) {
+							persistCache(data, product);
+							return data;
+						}
 					}
+					// null = in diesem Host nicht vorhanden → nächster Host
+				} catch {
+					// Netzwerkfehler/Timeout/5xx bei diesem Host → vorübergehend
+					transient = true;
 				}
-			} catch {
-				// next host
 			}
+		} finally {
+			clearTimeout(timer);
 		}
-	} catch {
-		// noop
+		// Alle Hosts sauber durchlaufen, kein vorübergehender Fehler → wirklich nicht gefunden
+		if (!transient) return null;
+		// Sonst kurz warten und erneut versuchen
+		if (attempt < OFF_MAX_ATTEMPTS) {
+			await new Promise((r) => setTimeout(r, 250 * attempt));
+		}
 	}
 	return null;
 }

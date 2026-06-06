@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.2',
+		de: [
+			'Barcode-Scanner: doppeltes Scannen desselben Artikels wird vermieden'
+		],
+		en: [
+			'Barcode scanner: avoids scanning the same item twice'
+		]
+	},
+	{
 		version: '0.8.1-2',
 		de: [
 			'Nutrition-Verlauf: Einträge wurden nicht angezeigt, wenn nur Mahlzeiten und keine anderen Tracker genutzt wurden – behoben'
