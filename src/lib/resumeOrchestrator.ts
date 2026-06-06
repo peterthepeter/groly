@@ -7,7 +7,7 @@
 //   2. Wenn kein Deep-Link: Geofence prüfen → goto zur passenden Liste
 //   3. Pending-Mutations-Queue antriggern — gestrandete Logs synchronisieren
 
-import { consumePendingDeeplink, DEEPLINK_CHANNEL } from '$lib/pendingDeeplink';
+import { consumePendingDeeplink, consumePendingDeeplinkWithRetry, DEEPLINK_CHANNEL } from '$lib/pendingDeeplink';
 import { findGeofenceMatch, resetLocationNavSession } from '$lib/locationNav';
 import { drainPendingMutations } from '$lib/sync/manager';
 
@@ -16,6 +16,10 @@ export function initResumeOrchestrator() {
 
 	let bc: BroadcastChannel | null = null;
 	let navigating = false;
+	// Zeitpunkt der letzten Deep-Link-Navigation. Schützt davor, dass ein
+	// verspäteter Geofence-Treffer ein gerade per Push geöffnetes Sheet wieder
+	// wegnavigiert (BC- und IDB-Pfad können im selben Resume-Zyklus feuern).
+	let lastDeeplinkAt = 0;
 
 	async function navigateTo(url: string) {
 		if (navigating) return;
@@ -35,10 +39,11 @@ export function initResumeOrchestrator() {
 		// BC-Listener war beim Mount synchron schon attached — etwaige
 		// laufende Nachrichten landen dort. Hier zusätzlich aktiv die IDB lesen
 		// (Backup-Pfad, falls SW gepostet hat bevor wir subscribed waren).
-		const pending = await consumePendingDeeplink();
+		const pending = await consumePendingDeeplinkWithRetry();
 		if (pending) {
+			lastDeeplinkAt = Date.now();
 			await navigateTo(pending);
-		} else {
+		} else if (Date.now() - lastDeeplinkAt > 2000) {
 			const matchId = await findGeofenceMatch();
 			if (matchId) await navigateTo(`/listen/${matchId}`);
 		}
@@ -57,6 +62,7 @@ export function initResumeOrchestrator() {
 				// Atomarer Read löscht die IDB-Eintrag — verhindert dass der spätere
 				// visibility-Read denselben Deeplink nochmal verarbeitet.
 				await consumePendingDeeplink();
+				lastDeeplinkAt = Date.now();
 				await navigateTo(data.url);
 				void drainPendingMutations();
 			}

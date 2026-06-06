@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.1-1',
+		de: [
+			'Push-Erinnerungen: Fix'
+		],
+		en: [
+			'Push reminders: fix'
+		]
+	},
+	{
 		version: '0.8.1',
 		de: [
 			'Schnellere Zutaten-Eingabe bei Rezepten: mit Enter zur nächsten Zeile, leere Zeile wächst automatisch nach',

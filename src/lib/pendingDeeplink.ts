@@ -41,6 +41,22 @@ export async function setPendingDeeplink(url: string): Promise<void> {
 	} catch { /* IDB nicht verfügbar — BC-Pfad versucht's noch */ }
 }
 
+// Resume-Variante: liest den Briefkasten kurz mehrfach (Summe ~900 ms). Auf iOS
+// committet der Service-Worker seinen IDB-Write beim Warm-Resume teils erst
+// Hunderte ms NACH dem visibilitychange — ein einziger Read würde dann leer
+// zurückkommen und der Deep-Link ginge verloren. Der erste Read (0 ms) trifft
+// beim Kaltstart sofort → dort entsteht kein Zeitverlust, die Retries greifen nur
+// wenn der Eintrag anfangs noch fehlt.
+export async function consumePendingDeeplinkWithRetry(): Promise<string | null> {
+	const delays = [0, 200, 300, 400]; // ~900 ms gesamt
+	for (const delay of delays) {
+		if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+		const url = await consumePendingDeeplink();
+		if (url) return url;
+	}
+	return null;
+}
+
 export async function consumePendingDeeplink(): Promise<string | null> {
 	try {
 		const db = await openDb();
