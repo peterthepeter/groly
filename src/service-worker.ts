@@ -134,20 +134,34 @@ self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 	const url: string = (event.notification.data as { url: string })?.url ?? '/';
 	event.waitUntil((async () => {
-		// Reihenfolge ist load-bearing:
-		// 1) IDB-Mailbox zuerst — überlebt iOS-Suspend, App-Mount liest sie ein.
-		// 2) BroadcastChannel-Post — primärer Pfad, erreicht alle aktuell laufenden
-		//    Clients sofort. Wird der App-Subscriber später aktiv (z.B. weil iOS
-		//    noch am Auftauen ist), liest er stattdessen die IDB.
-		// 3) openWindow — bringt die App in den Vordergrund. Auf iOS-PWA navigiert
-		//    der Aufruf die URL oft nicht zuverlässig; deshalb verlassen wir uns
-		//    nicht auf den URL-Parameter sondern auf den IDB/BC-Pfad.
+		// 1) IDB-Mailbox zuerst — überlebt iOS-Suspend, ein Kaltstart liest sie beim
+		//    Mount ein. Bleibt als Rückfall für alle anderen Pfade bestehen.
 		await swSetPendingDeeplink(url);
+
+		// 2) Läuft die App schon (Hintergrund / Warm-Resume)? Dann das vorhandene
+		//    Fenster DIREKT ansteuern. Das ist der zuverlässige Pfad auf iOS, weil er
+		//    weder auf BroadcastChannel noch auf ein visibilitychange-Signal
+		//    angewiesen ist — beide droppt iOS nach dem Tiefschlaf. focus() holt das
+		//    Fenster nach vorne, postMessage stellt den Deep-Link direkt zu (die App
+		//    navigiert client-seitig, kein Reload).
+		const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+		const client = clientsList[0] as WindowClient | undefined;
+
+		// 3) BroadcastChannel zusätzlich posten — manche Engines liefern ihn doch,
+		//    schadet nie (Empfänger ist idempotent, IDB wird nur einmal konsumiert).
 		try {
 			const bc = new BroadcastChannel(DEEPLINK_CHANNEL);
 			bc.postMessage({ type: 'deeplink', url });
 			bc.close();
-		} catch { /* BC nicht verfügbar — IDB-Pfad fängt es auf */ }
+		} catch { /* BC nicht verfügbar — postMessage/IDB fängt es auf */ }
+
+		if (client) {
+			try { await client.focus(); } catch { /* focus evtl. nicht erlaubt */ }
+			client.postMessage({ type: 'deeplink', url });
+			return;
+		}
+
+		// 4) Keine laufende Instanz → echter Kaltstart: neues Fenster öffnen.
 		await self.clients.openWindow(url);
 	})());
 });

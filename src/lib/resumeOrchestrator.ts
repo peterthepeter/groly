@@ -51,21 +51,36 @@ export function initResumeOrchestrator() {
 		void drainPendingMutations();
 	}
 
+	// Gemeinsamer Handler für beide Push-Kanäle (Service-Worker-postMessage UND
+	// BroadcastChannel). navigateTo hat einen 'navigating'-Riegel und
+	// consumePendingDeeplink löscht atomar — Doppel-Zustellung über beide Kanäle
+	// ist damit harmlos (der zweite Read kommt leer zurück, navigateTo no-op'd).
+	async function onDeeplinkMessage(data: { type?: string; url?: string } | undefined) {
+		if (data?.type === 'deeplink' && typeof data.url === 'string') {
+			await consumePendingDeeplink();
+			lastDeeplinkAt = Date.now();
+			await navigateTo(data.url);
+			void drainPendingMutations();
+		}
+	}
+
+	// Direkter Draht Service-Worker → laufende App. DAS ist der zuverlässige Pfad
+	// für den Warm-Resume (App war im Hintergrund): der SW stellt den Deep-Link per
+	// client.postMessage direkt zu, ohne Umweg über visibilitychange oder BC, die
+	// iOS nach dem Tiefschlaf verschluckt.
+	if ('serviceWorker' in navigator) {
+		navigator.serviceWorker.addEventListener('message', (ev: MessageEvent) => {
+			void onDeeplinkMessage(ev.data as { type?: string; url?: string } | undefined);
+		});
+	}
+
 	// BroadcastChannel SOFORT anhängen — vor dem ersten IDB-Read, damit eine
 	// Nachricht die zwischen Listener-Attach und IDB-Read eintrifft nicht
-	// verloren geht.
+	// verloren geht. Backup-Pfad neben dem SW-postMessage oben.
 	try {
 		bc = new BroadcastChannel(DEEPLINK_CHANNEL);
-		bc.onmessage = async (ev) => {
-			const data = ev.data as { type?: string; url?: string } | undefined;
-			if (data?.type === 'deeplink' && typeof data.url === 'string') {
-				// Atomarer Read löscht die IDB-Eintrag — verhindert dass der spätere
-				// visibility-Read denselben Deeplink nochmal verarbeitet.
-				await consumePendingDeeplink();
-				lastDeeplinkAt = Date.now();
-				await navigateTo(data.url);
-				void drainPendingMutations();
-			}
+		bc.onmessage = (ev) => {
+			void onDeeplinkMessage(ev.data as { type?: string; url?: string } | undefined);
 		};
 	} catch { /* BC nicht verfügbar — IDB-Pfad reicht */ }
 

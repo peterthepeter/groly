@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.3',
+		de: [
+			'Zuverlässigere Offline-Erkennung',
+			'Fix: Push-Mitteilungen öffnen die richtige Seite'
+		],
+		en: [
+			'More reliable offline detection',
+			'Fix: push notifications open the correct page'
+		]
+	},
+	{
 		version: '0.8.2-1',
 		de: [
 			'Weiterer Scanner-Fix'
