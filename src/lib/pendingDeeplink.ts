@@ -1,23 +1,18 @@
-// Persistente Briefkasten-IDB für Push-Deep-Links. Backup-Pfad für den Fall,
-// dass der primäre BroadcastChannel-Pfad (siehe service-worker.ts +
-// resumeOrchestrator.ts) eine Nachricht verpasst — z.B. weil der App-Mount und
-// der SW-Boot in unterschiedlichen Prozessen parallel laufen und die App schon
-// fertig ist bevor der SW gepostet hat. Die App liest diese IDB beim Mount und
-// bei jedem visibilitychange → wenn dort etwas steht, wird navigiert.
+// Persistente Briefkasten-IDB für Push-Deep-Links. Auf iOS ist das der EINZIGE
+// zuverlässige Zustellweg vom Service-Worker zur App: per Remote-Inspector belegt
+// werden postMessage/BroadcastChannel an einen schlafenden PWA-Client nach Suspend
+// stillschweigend verworfen, ein IDB-Eintrag überlebt dagegen jede Suspend-Tiefe.
+// Der Service-Worker schreibt beim notificationclick, die App liest beim Aufwachen
+// (resumeOrchestrator) — und zwar mit einem geduldigen Zeitfenster, weil der SW
+// seinen Write nach langem Suspend erst 2-5 s nach dem Antippen committet.
 //
-// Der frühere Polling-Loop (0/300/1000 ms) wurde entfernt: er war ein
-// Pflaster gegen genau die Race-Condition, die BroadcastChannel strukturell
-// löst. Diese Datei stellt nur noch zwei eindeutige Operationen bereit:
-// schreiben + atomar konsumieren.
+// Diese Datei stellt nur zwei Operationen bereit: schreiben + atomar konsumieren
+// (der Read löscht den Eintrag, damit derselbe Deep-Link nicht doppelt feuert).
 
 const DB_NAME = 'groly-deeplink';
 const STORE = 'pending';
 const KEY = 'current';
 const TTL_MS = 60 * 60 * 1000; // 1 Stunde — alte Pushes nicht versehentlich nachträglich öffnen
-
-// BroadcastChannel-Name. Wird vom Service-Worker (inline) und vom
-// resumeOrchestrator verwendet — Stringliteral muss synchron bleiben.
-export const DEEPLINK_CHANNEL = 'groly-deeplink';
 
 function openDb(): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
@@ -38,23 +33,7 @@ export async function setPendingDeeplink(url: string): Promise<void> {
 			tx.onerror = () => reject(tx.error);
 		});
 		db.close();
-	} catch { /* IDB nicht verfügbar — BC-Pfad versucht's noch */ }
-}
-
-// Resume-Variante: liest den Briefkasten kurz mehrfach (Summe ~900 ms). Auf iOS
-// committet der Service-Worker seinen IDB-Write beim Warm-Resume teils erst
-// Hunderte ms NACH dem visibilitychange — ein einziger Read würde dann leer
-// zurückkommen und der Deep-Link ginge verloren. Der erste Read (0 ms) trifft
-// beim Kaltstart sofort → dort entsteht kein Zeitverlust, die Retries greifen nur
-// wenn der Eintrag anfangs noch fehlt.
-export async function consumePendingDeeplinkWithRetry(): Promise<string | null> {
-	const delays = [0, 200, 300, 400]; // ~900 ms gesamt
-	for (const delay of delays) {
-		if (delay > 0) await new Promise((r) => setTimeout(r, delay));
-		const url = await consumePendingDeeplink();
-		if (url) return url;
-	}
-	return null;
+	} catch { /* IDB nicht verfügbar */ }
 }
 
 export async function consumePendingDeeplink(): Promise<string | null> {

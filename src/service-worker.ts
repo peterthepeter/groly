@@ -108,8 +108,9 @@ self.addEventListener('push', (event) => {
 });
 
 // Inline-IDB-Helper: schreibt den Deep-Link in die persistente "groly-deeplink"-IDB.
-// Backup-Pfad — der primäre Pfad ist BroadcastChannel (siehe unten). Schema-Konstanten
-// (DB-Name, Store-Name, Key) müssen mit src/lib/pendingDeeplink.ts identisch bleiben.
+// Das ist der EINZIGE auf iOS zuverlässige Zustellweg (überlebt jede Suspend-Tiefe).
+// Schema-Konstanten (DB-Name, Store-Name, Key) müssen mit src/lib/pendingDeeplink.ts
+// identisch bleiben.
 function swSetPendingDeeplink(url: string): Promise<void> {
 	return new Promise((resolve) => {
 		try {
@@ -127,41 +128,27 @@ function swSetPendingDeeplink(url: string): Promise<void> {
 	});
 }
 
-// Channel-Name muss mit DEEPLINK_CHANNEL in src/lib/pendingDeeplink.ts übereinstimmen.
-const DEEPLINK_CHANNEL = 'groly-deeplink';
-
 self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 	const url: string = (event.notification.data as { url: string })?.url ?? '/';
 	event.waitUntil((async () => {
-		// 1) IDB-Mailbox zuerst — überlebt iOS-Suspend, ein Kaltstart liest sie beim
-		//    Mount ein. Bleibt als Rückfall für alle anderen Pfade bestehen.
+		// Deep-Link in die persistente IDB-Mailbox schreiben — der einzige auf iOS
+		// zuverlässige Weg. Die App liest sie beim Aufwachen geduldig aus
+		// (resumeOrchestrator), denn dieser Write committet nach langem Suspend erst
+		// 2-5 s nach dem Antippen.
 		await swSetPendingDeeplink(url);
 
-		// 2) Läuft die App schon (Hintergrund / Warm-Resume)? Dann das vorhandene
-		//    Fenster DIREKT ansteuern. Das ist der zuverlässige Pfad auf iOS, weil er
-		//    weder auf BroadcastChannel noch auf ein visibilitychange-Signal
-		//    angewiesen ist — beide droppt iOS nach dem Tiefschlaf. focus() holt das
-		//    Fenster nach vorne, postMessage stellt den Deep-Link direkt zu (die App
-		//    navigiert client-seitig, kein Reload).
+		// App in den Vordergrund holen, damit sie aufwacht und die Mailbox liest.
 		const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
 		const client = clientsList[0] as WindowClient | undefined;
-
-		// 3) BroadcastChannel zusätzlich posten — manche Engines liefern ihn doch,
-		//    schadet nie (Empfänger ist idempotent, IDB wird nur einmal konsumiert).
-		try {
-			const bc = new BroadcastChannel(DEEPLINK_CHANNEL);
-			bc.postMessage({ type: 'deeplink', url });
-			bc.close();
-		} catch { /* BC nicht verfügbar — postMessage/IDB fängt es auf */ }
-
 		if (client) {
+			// Läuft schon (Hintergrund) → nach vorne holen. Die eigentliche Navigation
+			// macht die App selbst beim Mailbox-Read; client.navigate() vom SW ist auf
+			// iOS-PWA ein No-Op und wird daher nicht genutzt.
 			try { await client.focus(); } catch { /* focus evtl. nicht erlaubt */ }
-			client.postMessage({ type: 'deeplink', url });
-			return;
+		} else {
+			// Echter Kaltstart → neues Fenster öffnen.
+			await self.clients.openWindow(url);
 		}
-
-		// 4) Keine laufende Instanz → echter Kaltstart: neues Fenster öffnen.
-		await self.clients.openWindow(url);
 	})());
 });
