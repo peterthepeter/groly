@@ -132,22 +132,26 @@ self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 	const url: string = (event.notification.data as { url: string })?.url ?? '/';
 	event.waitUntil((async () => {
-		// Deep-Link in die persistente IDB-Mailbox schreiben — der einzige auf iOS
-		// zuverlässige Weg. Die App liest sie beim Aufwachen geduldig aus
-		// (resumeOrchestrator), denn dieser Write committet nach langem Suspend erst
-		// 2-5 s nach dem Antippen.
+		// Die EINE Wahrheit: Deep-Link in die persistente IDB-Mailbox schreiben.
+		// Passiert in JEDEM Fall (kalt/warm/Suspend); die App liest sie beim Aufwachen
+		// geduldig aus (resumeOrchestrator), denn dieser Write committet nach langem
+		// Suspend erst 2-5 s nach dem Antippen.
 		await swSetPendingDeeplink(url);
 
-		// App in den Vordergrund holen, damit sie aufwacht und die Mailbox liest.
 		const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-		const client = clientsList[0] as WindowClient | undefined;
+		const client =
+			(clientsList.find((c) => (c as WindowClient).focused) as WindowClient | undefined) ??
+			(clientsList[0] as WindowClient | undefined);
 		if (client) {
-			// Läuft schon (Hintergrund) → nach vorne holen. Die eigentliche Navigation
-			// macht die App selbst beim Mailbox-Read; client.navigate() vom SW ist auf
+			// App läuft schon (Hintergrund/Standby) → nach vorne holen UND anstupsen.
+			// Der Nudge ist KEIN eigener Kanal, nur ein Trigger: er sagt der App "lies
+			// die Mailbox". Im Warm-Fall wirkt er sofort, auch wenn visibilitychange
+			// (vom Sperrbildschirm aus) nicht feuert. client.navigate() vom SW ist auf
 			// iOS-PWA ein No-Op und wird daher nicht genutzt.
+			try { client.postMessage({ type: 'deeplink-nudge' }); } catch { /* egal */ }
 			try { await client.focus(); } catch { /* focus evtl. nicht erlaubt */ }
 		} else {
-			// Echter Kaltstart → neues Fenster öffnen.
+			// Echter Kaltstart → neues Fenster öffnen. Beim Mount liest sie die Mailbox.
 			await self.clients.openWindow(url);
 		}
 	})());

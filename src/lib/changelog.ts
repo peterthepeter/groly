@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.3-2',
+		de: [
+			'Push-Mitteilungen: erneuter Fix'
+		],
+		en: [
+			'Push notifications: another fix'
+		]
+	},
+	{
 		version: '0.8.3-1',
 		de: [
 			'Push-Mitteilungen öffnen die richtige Seite zuverlässiger (auch aus dem Hintergrund)'

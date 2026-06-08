@@ -1,13 +1,23 @@
-// Orchestriert Aktionen beim App-Resume (initialer Mount + Sichtbar-Werden aus dem
-// Hintergrund):
-//   1. Push-Deep-Link aus der persistenten IDB-Mailbox lesen → goto.
-//      Auf iOS schreibt der Service-Worker den Eintrag nach langem Suspend erst
-//      2-5 s nach dem Antippen (Cold-Boot des SW-Prozesses); DESHALB lesen wir nicht
-//      einmalig, sondern beobachten die Mailbox geduldig bis ~7 s nach dem Aufwachen.
-//      (postMessage/BroadcastChannel wurden bewusst entfernt: nach iOS-Suspend
-//      nachweislich verworfen — die IDB-Mailbox ist der einzige verlässliche Weg.)
-//   2. Kein Deep-Link → Geofence prüfen → ggf. goto zur passenden Liste.
-//   3. Pending-Mutations-Queue antriggern — gestrandete Logs synchronisieren.
+// Push-Deep-Links: EIN Mechanismus, mehrfach angestoßen.
+//
+// Die einzige Wahrheit ist die persistente IDB-Mailbox: der Service-Worker schreibt
+// dort beim notificationclick IMMER die Ziel-Seite rein (kalt/warm/Suspend). Die App
+// hat genau EINE Lese-Funktion (tryDeeplinkNow) — und ruft sie bei JEDEM verfügbaren
+// Aufwach-Signal auf:
+//   - Mount (Kaltstart)
+//   - visibilitychange (sichtbar werden)
+//   - window focus / pageshow
+//   - Service-Worker-"Nudge" (client.postMessage) — wirkt im Warm-Fall sofort, auch
+//     wenn visibilitychange vom Sperrbildschirm aus nicht feuert
+// Keines dieser Signale ist allein zuverlässig; zusammen deckt immer eines den Moment
+// ab. Das Lesen ist idempotent (atomarer Consume löscht den Eintrag, navigating-Riegel
+// verhindert Doppel-Navigation), also sind mehrfache Auslöser harmlos.
+//
+// Weil der SW seinen Mailbox-Write nach tiefem Suspend erst 2-5 s nach dem Antippen
+// committet, liest die Funktion nicht nur einmal, sondern fasst geduldig bis ~7 s nach.
+//
+// Geofence (Liste am Standort öffnen) läuft NUR beim Voll-Resume (Mount/sichtbar),
+// nicht bei den Zusatz-Triggern — sonst gäbe es bei jedem Fokus eine GPS-Abfrage.
 
 import { consumePendingDeeplink } from '$lib/pendingDeeplink';
 import { findGeofenceMatch, resetLocationNavSession } from '$lib/locationNav';
@@ -17,10 +27,10 @@ export function initResumeOrchestrator() {
 	if (typeof window === 'undefined') return;
 
 	let navigating = false;
+	let watching = false;
 	// Zeitpunkt der letzten Deep-Link-Navigation. Verhindert, dass ein verspäteter
 	// Geofence-Treffer ein gerade per Push geöffnetes Sheet wieder wegnavigiert.
 	let lastDeeplinkAt = 0;
-	let watching = false;
 
 	async function navigateTo(url: string) {
 		if (navigating) return;
@@ -36,64 +46,72 @@ export function initResumeOrchestrator() {
 		}
 	}
 
-	async function consumeAndNavigate(url: string) {
-		lastDeeplinkAt = Date.now();
-		await navigateTo(url);
-		void drainPendingMutations();
-	}
-
-	// Geduldiges Beobachten der Mailbox: deckt die iOS-SW-Cold-Boot-Latenz ab (der
-	// Eintrag landet teils erst 2-5 s nach dem Antippen). Bricht sofort ab, sobald
-	// etwas da ist. Läuft im Hintergrund neben dem Geofence-Check; ein eintreffender
-	// Deep-Link gewinnt gegen einen Geofence-Treffer (getippte Erinnerung hat Vorrang).
-	async function watchForDeeplink() {
+	// Geduldiges Nachfassen: deckt die iOS-SW-Cold-Boot-Latenz ab (der Mailbox-Write
+	// landet teils erst 2-5 s nach dem Antippen). Bricht sofort ab, sobald etwas da
+	// ist. Guard verhindert mehrere parallele Watch-Schleifen.
+	async function watchMailbox() {
 		if (watching) return;
 		watching = true;
 		try {
-			const delays = [250, 250, 250, 250, 500, 500, 1000, 1000, 1000, 1000, 1000]; // ~7 s gesamt
+			const delays = [250, 250, 250, 250, 500, 500, 1000, 1000, 1000, 1000, 1000]; // ~7 s
 			for (const d of delays) {
 				await new Promise((r) => setTimeout(r, d));
 				const url = await consumePendingDeeplink();
-				if (url) { await consumeAndNavigate(url); return; }
+				if (url) { lastDeeplinkAt = Date.now(); await navigateTo(url); void drainPendingMutations(); return; }
 			}
 		} finally {
 			watching = false;
 		}
 	}
 
-	async function handleResume() {
-		// 1) Sofort-Read — Kaltstart und warmer SW treffen hier direkt.
+	// DIE EINE Lese-Funktion: Mailbox jetzt lesen; bei Treffer navigieren, sonst im
+	// Hintergrund geduldig weiter beobachten. Gibt true zurück, wenn ein Deep-Link
+	// geöffnet wurde (für die Geofence-Entscheidung).
+	async function tryDeeplinkNow(): Promise<boolean> {
 		const url = await consumePendingDeeplink();
-		if (url) { await consumeAndNavigate(url); return; }
+		if (url) { lastDeeplinkAt = Date.now(); await navigateTo(url); void drainPendingMutations(); return true; }
+		void watchMailbox();
+		return false;
+	}
 
-		// 2) Noch kein Deep-Link: Mailbox im Hintergrund weiter beobachten (späterer
-		//    SW-Write) UND parallel den Geofence auf eigener, flotter Zeitschiene
-		//    prüfen — so wird der Standort-Check nicht durch das ~7-s-Fenster verzögert.
-		void watchForDeeplink();
+	// Voll-Resume (Mount / sichtbar werden): erst Deep-Link, sonst Geofence.
+	async function handleResume() {
+		if (await tryDeeplinkNow()) return;
 		if (Date.now() - lastDeeplinkAt > 2000) {
 			const matchId = await findGeofenceMatch();
-			// Nochmal prüfen: falls der Watcher zwischenzeitlich einen Deep-Link
-			// geöffnet hat, den Geofence-Treffer NICHT mehr drüberlegen.
-			if (matchId && Date.now() - lastDeeplinkAt > 2000) {
-				await navigateTo(`/listen/${matchId}`);
-			}
+			// Falls der Watcher zwischenzeitlich einen Deep-Link geöffnet hat, den
+			// Geofence-Treffer NICHT mehr drüberlegen.
+			if (matchId && Date.now() - lastDeeplinkAt > 2000) await navigateTo(`/listen/${matchId}`);
 		}
 		void drainPendingMutations();
 	}
 
-	// Initialer Check beim Mount (Cold-Start oder Hard-Reload).
+	// ── Auslöser ────────────────────────────────────────────────────────────────
+
+	// 1) Mount (Kaltstart / Hard-Reload).
 	void handleResume();
 
-	// Bei jedem Sichtbar-Werden erneut prüfen (Resume aus Hintergrund/Suspend).
-	// visibilitychange feuert auf iOS auch nach langem Suspend zuverlässig (per
-	// Remote-Inspector belegt) — das kurze Entprellen fängt nur Doppel-Feuern ab.
+	// 2) Sichtbar werden — Voll-Resume inkl. Geofence (entprellt gegen Doppel-Feuern).
 	let lastResumeAt = 0;
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState !== 'visible') return;
 		const now = Date.now();
-		if (now - lastResumeAt < 500) return;
+		if (now - lastResumeAt < 600) return;
 		lastResumeAt = now;
 		resetLocationNavSession();
 		void handleResume();
 	});
+
+	// 3) Zusatz-Trigger NUR für den Deep-Link (kein Geofence → keine GPS-Abfrage):
+	//    window focus, pageshow und der direkte SW-Nudge. Sie lesen denselben
+	//    Briefkasten — so wird er auch dann gelesen, wenn visibilitychange mal nicht
+	//    feuert (Antippen vom Sperrbildschirm/Standby).
+	window.addEventListener('focus', () => void tryDeeplinkNow());
+	window.addEventListener('pageshow', () => void tryDeeplinkNow());
+	if ('serviceWorker' in navigator) {
+		navigator.serviceWorker.addEventListener('message', (ev: MessageEvent) => {
+			const data = ev.data as { type?: string } | undefined;
+			if (data?.type === 'deeplink-nudge') void tryDeeplinkNow();
+		});
+	}
 }
