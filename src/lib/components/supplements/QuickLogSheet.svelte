@@ -2,8 +2,7 @@
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { displayUnit } from '$lib/units';
 	import { goto } from '$app/navigation';
-	import { fetchWithTimeout, generateClientId, logSupplementOffline, logWaterOffline, logCaffeineOffline, logMeditationOffline } from '$lib/sync/manager';
-	import { networkStore } from '$lib/stores/online.svelte';
+	import { generateClientId, logSupplementOffline, logWaterOffline, logCaffeineOffline, logMeditationOffline } from '$lib/sync/manager';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { untrack, tick } from 'svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
@@ -187,22 +186,10 @@
 		const mg = Math.round(drink.caffeineMg * ml / drink.defaultMl);
 		const loggedAt = makeTimestamp(logDate ?? todayStr(), new Date().toTimeString().slice(0, 5));
 		const clientLogId = generateClientId();
-		const payload = { drinkName: drink.name, amountMl: ml, caffeineMg: mg, loggedAt, clientLogId };
 
-		let ok = false;
-		if (networkStore.online) {
-			try {
-				const res = await fetchWithTimeout('/api/caffeine-logs', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(payload)
-				});
-				ok = res.ok;
-			} catch { /* Timeout / Netzwerk-Fehler → Queue-Fallback */ }
-		}
-		if (!ok) {
-			await logCaffeineOffline({ drinkName: drink.name, amountMl: ml, caffeineMg: mg, loggedAt, clientLogId });
-		}
+		// Erst dauerhaft in den Ausgangskorb (überlebt App-Kill/iOS-Suspend), dann
+		// stößt logCaffeineOffline den Server-Sync an. Haken erscheint erst danach.
+		await logCaffeineOffline({ drinkName: drink.name, amountMl: ml, caffeineMg: mg, loggedAt, clientLogId });
 		caffeineDone = drink.id;
 		setTimeout(() => { caffeineDone = null; }, 2500);
 		onlogged();
@@ -281,20 +268,8 @@
 			const loggedAt = makeTimestamp(logDate ?? todayStr(), meditationRetroStartTime);
 			const durationSeconds = meditationRetroDuration * 60;
 			const clientLogId = generateClientId();
-			let ok = false;
-			if (networkStore.online) {
-				try {
-					const res = await fetchWithTimeout('/api/meditation-logs', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ durationSeconds, loggedAt, clientLogId })
-					});
-					ok = res.ok;
-				} catch { /* Queue-Fallback */ }
-			}
-			if (!ok) {
-				await logMeditationOffline({ durationSeconds, loggedAt, clientLogId });
-			}
+			// Erst dauerhaft sichern, dann synchronisieren (siehe logCaffeine).
+			await logMeditationOffline({ durationSeconds, loggedAt, clientLogId });
 			meditationRetroOpen = false;
 			meditationRetroDuration = null;
 			onlogged();
@@ -307,20 +282,8 @@
 		waterError = null;
 		const ts = loggedAt ?? Date.now();
 		const clientLogId = generateClientId();
-		let ok = false;
-		if (networkStore.online) {
-			try {
-				const res = await fetchWithTimeout('/api/water-logs', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ amountMl: ml, loggedAt: ts, clientLogId })
-				});
-				ok = res.ok;
-			} catch { /* Queue-Fallback */ }
-		}
-		if (!ok) {
-			await logWaterOffline({ amountMl: ml, loggedAt: ts, clientLogId });
-		}
+		// Erst dauerhaft sichern, dann synchronisieren (siehe logCaffeine).
+		await logWaterOffline({ amountMl: ml, loggedAt: ts, clientLogId });
 		waterDone = true;
 		setTimeout(() => { waterDone = false; }, 2500);
 		onlogged();
@@ -378,20 +341,9 @@
 		const note = notes[supplementId]?.trim() || null;
 		const clientLogId = generateClientId();
 
-		let ok = false;
-		if (networkStore.online) {
-			try {
-				const res = await fetchWithTimeout('/api/supplement-logs', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ supplementId, amount, loggedAt, note, clientLogId })
-				});
-				ok = res.ok;
-			} catch { /* Timeout / Netzwerk → Queue-Fallback. Server dedupliziert über clientLogId. */ }
-		}
-		if (!ok) {
-			await logSupplementOffline({ supplementId, amount, loggedAt, note, clientLogId });
-		}
+		// Erst dauerhaft in den Ausgangskorb (überlebt App-Kill/iOS-Suspend), dann
+		// stößt logSupplementOffline den Server-Sync an (idempotent über clientLogId).
+		await logSupplementOffline({ supplementId, amount, loggedAt, note, clientLogId });
 
 		done = { ...done, [supplementId]: true };
 		setTimeout(() => { done = { ...done, [supplementId]: false }; }, 2500);

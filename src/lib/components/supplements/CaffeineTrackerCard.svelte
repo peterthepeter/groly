@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
+	import { formatTime } from '$lib/dates';
 	import type { CaffeineDrink } from '$lib/db/schema';
 	import CaffeineEditLogSheet from './CaffeineEditLogSheet.svelte';
 	import CaffeineDrinkPickerSheet from './CaffeineDrinkPickerSheet.svelte';
@@ -57,10 +58,6 @@
 	});
 
 	const sortedLogs = $derived(logs.slice().sort((a, b) => a.loggedAt - b.loggedAt));
-
-	function formatTime(ts: number): string {
-		return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-	}
 
 	function toHHMM(ts: number): string {
 		const d = new Date(ts);

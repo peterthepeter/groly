@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
 	import { getMoodLevel, findTag } from '$lib/mood';
 	import MoodEntrySheet from './MoodEntrySheet.svelte';
 	import MoodIcon from './MoodIcon.svelte';
@@ -24,7 +24,7 @@
 	function formatDate(d: string): string {
 		if (!d) return '';
 		const date = new Date(d + 'T12:00:00');
-		return date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+		return date.toLocaleDateString(currentLang(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 	}
 
 	async function deleteEntry() {

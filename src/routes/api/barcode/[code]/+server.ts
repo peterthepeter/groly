@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/db';
 import { barcodeCache } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { authGuard } from '$lib/auth/middleware';
 
 const USER_AGENT = 'Groly/0.2.6 (self-hosted grocery list app)';
 
@@ -69,8 +70,11 @@ async function lookupName(code: string): Promise<string | null> {
 	return null;
 }
 
-export const GET: RequestHandler = async ({ params }) => {
-	const { code } = params;
+export const GET: RequestHandler = async (event) => {
+	const { error } = authGuard(event);
+	if (error) return error;
+
+	const { code } = event.params;
 
 	if (!code || !/^\d{8,14}$/.test(code)) {
 		return json({ name: null }, { status: 400 });

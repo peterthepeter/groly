@@ -21,3 +21,8 @@ export function todayKey(): string {
 export function dateKeyToDate(key: string): Date {
 	return new Date(key + 'T12:00:00');
 }
+
+// Formats a timestamp (ms) as a localized HH:MM clock time.
+export function formatTime(ts: number): string {
+	return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}

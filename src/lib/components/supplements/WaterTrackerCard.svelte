@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
+	import { formatTime } from '$lib/dates';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import WaterEditLogSheet from './WaterEditLogSheet.svelte';
 	import WaterReminderSheet from './WaterReminderSheet.svelte';
@@ -53,10 +54,6 @@
 			.then(d => { if (d?.schedules?.length > 0) hasReminders = true; })
 			.catch(() => {});
 	});
-
-	function formatTime(ts: number): string {
-		return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-	}
 
 	function toHHMM(ts: number): string {
 		const d = new Date(ts);

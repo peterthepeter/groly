@@ -5,8 +5,9 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang, today_reminders_label } from '$lib/i18n.svelte';
-	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs } from '$lib/sync/manager';
+	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
+	import { formatTime } from '$lib/dates';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
@@ -332,10 +333,6 @@
 		return logsForSupplement(supplementId).reduce((sum, l) => sum + l.amount, 0);
 	}
 
-	function formatTime(ts: number): string {
-		return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-	}
-
 	function formatNutrientValue(val: number): string {
 		if (val >= 1000) return (val / 1000).toFixed(1).replace(/\.0$/, '') + ' g';
 		if (val % 1 === 0) return val.toString();
@@ -629,11 +626,13 @@
 	async function loadCaffeineDrinks() {
 		try {
 			const res = await fetch('/api/caffeine-drinks');
-			if (res.ok) {
-				const data = await res.json();
-				caffeineDrinks = data.drinks ?? [];
-			}
-		} catch {}
+			if (!res.ok) throw new Error();
+			const data = await res.json();
+			caffeineDrinks = data.drinks ?? [];
+			cacheCaffeineDrinks(caffeineDrinks).catch(() => {});
+		} catch {
+			caffeineDrinks = (await getOfflineCaffeineDrinks()) as CaffeineDrink[];
+		}
 	}
 
 	async function loadCaffeineLogs() {

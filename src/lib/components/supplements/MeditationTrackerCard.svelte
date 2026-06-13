@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
+	import { formatTime } from '$lib/dates';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import MeditationTimerSheet from './MeditationTimerSheet.svelte';
 	import MeditationEditLogSheet from './MeditationEditLogSheet.svelte';
@@ -59,10 +60,6 @@
 			.then(d => { if (d?.schedules?.length > 0) hasReminders = true; })
 			.catch(() => {});
 	});
-
-	function formatTime(ts: number): string {
-		return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-	}
 
 	function formatDurationShort(s: number): string {
 		const m = Math.floor(s / 60);

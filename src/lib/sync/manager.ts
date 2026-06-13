@@ -1,5 +1,5 @@
 import { offlineDb } from './db';
-import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog } from './db';
+import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink } from './db';
 import { networkStore } from '$lib/stores/online.svelte';
 
 export function generateClientId(): string {
@@ -308,6 +308,17 @@ export async function cacheCaffeineLogs(logs: OfflineCaffeineLog[]) {
 export async function getOfflineCaffeineLogsToday(): Promise<OfflineCaffeineLog[]> {
 	const d = new Date(); d.setHours(0, 0, 0, 0);
 	return offlineDb.caffeineLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray();
+}
+
+// Koffein-Getränke-Katalog (admin-verwaltet, kein Pending-State) — voller Ersatz
+// des Caches, damit Löschungen mitgezogen werden. Ermöglicht Offline-Loggen.
+export async function cacheCaffeineDrinks(drinks: OfflineCaffeineDrink[]) {
+	await offlineDb.caffeineDrinks.clear();
+	if (drinks.length > 0) await offlineDb.caffeineDrinks.bulkPut(drinks);
+}
+
+export async function getOfflineCaffeineDrinks(): Promise<OfflineCaffeineDrink[]> {
+	return offlineDb.caffeineDrinks.orderBy('sortOrder').toArray();
 }
 
 // ── Meditation-Cache ───────────────────────────────────────────────────────────

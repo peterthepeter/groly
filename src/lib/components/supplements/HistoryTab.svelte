@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { t, currentLang, nutrients_show_more } from '$lib/i18n.svelte';
 	import { displayUnit } from '$lib/units';
+	import { formatTime } from '$lib/dates';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -107,10 +108,6 @@
 		waterSelectedIdx = null;
 		supplementSelectedIdx = null;
 	});
-
-	function formatTime(ts: number): string {
-		return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-	}
 
 	function formatNutrientValue(val: number, unit: string): string {
 		// Auto-promote mg → g when ≥ 1000 mg (and μg → mg when ≥ 1000 μg)

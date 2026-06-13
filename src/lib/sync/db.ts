@@ -109,6 +109,15 @@ interface OfflineMeditationLog {
 	clientLogId?: string | null;
 }
 
+interface OfflineCaffeineDrink {
+	id: string;
+	name: string;
+	defaultMl: number;
+	caffeineMg: number;
+	sortOrder: number;
+	createdAt: number;
+}
+
 class GrolydDb extends Dexie {
 	lists!: EntityTable<OfflineList, 'id'>;
 	items!: EntityTable<OfflineItem, 'id'>;
@@ -120,6 +129,7 @@ class GrolydDb extends Dexie {
 	waterLogs!: EntityTable<OfflineWaterLog, 'id'>;
 	caffeineLogs!: EntityTable<OfflineCaffeineLog, 'id'>;
 	meditationLogs!: EntityTable<OfflineMeditationLog, 'id'>;
+	caffeineDrinks!: EntityTable<OfflineCaffeineDrink, 'id'>;
 
 	constructor() {
 		super('groly');
@@ -141,6 +151,9 @@ class GrolydDb extends Dexie {
 		this.version(4).stores({
 			meditationLogs: 'id, loggedAt'
 		});
+		this.version(5).stores({
+			caffeineDrinks: 'id, sortOrder'
+		});
 	}
 }
 
@@ -155,5 +168,6 @@ export type {
 	OfflineRecipeDetail,
 	OfflineWaterLog,
 	OfflineCaffeineLog,
-	OfflineMeditationLog
+	OfflineMeditationLog,
+	OfflineCaffeineDrink
 };
