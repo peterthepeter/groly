@@ -198,6 +198,23 @@ services:
     restart: unless-stopped
 ```
 
+### Beta channel (optional)
+
+Two image tags are published:
+
+- `:latest` — stable releases. **Recommended for everyone.**
+- `:beta` — pre-release builds for early testing. Opt-in only.
+
+To help test upcoming changes, switch your image tag to `:beta`:
+
+```yaml
+    image: ghcr.io/peterthepeter/groly:beta
+```
+
+Everyone staying on `:latest` is unaffected by beta builds. To leave the beta channel, switch the tag back to `:latest` and pull again.
+
+> **Back up your database before switching to `:beta`.** Beta builds may apply new database migrations that do not yet exist in `:latest`. Returning to `:latest` afterwards can fail if a newer migration has already run. The database lives in the `/app/data` volume — copy it somewhere safe first.
+
 ### Unraid
 
 Install via **Community Applications** (search for "Groly") or add the template manually:
