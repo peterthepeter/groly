@@ -12,6 +12,12 @@
 	import { LATEST_CHANGES } from '$lib/changelog';
 	import { browser } from '$app/environment';
 	import { userSettings, seedSettings } from '$lib/userSettings.svelte';
+	import { installApiFetchTimeout } from '$lib/apiTimeout';
+
+	// Früh genug, dass es vor den ersten Seiten-Loadern greift (Layout-Script läuft
+	// vor dem Mounten der Seiten). Schützt alle Lese-Anfragen gegen tote Verbindungen
+	// nach iOS-Standby. Idempotent.
+	if (browser) installApiFetchTimeout();
 
 	let whatsNewOpen = $state(false);
 
@@ -122,18 +128,37 @@
 			};
 		}
 
-		function handleOnline() {
+		// Verbindung hart neu aufbauen. Auf iOS 18 feuert EventSource.onerror nach dem
+		// Backgrounding NICHT und readyState bleibt fälschlich OPEN — wir dürfen uns also
+		// NICHT auf readyState verlassen, sondern schließen bedingungslos die alte
+		// (verhindert gestapelte Server-Streams) und verbinden frisch.
+		function reconnectSSE() {
 			if (retryTimeout !== null) { clearTimeout(retryTimeout); retryTimeout = null; }
-			if (!sse || sse.readyState === EventSource.CLOSED) connectSSE();
+			sse?.close();
+			retryDelay = 1000;
+			connectSSE();
+		}
+
+		// Nach längerer Abwesenheit (iOS-Suspend/Standby) ist die SSE-Verbindung meist
+		// tot, meldet sich aber nicht. Beim Sichtbar-werden frisch verbinden, wenn die
+		// App nennenswert weg war — kurze Tab-Wechsel lösen keinen Reconnect aus.
+		let hiddenSince = 0;
+		function handleVisibility() {
+			if (document.visibilityState === 'hidden') { hiddenSince = Date.now(); return; }
+			const away = hiddenSince ? Date.now() - hiddenSince : 0;
+			hiddenSince = 0;
+			if (away > 10_000) reconnectSSE();
 		}
 
 		connectSSE();
-		window.addEventListener('online', handleOnline);
+		window.addEventListener('online', reconnectSSE);
+		document.addEventListener('visibilitychange', handleVisibility);
 
 		return () => {
 			sse?.close();
 			if (retryTimeout !== null) clearTimeout(retryTimeout);
-			window.removeEventListener('online', handleOnline);
+			window.removeEventListener('online', reconnectSSE);
+			document.removeEventListener('visibilitychange', handleVisibility);
 		};
 	});
 </script>

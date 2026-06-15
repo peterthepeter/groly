@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.5-beta.1',
+		de: [
+			'Tracker-Logging optimiert'
+		],
+		en: [
+			'Optimised tracker logging'
+		]
+	},
+	{
 		version: '0.8.4',
 		de: [
 			'Tracker-Logging optimiert und Code aufgeräumt'
