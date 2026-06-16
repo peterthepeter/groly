@@ -83,6 +83,19 @@ async function processPendingMutations() {
 			const status = (e as { status?: number })?.status;
 			if (status === 404 || status === 409 || status === 403) {
 				// Permanenter Fehler – Mutation überspringen (Item gelöscht, Konflikt oder keine Berechtigung)
+				// Ausnahme: selbst geloggte Tracker-Einträge NIEMALS wegen 4xx verwerfen.
+				// Ein 403/404 ist hier fast immer ein transienter Front-/Proxy-Treffer
+				// (z.B. CrowdSec auf den Kaltstart-Request-Burst) — die Create-Endpunkte der
+				// App selbst geben gar kein 403 zurück. Verwerfen würde unwiederbringlich
+				// Nutzerdaten löschen. Stattdessen behalten und beim nächsten Drain
+				// (online / visibilitychange / Öffnen) erneut versuchen; dank clientLogId
+				// entstehen dabei keine Duplikate.
+				if (
+					mutation.type === 'create_supplement_log' ||
+					mutation.type === 'create_water_log' ||
+					mutation.type === 'create_caffeine_log' ||
+					mutation.type === 'create_meditation_log'
+				) continue; // in der Queue lassen, nächste Mutation versuchen
 				await offlineDb.pendingMutations.delete(mutation.id!);
 				continue;
 			}

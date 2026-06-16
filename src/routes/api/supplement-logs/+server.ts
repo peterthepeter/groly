@@ -71,9 +71,10 @@ export const POST: RequestHandler = async (event) => {
 				createdAt: now
 			}).run();
 
-			// Vorrat abziehen (nur wenn stockQuantity gesetzt und Supplement dem User gehört)
+			// Vorrat abziehen (nur wenn stockQuantity gesetzt und Supplement dem User gehört).
+			// Auf 0 deckeln — ein negativer Bestand ergibt physisch keinen Sinn.
 			db.update(supplements)
-				.set({ stockQuantity: sql`CASE WHEN ${supplements.stockQuantity} IS NOT NULL THEN ${supplements.stockQuantity} - ${amount} ELSE NULL END` })
+				.set({ stockQuantity: sql`CASE WHEN ${supplements.stockQuantity} IS NOT NULL THEN MAX(0, ${supplements.stockQuantity} - ${amount}) ELSE NULL END` })
 				.where(and(eq(supplements.id, supplementId), eq(supplements.userId, user!.id)))
 				.run();
 		});

@@ -26,5 +26,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const response = await resolve(event);
 	applySecurityHeaders(response);
+	// API-Antworten nie cachen: die URLs (z.B. /api/supplement-logs?from=…&to=…) sind
+	// über den Tag identisch. Ohne no-store beantwortet iOS Safari sie nach langem
+	// Standby aus dem eigenen HTTP-Cache statt neu zu laden → frisch geloggte Einträge
+	// erscheinen nicht (überlebt sogar App-Neustart). no-store erzwingt echten Abgleich.
+	if (isApiRoute) response.headers.set('Cache-Control', 'no-store');
 	return response;
 };

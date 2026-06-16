@@ -32,7 +32,10 @@ export function installApiFetchTimeout(): void {
 		}
 		const ctrl = new AbortController();
 		const timer = setTimeout(() => ctrl.abort(), GET_TIMEOUT_MS);
-		return nativeFetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+		// cache: 'no-store' erzwingt einen echten Server-Abgleich. Ohne das beantwortet
+		// iOS Safari identische API-URLs (über den Tag gleich) aus dem HTTP-Cache und
+		// zeigt veraltete Daten — Gürtel + Hosenträger zum no-store-Header (hooks.server.ts).
+		return nativeFetch(input, { ...init, cache: 'no-store', signal: ctrl.signal }).finally(() => clearTimeout(timer));
 	};
 
 	window.fetch = wrapped as typeof window.fetch;
