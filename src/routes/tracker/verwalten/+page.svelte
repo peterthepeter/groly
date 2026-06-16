@@ -61,6 +61,40 @@
 	let reminderLoading = $state(false);
 	let supplementsWithReminders = $state<Set<string>>(new Set());
 
+	// Week plan view
+	type WeekSchedule = { supplementId: string; supplementName: string; days: string; time: string };
+	let supplementView = $state<'list' | 'weekplan'>('list');
+	let allSchedules = $state<WeekSchedule[]>([]);
+	const todayDow = new Date().getDay(); // 0=Sun … 6=Sat
+
+	// Days in display order: Mo Di Mi Do Fr Sa So
+	const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+	const DAY_LABELS = $derived([
+		t.supplement_day_mo, t.supplement_day_di, t.supplement_day_mi,
+		t.supplement_day_do, t.supplement_day_fr, t.supplement_day_sa, t.supplement_day_so
+	]);
+
+	const weekPlan = $derived.by(() => {
+		const byDay = new Map<number, { supplementId: string; name: string; time: string }[]>();
+		for (const d of DAY_ORDER) byDay.set(d, []);
+		for (const s of allSchedules) {
+			let days: number[];
+			try { days = JSON.parse(s.days); } catch { continue; }
+			for (const day of days) {
+				byDay.get(day)?.push({ supplementId: s.supplementId, name: s.supplementName, time: s.time });
+			}
+		}
+		for (const arr of byDay.values()) {
+			arr.sort((a, b) => a.time.localeCompare(b.time) || a.name.localeCompare(b.name));
+		}
+		return DAY_ORDER.map((day, i) => ({ day, label: DAY_LABELS[i], entries: byDay.get(day)! }));
+	});
+
+	function openRemindersById(id: string) {
+		const s = supplements.find(x => x.id === id);
+		if (s) openReminders(s);
+	}
+
 	// Add-to-list dialog
 	let addToListSupplementId = $state<string | null>(null);
 
@@ -126,9 +160,10 @@
 	});
 
 	async function load() {
-		const [suppRes, remRes, waterRemRes, caffeineRes, moodRemRes] = await Promise.all([
+		const [suppRes, remRes, allRemRes, waterRemRes, caffeineRes, moodRemRes] = await Promise.all([
 			fetch('/api/supplements'),
 			fetch('/api/supplement-reminders'),
+			fetch('/api/supplement-reminders?all=1'),
 			fetch('/api/water-reminders'),
 			fetch('/api/caffeine-drinks'),
 			fetch('/api/mood-reminders')
@@ -140,6 +175,10 @@
 		if (remRes.ok) {
 			const data = await remRes.json();
 			supplementsWithReminders = new Set(data.supplementIdsWithReminders ?? []);
+		}
+		if (allRemRes.ok) {
+			const data = await allRemRes.json();
+			allSchedules = data.schedules ?? [];
 		}
 		if (waterRemRes.ok) {
 			const data = await waterRemRes.json();
@@ -282,10 +321,17 @@
 	// ─── Reminder sheet ──────────────────────────────────────────────────────────
 
 	async function refreshReminderIndicators() {
-		const res = await fetch('/api/supplement-reminders');
+		const [res, allRes] = await Promise.all([
+			fetch('/api/supplement-reminders'),
+			fetch('/api/supplement-reminders?all=1')
+		]);
 		if (res.ok) {
 			const data = await res.json();
 			supplementsWithReminders = new Set(data.supplementIdsWithReminders ?? []);
+		}
+		if (allRes.ok) {
+			const data = await allRes.json();
+			allSchedules = data.schedules ?? [];
 		}
 	}
 
@@ -382,8 +428,58 @@
 		<div class="px-4 py-3 flex flex-col gap-2">
 			<!-- Supplements group -->
 			{#if supplements.length > 0}
-				<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Supplements</p>
+				<div class="flex items-center justify-between gap-2 px-1">
+					<p class="text-[10px] font-semibold uppercase tracking-widest" style="color: var(--color-on-surface-variant)">Supplements</p>
+					<div class="flex gap-0.5 rounded-xl p-0.5" style="background-color: var(--color-surface-container)">
+						<button
+							onclick={() => supplementView = 'list'}
+							class="px-3 py-1 rounded-lg text-xs font-semibold transition-colors active:opacity-70"
+							style="background-color: {supplementView === 'list' ? 'var(--color-surface-elevated)' : 'transparent'}; color: {supplementView === 'list' ? '#D97706' : 'var(--color-on-surface-variant)'}"
+						>
+							{t.supplement_view_list}
+						</button>
+						<button
+							onclick={() => supplementView = 'weekplan'}
+							class="px-3 py-1 rounded-lg text-xs font-semibold transition-colors active:opacity-70"
+							style="background-color: {supplementView === 'weekplan' ? 'var(--color-surface-elevated)' : 'transparent'}; color: {supplementView === 'weekplan' ? '#D97706' : 'var(--color-on-surface-variant)'}"
+						>
+							{t.supplement_view_weekplan}
+						</button>
+					</div>
+				</div>
 				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+				{#if supplementView === 'weekplan'}
+					{#if allSchedules.length === 0}
+						<p class="text-sm text-center px-4 py-8" style="color: var(--color-on-surface-variant)">{t.supplement_weekplan_empty}</p>
+					{:else}
+						<div class="px-2.5 py-1.5">
+							{#each weekPlan as row (row.day)}
+								<div class="flex items-center gap-3 py-2.5 px-2 rounded-xl"
+								     style={row.day === todayDow ? 'background-color: color-mix(in srgb, #D97706 9%, transparent)' : ''}>
+									<div class="shrink-0 w-11 flex justify-center">
+										<span class="text-[11px] font-bold uppercase tracking-wide"
+										      style="color: {row.day === todayDow ? '#D97706' : 'var(--color-on-surface-variant)'}">{row.label}</span>
+									</div>
+									<div class="flex-1 min-w-0 flex flex-wrap gap-x-5 gap-y-0.5">
+										{#if row.entries.length === 0}
+											<span class="text-sm leading-snug" style="color: var(--color-on-surface-variant); opacity: 0.35">—</span>
+										{:else}
+											{#each row.entries as e}
+												<button
+													onclick={() => openRemindersById(e.supplementId)}
+													class="flex items-center gap-2 active:opacity-50 transition-opacity"
+												>
+													<span class="text-sm font-semibold leading-snug truncate" style="color: var(--color-on-surface); max-width: 150px">{e.name}</span>
+													<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">{e.time}</span>
+												</button>
+											{/each}
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{:else}
 					{#each supplements as supplement, i (supplement.id)}
 						<div class="px-3 py-2 flex items-center gap-3{!supplement.active ? ' opacity-50' : ''}"
 						     style="border-color: var(--color-outline-variant)">
@@ -440,6 +536,7 @@
 							</button>
 						</div>
 					{/each}
+				{/if}
 				</div>
 			{/if}
 

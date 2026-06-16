@@ -129,7 +129,7 @@
 				},
 				{
 					title: 'Reminders',
-					text: 'Tap the bell icon next to a supplement in Manage to set up reminders. Choose the days of the week and a time — you\'ll receive a push notification at that time. Multiple supplements due at the same time are combined into one notification. Reminders are automatically deactivated when a supplement is set to inactive, and reactivated when it\'s set to active again.',
+					text: 'Tap the bell icon next to a supplement in Manage to set up reminders. Choose the days of the week and a time — you\'ll receive a push notification at that time. Multiple supplements due at the same time are combined into one notification. Reminders are automatically deactivated when a supplement is set to inactive, and reactivated when it\'s set to active again. Use the "Week plan" toggle at the top of the supplement list to see all reminders across the whole week at a glance, with today highlighted — tap any entry to jump straight to that supplement\'s reminders.',
 					svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
 				},
 				{
@@ -306,7 +306,7 @@
 				},
 				{
 					title: 'Erinnerungen',
-					text: 'Tippe auf das Glocken-Icon neben einem Supplement unter „Verwalten", um Erinnerungen einzurichten. Wähle Wochentage und eine Uhrzeit – du erhältst dann eine Push-Benachrichtigung. Mehrere Supplements zur selben Uhrzeit werden in einer einzigen Nachricht zusammengefasst. Erinnerungen werden automatisch deaktiviert, wenn ein Supplement auf inaktiv gesetzt wird, und reaktiviert, wenn es wieder aktiviert wird.',
+					text: 'Tippe auf das Glocken-Icon neben einem Supplement unter „Verwalten", um Erinnerungen einzurichten. Wähle Wochentage und eine Uhrzeit – du erhältst dann eine Push-Benachrichtigung. Mehrere Supplements zur selben Uhrzeit werden in einer einzigen Nachricht zusammengefasst. Erinnerungen werden automatisch deaktiviert, wenn ein Supplement auf inaktiv gesetzt wird, und reaktiviert, wenn es wieder aktiviert wird. Über den Umschalter „Wochenplan" oben in der Supplement-Liste siehst du alle Erinnerungen der ganzen Woche auf einen Blick – der heutige Tag ist hervorgehoben. Tippe auf einen Eintrag, um direkt zu den Alarmen des Supplements zu springen.',
 					svg: `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`
 				},
 				{

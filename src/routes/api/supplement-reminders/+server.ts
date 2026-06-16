@@ -82,6 +82,27 @@ export const GET: RequestHandler = async (event) => {
 		return json({ todayReminders, overrides });
 	}
 
+	// ?all=1 → return all active reminder schedules of active supplements (for the week plan view)
+	if (event.url.searchParams.get('all') === '1') {
+		const rows = db
+			.select({
+				id: supplementReminderSchedules.id,
+				supplementId: supplementReminderSchedules.supplementId,
+				supplementName: supplements.name,
+				days: supplementReminderSchedules.days,
+				time: supplementReminderSchedules.time
+			})
+			.from(supplementReminderSchedules)
+			.innerJoin(supplements, eq(supplementReminderSchedules.supplementId, supplements.id))
+			.where(and(
+				eq(supplements.userId, user!.id),
+				eq(supplements.active, true),
+				eq(supplementReminderSchedules.active, true)
+			))
+			.all();
+		return json({ schedules: rows });
+	}
+
 	// No supplementId → return all supplement IDs that have at least one reminder (for this user)
 	const allRows = db
 		.select({ supplementId: supplementReminderSchedules.supplementId })
