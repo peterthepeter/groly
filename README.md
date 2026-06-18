@@ -316,3 +316,9 @@ Active data (lists, unchecked items, recipes, supplements, list members) is only
 | CSS | Tailwind CSS v4 |
 | i18n | Paraglide-SvelteKit |
 | Deployment | Docker (Node.js adapter), linux/amd64 |
+
+## Support
+
+Groly is free, open, and built in my spare time. If it's useful to you and you'd like to say thanks, you can buy me a coffee — entirely voluntary, with nothing expected in return.
+
+[![Support Groly on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/groly)
