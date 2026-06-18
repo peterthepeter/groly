@@ -2,32 +2,16 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
-		version: '0.8.5-beta.3',
+		version: '0.8.5',
 		de: [
-			'Supplements: neue Wochenplan-Übersicht unter Verwalten — alle Erinnerungen der ganzen Woche auf einen Blick, Tippen springt direkt zu den Alarmen'
-		],
-		en: [
-			'Supplements: new week-plan overview under Manage — see all reminders for the whole week at a glance, tap to jump straight to the reminders'
-		]
-	},
-	{
-		version: '0.8.5-beta.2',
-		de: [
-			'Tracker: frisch geloggte Einträge erscheinen jetzt zuverlässig, auch morgens nach langer Pause',
+			'Neue Wochenplan-Übersicht für Supplement-Erinnerungen unter Verwalten — die ganze Woche auf einen Blick',
+			'Tracker: frisch geloggte Einträge erscheinen zuverlässig, auch morgens nach langer Pause',
 			'Supplement-Bestand kann nicht mehr unter 0 fallen'
 		],
 		en: [
+			'New week-plan overview for supplement reminders under Manage — see the whole week at a glance',
 			'Tracker: freshly logged entries now appear reliably, even in the morning after a long break',
 			'Supplement stock can no longer drop below 0'
-		]
-	},
-	{
-		version: '0.8.5-beta.1',
-		de: [
-			'Tracker-Logging optimiert'
-		],
-		en: [
-			'Optimised tracker logging'
 		]
 	},
 	{
