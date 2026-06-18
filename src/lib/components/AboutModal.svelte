@@ -8,6 +8,7 @@
 	const version = CHANGELOG[0]?.version ?? '—';
 
 	const GITHUB = 'https://github.com/peterthepeter/groly';
+	const KOFI = 'https://ko-fi.com/groly';
 </script>
 
 <!-- Backdrop -->
@@ -66,8 +67,7 @@
 						{lang === 'en' ? 'Made by' : 'Erstellt von'} <span style="color: var(--color-primary)">@peterthepeter</span>
 					</div>
 				</div>
-				<span class="text-xs font-semibold px-2 py-0.5 rounded-full"
-				      style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)">
+				<span class="text-xs font-semibold" style="color: var(--color-primary)">
 					v{version}
 				</span>
 			</div>
@@ -76,7 +76,7 @@
 			<div class="mx-4 h-px" style="background-color: var(--color-outline-variant)"></div>
 
 			<!-- Links -->
-			<div class="px-4 py-3 flex flex-wrap gap-x-4 gap-y-2">
+			<div class="px-4 py-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
 				<a href={GITHUB} target="_blank" rel="noopener noreferrer"
 				   class="flex items-center gap-1.5 text-xs active:opacity-60"
 				   style="color: var(--color-on-surface-variant)">
@@ -104,6 +104,23 @@
 						<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
 					</svg>
 					{lang === 'en' ? 'Feedback & ideas' : 'Feedback & Ideen'}
+				</a>
+			</div>
+
+			<!-- Support -->
+			<div class="px-4 pb-4 flex justify-center">
+				<a href={KOFI} target="_blank" rel="noopener noreferrer"
+				   class="inline-flex items-center gap-2 text-sm font-semibold active:opacity-60 transition-opacity"
+				   style="color: var(--color-primary)">
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+						<path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+						<line x1="6" y1="1" x2="6" y2="4"/>
+						<line x1="10" y1="1" x2="10" y2="4"/>
+						<line x1="14" y1="1" x2="14" y2="4"/>
+					</svg>
+					{lang === 'en' ? 'Buy me a coffee' : 'Kaffee ausgeben'}
 				</a>
 			</div>
 

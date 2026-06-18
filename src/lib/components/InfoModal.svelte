@@ -39,6 +39,11 @@
 					text: 'The screen stays on automatically when you are inside a shopping list, an opened recipe, or a running meditation — so you don\'t have to wake it with sticky fingers while cooking or shopping. Toggle each context individually in Settings → "Keep screen on".',
 					link: { href: '/einstellungen', label: 'Manage in Settings' },
 					svg: `<rect x="2" y="4" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="22" x2="16" y2="22"/><line x1="12" y1="18" x2="12" y2="22"/>`
+				},
+				{
+					title: 'Support',
+					text: 'Groly is free and built in my spare time. If you want to say thanks, you can buy me a coffee via the "Buy me a coffee" button in the About dialog (menu → About). Completely voluntary, nothing is expected in return.',
+					svg: `<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>`
 				}
 			]
 		},
@@ -216,6 +221,11 @@
 					text: 'Der Bildschirm bleibt automatisch an, solange du in einer Einkaufsliste, einem geöffneten Rezept oder einer laufenden Meditation bist – so musst du das Handy beim Kochen oder Einkaufen nicht jedes Mal mit klebrigen Fingern wieder entsperren. Jeden Bereich einzeln umschaltbar unter Einstellungen → „Bildschirm anlassen".',
 					link: { href: '/einstellungen', label: 'In den Einstellungen verwalten' },
 					svg: `<rect x="2" y="4" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="22" x2="16" y2="22"/><line x1="12" y1="18" x2="12" y2="22"/>`
+				},
+				{
+					title: 'Unterstützen',
+					text: 'Groly ist kostenlos und entsteht in meiner Freizeit. Wenn du Danke sagen möchtest, kannst du mir über den „Kaffee ausgeben“-Knopf im Über-Dialog (Menü → Über) einen Kaffee ausgeben. Völlig freiwillig, ganz ohne Gegenleistung.',
+					svg: `<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>`
 				}
 			]
 		},

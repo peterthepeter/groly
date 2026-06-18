@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.8.6',
+		de: [
+			'Neue Wochenplan-Übersicht für Supplement-Erinnerungen unter Verwalten — die ganze Woche auf einen Blick',
+			'Tracker: frisch geloggte Einträge erscheinen zuverlässig, auch morgens nach langer Pause',
+			'Supplement-Bestand kann nicht mehr unter 0 fallen',
+			'Über-Dialog: optionaler „Kaffee ausgeben“-Link für alle, die Groly freiwillig unterstützen möchten'
+		],
+		en: [
+			'New week-plan overview for supplement reminders under Manage — see the whole week at a glance',
+			'Tracker: freshly logged entries now appear reliably, even in the morning after a long break',
+			'Supplement stock can no longer drop below 0',
+			'About dialog: optional "Buy me a coffee" link for anyone who would like to support Groly voluntarily'
+		]
+	},
+	{
 		version: '0.8.5',
 		de: [
 			'Neue Wochenplan-Übersicht für Supplement-Erinnerungen unter Verwalten — die ganze Woche auf einen Blick',
