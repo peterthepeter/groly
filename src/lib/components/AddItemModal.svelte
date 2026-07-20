@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n.svelte';
-	import { CATEGORIES, CATEGORY_LABELS, getCategoryForItem } from '$lib/categories';
+	import { MANUAL_CATEGORIES, CATEGORY_LABELS, getCategoryForItem } from '$lib/categories';
 	import { userSettings } from '$lib/userSettings.svelte';
 
 	let { item = null, onSave, onClose, onDelete = null, isFavorite = false, onToggleFavorite = null }: {
@@ -27,7 +27,7 @@
 	const lang = $derived(userSettings.lang === 'en' ? 'en' : 'de');
 	const effectiveCategory = $derived(getCategoryForItem(name || item?.name || '', categoryOverride));
 	const categoryLabel = $derived(
-		categoryOverride ? CATEGORY_LABELS[categoryOverride][lang] : (lang === 'en' ? 'Automatic' : 'Automatisch')
+		categoryOverride ? CATEGORY_LABELS[categoryOverride]?.[lang] ?? categoryOverride : (lang === 'en' ? 'Automatic' : 'Automatisch')
 	);
 
 	const isNumeric = $derived(/^\d+$/.test(quantityInfo.trim()) || quantityInfo.trim() === '');
@@ -127,7 +127,7 @@
 					      style="color: var(--color-on-surface-variant)">Auto</span>
 				</button>
 
-				{#each CATEGORIES as cat}
+				{#each MANUAL_CATEGORIES as cat}
 					<button
 						onclick={() => selectCategory(cat.key)}
 						class="flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1"

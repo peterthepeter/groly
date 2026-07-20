@@ -29,6 +29,7 @@ type ConceptRule = {
 	id: string;
 	categoryKey: string;
 	visualGroup?: VisualGroup;
+	modifier?: boolean;
 	phrases?: string[];
 	headwords?: string[];
 	compoundSuffixes?: string[];
@@ -113,14 +114,69 @@ const CONCEPT_RULES: ConceptRule[] = [
 		compoundSuffixes: ['bier', 'sekt', 'schnaps', 'likoer']
 	},
 	{
-		id: 'egg', categoryKey: 'milch', visualGroup: 'egg',
+		id: 'egg', categoryKey: 'milch', visualGroup: 'egg', modifier: true,
 		headwords: ['ei', 'eier', 'egg', 'eggs']
 	},
 	{
-		id: 'nuts', categoryKey: 'snacks', visualGroup: 'nuts',
+		id: 'nuts', categoryKey: 'snacks', visualGroup: 'nuts', modifier: true,
 		phrases: ['mixed nuts', 'trail mix', 'studentenfutter', 'brazil nut', 'brazil nuts'],
 		headwords: ['nuss', 'nuesse', 'erdnuss', 'erdnuesse', 'mandel', 'mandeln', 'cashew', 'cashews', 'walnuss', 'walnuesse', 'pistazie', 'pistazien', 'macadamia', 'pekannuss', 'paranuss', 'hazelnut', 'hazelnuts', 'peanut', 'peanuts', 'almond', 'almonds', 'walnut', 'walnuts', 'pistachio', 'pistachios', 'pecan', 'pecans'],
 		compoundSuffixes: ['nuss', 'nuesse']
+	},
+	{
+		id: 'dairy-cup', categoryKey: 'milch', visualGroup: 'dairy-cup',
+		phrases: ['greek yogurt', 'greek yoghurt', 'strawberry yogurt', 'strawberry yoghurt', 'erdbeer joghurt', 'naturjoghurt', 'fruchtjoghurt', 'rahmjoghurt', 'griechischer joghurt', 'sour cream', 'creme fraiche', 'cottage cheese'],
+		headwords: ['quark', 'speisequark', 'magerquark', 'skyr', 'joghurt', 'yogurt', 'yoghurt', 'schmand', 'sauerrahm', 'huettenkaese'],
+		compoundSuffixes: ['quark', 'skyr', 'joghurt', 'yogurt', 'yoghurt']
+	},
+	{
+		id: 'liquid-dairy', categoryKey: 'milch', visualGroup: 'milk-container',
+		phrases: ['whole milk', 'condensed milk', 'whipped cream', 'whipping cream', 'heavy cream', 'double cream', 'single cream', 'clotted cream'],
+		headwords: ['milch', 'milk', 'vollmilch', 'buttermilch', 'buttermilk', 'kondensmilch', 'kaffeemilch', 'kefir', 'sahne', 'schlagsahne', 'obers'],
+		compoundSuffixes: ['milch', 'buttermilch', 'sahne']
+	},
+	{
+		id: 'plant-milk', categoryKey: 'getraenke', visualGroup: 'milk-container',
+		phrases: ['oat milk', 'almond milk', 'soy milk', 'rice milk', 'coconut milk', 'oatmilk', 'almondmilk', 'soymilk', 'rice milk drink', 'hafermilch', 'mandelmilch', 'sojamilch', 'reismilch', 'kokosmilch']
+	},
+	{
+		id: 'condiment-bottle', categoryKey: 'konserven', visualGroup: 'sauce-bottle',
+		phrases: ['bbq sauce', 'barbecue sauce', 'burger sauce', 'cocktail sauce', 'salad dressing', 'salatdressing'],
+		headwords: ['ketchup', 'senf', 'mustard', 'mayonnaise', 'mayo', 'remoulade', 'dressing'],
+		compoundSuffixes: ['dressing']
+	},
+	{
+		id: 'hot-condiment-bottle', categoryKey: 'gewuerze', visualGroup: 'sauce-bottle',
+		phrases: ['hot sauce', 'chili sauce', 'chilli sauce'],
+		headwords: ['sriracha', 'tabasco']
+	},
+	{
+		id: 'oil-vinegar-bottle', categoryKey: 'gewuerze', visualGroup: 'oil-bottle',
+		phrases: ['olive oil', 'sunflower oil', 'rapeseed oil', 'coconut oil', 'sesame oil', 'linseed oil', 'balsamic vinegar', 'apple cider vinegar', 'white wine vinegar', 'red wine vinegar', 'soy sauce', 'fish sauce', 'oyster sauce', 'worcestershire sauce', 'maple syrup', 'agave syrup', 'agave nectar', 'olivenoel', 'sonnenblumenoel', 'rapsoel', 'kokosoel', 'sesamoel', 'leinoel', 'apfelessig', 'weissweinessig', 'rotweinessig', 'sojasauce', 'fischsauce', 'austernsosse', 'worcestersauce', 'ahornsirup', 'agavensirup', 'agavendicksaft'],
+		headwords: ['oel', 'oil', 'essig', 'vinegar', 'balsamico'],
+		compoundSuffixes: ['oel', 'essig']
+	},
+	{
+		id: 'snack-bag', categoryKey: 'snacks', visualGroup: 'snack-bag',
+		phrases: ['tortilla chips', 'potato chips', 'rice cakes', 'salt sticks'],
+		headwords: ['chips', 'crisps', 'nachos', 'popcorn', 'salzstangen', 'cracker', 'crackers', 'reiswaffel', 'reiswaffeln'],
+		compoundSuffixes: ['chips']
+	},
+	{
+		id: 'packaged-pretzels', categoryKey: 'backwaren', visualGroup: 'snack-bag',
+		headwords: ['pretzel', 'pretzels']
+	},
+	{
+		id: 'breakfast-cereal', categoryKey: 'backwaren', visualGroup: 'cereal-bowl',
+		phrases: ['breakfast cereal', 'breakfast cereals', 'corn flakes'],
+		headwords: ['muesli', 'granola', 'haferflocken', 'oats', 'oatmeal', 'porridge', 'cornflakes', 'cereal', 'cereals'],
+		compoundSuffixes: ['muesli', 'cornflakes']
+	},
+	{
+		id: 'detergent', categoryKey: 'haushalt', visualGroup: 'detergent',
+		phrases: ['dish soap', 'washing up liquid', 'laundry detergent', 'liquid detergent', 'washing powder', 'fabric softener', 'dishwasher tablets', 'dishwasher pods', 'rinse aid'],
+		headwords: ['spuelmittel', 'geschirrspuelmittel', 'waschmittel', 'fluessigwaschmittel', 'waschpulver', 'weichspueler', 'klarspueler', 'detergent'],
+		compoundSuffixes: ['spuelmittel', 'waschmittel', 'weichspueler', 'klarspueler']
 	},
 	// Zutaten- oder Verarbeitungsphrasen müssen vor ihren Bestandteilen gewinnen.
 	{
@@ -201,19 +257,19 @@ const CONCEPT_RULES: ConceptRule[] = [
 		compoundSuffixes: ['spuelmittel', 'waschmittel', 'muellbeutel', 'folie', 'papier']
 	},
 	{
-		id: 'fruit', categoryKey: 'obst', visualGroup: 'fruit',
+		id: 'fruit', categoryKey: 'obst', visualGroup: 'fruit', modifier: true,
 		phrases: ['passion fruit', 'dragon fruit'],
 		headwords: ['apfel', 'aepfel', 'apple', 'apples', 'birne', 'birnen', 'pear', 'pears', 'banane', 'bananen', 'banana', 'bananas', 'beere', 'beeren', 'berry', 'berries', 'erdbeere', 'erdbeeren', 'strawberry', 'strawberries', 'heidelbeere', 'blueberry', 'blueberries', 'himbeere', 'raspberry', 'raspberries', 'orange', 'orangen', 'mandarine', 'mandarin', 'kiwi', 'mango', 'ananas', 'pineapple', 'trauben', 'grapes', 'zitrone', 'lemon', 'lemons', 'pflaume', 'plum', 'plums', 'kirsche', 'cherry', 'cherries', 'pfirsich', 'peach', 'peaches', 'nektarine', 'nectarine', 'melone', 'melon', 'wassermelone', 'watermelon', 'granatapfel', 'pomegranate', 'papaya', 'lime', 'limes', 'grapefruit'],
 		compoundSuffixes: ['apfel', 'birne', 'banane', 'beere', 'orange', 'zitrone', 'pflaume', 'kirsche', 'melone']
 	},
 	{
-		id: 'vegetable', categoryKey: 'obst', visualGroup: 'vegetable',
+		id: 'vegetable', categoryKey: 'obst', visualGroup: 'vegetable', modifier: true,
 		phrases: ['bell pepper'],
 		headwords: ['tomate', 'tomaten', 'tomato', 'tomatoes', 'salat', 'lettuce', 'karotte', 'karotten', 'carrot', 'carrots', 'gemuese', 'vegetable', 'vegetables', 'zwiebel', 'onion', 'onions', 'knoblauch', 'garlic', 'gurke', 'gurken', 'cucumber', 'cucumbers', 'paprika', 'kartoffel', 'kartoffeln', 'potato', 'potatoes', 'brokkoli', 'broccoli', 'spinat', 'spinach', 'moehre', 'moehren', 'sellerie', 'celery', 'lauch', 'leek', 'zucchini', 'courgette', 'avocado', 'pilze', 'mushroom', 'mushrooms', 'champignon', 'kohlrabi', 'blumenkohl', 'cauliflower', 'rotkohl', 'cabbage', 'rucola', 'arugula', 'rocket', 'radieschen', 'radish', 'rettich', 'mais', 'corn', 'spargel', 'asparagus', 'aubergine', 'eggplant', 'fennel', 'artischocke', 'artichoke', 'suesskartoffel', 'pastinake', 'turnip', 'bok choy', 'pak choi'],
 		compoundSuffixes: ['tomate', 'kartoffel', 'gurke', 'zwiebel', 'salat', 'kohl']
 	},
 	{
-		id: 'fresh-herb', categoryKey: 'obst',
+		id: 'fresh-herb', categoryKey: 'obst', modifier: true,
 		headwords: ['petersilie', 'parsley', 'schnittlauch', 'chives', 'basilikum', 'basil', 'minze', 'mint', 'thymian', 'thyme', 'ingwer', 'ginger', 'koriander', 'cilantro', 'coriander', 'dill', 'rosmarin', 'rosemary', 'salbei', 'sage', 'zitronengras', 'lemongrass']
 	}
 ];
@@ -246,6 +302,17 @@ const COMPILED_RULES: CompiledRule[] = CONCEPT_RULES.map(rule => ({
 	words: normalizeList(rule.words)
 }));
 
+const FLAVOR_HEADWORDS = new Set(normalizeList([
+	'schokolade', 'chocolate', 'kakao', 'cocoa', 'vanille', 'vanilla', 'zimt', 'cinnamon',
+	'karamell', 'caramel', 'honig', 'honey', 'zucker', 'sugar', 'salz', 'salt', 'pfeffer', 'pepper',
+	'suess', 'suesses', 'sweet', 'sweets'
+]));
+
+function isModifierMatch(match: RuleMatch): boolean {
+	if (match.source === 'compound') return false;
+	return match.rule.modifier === true || FLAVOR_HEADWORDS.has(match.matched);
+}
+
 function containsPhrase(normalized: string, phrase: string): boolean {
 	return (` ${normalized} `).includes(` ${phrase} `);
 }
@@ -264,6 +331,7 @@ function bestPhraseMatch(normalized: string): RuleMatch | null {
 }
 
 function bestHeadwordMatch(tokens: string[]): RuleMatch | null {
+	let modifierFallback: RuleMatch | null = null;
 	for (let tokenIndex = tokens.length - 1; tokenIndex >= 0; tokenIndex--) {
 		const token = tokens[tokenIndex];
 		let best: RuleMatch | null = null;
@@ -281,9 +349,11 @@ function bestHeadwordMatch(tokens: string[]): RuleMatch | null {
 				}
 			}
 		}
-		if (best) return best;
+		if (!best) continue;
+		if (!isModifierMatch(best)) return best;
+		modifierFallback ??= best;
 	}
-	return null;
+	return modifierFallback;
 }
 
 function bestWordMatch(tokens: string[]): RuleMatch | null {
@@ -316,7 +386,7 @@ export function createItemResolver(
 	brandCategories: Record<string, string>,
 	defaultKey = 'default'
 ): (name: string, override?: string | null) => ItemResolution {
-	const validCategoryKeys = new Set(categories.map(category => category.key));
+	const validCategoryKeys = new Set([...categories.map(category => category.key), defaultKey]);
 	const hints = categories.flatMap((category, categoryIndex) =>
 		category.key === defaultKey
 			? []
@@ -366,11 +436,16 @@ export function createItemResolver(
 		const normalized = normalizeItemName(name);
 		const tokens = normalized ? normalized.split(' ') : [];
 		const phrase = bestPhraseMatch(normalized);
-		const headword = phrase ? null : bestHeadwordMatch(tokens);
-		const word = phrase || headword ? null : bestWordMatch(tokens);
+		const phraseIsModifier = phrase ? isModifierMatch(phrase) : false;
+		const headword = !phrase || phraseIsModifier ? bestHeadwordMatch(tokens) : null;
+		const structuralMatch = phrase && !phraseIsModifier
+			? phrase
+			: headword && !isModifierMatch(headword)
+				? headword
+				: phrase ?? headword;
+		const word = structuralMatch ? null : bestWordMatch(tokens);
 		const base =
-			(phrase ? asResolution(phrase) : null) ??
-			(headword ? asResolution(headword) : null) ??
+			(structuralMatch ? asResolution(structuralMatch) : null) ??
 			(word ? asResolution(word) : null) ??
 			bestHint(normalized, tokens) ??
 			brandMatch(normalized) ?? {

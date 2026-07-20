@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
 	CATEGORIES,
+	DEFAULT_CATEGORY_ORDER,
+	MANUAL_CATEGORIES,
 	getCategoryByKey,
 	getCategoryForItem,
 	getCategoryKey,
@@ -19,12 +21,12 @@ const REQUIRED_CASES: GoldenCase[] = [
 	['Apfelsaft', 'getraenke'],
 	['Saftapfel', 'obst', 'fruit'],
 	['Milchkaffee', 'getraenke', 'coffee'],
-	['Kaffeemilch', 'milch'],
-	['Erdbeer-Joghurt', 'milch'],
+	['Kaffeemilch', 'milch', 'milk-container'],
+	['Erdbeer-Joghurt', 'milch', 'dairy-cup'],
 	['Apple Juice', 'getraenke'],
 	['Toothpaste', 'koerperpflege', 'tube'],
 	['Tomato Paste', 'konserven', 'tube'],
-	['Strawberry Yogurt', 'milch'],
+	['Strawberry Yogurt', 'milch', 'dairy-cup'],
 	['DM Bio Kamillentee', 'getraenke', 'tea'],
 	['Pfefferminz-Tee', 'getraenke', 'tea'],
 	['Iced Tea Lemon', 'getraenke', 'tea'],
@@ -33,10 +35,10 @@ const REQUIRED_CASES: GoldenCase[] = [
 	['Mixed Nuts', 'snacks', 'nuts'],
 	['Thunfisch', 'fleisch', 'fish'],
 	['Thunfischdose', 'konserven'],
-	['Fischsauce', 'gewuerze'],
-	['Apple Cider Vinegar', 'gewuerze'],
+	['Fischsauce', 'gewuerze', 'oil-bottle'],
+	['Apple Cider Vinegar', 'gewuerze', 'oil-bottle'],
 	['Milchschokolade', 'snacks'],
-	['Kokosmilch', 'getraenke'],
+	['Kokosmilch', 'getraenke', 'milk-container'],
 	['Tiefkühlfisch', 'tiefkuehl'],
 	['Marmelade', 'konserven', 'spread'],
 	['Nussmus', 'konserven', 'spread'],
@@ -53,6 +55,43 @@ const REQUIRED_CASES: GoldenCase[] = [
 	['Brokkoli', 'obst', 'vegetable'],
 	['Salbei', 'obst'],
 	['Fresh Sage', 'obst'],
+	['Quark', 'milch', 'dairy-cup'],
+	['Magerquark', 'milch', 'dairy-cup'],
+	['Skyr Erdbeere', 'milch', 'dairy-cup'],
+	['Yogurt Passion Fruit', 'milch', 'dairy-cup'],
+	['Passion Fruit Yogurt', 'milch', 'dairy-cup'],
+	['Greek Yoghurt', 'milch', 'dairy-cup'],
+	['Crème fraîche', 'milch', 'dairy-cup'],
+	['Cottage Cheese', 'milch', 'dairy-cup'],
+	['Milch', 'milch', 'milk-container'],
+	['Buttermilch', 'milch', 'milk-container'],
+	['Heavy Cream', 'milch', 'milk-container'],
+	['Hafermilch', 'getraenke', 'milk-container'],
+	['Oat Milk', 'getraenke', 'milk-container'],
+	['Ketchup', 'konserven', 'sauce-bottle'],
+	['Salatdressing', 'konserven', 'sauce-bottle'],
+	['BBQ Sauce', 'konserven', 'sauce-bottle'],
+	['Hot Sauce', 'gewuerze', 'sauce-bottle'],
+	['Sriracha', 'gewuerze', 'sauce-bottle'],
+	['Olivenöl', 'gewuerze', 'oil-bottle'],
+	['Balsamico Essig', 'gewuerze', 'oil-bottle'],
+	['Soy Sauce', 'gewuerze', 'oil-bottle'],
+	['Maple Syrup', 'gewuerze', 'oil-bottle'],
+	['Chips Paprika', 'snacks', 'snack-bag'],
+	['Salzstangen', 'snacks', 'snack-bag'],
+	['Crisps', 'snacks', 'snack-bag'],
+	['Pretzels', 'backwaren', 'snack-bag'],
+	['Müsli', 'backwaren', 'cereal-bowl'],
+	['Müsli Schokolade', 'backwaren', 'cereal-bowl'],
+	['Chocolate Muesli', 'backwaren', 'cereal-bowl'],
+	['Porridge', 'backwaren', 'cereal-bowl'],
+	['Cornflakes', 'backwaren', 'cereal-bowl'],
+	['Granola Bar', 'snacks'],
+	['Spülmittel Zitrone', 'haushalt', 'detergent'],
+	['Waschmittel Lavendel', 'haushalt', 'detergent'],
+	['Dish Soap Lemon', 'haushalt', 'detergent'],
+	['Laundry Detergent', 'haushalt', 'detergent'],
+	['Tomato Sauce', 'konserven'],
 	['Unbekannter Spezialartikel', 'default']
 ];
 
@@ -131,11 +170,23 @@ describe('item resolver', () => {
 		});
 		expect(getCategoryKey('Apfel', 'not-a-category')).toBe('obst');
 	});
+
+	it('allows an explicit Everything else override without turning visual groups into categories', () => {
+		expect(MANUAL_CATEGORIES.map(category => category.key)).toEqual([...CATEGORIES.map(category => category.key), 'default']);
+		expect(new Set(DEFAULT_CATEGORY_ORDER)).toEqual(new Set(MANUAL_CATEGORIES.map(category => category.key)));
+		expect(VISUAL_GROUPS.some(group => DEFAULT_CATEGORY_ORDER.includes(group))).toBe(false);
+		expect(resolveItem('Tomatenmark', 'default')).toMatchObject({
+			categoryKey: 'default',
+			visualGroup: 'tube',
+			source: 'override'
+		});
+		expect(getCategoryKey('Magentabletten', 'default')).toBe('default');
+	});
 });
 
 describe('subgroup icons', () => {
-	it('contains exactly the 13 approved visual groups', () => {
-		expect(VISUAL_GROUPS).toHaveLength(13);
+	it('contains exactly the 20 approved visual groups', () => {
+		expect(VISUAL_GROUPS).toHaveLength(20);
 		expect(Object.keys(VISUAL_GROUP_ICONS).sort()).toEqual([...VISUAL_GROUPS].sort());
 	});
 
@@ -152,7 +203,14 @@ describe('subgroup icons', () => {
 		['Pesto', 'spread'],
 		['Badreiniger', 'cleaner-spray'],
 		['Küchenrolle', 'paper-goods'],
-		['Flüssigseife', 'liquid-care']
+		['Flüssigseife', 'liquid-care'],
+		['Skyr', 'dairy-cup'],
+		['Milch', 'milk-container'],
+		['Ketchup', 'sauce-bottle'],
+		['Olivenöl', 'oil-bottle'],
+		['Chips', 'snack-bag'],
+		['Müsli', 'cereal-bowl'],
+		['Waschmittel', 'detergent']
 	] satisfies Array<readonly [string, VisualGroup]>)('uses the approved %s icon', (name, visualGroup) => {
 		expect(getCategoryForItem(name).svgContent).toBe(VISUAL_GROUP_ICONS[visualGroup]);
 	});
@@ -161,6 +219,10 @@ describe('subgroup icons', () => {
 		expect(getCategoryForItem('Tomatenmark').color).toBe(getCategoryByKey('konserven').color);
 		expect(getCategoryForItem('Zahnpasta').color).toBe(getCategoryByKey('koerperpflege').color);
 		expect(getCategoryForItem('Tomatenmark', 'koerperpflege').color).toBe(getCategoryByKey('koerperpflege').color);
+		expect(getCategoryForItem('Milch').color).toBe(getCategoryByKey('milch').color);
+		expect(getCategoryForItem('Hafermilch').color).toBe(getCategoryByKey('getraenke').color);
+		expect(getCategoryForItem('Ketchup').color).toBe(getCategoryByKey('konserven').color);
+		expect(getCategoryForItem('Soy Sauce').color).toBe(getCategoryByKey('gewuerze').color);
 	});
 
 	it('prefers packaging and falls back to the established category icon', () => {

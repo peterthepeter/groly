@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.0-beta.2',
+		de: [
+			'Neue Symbole für Milchprodukte, Getränkekartons, Saucen, Öle, Snacks, Müsli und Waschmittel',
+			'Verbesserte Artikelerkennung: Die Produktart hat Vorrang vor Geschmacks- und Zutatenangaben',
+			'Artikel können jetzt manuell „Alles andere“ zugeordnet werden'
+		],
+		en: [
+			'New icons for dairy products, drink cartons, sauces, oils, snacks, cereal and detergents',
+			'Improved item recognition: product types now take priority over flavours and ingredients',
+			'Items can now be assigned manually to “Everything else”'
+		]
+	},
+	{
 		version: '0.9.0-beta.1',
 		de: [
 			'Zuverlässigere automatische Artikelerkennung auf Deutsch und Englisch',

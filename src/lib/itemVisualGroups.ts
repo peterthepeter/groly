@@ -11,14 +11,24 @@ export const VISUAL_GROUPS = [
 	'spread',
 	'cleaner-spray',
 	'paper-goods',
-	'liquid-care'
+	'liquid-care',
+	'dairy-cup',
+	'milk-container',
+	'sauce-bottle',
+	'oil-bottle',
+	'snack-bag',
+	'cereal-bowl',
+	'detergent'
 ] as const;
 
 export type VisualGroup = (typeof VISUAL_GROUPS)[number];
 
-// Verbindliche Auswahl aus dem Freigabe-Board für Groly 0.9.0:
+// Verbindliche Auswahl aus den Freigabe-Boards für Groly 0.9.0:
 // A: Obst, Gemüse, Fisch, Tee, Kaffee, Alkohol, Ei, Nüsse, Glas/Aufstrich
 // B: Tube, Reinigerspray, Papierwaren, flüssige Körperpflege
+// Erweiterung A: Milchprodukt-Becher, Milch-/Getränkekarton, Öl-/Essigflasche,
+// Snacktüte, Müslischale
+// Erweiterung B: Saucenflasche, Wasch-/Spülmittel
 export const VISUAL_GROUP_ICONS: Record<VisualGroup, string> = {
 	fruit: `<path d="M12 6.5V3a1 1 0 0 1 1-1"/><path d="M18.2 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.5A6 6 0 0 0 2 11a15 15 0 0 0 3.8 10 3 3 0 0 0 3.6.6 5.5 5.5 0 0 1 5.2 0 3 3 0 0 0 3.6-.6Z"/>`,
 	vegetable: `<path d="M2.3 21.7s9.8-3.5 12.7-6.4A4.5 4.5 0 0 0 8.6 9C5.8 11.8 2.3 21.7 2.3 21.7Z"/><path d="m8.6 14-2-2"/><path d="m12 15.8-2.2-2.2"/><path d="M15 9c1-3 3-5 6-5-1 3-3 5-6 5Z"/><path d="M15 9c-2-2-2-5-1-7 2 2 3 4 1 7Z"/>`,
@@ -32,5 +42,12 @@ export const VISUAL_GROUP_ICONS: Record<VisualGroup, string> = {
 	spread: `<path d="M7 3h10v3H7V3Z"/><path d="M6 6h12v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6Z"/><rect x="8" y="10" width="8" height="6" rx="1"/>`,
 	'cleaner-spray': `<path d="M8 8h8l2 4v9H6v-9l2-4Z"/><path d="M10 8V5h7"/><path d="M17 5v2"/><path d="M19 3v4"/><path d="M21 4v2"/><path d="m10 15 1 1 3-3"/>`,
 	'paper-goods': `<path d="M5 4h10a4 4 0 0 1 4 4v12H9V8a4 4 0 0 0-4-4Z"/><ellipse cx="5" cy="8" rx="4" ry="4"/><ellipse cx="5" cy="8" rx="1.5" ry="1.5"/><path d="M9 16h10"/>`,
-	'liquid-care': `<path d="M8 3h8v4l2 3v11H6V10l2-3V3Z"/><path d="M8 7h8"/><path d="M9 13c2-2 4-2 6 0"/><path d="M9 16h6"/>`
+	'liquid-care': `<path d="M8 3h8v4l2 3v11H6V10l2-3V3Z"/><path d="M8 7h8"/><path d="M9 13c2-2 4-2 6 0"/><path d="M9 16h6"/>`,
+	'dairy-cup': `<path d="M6 7h12l-1.5 14h-9L6 7Z"/><path d="M5 4h14v3H5V4Z"/><path d="M9 12c2-1.5 4-1.5 6 0"/><path d="M9 15h6"/>`,
+	'milk-container': `<path d="M7 7l3-5h6l2 5v14H7V7Z"/><path d="M10 2v5h8M7 7h11"/><path d="M10 12c1.2-1.4 2.8-1.4 4 0 1.2 1.4 1.2 2.6 0 4-1.2 1.4-2.8 1.4-4 0-1.2-1.4-1.2-2.6 0-4Z"/>`,
+	'sauce-bottle': `<path d="M10 2h4v4l2 3v12H8V9l2-3V2Z"/><path d="M10 5h4M8 11h8"/><path d="M10 14h4v3h-4z"/>`,
+	'oil-bottle': `<path d="M10 2h4v5l2 3v11H8V10l2-3V2Z"/><path d="M10 5h4M8 12h8"/><path d="M11 15c.8-1.2 1.2-1.8 1-3 .9 1.2 1.5 2 1.5 3a1.25 1.25 0 0 1-2.5 0Z"/>`,
+	'snack-bag': `<path d="M6 3h12l-1 4 1 14H6L7 7 6 3Z"/><path d="M7 7h10M7 18h10"/><circle cx="10" cy="12" r="1.2"/><circle cx="14" cy="14" r="1.2"/>`,
+	'cereal-bowl': `<path d="M4 11h16a8 8 0 0 1-16 0Z"/><path d="m17 11 3-7"/><circle cx="8" cy="8" r="1"/><circle cx="12" cy="7" r="1"/><circle cx="16" cy="8" r="1"/>`,
+	detergent: `<path d="M8 3h8v4l2 3v11H6V10l2-3V3Z"/><path d="M8 7h8"/><circle cx="10" cy="14" r="1.2"/><circle cx="14" cy="16" r="1.5"/><circle cx="15.5" cy="12.5" r=".7"/>`
 };

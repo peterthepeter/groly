@@ -30,11 +30,13 @@ export const CATEGORIES: CategoryDef[] = [
 			'pita', 'naan', 'bagel', 'brioche', 'hefe', 'backpulver', 'vanillezucker',
 			'dinkel', 'roggen', 'pumpernickel', 'laugenbrezel', 'semmel', 'weckle', 'kaiserbrötchen',
 			'paniermehl', 'speisestärke', 'grieß', 'haferflocken', 'müsli', 'cornflakes', 'granola',
+			'porridge', 'frühstückscerealien',
 			'dinkelmehl', 'roggenmehl', 'weizenmehl', 'buchweizenmehl', 'reismehl',
 			'toastbrot', 'sandwichbrot', 'focaccia', 'fladenbrot', 'knödelbrot',
 			// English
 			'bread', 'roll', 'rolls', 'cake', 'flour', 'baking', 'waffle', 'waffles',
 			'cookie', 'cookies', 'cracker', 'crackers', 'yeast', 'baking powder', 'oats', 'oatmeal',
+			'porridge', 'breakfast cereal', 'breakfast cereals', 'cereal', 'cereals', 'corn flakes',
 			'muesli', 'granola', 'breadcrumbs', 'flatbread', 'sourdough', 'rye bread',
 			'whole grain', 'whole wheat', 'buckwheat', 'rice flour', 'cornstarch', 'semolina',
 			'sandwich bread', 'pretzel', 'pretzels', 'crispbread'
@@ -159,7 +161,7 @@ export const CATEGORIES: CategoryDef[] = [
 			'bonbon', 'riegel', 'mars', 'snickers', 'twix', 'kitkat', 'oreo', 'nutella',
 			'popcorn', 'salzstangen', 'cracker', 'studentenfutter', 'müsliriegel', 'praline',
 			'weingummi', 'lakritze', 'dominosteine', 'lebkuchen', 'marzipan', 'zartbitter',
-			'vollmilchschokolade', 'nussschokolade', 'tortilla chips', 'nachos', 'pralinen',
+			'vollmilchschokolade', 'nussschokolade', 'tortilla chips', 'nachos', 'pralinen', 'reiswaffel', 'reiswaffeln',
 			'karamell', 'lollipop', 'lutscher', 'brause', 'haribo', 'trolli', 'nimm 2',
 			'ritter sport', 'milka', 'lindt', 'ferrero', 'raffaello', 'bounty', 'lion',
 			'pistazien', 'macadamia', 'pekannuss', 'paranuss', 'kokosnuss', 'sesamriegel',
@@ -169,7 +171,7 @@ export const CATEGORIES: CategoryDef[] = [
 			'nuts', 'peanuts', 'almonds', 'cashews', 'walnuts', 'pistachios', 'macadamia',
 			'pecan', 'brazil nut', 'hazelnut', 'mixed nuts', 'trail mix',
 			'caramel', 'lollipop', 'licorice', 'liquorice', 'dark chocolate', 'milk chocolate',
-			'tortilla chips', 'nachos', 'popcorn', 'pretzels', 'rice cakes',
+			'tortilla chips', 'nachos', 'popcorn', 'pretzels', 'rice cakes', 'crisps',
 			'granola bar', 'cereal bar', 'protein bar', 'energy bar', 'dried fruit',
 			'fruit gummies', 'jelly beans', 'toffee', 'fudge', 'marshmallow', 'nougat',
 			'peanut butter', 'nutella', 'hazelnut spread'
@@ -182,7 +184,7 @@ export const CATEGORIES: CategoryDef[] = [
 	{
 		key: 'haushalt',
 		keywords: [
-			'spülmittel', 'klarspüler', 'putzmittel', 'waschmittel', 'toilettenpapier', 'müllbeutel', 'schwamm',
+			'spülmittel', 'klarspüler', 'putzmittel', 'waschmittel', 'flüssigwaschmittel', 'waschpulver', 'toilettenpapier', 'müllbeutel', 'schwamm',
 			'reiniger', 'weichspüler', 'geschirrspüler', 'tabs', 'klebeband', 'folie', 'backpapier',
 			'haushalt', 'einweghandschuhe', 'küchenrolle', 'papiertaschentuch', 'taschentuch',
 			'putztuch', 'lappen', 'besen', 'mop', 'staubsauger', 'kerze', 'batterien', 'glühbirne',
@@ -190,7 +192,7 @@ export const CATEGORIES: CategoryDef[] = [
 			'gefrierbeutel', 'badreiniger', 'kalklöser', 'entkalker', 'rohrreiniger',
 			'desinfektionsmittel', 'papiertücher', 'feuchttücher', 'windeln', 'babytücher',
 			// English
-			'dish soap', 'washing up liquid', 'detergent', 'laundry detergent', 'toilet paper',
+			'dish soap', 'washing up liquid', 'detergent', 'laundry detergent', 'liquid detergent', 'washing powder', 'rinse aid', 'toilet paper',
 			'toilet roll', 'loo roll', 'trash bags', 'bin bags', 'garbage bags', 'sponge',
 			'cleaner', 'fabric softener', 'dishwasher tablets', 'dishwasher pods',
 			'tape', 'foil', 'aluminium foil', 'aluminum foil', 'cling film', 'plastic wrap',
@@ -225,7 +227,7 @@ export const CATEGORIES: CategoryDef[] = [
 	{
 		key: 'konserven',
 		keywords: [
-			'dose', 'konserve', 'ketchup', 'senf', 'mayonnaise', 'mayo', 'soße', 'sauce',
+			'dose', 'konserve', 'ketchup', 'senf', 'mayonnaise', 'mayo', 'dressing', 'salatdressing', 'bbq-sauce', 'soße', 'sauce',
 			'tomatenmark', 'passata', 'tomaten dose', 'tomaten passiert', 'dosentomaten',
 			'aufstrich', 'brotaufstrich', 'hummus', 'pesto', 'ajvar', 'tapenade', 'remoulade',
 			'marmelade', 'konfitüre', 'konfituere', 'gelee', 'pflaumenmus', 'apfelmus',
@@ -237,7 +239,8 @@ export const CATEGORIES: CategoryDef[] = [
 			'instantsuppe', 'fertigsuppe', 'suppenpulver', 'tütensuppe', 'dosensuppe',
 			'fertiggericht', 'fertigsauce', 'glasnudeln sauce',
 			// English
-			'can', 'canned', 'tin', 'tinned', 'ketchup', 'mustard', 'mayonnaise',
+			'can', 'canned', 'tin', 'tinned', 'ketchup', 'mustard', 'mayonnaise', 'mayo',
+			'remoulade', 'dressing', 'salad dressing', 'bbq sauce', 'barbecue sauce',
 			'tomato paste', 'tomato sauce', 'passata', 'tinned tomatoes', 'canned tomatoes',
 			'jam', 'jelly', 'marmalade', 'fruit spread', 'spread', 'pesto', 'olives', 'capers',
 			'peanut butter', 'almond butter', 'nut butter', 'hazelnut butter',
@@ -365,6 +368,13 @@ export const CATEGORIES: CategoryDef[] = [
 // Default sort order (index 0 = bottom of grid, index last = top of grid)
 export const DEFAULT_CATEGORY_ORDER = ['obst', 'nudeln', 'backwaren', 'milch', 'fleisch', 'konserven', 'getraenke', 'tiefkuehl', 'snacks', 'gewuerze', 'haushalt', 'koerperpflege', 'default'];
 
+// Manual choices stay at category level. Visual subgroups are always resolved
+// from the item name and never become sortable or user-selectable categories.
+export const MANUAL_CATEGORIES: CategoryDef[] = [
+	...CATEGORIES,
+	{ key: DEFAULT_KEY, keywords: [], category: DEFAULT }
+];
+
 export const CATEGORY_LABELS: Record<string, { de: string; en: string }> = {
 	obst:      { de: 'Obst & Gemüse',      en: 'Fruit & Veg' },
 	nudeln:    { de: 'Nudeln & Reis',      en: 'Pasta & Rice' },
@@ -381,7 +391,7 @@ export const CATEGORY_LABELS: Record<string, { de: string; en: string }> = {
 	default:       { de: 'Alles andere',        en: 'Everything else' },
 };
 
-const categoryByKey = new Map(CATEGORIES.map(c => [c.key, c.category]));
+const categoryByKey = new Map(MANUAL_CATEGORIES.map(c => [c.key, c.category]));
 
 const resolve = createItemResolver(CATEGORIES, BRAND_CATEGORIES, DEFAULT_KEY);
 
