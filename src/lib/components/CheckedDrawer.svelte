@@ -54,7 +54,7 @@
 						<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
 						     stroke={category.color} stroke-width="1.3"
 						     stroke-linecap="round" stroke-linejoin="round"
-						     class="flex-shrink-0">
+						     class="flex-shrink-0" style="color: {category.color}">
 							{@html category.svgContent}
 						</svg>
 						<div class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
@@ -87,7 +87,7 @@
 						<div class="absolute inset-0 flex items-start justify-center pt-[30px]">
 							<svg width="44" height="44" viewBox="0 0 24 24" fill="none"
 							     stroke="var(--color-on-surface-variant)" stroke-width="1.3"
-							     stroke-linecap="round" stroke-linejoin="round">
+							     stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-on-surface-variant)">
 								{@html category.svgContent}
 							</svg>
 						</div>

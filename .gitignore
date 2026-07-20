@@ -17,10 +17,17 @@ Thumbs.db
 *.swo
 
 # Claude Code (local config)
+/CLAUDE.md
 .claude/settings.local.json
 .claude/skills/
 .claude/todos/
 .claude/projects/
+
+# Codex (local config, instructions, and memory)
+/AGENTS.md
+/CODEX.md
+/.agents/
+/.codex/
 
 # Env
 .env

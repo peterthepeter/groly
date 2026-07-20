@@ -101,7 +101,7 @@
 				},
 				{
 					title: 'Categories',
-					text: 'Items are categorized automatically. Long-press an item to override its category manually. You can enable and reorder global category sorting in Settings. For per-list sorting, long-press a list name → Edit → "Category sorting".',
+					text: 'Items are recognized automatically in German and English. Clear product names can also receive a more specific icon — for example fruit, vegetables, tea, coffee, fish, eggs, tubes, or paper goods — while sorting and colour still follow the regular category. Ambiguous or unknown names keep the familiar category icon. Long-press an item to choose a category manually or switch back to Automatic. You can enable and reorder global category sorting in Settings. For per-list sorting, long-press a list name → Edit → "Category sorting".',
 					link: { href: '/einstellungen#kategorien-sortieren', label: 'Category sorting in Settings' },
 					svg: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`
 				},
@@ -283,7 +283,7 @@
 				},
 				{
 					title: 'Kategorien',
-					text: 'Items werden automatisch kategorisiert. Langer Druck auf ein Item → Kategorie manuell überschreiben. Die globale Kategoriesortierung lässt sich in den Einstellungen aktivieren und umsortieren.',
+					text: 'Items werden automatisch auf Deutsch und Englisch erkannt. Eindeutige Produktnamen können zusätzlich ein genaueres Symbol erhalten – etwa für Obst, Gemüse, Tee, Kaffee, Fisch, Eier, Tuben oder Papierwaren. Sortierung und Farbe richten sich weiterhin nach der normalen Kategorie. Unsichere oder unbekannte Namen behalten das bewährte Kategorie-Icon. Mit langem Druck auf ein Item lässt sich die Kategorie manuell auswählen oder wieder auf „Automatisch“ stellen. Die globale Kategoriesortierung lässt sich in den Einstellungen aktivieren und umsortieren.',
 					link: { href: '/einstellungen#kategorien-sortieren', label: 'Kategoriesortierung in den Einstellungen' },
 					svg: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`
 				},

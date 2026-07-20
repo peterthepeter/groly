@@ -207,9 +207,9 @@
 										      style="background-color: var(--color-primary)" aria-hidden="true"></span>
 									{/if}
 									<div class="absolute inset-0 flex items-start justify-center pt-[30px] max-[374px]:pt-[22px]">
-										<svg class="w-11 h-11 max-[374px]:w-9 max-[374px]:h-9" viewBox="0 0 24 24" fill="none"
-										     stroke={cat.color} stroke-width="1.3"
-										     stroke-linecap="round" stroke-linejoin="round">
+									<svg class="w-11 h-11 max-[374px]:w-9 max-[374px]:h-9" viewBox="0 0 24 24" fill="none"
+									     stroke={cat.color} stroke-width="1.3"
+									     stroke-linecap="round" stroke-linejoin="round" style="color: {cat.color}">
 											{@html cat.svgContent}
 										</svg>
 									</div>

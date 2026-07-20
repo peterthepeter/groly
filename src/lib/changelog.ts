@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.0-beta.1',
+		de: [
+			'Zuverlässigere automatische Artikelerkennung auf Deutsch und Englisch',
+			'13 neue Untergruppen-Icons mit sicherem Fallback auf die bisherigen Kategorie-Symbole'
+		],
+		en: [
+			'More reliable automatic item recognition in German and English',
+			'13 new subgroup icons with a safe fallback to the existing category icons'
+		]
+	},
+	{
 		version: '0.8.6',
 		de: [
 			'Neue Wochenplan-Übersicht für Supplement-Erinnerungen unter Verwalten — die ganze Woche auf einen Blick',

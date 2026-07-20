@@ -4,6 +4,8 @@ export type Category = {
 };
 
 import { BRAND_CATEGORIES } from '$lib/brands';
+import { createItemResolver, type ItemResolution } from '$lib/itemResolver';
+import { VISUAL_GROUP_ICONS } from '$lib/itemVisualGroups';
 
 type CategoryDef = {
 	key: string;
@@ -381,66 +383,24 @@ export const CATEGORY_LABELS: Record<string, { de: string; en: string }> = {
 
 const categoryByKey = new Map(CATEGORIES.map(c => [c.key, c.category]));
 
-function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+const resolve = createItemResolver(CATEGORIES, BRAND_CATEGORIES, DEFAULT_KEY);
 
-function matchesKeyword(name: string, keyword: string): boolean {
-	if (new RegExp('(^|\\s)' + escapeRegex(keyword), 'i').test(name)) return true;
-	if (keyword.length >= 5 && new RegExp('(?<![a-zäöüß])' + escapeRegex(keyword) + '(?![a-zäöüß])', 'i').test(name)) return true;
-	if (new RegExp('(^|[\\s-])' + escapeRegex(keyword) + '(\\s|$)', 'i').test(name)) return true;
-	return false;
-}
-
-// Zählt Keyword-Treffer für eine Kategorie (Scoring statt First-Match).
-// Obst steht am Ende des Arrays → gewinnt bei Gleichstand nie gegen eine
-// frühere Kategorie (strict >), sondern nur bei mehr Treffern.
-function scoreKeywords(name: string, keywords: string[]): number {
-	let score = 0;
-	for (const k of keywords) {
-		if (matchesKeyword(name, k)) score++;
-	}
-	return score;
-}
-
-function getBrandKey(name: string): string | null {
-	const lower = name.toLowerCase().trim();
-	// Exact match first
-	if (BRAND_CATEGORIES[lower]) return BRAND_CATEGORIES[lower];
-	// Check if name starts with a known brand
-	for (const brand of Object.keys(BRAND_CATEGORIES)) {
-		if (lower.startsWith(brand + ' ') || lower === brand) {
-			return BRAND_CATEGORIES[brand];
-		}
-	}
-	return null;
-}
-
-function getBestCategoryKey(lower: string): string {
-	let bestKey = DEFAULT_KEY;
-	let bestScore = 0;
-	for (const { key, keywords } of CATEGORIES) {
-		const score = scoreKeywords(lower, keywords);
-		if (score > bestScore) {
-			bestScore = score;
-			bestKey = key;
-		}
-	}
-	return bestKey;
+/** Pure, deterministic DE/EN resolution. Exported for regression tests. */
+export function resolveItem(name: string, override?: string | null): ItemResolution {
+	return resolve(name, override);
 }
 
 export function getCategoryForItem(name: string, override?: string | null): Category {
-	if (override) return categoryByKey.get(override) ?? DEFAULT;
-	const lower = name.toLowerCase();
-	const brandKey = getBrandKey(lower);
-	if (brandKey) return categoryByKey.get(brandKey) ?? DEFAULT;
-	return categoryByKey.get(getBestCategoryKey(lower)) ?? DEFAULT;
+	const resolution = resolve(name, override);
+	const category = categoryByKey.get(resolution.categoryKey) ?? DEFAULT;
+	const svgContent = resolution.confidence === 'high' && resolution.visualGroup
+		? VISUAL_GROUP_ICONS[resolution.visualGroup]
+		: category.svgContent;
+	return svgContent === category.svgContent ? category : { ...category, svgContent };
 }
 
 export function getCategoryKey(name: string, override?: string | null): string {
-	if (override && CATEGORIES.some(c => c.key === override)) return override;
-	const lower = name.toLowerCase();
-	const brandKey = getBrandKey(lower);
-	if (brandKey) return brandKey;
-	return getBestCategoryKey(lower);
+	return resolve(name, override).categoryKey;
 }
 
 export function getCategoryByKey(key: string): Category {

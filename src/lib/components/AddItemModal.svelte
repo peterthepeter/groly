@@ -92,7 +92,7 @@
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
 				     stroke={effectiveCategory.color} stroke-width="1.8"
 				     stroke-linecap="round" stroke-linejoin="round"
-				     style="flex-shrink: 0">
+				     style="flex-shrink: 0; color: {effectiveCategory.color}">
 					{@html effectiveCategory.svgContent}
 				</svg>
 				<span class="text-sm truncate" style="color: var(--color-on-surface-variant)">{categoryLabel}</span>

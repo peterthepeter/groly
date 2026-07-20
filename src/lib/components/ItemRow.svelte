@@ -49,7 +49,7 @@
 	<div class="relative flex-shrink-0">
 		<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
 		     stroke={category.color} stroke-width="1.3"
-		     stroke-linecap="round" stroke-linejoin="round">
+		     stroke-linecap="round" stroke-linejoin="round" style="color: {category.color}">
 			{@html category.svgContent}
 		</svg>
 		{#if isFavorite && userSettings.showFavoriteIndicator}
