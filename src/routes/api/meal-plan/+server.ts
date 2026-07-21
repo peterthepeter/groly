@@ -9,6 +9,9 @@ import { scaleAmount } from '$lib/recipeUtils';
 import { now as dbNow, generateId } from '$lib/auth';
 import { emitToListMembers } from '$lib/server/userEvents';
 import { schedulePushForItemAdded } from '$lib/server/pushDebounce';
+import { getCategoryPreferenceMap } from '$lib/server/categoryPreferences';
+import { resolveCategoryOverrideForCreate } from '$lib/categoryPreferences';
+import { toAddedItemEventPayload } from '$lib/server/itemEventPayload';
 
 // GET /api/meal-plan?from=2026-04-14&to=2026-04-20
 export const GET: RequestHandler = async (event) => {
@@ -174,17 +177,20 @@ export const POST: RequestHandler = async (event) => {
 
 		// Items direkt in die DB schreiben
 		const creator = db.select({ username: users.username }).from(users).where(eq(users.id, user!.id)).get();
+		const categoryPreferenceMap = getCategoryPreferenceMap(user!.id);
 		const ts = dbNow();
 		let added = 0;
 
 		for (const item of itemsToAdd) {
 			const id = generateId(16);
+			const categoryOverride = resolveCategoryOverrideForCreate(item.name, null, categoryPreferenceMap);
 			db.insert(items).values({
 				id,
 				listId,
 				name: item.name,
 				quantityInfo: item.quantityInfo,
 				isChecked: false,
+				categoryOverride,
 				createdBy: user!.id,
 				createdAt: ts,
 				updatedAt: ts
@@ -198,7 +204,7 @@ export const POST: RequestHandler = async (event) => {
 				})
 				.run();
 
-			const newItem = { id, listId, name: item.name, quantityInfo: item.quantityInfo, isChecked: false, checkedAt: null, categoryOverride: null, createdBy: user!.id, createdByUsername: creator?.username ?? null, createdAt: ts, updatedAt: ts };
+			const newItem = toAddedItemEventPayload({ id, listId, name: item.name, quantityInfo: item.quantityInfo, isChecked: false, checkedAt: null, categoryOverride, createdBy: user!.id, createdAt: ts, updatedAt: ts }, creator?.username ?? null);
 			emitToListMembers(listId, { type: 'item_added', listId, item: newItem, byUserId: user!.id });
 			added++;
 		}

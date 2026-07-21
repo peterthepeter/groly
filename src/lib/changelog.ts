@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.0-beta.3',
+		de: [
+			'Groly merkt sich manuelle Kategorieauswahlen persönlich für gleiche Artikelnamen',
+			'„Automatisch“ löscht die gelernte Zuordnung; Favoriten behalten Vorrang',
+			'Die Lernfunktion arbeitet auch offline und bleibt zwischen Benutzern getrennt'
+		],
+		en: [
+			'Groly personally remembers manual category choices for matching item names',
+			'“Automatic” removes the learned preference; favourites keep priority',
+			'Learning works offline and remains separated between users'
+		]
+	},
+	{
 		version: '0.9.0-beta.2',
 		de: [
 			'Neue Symbole für Milchprodukte, Getränkekartons, Saucen, Öle, Snacks, Müsli und Waschmittel',

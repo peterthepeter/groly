@@ -1,4 +1,4 @@
-import Dexie, { type EntityTable } from 'dexie';
+import Dexie, { type EntityTable, type Table } from 'dexie';
 
 interface OfflineList {
 	id: string;
@@ -25,6 +25,7 @@ interface OfflineItem {
 
 interface PendingMutation {
 	id?: number;
+	userId?: string;
 	type:
 		| 'create_list'
 		| 'update_list'
@@ -36,9 +37,18 @@ interface PendingMutation {
 		| 'delete_supplement_log'
 		| 'create_water_log'
 		| 'create_caffeine_log'
-		| 'create_meditation_log';
+		| 'create_meditation_log'
+		| 'set_category_preference'
+		| 'delete_category_preference';
 	payload: Record<string, unknown>;
 	createdAt: number;
+}
+
+interface OfflineCategoryPreference {
+	userId: string;
+	normalizedName: string;
+	categoryOverride: string;
+	updatedAt: number;
 }
 
 interface OfflineSupplement {
@@ -130,6 +140,7 @@ class GrolydDb extends Dexie {
 	caffeineLogs!: EntityTable<OfflineCaffeineLog, 'id'>;
 	meditationLogs!: EntityTable<OfflineMeditationLog, 'id'>;
 	caffeineDrinks!: EntityTable<OfflineCaffeineDrink, 'id'>;
+	categoryPreferences!: Table<OfflineCategoryPreference, [string, string]>;
 
 	constructor() {
 		super('groly');
@@ -154,6 +165,10 @@ class GrolydDb extends Dexie {
 		this.version(5).stores({
 			caffeineDrinks: 'id, sortOrder'
 		});
+		this.version(6).stores({
+			pendingMutations: '++id, type, userId, createdAt',
+			categoryPreferences: '[userId+normalizedName], userId, updatedAt'
+		});
 	}
 }
 
@@ -169,5 +184,6 @@ export type {
 	OfflineWaterLog,
 	OfflineCaffeineLog,
 	OfflineMeditationLog,
-	OfflineCaffeineDrink
+	OfflineCaffeineDrink,
+	OfflineCategoryPreference
 };

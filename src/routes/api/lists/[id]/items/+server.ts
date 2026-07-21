@@ -7,6 +7,9 @@ import { eq, and, sql } from 'drizzle-orm';
 import { emitToListMembers } from '$lib/server/userEvents';
 import { schedulePushForItemAdded } from '$lib/server/pushDebounce';
 import { now, generateId } from '$lib/auth';
+import { isValidCategoryKey } from '$lib/categories';
+import { getCategoryPreference } from '$lib/server/categoryPreferences';
+import { toAddedItemEventPayload } from '$lib/server/itemEventPayload';
 
 function getListAccess(listId: string, userId: string): { list: typeof lists.$inferSelect; permission: 'owner' | 'write' | 'read' | null } {
 	const list = db.select().from(lists).where(eq(lists.id, listId)).get();
@@ -54,8 +57,11 @@ export const POST: RequestHandler = async (event) => {
 	if (!list || permission === null) return json({ error: 'Nicht gefunden' }, { status: 404 });
 	if (permission === 'read') return json({ error: 'Keine Schreibberechtigung' }, { status: 403 });
 
-	const { name, quantityInfo, id: clientId } = await event.request.json();
+	const { name, quantityInfo, id: clientId, categoryOverride: requestedCategoryOverride } = await event.request.json();
 	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
+	if (requestedCategoryOverride != null && !isValidCategoryKey(requestedCategoryOverride)) {
+		return json({ error: 'Ungültige Kategorie' }, { status: 400 });
+	}
 
 	const id = typeof clientId === 'string' && clientId.length > 0 && clientId.length <= 32
 		? clientId
@@ -63,7 +69,8 @@ export const POST: RequestHandler = async (event) => {
 	const ts = now();
 	const trimmedName = name.trim();
 	const trimmedQty = quantityInfo?.trim() ?? null;
-	db.insert(items).values({ id, listId: event.params.id, name: trimmedName, quantityInfo: trimmedQty, isChecked: false, createdBy: user!.id, createdAt: ts, updatedAt: ts }).run();
+	const categoryOverride = requestedCategoryOverride ?? getCategoryPreference(user!.id, trimmedName);
+	db.insert(items).values({ id, listId: event.params.id, name: trimmedName, quantityInfo: trimmedQty, isChecked: false, categoryOverride, createdBy: user!.id, createdAt: ts, updatedAt: ts }).run();
 
 	// Item-History für Vorschläge aktualisieren
 	db.insert(itemHistory)
@@ -78,7 +85,7 @@ export const POST: RequestHandler = async (event) => {
 	db.update(lists).set({ updatedAt: ts }).where(eq(lists.id, event.params.id)).run();
 
 	const creator = db.select({ username: users.username }).from(users).where(eq(users.id, user!.id)).get();
-	const newItem = { id, listId: event.params.id, name: trimmedName, quantityInfo: trimmedQty, isChecked: false, checkedAt: null, categoryOverride: null, createdBy: user!.id, createdByUsername: creator?.username ?? null, createdAt: ts, updatedAt: ts };
+	const newItem = toAddedItemEventPayload({ id, listId: event.params.id, name: trimmedName, quantityInfo: trimmedQty, isChecked: false, checkedAt: null, categoryOverride, createdBy: user!.id, createdAt: ts, updatedAt: ts }, creator?.username ?? null);
 
 	emitToListMembers(event.params.id, { type: 'item_added', listId: event.params.id, item: newItem, byUserId: user!.id });
 

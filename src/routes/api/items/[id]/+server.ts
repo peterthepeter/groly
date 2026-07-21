@@ -7,6 +7,8 @@ import { eq, and } from 'drizzle-orm';
 import { emitToListMembers } from '$lib/server/userEvents';
 
 import { now } from '$lib/auth';
+import { isValidCategoryKey } from '$lib/categories';
+import { toUpdatedItemEventPayload } from '$lib/server/itemEventPayload';
 
 async function getWritableItem(itemId: string, userId: string) {
 	const item = db.select().from(items).where(eq(items.id, itemId)).get();
@@ -45,7 +47,12 @@ export const PUT: RequestHandler = async (event) => {
 			updates.createdBy = user!.id;
 		}
 	}
-	if (body.categoryOverride !== undefined) updates.categoryOverride = body.categoryOverride ?? null;
+	if (body.categoryOverride !== undefined) {
+		if (body.categoryOverride !== null && !isValidCategoryKey(body.categoryOverride)) {
+			return json({ error: 'Ungültige Kategorie' }, { status: 400 });
+		}
+		updates.categoryOverride = body.categoryOverride ?? null;
+	}
 
 	db.update(items).set(updates).where(eq(items.id, item.id)).run();
 	db.update(lists).set({ updatedAt: ts }).where(eq(lists.id, item.listId)).run();
@@ -57,7 +64,7 @@ export const PUT: RequestHandler = async (event) => {
 	const openCountDelta = body.isChecked !== undefined
 		? (body.isChecked && !item.isChecked ? -1 : !body.isChecked && item.isChecked ? 1 : 0)
 		: 0;
-	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: { id: updated.id, name: updated.name, quantityInfo: updated.quantityInfo, isChecked: updated.isChecked, checkedAt: updated.checkedAt, categoryOverride: updated.categoryOverride, createdByUsername, updatedAt: updated.updatedAt }, openCountDelta, byUserId: user!.id });
+	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: toUpdatedItemEventPayload(updated, createdByUsername), openCountDelta, byUserId: user!.id });
 
 	return json({ ok: true });
 };

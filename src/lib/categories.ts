@@ -392,6 +392,7 @@ export const CATEGORY_LABELS: Record<string, { de: string; en: string }> = {
 };
 
 const categoryByKey = new Map(MANUAL_CATEGORIES.map(c => [c.key, c.category]));
+const validCategoryKeys = new Set(categoryByKey.keys());
 
 const resolve = createItemResolver(CATEGORIES, BRAND_CATEGORIES, DEFAULT_KEY);
 
@@ -415,4 +416,8 @@ export function getCategoryKey(name: string, override?: string | null): string {
 
 export function getCategoryByKey(key: string): Category {
 	return categoryByKey.get(key) ?? DEFAULT;
+}
+
+export function isValidCategoryKey(key: unknown): key is string {
+	return typeof key === 'string' && validCategoryKeys.has(key);
 }

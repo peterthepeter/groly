@@ -1,6 +1,13 @@
 import { offlineDb } from './db';
-import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink } from './db';
+import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink, OfflineCategoryPreference, PendingMutation } from './db';
 import { networkStore } from '$lib/stores/online.svelte';
+import { isValidCategoryKey } from '$lib/categories';
+import { normalizeCategoryPreferenceName, resolveCategoryOverrideForCreate } from '$lib/categoryPreferences';
+
+let activeUserId: string | null = null;
+let syncInitialized = false;
+let drainPromise: Promise<void> | null = null;
+let drainingUserId: string | null = null;
 
 export function generateClientId(): string {
 	const bytes = new Uint8Array(12);
@@ -39,9 +46,31 @@ async function apiFetch(url: string, options?: RequestInit) {
 	return res.json();
 }
 
-async function processPendingMutations() {
-	const pending = await offlineDb.pendingMutations.orderBy('createdAt').toArray();
+function belongsToActiveUser(mutation: PendingMutation): boolean {
+	// Mutationen aus älteren App-Versionen hatten noch keine Besitzer-ID. Sie werden
+	// aus Kompatibilitätsgründen beim aktuell angemeldeten Benutzer fertig verarbeitet.
+	return mutation.userId === undefined || mutation.userId === activeUserId;
+}
+
+async function countActivePendingMutations(): Promise<number> {
+	if (!activeUserId) return 0;
+	const pending = await offlineDb.pendingMutations.toArray();
+	return pending.filter(belongsToActiveUser).length;
+}
+
+async function addPendingMutation(mutation: Omit<PendingMutation, 'id'>): Promise<void> {
+	await offlineDb.pendingMutations.add({
+		...mutation,
+		...(mutation.userId ? {} : activeUserId ? { userId: activeUserId } : {})
+	});
+	networkStore.setPending(await countActivePendingMutations());
+}
+
+async function runPendingMutations(userId: string) {
+	const pending = (await offlineDb.pendingMutations.orderBy('createdAt').toArray())
+		.filter(mutation => mutation.userId === undefined || mutation.userId === userId);
 	for (const mutation of pending) {
+		if (activeUserId !== userId) break;
 		try {
 			switch (mutation.type) {
 				case 'create_list':
@@ -77,11 +106,25 @@ async function processPendingMutations() {
 				case 'create_meditation_log':
 					await apiFetch('/api/meditation-logs', { method: 'POST', body: JSON.stringify(mutation.payload) });
 					break;
+				case 'set_category_preference':
+					await apiFetch('/api/category-preferences', { method: 'PUT', body: JSON.stringify(mutation.payload) });
+					break;
+				case 'delete_category_preference':
+					await apiFetch('/api/category-preferences', { method: 'DELETE', body: JSON.stringify(mutation.payload) });
+					break;
 			}
 			await offlineDb.pendingMutations.delete(mutation.id!);
 		} catch (e: unknown) {
 			const status = (e as { status?: number })?.status;
-			if (status === 404 || status === 409 || status === 403) {
+			const isCategoryPreferenceMutation = mutation.type === 'set_category_preference' || mutation.type === 'delete_category_preference';
+			if (status === 404 || status === 409 || status === 403 || (
+				status === 400 && isCategoryPreferenceMutation
+			)) {
+				// Diese Endpunkte liefern selbst weder 403, 404 noch 409. Solche Antworten
+				// stammen daher typischerweise von einem kalten Proxy/WAF und dürfen eine
+				// persönliche Lernregel nicht vernichten. Nur echte 400-Validierungsfehler
+				// sind dauerhaft.
+				if (isCategoryPreferenceMutation && status !== 400) continue;
 				// Permanenter Fehler – Mutation überspringen (Item gelöscht, Konflikt oder keine Berechtigung)
 				// Ausnahme: selbst geloggte Tracker-Einträge NIEMALS wegen 4xx verwerfen.
 				// Ein 403/404 ist hier fast immer ein transienter Front-/Proxy-Treffer
@@ -102,13 +145,25 @@ async function processPendingMutations() {
 			break; // Netzwerkfehler / Timeout / 5xx — beim nächsten Drain erneut versuchen
 		}
 	}
-	const remaining = await offlineDb.pendingMutations.count();
+	const remaining = await countActivePendingMutations();
 	networkStore.setPending(remaining);
 }
 
 // Öffentliche Variante für Aufrufer außerhalb (resumeOrchestrator).
 export function drainPendingMutations(): Promise<void> {
-	return processPendingMutations();
+	if (!activeUserId) return Promise.resolve();
+	if (drainPromise) {
+		const runningUserId = drainingUserId;
+		return drainPromise.then(() =>
+			activeUserId && activeUserId !== runningUserId ? drainPendingMutations() : undefined
+		);
+	}
+	drainingUserId = activeUserId;
+	drainPromise = runPendingMutations(activeUserId).finally(() => {
+		drainPromise = null;
+		drainingUserId = null;
+	});
+	return drainPromise;
 }
 
 export async function execute<T>(
@@ -126,11 +181,9 @@ export async function execute<T>(
 		}
 	}
 
-	await offlineDb.pendingMutations.add(offlineMutation);
-	const count = await offlineDb.pendingMutations.count();
-	networkStore.setPending(count);
+	await addPendingMutation({ ...offlineMutation, userId: activeUserId ?? undefined });
 	// Sofort versuchen, die Queue zu leeren (z.B. 409-Konflikte bereinigen)
-	if (networkStore.online) void processPendingMutations();
+	if (networkStore.online) void drainPendingMutations();
 	return null;
 }
 
@@ -153,9 +206,8 @@ async function enqueueLog(
 	localWrite: () => Promise<unknown>
 ): Promise<void> {
 	await localWrite();
-	await offlineDb.pendingMutations.add({ type, payload, createdAt: Date.now() });
-	networkStore.setPending(await offlineDb.pendingMutations.count());
-	if (networkStore.online) void processPendingMutations();
+	await addPendingMutation({ type, payload, createdAt: Date.now(), userId: activeUserId ?? undefined });
+	if (networkStore.online) void drainPendingMutations();
 }
 
 export async function logSupplementOffline(args: { supplementId: string; amount: number; loggedAt: number; note: string | null; clientLogId: string }): Promise<void> {
@@ -200,12 +252,112 @@ export async function getPendingLogs(
 	to: number
 ): Promise<Array<Record<string, unknown>>> {
 	const muts = await offlineDb.pendingMutations.where('type').equals(type).toArray();
-	return muts
+	return muts.filter(belongsToActiveUser)
 		.map(m => m.payload)
 		.filter(p => {
 			const ts = (p as { loggedAt?: number }).loggedAt;
 			return typeof ts === 'number' && ts >= from && ts <= to;
 		});
+}
+
+// ── Persönliche Kategorie-Präferenzen ────────────────────────────────────────
+
+async function sendOrQueueCategoryPreference(
+	type: 'set_category_preference' | 'delete_category_preference',
+	userId: string,
+	payload: { name: string; categoryOverride?: string }
+): Promise<void> {
+	if (networkStore.online && activeUserId === userId) {
+		try {
+			await apiFetch('/api/category-preferences', {
+				method: type === 'set_category_preference' ? 'PUT' : 'DELETE',
+				body: JSON.stringify(payload)
+			});
+			return;
+		} catch {
+			// Antwort verloren oder Server nicht erreichbar: idempotent nachstellen.
+		}
+	}
+
+	await addPendingMutation({ type, userId, payload, createdAt: Date.now() });
+}
+
+export async function setCategoryPreferenceOffline(userId: string, name: string, categoryOverride: string): Promise<void> {
+	const normalizedName = normalizeCategoryPreferenceName(name);
+	if (!normalizedName || !isValidCategoryKey(categoryOverride)) return;
+	await offlineDb.categoryPreferences.put({ userId, normalizedName, categoryOverride, updatedAt: Date.now() });
+	await sendOrQueueCategoryPreference('set_category_preference', userId, { name: normalizedName, categoryOverride });
+}
+
+export async function deleteCategoryPreferenceOffline(userId: string, name: string): Promise<void> {
+	const normalizedName = normalizeCategoryPreferenceName(name);
+	if (!normalizedName) return;
+	await offlineDb.categoryPreferences.delete([userId, normalizedName]);
+	await sendOrQueueCategoryPreference('delete_category_preference', userId, { name: normalizedName });
+}
+
+export async function getOfflineCategoryPreferences(userId: string): Promise<Map<string, string>> {
+	const rows = await offlineDb.categoryPreferences.where('userId').equals(userId).toArray();
+	return new Map(rows.map(row => [row.normalizedName, row.categoryOverride]));
+}
+
+export async function getCategoryOverrideForCreate(
+	userId: string,
+	name: string,
+	favoriteOverride?: string | null
+): Promise<string | null> {
+	return resolveCategoryOverrideForCreate(name, favoriteOverride, await getOfflineCategoryPreferences(userId));
+}
+
+export async function refreshCategoryPreferences(userId: string): Promise<void> {
+	if (activeUserId !== userId) return;
+	await drainPendingMutations();
+	const syncStartedAt = Date.now();
+	let serverRows: OfflineCategoryPreference[];
+	try {
+		const response = await fetchWithTimeout('/api/category-preferences');
+		if (!response.ok) return;
+		const rows = await response.json() as Array<Partial<OfflineCategoryPreference>>;
+		serverRows = rows.flatMap(row =>
+			typeof row.normalizedName === 'string' && isValidCategoryKey(row.categoryOverride)
+				? [{
+					userId,
+					normalizedName: normalizeCategoryPreferenceName(row.normalizedName),
+					categoryOverride: row.categoryOverride,
+					updatedAt: syncStartedAt
+				}]
+				: []
+		).filter(row => row.normalizedName.length > 0);
+	} catch {
+		return;
+	}
+
+	await offlineDb.transaction('rw', offlineDb.categoryPreferences, offlineDb.pendingMutations, async () => {
+		const localRows = await offlineDb.categoryPreferences.where('userId').equals(userId).toArray();
+		const concurrentRows = localRows.filter(row => row.updatedAt >= syncStartedAt);
+		await offlineDb.categoryPreferences.where('userId').equals(userId).delete();
+		if (serverRows.length > 0) await offlineDb.categoryPreferences.bulkPut(serverRows);
+		if (concurrentRows.length > 0) await offlineDb.categoryPreferences.bulkPut(concurrentRows);
+
+		const pending = (await offlineDb.pendingMutations.orderBy('createdAt').toArray())
+			.filter(mutation => mutation.userId === userId && (
+				mutation.type === 'set_category_preference' || mutation.type === 'delete_category_preference'
+			));
+		for (const mutation of pending) {
+			const normalizedName = normalizeCategoryPreferenceName(String(mutation.payload.name ?? ''));
+			if (!normalizedName) continue;
+			if (mutation.type === 'delete_category_preference') {
+				await offlineDb.categoryPreferences.delete([userId, normalizedName]);
+			} else if (isValidCategoryKey(mutation.payload.categoryOverride)) {
+				await offlineDb.categoryPreferences.put({
+					userId,
+					normalizedName,
+					categoryOverride: mutation.payload.categoryOverride,
+					updatedAt: Date.now()
+				});
+			}
+		}
+	});
 }
 
 // ── Listen-Cache ───────────────────────────────────────────────────────────────
@@ -351,24 +503,31 @@ export async function getOfflineMeditationLogsRange(from: number, to: number): P
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 
-export function initSync() {
+export function initSync(userId: string | null = null) {
+	activeUserId = userId;
 	if (typeof window === 'undefined') return;
+	void countActivePendingMutations().then(count => networkStore.setPending(count));
+	if (syncInitialized) {
+		if (userId) void drainPendingMutations();
+		return;
+	}
+	syncInitialized = true;
 	window.addEventListener('online', () => {
-		processPendingMutations();
+		drainPendingMutations();
 	});
 	// Beim Foregrounding nach Hintergrund-Suspend (besonders iOS): das 'online'-Event
 	// feuert dort unzuverlässig. Wir prüfen die Queue zusätzlich bei jedem
 	// visibilitychange → visible, damit gestrandete Mutations nicht hängenbleiben.
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState !== 'visible') return;
-		offlineDb.pendingMutations.count().then((c) => {
+		countActivePendingMutations().then((c) => {
 			networkStore.setPending(c);
-			if (c > 0) processPendingMutations();
+			if (c > 0) drainPendingMutations();
 		});
 	});
 	// Initial prüfen und ggf. sofort abarbeiten
-	offlineDb.pendingMutations.count().then((c) => {
+	countActivePendingMutations().then((c) => {
 		networkStore.setPending(c);
-		if (c > 0) processPendingMutations();
+		if (c > 0) drainPendingMutations();
 	});
 }

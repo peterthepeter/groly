@@ -1,7 +1,7 @@
 {
 	"name": "groly",
 	"private": true,
-	"version": "0.9.0-beta.2",
+	"version": "0.9.0-beta.3",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -23,6 +23,7 @@
 		"@types/pdfmake": "^0.3.3",
 		"@types/web-push": "^3.6.4",
 		"drizzle-kit": "^0.31.10",
+		"fake-indexeddb": "^6.2.5",
 		"svelte": "^5.51.0",
 		"svelte-check": "^4.4.2",
 		"tailwindcss": "^4.2.2",

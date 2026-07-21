@@ -1,4 +1,4 @@
-let isOnline = $state(typeof navigator !== 'undefined' ? navigator.onLine : true);
+let isOnline = $state(typeof navigator !== 'undefined' ? navigator.onLine !== false : true);
 let pendingCount = $state(0);
 let isServerReachable = $state(true);
 
@@ -25,7 +25,7 @@ async function pingServer() {
 // erreichbar ist. Wird beim Start, bei 'online' und bei jedem Sichtbar-Werden
 // aufgerufen.
 function refreshConnectivity() {
-	isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+	isOnline = typeof navigator !== 'undefined' ? navigator.onLine !== false : true;
 	if (isOnline) {
 		void pingServer();
 	} else {

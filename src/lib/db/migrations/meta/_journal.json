@@ -316,6 +316,13 @@
       "when": 1781740800000,
       "tag": "0044_recipe_nutrition",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1784615310005,
+      "tag": "0045_boring_hobgoblin",
+      "breakpoints": true
     }
   ]
 }

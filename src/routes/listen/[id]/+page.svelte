@@ -11,12 +11,25 @@
 	import CheckedDrawer from '$lib/components/CheckedDrawer.svelte';
 	import AddItemModal from '$lib/components/AddItemModal.svelte';
 	import AddItemBar from '$lib/components/AddItemBar.svelte';
-	import { execute, generateClientId, cacheItemsData, getOfflineItems, getOfflineListName, updateOfflineItem, deleteOfflineItem } from '$lib/sync/manager';
+	import {
+		execute,
+		generateClientId,
+		cacheItemsData,
+		getOfflineItems,
+		getOfflineListName,
+		updateOfflineItem,
+		deleteOfflineItem,
+		getCategoryOverrideForCreate,
+		refreshCategoryPreferences,
+		setCategoryPreferenceOffline,
+		deleteCategoryPreferenceOffline
+	} from '$lib/sync/manager';
 	import { acquireWakeLock, releaseWakeLock } from '$lib/wakeLock';
 
 	let wakeLockHeld = false;
 	import { t, list_items_open } from '$lib/i18n.svelte';
 	import { getCategoryKey } from '$lib/categories';
+	import { getCategoryPreferenceAction } from '$lib/categoryPreferences';
 	import { userSettings } from '$lib/userSettings.svelte';
 
 	const LISTVIEW_HINT_KEY = 'groly_listview_hint_dismissed';
@@ -105,6 +118,7 @@
 	async function loadItems() {
 		const targetListId = listId ?? '';
 		const requestVersion = ++itemsLoadVersion;
+		if (data.user?.id) void refreshCategoryPreferences(data.user.id);
 
 		// Gecachte Daten sofort anzeigen, während der Netzwerk-Fetch läuft (stale-while-revalidate)
 		if (items.length === 0) {
@@ -173,12 +187,15 @@
 		);
 	}
 
-	async function addItem(name: string, quantityInfo: string) {
+	async function addItem(name: string, quantityInfo: string, favoriteCategoryOverride?: string | null) {
 		const id = generateClientId();
+		const categoryOverride = data.user?.id
+			? await getCategoryOverrideForCreate(data.user.id, name, favoriteCategoryOverride)
+			: null;
 		const optimisticItem: Item = {
 			id, listId: listId ?? '', name: name.trim(),
 			quantityInfo: quantityInfo.trim() || null,
-			isChecked: false, checkedAt: null, categoryOverride: null,
+			isChecked: false, checkedAt: null, categoryOverride,
 			createdByUsername: data.user?.username ?? null,
 			updatedAt: Math.floor(Date.now() / 1000)
 		};
@@ -186,9 +203,14 @@
 			() => fetch(`/api/lists/${listId}/items`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ id, name, quantityInfo })
-			}).then(r => { if (!r.ok) throw new Error(); }),
-			{ type: 'create_item', payload: { id, listId: listId ?? '', name, quantityInfo }, createdAt: Date.now() },
+				body: JSON.stringify({ id, name, quantityInfo, categoryOverride })
+			}).then(async r => {
+				if (!r.ok) throw new Error();
+				const created = await r.json() as Item;
+				items = items.map(item => item.id === id ? { ...item, ...created } : item);
+				void updateOfflineItem(id, created);
+			}),
+			{ type: 'create_item', payload: { id, listId: listId ?? '', name, quantityInfo, categoryOverride }, createdAt: Date.now() },
 			() => {
 				items = [...items, optimisticItem];
 				void cacheItemsData(items);
@@ -199,13 +221,13 @@
 		);
 	}
 
-	async function saveEditItem(name: string, quantityInfo: string, categoryOverride: string | null) {
+	async function saveEditItem(name: string, quantityInfo: string, categoryOverride: string | null, categoryPickerUsed: boolean) {
 		if (!editItem) return;
 		const id = editItem.id;
 		const clientUpdatedAt = editItem.updatedAt;
 		editItem = null;
 		addModalOpen = false;
-		await execute(
+		const itemUpdate = execute(
 			() => fetch(`/api/items/${id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -217,6 +239,13 @@
 				void updateOfflineItem(id, { name, quantityInfo: quantityInfo || null, categoryOverride, updatedAt: Math.floor(Date.now() / 1000) });
 			}
 		);
+		const preferenceAction = getCategoryPreferenceAction(categoryPickerUsed, categoryOverride);
+		const preferenceUpdate = data.user?.id && preferenceAction.type === 'set'
+			? setCategoryPreferenceOffline(data.user.id, name, preferenceAction.categoryOverride)
+			: data.user?.id && preferenceAction.type === 'delete'
+				? deleteCategoryPreferenceOffline(data.user.id, name)
+				: Promise.resolve();
+		await Promise.all([itemUpdate, preferenceUpdate]);
 	}
 
 	async function deleteItem(id: string) {

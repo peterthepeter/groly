@@ -5,7 +5,7 @@
 
 	let { item = null, onSave, onClose, onDelete = null, isFavorite = false, onToggleFavorite = null }: {
 		item?: { name: string; quantityInfo: string | null; categoryOverride?: string | null } | null;
-		onSave: (name: string, quantityInfo: string, categoryOverride: string | null) => void;
+		onSave: (name: string, quantityInfo: string, categoryOverride: string | null, categoryPickerUsed: boolean) => void;
 		onClose: () => void;
 		onDelete?: (() => void) | null;
 		isFavorite?: boolean;
@@ -22,6 +22,7 @@
 	let quantityInfo = $state(item?.quantityInfo ?? '');
 	// svelte-ignore state_referenced_locally
 	let categoryOverride = $state<string | null>(item?.categoryOverride ?? null);
+	let categoryPickerUsed = $state(false);
 	let categoryOpen = $state(false);
 
 	const lang = $derived(userSettings.lang === 'en' ? 'en' : 'de');
@@ -45,6 +46,7 @@
 
 	function selectCategory(key: string | null) {
 		categoryOverride = key;
+		categoryPickerUsed = true;
 		categoryOpen = false;
 	}
 </script>
@@ -214,7 +216,7 @@
 			{t.item_cancel}
 		</button>
 		<button
-			onclick={() => name.trim() && onSave(name.trim(), quantityInfo.trim(), categoryOverride)}
+			onclick={() => name.trim() && onSave(name.trim(), quantityInfo.trim(), categoryOverride, categoryPickerUsed)}
 			disabled={!name.trim()}
 			class="flex-1 py-3 rounded-full text-sm font-semibold disabled:opacity-40"
 			style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"

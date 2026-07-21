@@ -153,6 +153,16 @@ export const favorites = sqliteTable('favorites', {
 	createdAt: integer('created_at').notNull()
 }, (t) => [primaryKey({ columns: [t.userId, t.name] })]);
 
+export const categoryPreferences = sqliteTable('category_preferences', {
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	normalizedName: text('normalized_name').notNull(),
+	categoryOverride: text('category_override').notNull(),
+	updatedAt: integer('updated_at').notNull()
+}, (t) => [
+	primaryKey({ columns: [t.userId, t.normalizedName] }),
+	index('category_preferences_user_id_idx').on(t.userId)
+]);
+
 export const appMeta = sqliteTable('app_meta', {
 	key: text('key').primaryKey(),
 	value: text('value').notNull()
@@ -254,6 +264,7 @@ export type RecipeIngredientExclusion = typeof recipeIngredientExclusions.$infer
 export type ItemHistory = typeof itemHistory.$inferSelect;
 export type MealPlanEntry = typeof mealPlanEntries.$inferSelect;
 export type Favorite = typeof favorites.$inferSelect;
+export type CategoryPreference = typeof categoryPreferences.$inferSelect;
 export const supplementReminderSchedules = sqliteTable('supplement_reminder_schedules', {
 	id: text('id').primaryKey(),
 	supplementId: text('supplement_id').notNull().references(() => supplements.id, { onDelete: 'cascade' }),

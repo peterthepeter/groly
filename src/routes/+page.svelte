@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { on } from '$lib/sseStore.svelte';
 	import { goto } from '$app/navigation';
-	import { initSync, execute, cacheListsData, getOfflineLists, updateOfflineList, deleteOfflineList } from '$lib/sync/manager';
+	import { execute, cacheListsData, getOfflineLists, updateOfflineList, deleteOfflineList } from '$lib/sync/manager';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import ListCard from '$lib/components/ListCard.svelte';
@@ -352,7 +352,6 @@
 	onMount(() => {
 		loadCustomOrder();
 		loadLists();
-		initSync();
 		checkInstallBanner(); checkPushPrompt();
 
 		const handleBeforeInstall = (e: Event) => {

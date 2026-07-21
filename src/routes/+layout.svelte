@@ -13,6 +13,7 @@
 	import { browser } from '$app/environment';
 	import { userSettings, seedSettings } from '$lib/userSettings.svelte';
 	import { installApiFetchTimeout } from '$lib/apiTimeout';
+	import { initSync } from '$lib/sync/manager';
 
 	// Früh genug, dass es vor den ersten Seiten-Loadern greift (Layout-Script läuft
 	// vor dem Mounten der Seiten). Schützt alle Lese-Anfragen gegen tote Verbindungen
@@ -22,6 +23,10 @@
 	let whatsNewOpen = $state(false);
 
 	let { data, children } = $props();
+
+	$effect(() => {
+		if (browser) initSync(data.user?.id ?? null);
+	});
 
 	afterNavigate(() => {
 		checkForUpdate();

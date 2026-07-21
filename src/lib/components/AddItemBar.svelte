@@ -6,7 +6,7 @@
 	import BarcodeScanner from './BarcodeScanner.svelte';
 
 	let { onAdd, onClose, suggestions = [], autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null }: {
-		onAdd: (name: string, quantityInfo: string) => Promise<void>;
+		onAdd: (name: string, quantityInfo: string, favoriteCategoryOverride?: string | null) => Promise<void>;
 		onClose: () => void;
 		suggestions?: string[];
 		autoOpenScanner?: boolean;
@@ -69,9 +69,9 @@
 		if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 	}
 
-	async function handleFavAdd(fav: { name: string; quantityInfo: string | null }) {
+	async function handleFavAdd(fav: { name: string; quantityInfo: string | null; categoryOverride: string | null }) {
 		addedName = fav.name;
-		await onAdd(fav.name, fav.quantityInfo ?? '');
+		await onAdd(fav.name, fav.quantityInfo ?? '', fav.categoryOverride);
 		setTimeout(() => { if (addedName === fav.name) addedName = null; }, 1000);
 	}
 	onMount(() => {
