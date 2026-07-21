@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `settings_revision` integer DEFAULT 0 NOT NULL;

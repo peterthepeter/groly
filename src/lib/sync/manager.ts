@@ -1,8 +1,16 @@
 import { offlineDb } from './db';
-import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink, OfflineCategoryPreference, PendingMutation } from './db';
+import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink, OfflineCategoryPreference, OfflineUserSettings, PendingMutation } from './db';
 import { networkStore } from '$lib/stores/online.svelte';
 import { isValidCategoryKey } from '$lib/categories';
 import { normalizeCategoryPreferenceName, resolveCategoryOverrideForCreate } from '$lib/categoryPreferences';
+import type { UserSettings } from '$lib/userSettingsTypes';
+import {
+	applyUserSettingsPatch,
+	combineUserSettingsPatches,
+	sanitizeUserSettingsPatch,
+	userSettingsPatchMatches,
+	type UserSettingsPatch
+} from '$lib/userSettingsSync';
 
 let activeUserId: string | null = null;
 let syncInitialized = false;
@@ -66,12 +74,145 @@ async function addPendingMutation(mutation: Omit<PendingMutation, 'id'>): Promis
 	networkStore.setPending(await countActivePendingMutations());
 }
 
+type SettingsMutationPayload = {
+	settings: UserSettingsPatch;
+	settingsRevision: number;
+	generation: number;
+};
+
+type SettingsServerState = {
+	settings: UserSettings;
+	settingsRevision: number;
+};
+
+function readSettingsMutationPayload(mutation: PendingMutation): SettingsMutationPayload | null {
+	const settings = sanitizeUserSettingsPatch(mutation.payload.settings);
+	const settingsRevision = mutation.payload.settingsRevision;
+	const generation = mutation.payload.generation;
+	if (
+		!settings ||
+		!Number.isSafeInteger(settingsRevision) || (settingsRevision as number) < 0 ||
+		!Number.isSafeInteger(generation) || (generation as number) < 1
+	) return null;
+	return {
+		settings,
+		settingsRevision: settingsRevision as number,
+		generation: generation as number
+	};
+}
+
+function readSettingsServerState(value: unknown): SettingsServerState | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const body = value as Record<string, unknown>;
+	const settings = sanitizeUserSettingsPatch(body.settings);
+	if (!settings || !Number.isSafeInteger(body.settingsRevision) || (body.settingsRevision as number) < 0) return null;
+	return { settings: settings as UserSettings, settingsRevision: body.settingsRevision as number };
+}
+
+async function reconcileSettingsMutation(
+	mutationId: number,
+	userId: string,
+	sentGeneration: number,
+	serverState: SettingsServerState,
+	sentPatchApplied: boolean
+): Promise<boolean> {
+	let remainsPending = false;
+	await offlineDb.transaction('rw', offlineDb.pendingMutations, offlineDb.userSettings, async () => {
+		const latest = await offlineDb.pendingMutations.get(mutationId);
+		if (!latest) {
+			await offlineDb.userSettings.put({
+				userId,
+				settings: serverState.settings as Record<string, unknown>,
+				revision: serverState.settingsRevision,
+				updatedAt: Date.now()
+			});
+			return;
+		}
+		const latestPayload = readSettingsMutationPayload(latest);
+		if (!latestPayload) throw Object.assign(new Error('Invalid settings mutation'), { status: 400 });
+		if (latestPayload.generation === sentGeneration && sentPatchApplied) {
+			await offlineDb.pendingMutations.delete(mutationId);
+			await offlineDb.userSettings.put({
+				userId,
+				settings: serverState.settings as Record<string, unknown>,
+				revision: serverState.settingsRevision,
+				updatedAt: Date.now()
+			});
+			return;
+		}
+
+		remainsPending = true;
+		await offlineDb.pendingMutations.update(mutationId, {
+			payload: {
+				settings: latestPayload.settings,
+				settingsRevision: serverState.settingsRevision,
+				generation: latestPayload.generation
+			}
+		});
+		await offlineDb.userSettings.put({
+			userId,
+			settings: applyUserSettingsPatch(serverState.settings, latestPayload.settings) as Record<string, unknown>,
+			revision: serverState.settingsRevision,
+			updatedAt: Date.now()
+		});
+	});
+	return remainsPending;
+}
+
+async function syncPendingUserSettings(mutation: PendingMutation, userId: string): Promise<void> {
+	if (mutation.id === undefined) return;
+	for (let attempt = 0; attempt < 6; attempt++) {
+		if (activeUserId !== userId) return;
+		const latest = await offlineDb.pendingMutations.get(mutation.id);
+		if (!latest || latest.userId !== userId) return;
+		const payload = readSettingsMutationPayload(latest);
+		if (!payload) throw Object.assign(new Error('Invalid settings mutation'), { status: 400 });
+
+		const response = await fetchWithTimeout('/api/users/me', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ settings: payload.settings, settingsRevision: payload.settingsRevision })
+		});
+		let responseBody: unknown = null;
+		try { responseBody = await response.json(); } catch {}
+		const serverState = readSettingsServerState(responseBody);
+
+		if (response.status === 409 && serverState) {
+			const alreadyApplied = userSettingsPatchMatches(serverState.settings, payload.settings);
+			const remains = await reconcileSettingsMutation(
+				mutation.id,
+				userId,
+				payload.generation,
+				serverState,
+				alreadyApplied
+			);
+			if (!remains) return;
+			continue;
+		}
+		if (!response.ok) {
+			const err = new Error(`API error: ${response.status}`) as Error & { status: number };
+			err.status = response.status;
+			throw err;
+		}
+		if (!serverState) throw Object.assign(new Error('Invalid settings response'), { status: 502 });
+		const remains = await reconcileSettingsMutation(
+			mutation.id,
+			userId,
+			payload.generation,
+			serverState,
+			true
+		);
+		if (!remains) return;
+	}
+}
+
 async function runPendingMutations(userId: string) {
 	const pending = (await offlineDb.pendingMutations.orderBy('createdAt').toArray())
 		.filter(mutation => mutation.userId === undefined || mutation.userId === userId);
 	for (const mutation of pending) {
 		if (activeUserId !== userId) break;
 		try {
+			let mutationManagesItsOwnQueueEntry = false;
 			switch (mutation.type) {
 				case 'create_list':
 					await apiFetch('/api/lists', { method: 'POST', body: JSON.stringify(mutation.payload) });
@@ -112,19 +253,24 @@ async function runPendingMutations(userId: string) {
 				case 'delete_category_preference':
 					await apiFetch('/api/category-preferences', { method: 'DELETE', body: JSON.stringify(mutation.payload) });
 					break;
+				case 'update_user_settings':
+					mutationManagesItsOwnQueueEntry = true;
+					await syncPendingUserSettings(mutation, userId);
+					break;
 			}
-			await offlineDb.pendingMutations.delete(mutation.id!);
+			if (!mutationManagesItsOwnQueueEntry) await offlineDb.pendingMutations.delete(mutation.id!);
 		} catch (e: unknown) {
 			const status = (e as { status?: number })?.status;
 			const isCategoryPreferenceMutation = mutation.type === 'set_category_preference' || mutation.type === 'delete_category_preference';
+			const isSettingsMutation = mutation.type === 'update_user_settings';
 			if (status === 404 || status === 409 || status === 403 || (
-				status === 400 && isCategoryPreferenceMutation
+				status === 400 && (isCategoryPreferenceMutation || isSettingsMutation)
 			)) {
 				// Diese Endpunkte liefern selbst weder 403, 404 noch 409. Solche Antworten
 				// stammen daher typischerweise von einem kalten Proxy/WAF und dürfen eine
 				// persönliche Lernregel nicht vernichten. Nur echte 400-Validierungsfehler
 				// sind dauerhaft.
-				if (isCategoryPreferenceMutation && status !== 400) continue;
+				if ((isCategoryPreferenceMutation || isSettingsMutation) && status !== 400) continue;
 				// Permanenter Fehler – Mutation überspringen (Item gelöscht, Konflikt oder keine Berechtigung)
 				// Ausnahme: selbst geloggte Tracker-Einträge NIEMALS wegen 4xx verwerfen.
 				// Ein 403/404 ist hier fast immer ein transienter Front-/Proxy-Treffer
@@ -358,6 +504,131 @@ export async function refreshCategoryPreferences(userId: string): Promise<void> 
 			}
 		}
 	});
+}
+
+// ── Benutzereinstellungen: offline + revisionsgeschützt ──────────────────────
+
+async function getPendingSettingsMutations(userId: string): Promise<PendingMutation[]> {
+	return (await offlineDb.pendingMutations.where('type').equals('update_user_settings').toArray())
+		.filter(mutation => mutation.userId === userId)
+		.sort((a, b) => a.createdAt - b.createdAt);
+}
+
+export async function queueUserSettingsPatch(
+	userId: string,
+	patch: UserSettingsPatch,
+	effectiveSettings: UserSettings
+): Promise<void> {
+	await offlineDb.transaction('rw', offlineDb.pendingMutations, offlineDb.userSettings, async () => {
+		const existingMutations = await getPendingSettingsMutations(userId);
+		const primary = existingMutations[0];
+		const cached = await offlineDb.userSettings.get(userId);
+		let combined = patch;
+		let settingsRevision = cached?.revision ?? 0;
+		let generation = 1;
+
+		if (primary) {
+			const payload = readSettingsMutationPayload(primary);
+			if (payload) {
+				combined = combineUserSettingsPatches(payload.settings, patch);
+				settingsRevision = payload.settingsRevision;
+				generation = payload.generation + 1;
+			}
+		}
+
+		const payload: Record<string, unknown> = {
+			settings: combined,
+			settingsRevision,
+			generation
+		};
+		if (primary?.id !== undefined) {
+			await offlineDb.pendingMutations.update(primary.id, { payload, createdAt: Date.now() });
+			for (const duplicate of existingMutations.slice(1)) {
+				if (duplicate.id !== undefined) await offlineDb.pendingMutations.delete(duplicate.id);
+			}
+		} else {
+			await offlineDb.pendingMutations.add({
+				type: 'update_user_settings',
+				userId,
+				payload,
+				createdAt: Date.now()
+			});
+		}
+
+		await offlineDb.userSettings.put({
+			userId,
+			settings: effectiveSettings as Record<string, unknown>,
+			revision: settingsRevision,
+			updatedAt: Date.now()
+		});
+	});
+	if (activeUserId === userId) networkStore.setPending(await countActivePendingMutations());
+}
+
+export async function getOfflineUserSettings(userId: string): Promise<OfflineUserSettings | undefined> {
+	return offlineDb.userSettings.get(userId);
+}
+
+export async function refreshUserSettings(
+	userId: string,
+	serverSeed: SettingsServerState
+): Promise<OfflineUserSettings> {
+	const existing = await offlineDb.userSettings.get(userId);
+	const seedRevision = Number.isSafeInteger(serverSeed.settingsRevision) && serverSeed.settingsRevision >= 0
+		? serverSeed.settingsRevision
+		: 0;
+	const pendingBeforeSeed = await getPendingSettingsMutations(userId);
+	let seededSettings = serverSeed.settings;
+	for (const mutation of pendingBeforeSeed) {
+		const payload = readSettingsMutationPayload(mutation);
+		if (payload) seededSettings = applyUserSettingsPatch(seededSettings, payload.settings);
+	}
+	if (!existing || seedRevision >= existing.revision) {
+		await offlineDb.userSettings.put({
+			userId,
+			settings: seededSettings as Record<string, unknown>,
+			revision: seedRevision,
+			updatedAt: Date.now()
+		});
+	}
+
+	if (activeUserId === userId) await drainPendingMutations();
+	if (activeUserId !== userId) {
+		return (await offlineDb.userSettings.get(userId)) ?? {
+			userId,
+			settings: seededSettings as Record<string, unknown>,
+			revision: seedRevision,
+			updatedAt: Date.now()
+		};
+	}
+
+	try {
+		const response = await fetchWithTimeout('/api/users/me', { cache: 'no-store' });
+		if (!response.ok) throw new Error(`API error: ${response.status}`);
+		const serverState = readSettingsServerState(await response.json());
+		if (!serverState) throw new Error('Invalid settings response');
+		let effective = serverState.settings;
+		const pending = await getPendingSettingsMutations(userId);
+		for (const mutation of pending) {
+			const payload = readSettingsMutationPayload(mutation);
+			if (payload) effective = applyUserSettingsPatch(effective, payload.settings);
+		}
+		const row: OfflineUserSettings = {
+			userId,
+			settings: effective as Record<string, unknown>,
+			revision: serverState.settingsRevision,
+			updatedAt: Date.now()
+		};
+		await offlineDb.userSettings.put(row);
+		return row;
+	} catch {
+		return (await offlineDb.userSettings.get(userId)) ?? {
+			userId,
+			settings: seededSettings as Record<string, unknown>,
+			revision: seedRevision,
+			updatedAt: Date.now()
+		};
+	}
 }
 
 // ── Listen-Cache ───────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@
 	import { shortcuts, shortcutMenu } from '$lib/shortcuts.svelte';
 	import { LATEST_CHANGES } from '$lib/changelog';
 	import { browser } from '$app/environment';
-	import { userSettings, seedSettings } from '$lib/userSettings.svelte';
+	import { userSettings } from '$lib/userSettings.svelte';
 	import { installApiFetchTimeout } from '$lib/apiTimeout';
 	import { initSync } from '$lib/sync/manager';
 
@@ -25,7 +25,10 @@
 	let { data, children } = $props();
 
 	$effect(() => {
-		if (browser) initSync(data.user?.id ?? null);
+		if (!browser) return;
+		const userId = data.user?.id ?? null;
+		initSync(userId);
+		void initLanguage(userId, data.settings ?? {}, data.settingsRevision ?? 0);
 	});
 
 	afterNavigate(() => {
@@ -59,12 +62,6 @@
 	$effect(() => { applyColorScheme(userSettings.colorScheme); });
 
 	onMount(() => {
-		// Seed settings from SSR data only when localStorage has no cached settings (incognito / first visit).
-		if (!localStorage.getItem('groly_settings') && data.settings && Object.keys(data.settings as object).length > 0) {
-			seedSettings(data.settings);
-		}
-
-		initLanguage();
 		initUpdateDetection();
 		initResumeOrchestrator();
 

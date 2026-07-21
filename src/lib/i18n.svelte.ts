@@ -1,9 +1,20 @@
 import * as m from '$lib/paraglide/messages';
 import { setLanguageTag, type AvailableLanguageTag } from '$lib/paraglide/runtime';
 import { browser } from '$app/environment';
-import { userSettings, initUserSettings } from '$lib/userSettings.svelte';
+import { userSettings, initUserSettings, onUserSettingsApplied } from '$lib/userSettings.svelte';
+import type { UserSettings } from '$lib/userSettingsTypes';
 
 let _lang = $state<AvailableLanguageTag>('de');
+let initializedUserId: string | null | undefined;
+let initializationToken = 0;
+
+if (browser) {
+	onUserSettingsApplied((settings) => {
+		const lang = settings.lang ?? 'de';
+		setLanguageTag(lang);
+		_lang = lang;
+	});
+}
 
 export function currentLang(): AvailableLanguageTag {
 	return _lang;
@@ -15,15 +26,23 @@ export function setLang(lang: AvailableLanguageTag) {
 	userSettings.lang = lang;
 }
 
-export async function initLanguage() {
+export async function initLanguage(
+	userId: string | null,
+	serverSettings: UserSettings = {},
+	settingsRevision = 0
+) {
 	if (!browser) return;
-	// Load from server (falls back to localStorage cache if offline)
-	const serverSettings = await initUserSettings();
+	if (initializedUserId === userId) return;
+	initializedUserId = userId;
+	const token = ++initializationToken;
+	// Load the user-scoped offline cache first, then reconcile with the server.
+	const effectiveSettings = await initUserSettings(userId, serverSettings, settingsRevision);
+	if (token !== initializationToken) return;
 	const lang = userSettings.lang;
 	setLanguageTag(lang);
 	_lang = lang;
 	// If no explicit language preference was saved, detect from browser
-	if (!serverSettings?.lang) {
+	if (userId && !effectiveSettings?.lang) {
 		const browserLang = navigator.language.slice(0, 2);
 		setLang(browserLang === 'en' ? 'en' : 'de');
 	}

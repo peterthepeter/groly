@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.0-beta.4',
+		de: [
+			'Einstellungsänderungen werden offline gespeichert und später automatisch synchronisiert',
+			'Globale und listenbezogene Kategoriesortierungen bleiben bei Serverausfällen erhalten',
+			'Ein Versionsschutz verhindert das Überschreiben durch ältere Einstellungen'
+		],
+		en: [
+			'Setting changes are saved offline and synchronized automatically later',
+			'Global and per-list category sorting survives server outages',
+			'Version protection prevents older settings from overwriting newer changes'
+		]
+	},
+	{
 		version: '0.9.0-beta.3',
 		de: [
 			'Groly merkt sich manuelle Kategorieauswahlen persönlich für gleiche Artikelnamen',

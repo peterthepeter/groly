@@ -22,6 +22,7 @@
 import { consumePendingDeeplink } from '$lib/pendingDeeplink';
 import { findGeofenceMatch, resetLocationNavSession } from '$lib/locationNav';
 import { drainPendingMutations } from '$lib/sync/manager';
+import { refreshActiveUserSettings } from '$lib/userSettings.svelte';
 
 export function initResumeOrchestrator() {
 	if (typeof window === 'undefined') return;
@@ -83,7 +84,9 @@ export function initResumeOrchestrator() {
 			// Geofence-Treffer NICHT mehr drüberlegen.
 			if (matchId && Date.now() - lastDeeplinkAt > 2000) await navigateTo(`/listen/${matchId}`);
 		}
-		void drainPendingMutations();
+		// Settings use the same pending queue but additionally reconcile their server
+		// revision, so an older response can never replace a local pending change.
+		void refreshActiveUserSettings();
 	}
 
 	// ── Auslöser ────────────────────────────────────────────────────────────────

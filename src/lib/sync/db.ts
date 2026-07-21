@@ -39,7 +39,8 @@ interface PendingMutation {
 		| 'create_caffeine_log'
 		| 'create_meditation_log'
 		| 'set_category_preference'
-		| 'delete_category_preference';
+		| 'delete_category_preference'
+		| 'update_user_settings';
 	payload: Record<string, unknown>;
 	createdAt: number;
 }
@@ -48,6 +49,13 @@ interface OfflineCategoryPreference {
 	userId: string;
 	normalizedName: string;
 	categoryOverride: string;
+	updatedAt: number;
+}
+
+interface OfflineUserSettings {
+	userId: string;
+	settings: Record<string, unknown>;
+	revision: number;
 	updatedAt: number;
 }
 
@@ -141,6 +149,7 @@ class GrolydDb extends Dexie {
 	meditationLogs!: EntityTable<OfflineMeditationLog, 'id'>;
 	caffeineDrinks!: EntityTable<OfflineCaffeineDrink, 'id'>;
 	categoryPreferences!: Table<OfflineCategoryPreference, [string, string]>;
+	userSettings!: EntityTable<OfflineUserSettings, 'userId'>;
 
 	constructor() {
 		super('groly');
@@ -169,6 +178,9 @@ class GrolydDb extends Dexie {
 			pendingMutations: '++id, type, userId, createdAt',
 			categoryPreferences: '[userId+normalizedName], userId, updatedAt'
 		});
+		this.version(7).stores({
+			userSettings: 'userId, updatedAt'
+		});
 	}
 }
 
@@ -185,5 +197,6 @@ export type {
 	OfflineCaffeineLog,
 	OfflineMeditationLog,
 	OfflineCaffeineDrink,
-	OfflineCategoryPreference
+	OfflineCategoryPreference,
+	OfflineUserSettings
 };

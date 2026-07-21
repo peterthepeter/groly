@@ -6,7 +6,10 @@ import { eq } from 'drizzle-orm';
 export const load: LayoutServerLoad = async ({ locals }) => {
 	if (!locals.user) return { user: null, settings: null };
 
-	const fullUser = db.select({ settings: users.settings }).from(users).where(eq(users.id, locals.user.id)).get();
+	const fullUser = db.select({
+		settings: users.settings,
+		settingsRevision: users.settingsRevision
+	}).from(users).where(eq(users.id, locals.user.id)).get();
 	let settings = null;
 	try {
 		settings = fullUser?.settings ? JSON.parse(fullUser.settings) : {};
@@ -18,6 +21,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			username: locals.user.username,
 			role: locals.user.role
 		},
-		settings
+		settings,
+		settingsRevision: fullUser?.settingsRevision ?? 0
 	};
 };

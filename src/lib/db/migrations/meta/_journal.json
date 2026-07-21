@@ -323,6 +323,13 @@
       "when": 1784615310005,
       "tag": "0045_boring_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1784620587943,
+      "tag": "0046_striped_wolverine",
+      "breakpoints": true
     }
   ]
 }
