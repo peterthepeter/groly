@@ -2,53 +2,16 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
-		version: '0.9.0-beta.4',
+		version: '0.9.0',
 		de: [
-			'Einstellungsänderungen werden offline gespeichert und später automatisch synchronisiert',
-			'Globale und listenbezogene Kategoriesortierungen bleiben bei Serverausfällen erhalten',
-			'Ein Versionsschutz verhindert das Überschreiben durch ältere Einstellungen'
+			'Zuverlässigere automatische Artikelerkennung auf Deutsch und Englisch mit 20 neuen spezifischen Symbolen',
+			'Groly merkt sich persönliche Kategorie-Korrekturen und wendet sie bei gleichen Artikeln automatisch an',
+			'Kategorie-Lernen, Einstellungen und Sortierungen funktionieren offline und werden sicher synchronisiert'
 		],
 		en: [
-			'Setting changes are saved offline and synchronized automatically later',
-			'Global and per-list category sorting survives server outages',
-			'Version protection prevents older settings from overwriting newer changes'
-		]
-	},
-	{
-		version: '0.9.0-beta.3',
-		de: [
-			'Groly merkt sich manuelle Kategorieauswahlen persönlich für gleiche Artikelnamen',
-			'„Automatisch“ löscht die gelernte Zuordnung; Favoriten behalten Vorrang',
-			'Die Lernfunktion arbeitet auch offline und bleibt zwischen Benutzern getrennt'
-		],
-		en: [
-			'Groly personally remembers manual category choices for matching item names',
-			'“Automatic” removes the learned preference; favourites keep priority',
-			'Learning works offline and remains separated between users'
-		]
-	},
-	{
-		version: '0.9.0-beta.2',
-		de: [
-			'Neue Symbole für Milchprodukte, Getränkekartons, Saucen, Öle, Snacks, Müsli und Waschmittel',
-			'Verbesserte Artikelerkennung: Die Produktart hat Vorrang vor Geschmacks- und Zutatenangaben',
-			'Artikel können jetzt manuell „Alles andere“ zugeordnet werden'
-		],
-		en: [
-			'New icons for dairy products, drink cartons, sauces, oils, snacks, cereal and detergents',
-			'Improved item recognition: product types now take priority over flavours and ingredients',
-			'Items can now be assigned manually to “Everything else”'
-		]
-	},
-	{
-		version: '0.9.0-beta.1',
-		de: [
-			'Zuverlässigere automatische Artikelerkennung auf Deutsch und Englisch',
-			'13 neue Untergruppen-Icons mit sicherem Fallback auf die bisherigen Kategorie-Symbole'
-		],
-		en: [
-			'More reliable automatic item recognition in German and English',
-			'13 new subgroup icons with a safe fallback to the existing category icons'
+			'More reliable automatic item recognition in German and English with 20 new specific icons',
+			'Groly remembers personal category corrections and applies them automatically to matching items',
+			'Category learning, settings, and sorting work offline and synchronize safely'
 		]
 	},
 	{
