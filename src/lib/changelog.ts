@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.1',
+		de: [
+			'Gängige Obst- und Gemüsesorten sowie alkoholische Getränke werden jetzt mit passenden Symbolen angezeigt'
+		],
+		en: [
+			'Common fruit, vegetables, and alcoholic drinks now display matching icons'
+		]
+	},
+	{
 		version: '0.9.0',
 		de: [
 			'Zuverlässigere automatische Artikelerkennung auf Deutsch und Englisch mit 20 neuen spezifischen Symbolen',

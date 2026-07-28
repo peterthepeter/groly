@@ -1,10 +1,27 @@
 export const VISUAL_GROUPS = [
-	'fruit',
-	'vegetable',
+	'apple',
+	'banana',
+	'pear',
+	'orange',
+	'lemon',
+	'strawberry',
+	'grapes',
+	'carrot',
+	'tomato',
+	'bell-pepper',
+	'potato',
+	'cucumber',
+	'onion',
+	'broccoli',
+	'mushroom',
 	'fish',
 	'tea',
 	'coffee',
-	'alcohol',
+	'wine',
+	'beer',
+	'sparkling-wine',
+	'spirits',
+	'alcohol-neutral',
 	'egg',
 	'nuts',
 	'tube',
@@ -23,19 +40,36 @@ export const VISUAL_GROUPS = [
 
 export type VisualGroup = (typeof VISUAL_GROUPS)[number];
 
-// Verbindliche Auswahl aus den Freigabe-Boards für Groly 0.9.0:
-// A: Obst, Gemüse, Fisch, Tee, Kaffee, Alkohol, Ei, Nüsse, Glas/Aufstrich
+// Verbindliche Auswahl aus den Freigabe-Boards für Groly:
+// A: artikelspezifisches Obst/Gemüse, Alkohol, Fisch, Tee, Kaffee, Ei, Nüsse, Glas/Aufstrich
 // B: Tube, Reinigerspray, Papierwaren, flüssige Körperpflege
 // Erweiterung A: Milchprodukt-Becher, Milch-/Getränkekarton, Öl-/Essigflasche,
 // Snacktüte, Müslischale
 // Erweiterung B: Saucenflasche, Wasch-/Spülmittel
 export const VISUAL_GROUP_ICONS: Record<VisualGroup, string> = {
-	fruit: `<path d="M12 6.5V3a1 1 0 0 1 1-1"/><path d="M18.2 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.5A6 6 0 0 0 2 11a15 15 0 0 0 3.8 10 3 3 0 0 0 3.6.6 5.5 5.5 0 0 1 5.2 0 3 3 0 0 0 3.6-.6Z"/>`,
-	vegetable: `<path d="M2.3 21.7s9.8-3.5 12.7-6.4A4.5 4.5 0 0 0 8.6 9C5.8 11.8 2.3 21.7 2.3 21.7Z"/><path d="m8.6 14-2-2"/><path d="m12 15.8-2.2-2.2"/><path d="M15 9c1-3 3-5 6-5-1 3-3 5-6 5Z"/><path d="M15 9c-2-2-2-5-1-7 2 2 3 4 1 7Z"/>`,
+	apple: `<path d="M12 6.5V3a1 1 0 0 1 1-1"/><path d="M18.2 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.5A6 6 0 0 0 2 11a15 15 0 0 0 3.8 10 3 3 0 0 0 3.6.6 5.5 5.5 0 0 1 5.2 0 3 3 0 0 0 3.6-.6Z"/>`,
+	banana: `<path d="M4 6c2 8 7 12 15 12-1.6 2.2-4.5 3-7.8 1.6C7.2 17.9 4.4 13.8 4 6Z"/><path d="M4 6 3 4M18.5 18l1.5-1"/><path d="M7.2 8.5c1.1 4 4.3 6.8 8.6 7.6"/>`,
+	pear: `<path d="M13 7c0-2 1-3 2-4"/><path d="M13.5 5c2-1.2 4-1 5 .5-1.8 1-3.5 1-5-.5Z"/><path d="M12 6c-2.5 0-3 3-3.6 4.4C7.5 12.5 5 14 5 17a7 7 0 0 0 14 0c0-3-2.5-4.5-3.4-6.6C15 9 14.5 6 12 6Z"/>`,
+	orange: `<circle cx="12" cy="13" r="8"/><path d="M12 5c.2-2 1.2-3.2 3-4"/><path d="M13.5 4c2-1.4 4.3-1 5.5.8-2.1.9-4 .7-5.5-.8Z"/><circle cx="9" cy="10" r=".5"/><circle cx="15" cy="14" r=".5"/>`,
+	lemon: `<path d="M4 16a9 9 0 0 1 16 0H4Z"/><path d="M12 7v9M7.2 10.2 12 16M16.8 10.2 12 16"/><path d="M3 18h18"/>`,
+	strawberry: `<path d="M4.5 9C5 6.2 8.5 5.5 12 7c3.5-1.5 7-.8 7.5 2-1 6.5-4.2 11-7.5 13-3.3-2-6.5-6.5-7.5-13Z"/><path d="M7 6c2-.4 3.7 0 5 1 1.3-1 3-1.4 5-1"/><path d="m8.5 11 .01 0M15.5 11h.01M12 14.5h.01M9.5 17h.01M14.5 17h.01"/>`,
+	grapes: `<path d="M13 6c0-2 1-3 3-4"/><path d="M14 5c2-2 4.5-1.5 6 .5-2.5 1.2-4.5 1-6-.5Z"/><circle cx="10" cy="8" r="2.5"/><circle cx="14" cy="9" r="2.5"/><circle cx="8" cy="12" r="2.5"/><circle cx="12" cy="13" r="2.5"/><circle cx="16" cy="13" r="2.5"/><circle cx="10" cy="17" r="2.5"/><circle cx="14" cy="17" r="2.5"/><circle cx="12" cy="20" r="2"/>`,
+	carrot: `<path d="M2.3 21.7s9.8-3.5 12.7-6.4A4.5 4.5 0 0 0 8.6 9C5.8 11.8 2.3 21.7 2.3 21.7Z"/><path d="m8.6 14-2-2"/><path d="m12 15.8-2.2-2.2"/><path d="M15 9c1-3 3-5 6-5-1 3-3 5-6 5Z"/><path d="M15 9c-2-2-2-5-1-7 2 2 3 4 1 7Z"/>`,
+	tomato: `<path d="M12 7c5 0 9 3 9 7.2S17 21 12 21s-9-2.6-9-6.8S7 7 12 7Z"/><path d="m12 8-2.2-4L12 5l2-3 .5 3.5L18 5l-2 3"/><path d="M12 8c-2 1-3 2.5-3 4M12 8c2 1 3 2.5 3 4"/>`,
+	'bell-pepper': `<path d="M11 6c-.5-2 0-3.5 2-4"/><path d="M7 7c-3 1.8-4 5.5-2.2 10.5.8 2.4 2.4 3.5 4.2 3 1.2-.3 2.1-1.2 3-2.5.9 1.3 1.8 2.2 3 2.5 1.8.5 3.4-.6 4.2-3C21 12.5 20 8.8 17 7c-3-1.8-7-1.8-10 0Z"/><path d="M12 7c-1.5 3-1.5 7 0 11M8 9c-.5 3 0 6 1.5 8M16 9c.5 3 0 6-1.5 8"/>`,
+	potato: `<path d="M4 13C4.5 7.5 8 4 13 4c4.5 0 7.5 3.5 7 8.5-.5 5.5-4.5 8-9.5 7.5C6 19.5 3.5 17 4 13Z"/><path d="m9 9 .01 0M15 8l.01 0M8 15l.01 0M14 14l.01 0M17 17l.01 0"/>`,
+	cucumber: `<path d="M5 18C2 15 3 11.5 6 8.5l4.5-4.3c3-2.8 6.7-2.4 8.8.2 2.2 2.7 1.8 6.2-1 9l-4.5 4.3C10.8 20.5 7 20.5 5 18Z"/><path d="m8 15 .01 0M11 12l.01 0M14 9l.01 0M16 13l.01 0M10 17l.01 0"/>`,
+	onion: `<path d="M12 3c0 4-7 6-7 12a7 7 0 0 0 14 0c0-6-7-8-7-12Z"/><path d="M12 7c-2 4-3 6-3 9a5 5 0 0 0 3 4.5M12 7c2 4 3 6 3 9a5 5 0 0 1-3 4.5M8 22l4-1 4 1"/>`,
+	broccoli: `<path d="M10 21h5l-1-8h-3l-1 8Z"/><circle cx="7" cy="10" r="4"/><circle cx="12" cy="7" r="5"/><circle cx="17" cy="10" r="4"/><path d="M8 13h8M12 12v9"/>`,
+	mushroom: `<path d="M4 12a8 8 0 0 1 16 0H4Z"/><path d="M9 12v6a3 3 0 0 0 6 0v-6"/><path d="M7 12c1.5-1 3.2-1.5 5-1.5s3.5.5 5 1.5"/>`,
 	fish: `<path d="M6.5 12c2-4 5.5-6 9-6 3 0 5 2 6.5 6-1.5 4-3.5 6-6.5 6-3.5 0-7-2-9-6Z"/><path d="M6.5 9C5 7 3 6 1.5 6c0 2 1 4 2.5 6-1.5 2-2.5 4-2.5 6 1.5 0 3.5-1 5-3"/><circle cx="18" cy="11" r=".7" fill="currentColor" stroke="none"/>`,
 	tea: `<path d="M4 9h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Z"/><path d="M17 11h1.5a3 3 0 0 1 0 6H17"/><path d="M9 3c-1 1-1 2 0 3"/><path d="M13 2c-1 1.5-1 3 0 4"/><path d="M7 9v4"/><path d="M6 13h2"/>`,
 	coffee: `<path d="M4 9h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Z"/><path d="M17 11h1.5a3 3 0 0 1 0 6H17"/><path d="M8 3c-1 1-1 2 0 3"/><path d="M12 2c-1 1.5-1 3 0 4"/><path d="M16 3c-1 1-1 2 0 3"/>`,
-	alcohol: `<path d="M6 3h12l-1 7a5 5 0 0 1-10 0L6 3Z"/><path d="M7 8h10"/><path d="M12 15v6"/><path d="M8 21h8"/>`,
+	wine: `<path d="M6 3h12l-1 7a5 5 0 0 1-10 0L6 3Z"/><path d="M7 8h10"/><path d="M12 15v6"/><path d="M8 21h8"/>`,
+	beer: `<path d="M5 7h11v13H7a2 2 0 0 1-2-2V7Z"/><path d="M16 10h2a3 3 0 0 1 0 6h-2"/><path d="M5 7c0-2 1.5-3 3-2 1-2 3.5-2 4.5 0 2-1 3.5 0 3.5 2"/><path d="M9 10v7M12 10v7"/>`,
+	'sparkling-wine': `<path d="M7 3h10l-1.5 8a3.6 3.6 0 0 1-7 0L7 3Z"/><path d="M8 8h8M12 15v6M8 21h8"/><circle cx="11" cy="10" r=".5"/><circle cx="14" cy="6" r=".5"/>`,
+	spirits: `<path d="M7 3h5v4l2 3v11H5V10l2-3V3Z"/><path d="M7 6h5M5 13h9"/><path d="M16 13h5l-.7 8h-3.6l-.7-8Z"/><path d="M16.4 17h4.2"/>`,
+	'alcohol-neutral': `<path d="M6 3h5v4l2 3v11H4V10l2-3V3Z"/><path d="M6 6h5M4 13h9"/><path d="M15 9h6l-.7 5a2.3 2.3 0 0 1-4.6 0L15 9Z"/><path d="M18 16.5V21M15.5 21h5"/>`,
 	egg: `<path d="M12 22c6 0 8-4 7-9C18 7 15 2 12 2S6 7 5 13c-1 5 1 9 7 9Z"/>`,
 	nuts: `<path d="M12 3.5C9.4 3.5 8 5.4 8 7c0 1 .5 1.8 1 2.4-.9.8-1.6 2-1.6 3.6 0 2.5 2 4.5 4.6 4.5s4.6-2 4.6-4.5c0-1.6-.7-2.8-1.6-3.6.5-.6 1-1.4 1-2.4 0-1.6-1.4-3.5-4-3.5Z"/><path d="M9.2 7.2h5.6"/><path d="M8.7 12.2h6.6"/><path d="M9.3 14.9h5.4"/>`,
 	tube: `<path d="m8 3 10 4-5 12-10-4L8 3Z"/><path d="m3 15 10 4-1 3-10-4 1-3Z"/><path d="m9 8 5 2"/><path d="m8 11 4 1.5"/>`,

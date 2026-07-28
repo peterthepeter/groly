@@ -108,10 +108,31 @@ const CONCEPT_RULES: ConceptRule[] = [
 		compoundSuffixes: ['kaffee']
 	},
 	{
-		id: 'alcohol', categoryKey: 'getraenke', visualGroup: 'alcohol',
-		phrases: ['hard cider', 'sparkling wine', 'red wine', 'white wine', 'rose wine', 'eierlikoer', 'gluehwein', 'rotwein', 'weisswein', 'apfelwein', 'weinschorle'],
-		headwords: ['bier', 'beer', 'wein', 'wine', 'sekt', 'prosecco', 'champagner', 'champagne', 'schnaps', 'whisky', 'whiskey', 'rum', 'vodka', 'gin', 'cocktail', 'likoer', 'cider', 'radler'],
-		compoundSuffixes: ['bier', 'sekt', 'schnaps', 'likoer']
+		id: 'sparkling-wine', categoryKey: 'getraenke', visualGroup: 'sparkling-wine',
+		phrases: ['sparkling wine'],
+		headwords: ['sekt', 'prosecco', 'champagner', 'champagne'],
+		compoundSuffixes: ['sekt']
+	},
+	{
+		id: 'wine', categoryKey: 'getraenke', visualGroup: 'wine',
+		phrases: ['red wine', 'white wine', 'rose wine', 'gluehwein', 'rotwein', 'weisswein', 'apfelwein', 'weinschorle'],
+		headwords: ['wein', 'wine']
+	},
+	{
+		id: 'beer', categoryKey: 'getraenke', visualGroup: 'beer',
+		headwords: ['bier', 'beer', 'radler'],
+		compoundSuffixes: ['bier']
+	},
+	{
+		id: 'spirits', categoryKey: 'getraenke', visualGroup: 'spirits',
+		phrases: ['eierlikoer'],
+		headwords: ['schnaps', 'whisky', 'whiskey', 'rum', 'vodka', 'gin', 'likoer'],
+		compoundSuffixes: ['schnaps', 'likoer']
+	},
+	{
+		id: 'alcohol', categoryKey: 'getraenke', visualGroup: 'alcohol-neutral',
+		phrases: ['hard cider'],
+		headwords: ['alkohol', 'alcohol', 'cocktail', 'cider']
 	},
 	{
 		id: 'egg', categoryKey: 'milch', visualGroup: 'egg', modifier: true,
@@ -257,16 +278,85 @@ const CONCEPT_RULES: ConceptRule[] = [
 		compoundSuffixes: ['spuelmittel', 'waschmittel', 'muellbeutel', 'folie', 'papier']
 	},
 	{
-		id: 'fruit', categoryKey: 'obst', visualGroup: 'fruit', modifier: true,
-		phrases: ['passion fruit', 'dragon fruit'],
-		headwords: ['apfel', 'aepfel', 'apple', 'apples', 'birne', 'birnen', 'pear', 'pears', 'banane', 'bananen', 'banana', 'bananas', 'beere', 'beeren', 'berry', 'berries', 'erdbeere', 'erdbeeren', 'strawberry', 'strawberries', 'heidelbeere', 'blueberry', 'blueberries', 'himbeere', 'raspberry', 'raspberries', 'orange', 'orangen', 'mandarine', 'mandarin', 'kiwi', 'mango', 'ananas', 'pineapple', 'trauben', 'grapes', 'zitrone', 'lemon', 'lemons', 'pflaume', 'plum', 'plums', 'kirsche', 'cherry', 'cherries', 'pfirsich', 'peach', 'peaches', 'nektarine', 'nectarine', 'melone', 'melon', 'wassermelone', 'watermelon', 'granatapfel', 'pomegranate', 'papaya', 'lime', 'limes', 'grapefruit'],
-		compoundSuffixes: ['apfel', 'birne', 'banane', 'beere', 'orange', 'zitrone', 'pflaume', 'kirsche', 'melone']
+		id: 'apple', categoryKey: 'obst', visualGroup: 'apple', modifier: true,
+		headwords: ['apfel', 'aepfel', 'apple', 'apples'],
+		compoundSuffixes: ['apfel']
 	},
 	{
-		id: 'vegetable', categoryKey: 'obst', visualGroup: 'vegetable', modifier: true,
+		id: 'banana', categoryKey: 'obst', visualGroup: 'banana', modifier: true,
+		headwords: ['banane', 'bananen', 'banana', 'bananas'],
+		compoundSuffixes: ['banane']
+	},
+	{
+		id: 'pear', categoryKey: 'obst', visualGroup: 'pear', modifier: true,
+		headwords: ['birne', 'birnen', 'pear', 'pears'],
+		compoundSuffixes: ['birne']
+	},
+	{
+		id: 'orange', categoryKey: 'obst', visualGroup: 'orange', modifier: true,
+		headwords: ['orange', 'orangen']
+	},
+	{
+		id: 'lemon', categoryKey: 'obst', visualGroup: 'lemon', modifier: true,
+		headwords: ['zitrone', 'zitronen', 'lemon', 'lemons'],
+		compoundSuffixes: ['zitrone']
+	},
+	{
+		id: 'strawberry', categoryKey: 'obst', visualGroup: 'strawberry', modifier: true,
+		headwords: ['erdbeere', 'erdbeeren', 'strawberry', 'strawberries']
+	},
+	{
+		id: 'grapes', categoryKey: 'obst', visualGroup: 'grapes', modifier: true,
+		headwords: ['traube', 'trauben', 'weintraube', 'weintrauben', 'grape', 'grapes']
+	},
+	{
+		id: 'fruit', categoryKey: 'obst', modifier: true,
+		phrases: ['passion fruit', 'dragon fruit'],
+		headwords: ['beere', 'beeren', 'berry', 'berries', 'heidelbeere', 'blueberry', 'blueberries', 'himbeere', 'raspberry', 'raspberries', 'mandarine', 'mandarin', 'kiwi', 'mango', 'ananas', 'pineapple', 'pflaume', 'plum', 'plums', 'kirsche', 'cherry', 'cherries', 'pfirsich', 'peach', 'peaches', 'nektarine', 'nectarine', 'melone', 'melon', 'wassermelone', 'watermelon', 'granatapfel', 'pomegranate', 'papaya', 'lime', 'limes', 'grapefruit'],
+		compoundSuffixes: ['beere', 'pflaume', 'kirsche', 'melone']
+	},
+	{
+		id: 'carrot', categoryKey: 'obst', visualGroup: 'carrot', modifier: true,
+		headwords: ['karotte', 'karotten', 'carrot', 'carrots', 'moehre', 'moehren']
+	},
+	{
+		id: 'tomato', categoryKey: 'obst', visualGroup: 'tomato', modifier: true,
+		headwords: ['tomate', 'tomaten', 'tomato', 'tomatoes'],
+		compoundSuffixes: ['tomate']
+	},
+	{
+		id: 'bell-pepper', categoryKey: 'obst', visualGroup: 'bell-pepper', modifier: true,
 		phrases: ['bell pepper'],
-		headwords: ['tomate', 'tomaten', 'tomato', 'tomatoes', 'salat', 'lettuce', 'karotte', 'karotten', 'carrot', 'carrots', 'gemuese', 'vegetable', 'vegetables', 'zwiebel', 'onion', 'onions', 'knoblauch', 'garlic', 'gurke', 'gurken', 'cucumber', 'cucumbers', 'paprika', 'kartoffel', 'kartoffeln', 'potato', 'potatoes', 'brokkoli', 'broccoli', 'spinat', 'spinach', 'moehre', 'moehren', 'sellerie', 'celery', 'lauch', 'leek', 'zucchini', 'courgette', 'avocado', 'pilze', 'mushroom', 'mushrooms', 'champignon', 'kohlrabi', 'blumenkohl', 'cauliflower', 'rotkohl', 'cabbage', 'rucola', 'arugula', 'rocket', 'radieschen', 'radish', 'rettich', 'mais', 'corn', 'spargel', 'asparagus', 'aubergine', 'eggplant', 'fennel', 'artischocke', 'artichoke', 'suesskartoffel', 'pastinake', 'turnip', 'bok choy', 'pak choi'],
-		compoundSuffixes: ['tomate', 'kartoffel', 'gurke', 'zwiebel', 'salat', 'kohl']
+		headwords: ['paprika', 'paprikaschote', 'capsicum']
+	},
+	{
+		id: 'potato', categoryKey: 'obst', visualGroup: 'potato', modifier: true,
+		phrases: ['sweet potato', 'sweet potatoes'],
+		headwords: ['kartoffel', 'kartoffeln', 'suesskartoffel', 'potato', 'potatoes', 'erdapfel', 'erdaepfel'],
+		compoundSuffixes: ['kartoffel']
+	},
+	{
+		id: 'cucumber', categoryKey: 'obst', visualGroup: 'cucumber', modifier: true,
+		headwords: ['gurke', 'gurken', 'cucumber', 'cucumbers'],
+		compoundSuffixes: ['gurke']
+	},
+	{
+		id: 'onion', categoryKey: 'obst', visualGroup: 'onion', modifier: true,
+		headwords: ['zwiebel', 'zwiebeln', 'onion', 'onions'],
+		compoundSuffixes: ['zwiebel']
+	},
+	{
+		id: 'broccoli', categoryKey: 'obst', visualGroup: 'broccoli', modifier: true,
+		headwords: ['brokkoli', 'broccoli']
+	},
+	{
+		id: 'mushroom', categoryKey: 'obst', visualGroup: 'mushroom', modifier: true,
+		headwords: ['pilz', 'pilze', 'mushroom', 'mushrooms', 'champignon', 'champignons']
+	},
+	{
+		id: 'vegetable', categoryKey: 'obst', modifier: true,
+		headwords: ['salat', 'lettuce', 'gemuese', 'vegetable', 'vegetables', 'knoblauch', 'garlic', 'spinat', 'spinach', 'sellerie', 'celery', 'lauch', 'leek', 'zucchini', 'courgette', 'avocado', 'kohlrabi', 'blumenkohl', 'cauliflower', 'rotkohl', 'cabbage', 'rucola', 'arugula', 'rocket', 'radieschen', 'radish', 'rettich', 'mais', 'corn', 'spargel', 'asparagus', 'aubergine', 'eggplant', 'fennel', 'artischocke', 'artichoke', 'pastinake', 'turnip', 'bok choy', 'pak choi'],
+		compoundSuffixes: ['salat', 'kohl']
 	},
 	{
 		id: 'fresh-herb', categoryKey: 'obst', modifier: true,

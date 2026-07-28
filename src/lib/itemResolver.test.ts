@@ -19,7 +19,7 @@ const REQUIRED_CASES: GoldenCase[] = [
 	['Tomatenmark', 'konserven', 'tube'],
 	['Zahnpasta', 'koerperpflege', 'tube'],
 	['Apfelsaft', 'getraenke'],
-	['Saftapfel', 'obst', 'fruit'],
+	['Saftapfel', 'obst', 'apple'],
 	['Milchkaffee', 'getraenke', 'coffee'],
 	['Kaffeemilch', 'milch', 'milk-container'],
 	['Erdbeer-Joghurt', 'milch', 'dairy-cup'],
@@ -47,14 +47,31 @@ const REQUIRED_CASES: GoldenCase[] = [
 	['Toilettenpapier', 'haushalt', 'paper-goods'],
 	['Shampoo', 'koerperpflege', 'liquid-care'],
 	['Duschgel', 'koerperpflege', 'liquid-care'],
-	['Apfel', 'obst', 'fruit'],
-	['Birne', 'obst', 'fruit'],
-	['Banane', 'obst', 'fruit'],
-	['Tomate', 'obst', 'vegetable'],
-	['Karotte', 'obst', 'vegetable'],
-	['Brokkoli', 'obst', 'vegetable'],
+	['Apfel', 'obst', 'apple'],
+	['Banane', 'obst', 'banana'],
+	['Birne', 'obst', 'pear'],
+	['Orange', 'obst', 'orange'],
+	['Zitrone', 'obst', 'lemon'],
+	['Erdbeere', 'obst', 'strawberry'],
+	['Trauben', 'obst', 'grapes'],
+	['Mango', 'obst'],
+	['Karotte', 'obst', 'carrot'],
+	['Tomate', 'obst', 'tomato'],
+	['Paprika', 'obst', 'bell-pepper'],
+	['Kartoffel', 'obst', 'potato'],
+	['Süßkartoffel', 'obst', 'potato'],
+	['Gurke', 'obst', 'cucumber'],
+	['Zwiebel', 'obst', 'onion'],
+	['Brokkoli', 'obst', 'broccoli'],
+	['Pilz', 'obst', 'mushroom'],
+	['Salat', 'obst'],
 	['Salbei', 'obst'],
 	['Fresh Sage', 'obst'],
+	['Bier', 'getraenke', 'beer'],
+	['Wein', 'getraenke', 'wine'],
+	['Sekt', 'getraenke', 'sparkling-wine'],
+	['Whisky', 'getraenke', 'spirits'],
+	['Cocktail', 'getraenke', 'alcohol-neutral'],
 	['Quark', 'milch', 'dairy-cup'],
 	['Magerquark', 'milch', 'dairy-cup'],
 	['Skyr Erdbeere', 'milch', 'dairy-cup'],
@@ -185,18 +202,35 @@ describe('item resolver', () => {
 });
 
 describe('subgroup icons', () => {
-	it('contains exactly the 20 approved visual groups', () => {
-		expect(VISUAL_GROUPS).toHaveLength(20);
+	it('contains exactly the 37 approved visual groups', () => {
+		expect(VISUAL_GROUPS).toHaveLength(37);
 		expect(Object.keys(VISUAL_GROUP_ICONS).sort()).toEqual([...VISUAL_GROUPS].sort());
 	});
 
 	it.each([
-		['Apfel', 'fruit'],
-		['Karotte', 'vegetable'],
+		['Apfel', 'apple'],
+		['Banane', 'banana'],
+		['Birne', 'pear'],
+		['Orange', 'orange'],
+		['Zitrone', 'lemon'],
+		['Erdbeere', 'strawberry'],
+		['Trauben', 'grapes'],
+		['Karotte', 'carrot'],
+		['Tomate', 'tomato'],
+		['Paprika', 'bell-pepper'],
+		['Kartoffel', 'potato'],
+		['Gurke', 'cucumber'],
+		['Zwiebel', 'onion'],
+		['Brokkoli', 'broccoli'],
+		['Pilz', 'mushroom'],
 		['Lachs', 'fish'],
 		['Tee', 'tea'],
 		['Espresso', 'coffee'],
-		['Wein', 'alcohol'],
+		['Wein', 'wine'],
+		['Bier', 'beer'],
+		['Sekt', 'sparkling-wine'],
+		['Whisky', 'spirits'],
+		['Cocktail', 'alcohol-neutral'],
 		['Ei', 'egg'],
 		['Mandeln', 'nuts'],
 		['Zahnpasta', 'tube'],
@@ -229,7 +263,15 @@ describe('subgroup icons', () => {
 		expect(resolveItem('Thunfischdose')).toMatchObject({ categoryKey: 'konserven' });
 		expect(resolveItem('Thunfischdose').visualGroup).toBeUndefined();
 		expect(getCategoryForItem('Thunfischdose').svgContent).toBe(getCategoryByKey('konserven').svgContent);
+		expect(getCategoryForItem('Mango').svgContent).toBe(getCategoryByKey('obst').svgContent);
+		expect(getCategoryForItem('Salat').svgContent).toBe(getCategoryByKey('obst').svgContent);
 		expect(getCategoryForItem('Salbei').svgContent).toBe(getCategoryByKey('obst').svgContent);
 		expect(getCategoryForItem('Unbekannter Spezialartikel')).toEqual(getCategoryByKey('default'));
+	});
+
+	it('never uses another produce item as a generic group symbol', () => {
+		expect(getCategoryForItem('Banane').svgContent).not.toBe(getCategoryForItem('Apfel').svgContent);
+		expect(getCategoryForItem('Paprika').svgContent).not.toBe(getCategoryForItem('Karotte').svgContent);
+		expect(getCategoryForItem('Mango').svgContent).toBe(getCategoryByKey('obst').svgContent);
 	});
 });
