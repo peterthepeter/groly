@@ -2,7 +2,7 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
-		version: '0.9.2-beta.1',
+		version: '0.9.2',
 		de: [
 			'Artikel können direkt nacheinander hinzugefügt werden, ohne das Eingabefeld erneut anzutippen',
 			'Neue Artikel erscheinen wieder zuverlässig in den Vorschlägen'
