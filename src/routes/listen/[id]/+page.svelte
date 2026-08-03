@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { flushSync, onMount, onDestroy, tick } from 'svelte';
 	import { on } from '$lib/sseStore.svelte';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -14,6 +14,8 @@
 	import {
 		execute,
 		generateClientId,
+		queueItemCreate,
+		getPendingCreateItems,
 		cacheItemsData,
 		getOfflineItems,
 		getOfflineListName,
@@ -115,6 +117,15 @@
 			: list_items_open(openCount)
 	);
 
+	function openAddInput() {
+		editItem = null;
+		autoScannerOnOpen = false;
+		autoFavoritesOnOpen = false;
+		// Mount and focus the real input while the iOS touch gesture is still active.
+		flushSync(() => { addModalOpen = true; });
+		document.querySelector<HTMLInputElement>('[data-add-item-name]')?.focus({ preventScroll: true });
+	}
+
 	async function loadItems() {
 		const targetListId = listId ?? '';
 		const requestVersion = ++itemsLoadVersion;
@@ -148,7 +159,18 @@
 			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
 			listName = listData.name;
 			userPermission = listData.userPermission ?? 'write';
-			const newItems: Item[] = await itemsRes.json();
+			const serverItems: Item[] = await itemsRes.json();
+			const pendingItems = data.user?.id
+				? await getPendingCreateItems(data.user.id, targetListId)
+				: [];
+			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
+			const serverIds = new Set(serverItems.map((item) => item.id));
+			const newItems: Item[] = [
+				...serverItems,
+				...pendingItems
+					.filter((item) => !serverIds.has(item.id))
+					.map((item) => ({ ...item, createdByUsername: data.user?.username ?? null }))
+			];
 			if (suggestRes.ok) suggestions = await suggestRes.json();
 			if (favsRes.ok) favorites = await favsRes.json();
 			// Cache als plain objects (vor State-Zuweisung)
@@ -188,37 +210,45 @@
 	}
 
 	async function addItem(name: string, quantityInfo: string, favoriteCategoryOverride?: string | null) {
+		const targetListId = listId ?? '';
 		const id = generateClientId();
 		const categoryOverride = data.user?.id
 			? await getCategoryOverrideForCreate(data.user.id, name, favoriteCategoryOverride)
 			: null;
 		const optimisticItem: Item = {
-			id, listId: listId ?? '', name: name.trim(),
+			id, listId: targetListId, name: name.trim(),
 			quantityInfo: quantityInfo.trim() || null,
 			isChecked: false, checkedAt: null, categoryOverride,
 			createdByUsername: data.user?.username ?? null,
 			updatedAt: Math.floor(Date.now() / 1000)
 		};
-		await execute(
-			() => fetch(`/api/lists/${listId}/items`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ id, name, quantityInfo, categoryOverride })
-			}).then(async r => {
-				if (!r.ok) throw new Error();
-				const created = await r.json() as Item;
-				items = items.map(item => item.id === id ? { ...item, ...created } : item);
-				void updateOfflineItem(id, created);
-			}),
-			{ type: 'create_item', payload: { id, listId: listId ?? '', name, quantityInfo, categoryOverride }, createdAt: Date.now() },
-			() => {
-				items = [...items, optimisticItem];
-				void cacheItemsData(items);
-				if (!suggestions.includes(name)) {
-					suggestions = [name, ...suggestions].slice(0, 30);
-				}
-			}
-		);
+		if (!data.user?.id) return;
+		await queueItemCreate(data.user.id, optimisticItem, {
+			id,
+			listId: targetListId,
+			name: optimisticItem.name,
+			quantityInfo: quantityInfo.trim(),
+			categoryOverride
+		});
+		if (targetListId !== (listId ?? '')) return;
+		if (!items.some((item) => item.id === id)) items = [...items, optimisticItem];
+		if (!suggestions.some((suggestion) => suggestion.toLowerCase() === optimisticItem.name.toLowerCase())) {
+			suggestions = [optimisticItem.name, ...suggestions].slice(0, 30);
+		}
+	}
+
+	async function searchItemSuggestions(query: string, signal: AbortSignal): Promise<string[]> {
+		try {
+			const response = await fetch(`/api/suggestions?q=${encodeURIComponent(query)}`, {
+				cache: 'no-store',
+				signal
+			});
+			if (!response.ok) return [];
+			return await response.json() as string[];
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') return [];
+			return [];
+		}
 	}
 
 	async function saveEditItem(name: string, quantityInfo: string, categoryOverride: string | null, categoryPickerUsed: boolean) {
@@ -648,7 +678,7 @@
 	{#if !addModalOpen && userPermission !== 'read'}
 		<AppBottomNav
 			activeTab="lists"
-			onFabTap={() => { editItem = null; autoFavoritesOnOpen = false; addModalOpen = true; }}
+			onFabTap={openAddInput}
 			fabLabel={t.add}
 			onFavorites={() => { editItem = null; autoFavoritesOnOpen = true; addModalOpen = true; }}
 		/>
@@ -667,6 +697,7 @@
 		autoOpenFavorites={autoFavoritesOnOpen}
 		{favorites}
 		{activeItemNames}
+		onSearchSuggestions={searchItemSuggestions}
 		onRemoveFavorite={(name) => toggleFavorite(name, false)}
 		onAddFavorite={addFavorite}
 	/>

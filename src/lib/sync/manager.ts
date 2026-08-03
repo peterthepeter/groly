@@ -16,6 +16,7 @@ let activeUserId: string | null = null;
 let syncInitialized = false;
 let drainPromise: Promise<void> | null = null;
 let drainingUserId: string | null = null;
+let drainAgain = false;
 
 export function generateClientId(): string {
 	const bytes = new Uint8Array(12);
@@ -299,13 +300,18 @@ async function runPendingMutations(userId: string) {
 export function drainPendingMutations(): Promise<void> {
 	if (!activeUserId) return Promise.resolve();
 	if (drainPromise) {
-		const runningUserId = drainingUserId;
-		return drainPromise.then(() =>
-			activeUserId && activeUserId !== runningUserId ? drainPendingMutations() : undefined
-		);
+		drainAgain = true;
+		return drainPromise;
 	}
-	drainingUserId = activeUserId;
-	drainPromise = runPendingMutations(activeUserId).finally(() => {
+	drainPromise = (async () => {
+		do {
+			drainAgain = false;
+			const userId: string | null = activeUserId;
+			if (!userId) return;
+			drainingUserId = userId;
+			await runPendingMutations(userId);
+		} while (activeUserId !== null && (drainAgain || activeUserId !== drainingUserId));
+	})().finally(() => {
 		drainPromise = null;
 		drainingUserId = null;
 	});
@@ -331,6 +337,50 @@ export async function execute<T>(
 	// Sofort versuchen, die Queue zu leeren (z.B. 409-Konflikte bereinigen)
 	if (networkStore.online) void drainPendingMutations();
 	return null;
+}
+
+type CreateItemMutationPayload = {
+	id: string;
+	listId: string;
+	name: string;
+	quantityInfo: string;
+	categoryOverride: string | null;
+};
+
+/**
+ * Item creation is local-first: the visible item and its mutation are committed
+ * in one IndexedDB transaction before server sync starts. This removes the data
+ * loss window between an optimistic UI update and a failed/aborted network call.
+ */
+export async function queueItemCreate(
+	userId: string,
+	item: OfflineItem,
+	payload: CreateItemMutationPayload
+): Promise<void> {
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.pendingMutations, async () => {
+		await offlineDb.items.put(item);
+		await offlineDb.pendingMutations.add({
+			type: 'create_item',
+			userId,
+			payload,
+			createdAt: Date.now()
+		});
+	});
+
+	if (activeUserId !== userId) return;
+	networkStore.setPending(await countActivePendingMutations());
+	if (networkStore.online) void drainPendingMutations();
+}
+
+export async function getPendingCreateItems(userId: string, listId: string): Promise<OfflineItem[]> {
+	const pending = (await offlineDb.pendingMutations.where('type').equals('create_item').toArray())
+		.filter((mutation) =>
+			(mutation.userId === undefined || mutation.userId === userId) &&
+			mutation.payload.listId === listId &&
+			typeof mutation.payload.id === 'string'
+		);
+	const rows = await offlineDb.items.bulkGet(pending.map((mutation) => mutation.payload.id as string));
+	return rows.filter((item): item is OfflineItem => item !== undefined);
 }
 
 // ── Tracker-Logs: optimistisch + idempotent ────────────────────────────────────

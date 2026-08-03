@@ -5,10 +5,11 @@
 	import { getCategoryForItem, getCategoryKey, CATEGORIES } from '$lib/categories';
 	import BarcodeScanner from './BarcodeScanner.svelte';
 
-	let { onAdd, onClose, suggestions = [], autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null }: {
+	let { onAdd, onClose, suggestions = [], onSearchSuggestions = null, autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null }: {
 		onAdd: (name: string, quantityInfo: string, favoriteCategoryOverride?: string | null) => Promise<void>;
 		onClose: () => void;
 		suggestions?: string[];
+		onSearchSuggestions?: ((query: string, signal: AbortSignal) => Promise<string[]>) | null;
 		autoOpenScanner?: boolean;
 		autoOpenFavorites?: boolean;
 		favorites?: Array<{ name: string; quantityInfo: string | null; categoryOverride: string | null }>;
@@ -19,9 +20,9 @@
 
 	let name = $state('');
 	let quantityInfo = $state('');
-	let adding = $state(false);
 	let nameInput = $state<HTMLInputElement | undefined>(undefined);
 	let showSuggestions = $state(false);
+	let remoteSuggestions = $state<string[]>([]);
 	let bottomOffset = $state(0);
 	let scannerOpen = $state(false);
 	let favoritesOpen = $state(false);
@@ -33,6 +34,7 @@
 	let favAddedFeedback = $state(false);
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let favScrollEl: HTMLElement | null = $state(null);
+	let submissionChain: Promise<void> = Promise.resolve();
 
 	// Sort favorites by category order
 	const CATEGORY_ORDER = new Map<string, number>(CATEGORIES.map((c, i) => [c.key, i]));
@@ -118,43 +120,69 @@
 			: []
 	);
 
-	const filtered = $derived(
-		name.length >= 1
-			? suggestions.filter(s => s.toLowerCase().includes(name.toLowerCase()) && s.toLowerCase() !== name.toLowerCase()).slice(0, 5)
-			: []
-	);
+	$effect(() => {
+		const query = name.trim();
+		remoteSuggestions = [];
+		if (!query || !onSearchSuggestions) return;
 
-	async function handleAdd() {
-		if (!name.trim() || adding) return;
-		adding = true;
-		showSuggestions = false;
+		const controller = new AbortController();
+		const timer = setTimeout(async () => {
+			const results = await onSearchSuggestions(query, controller.signal);
+			if (!controller.signal.aborted && name.trim() === query) remoteSuggestions = results;
+		}, 180);
 
-		if (isMultiItem) {
-			for (const item of parsedItems) {
-				if (item.name) await onAdd(item.name, item.quantityInfo);
-			}
-		} else {
-			await onAdd(name.trim(), quantityInfo.trim());
-		}
+		return () => {
+			clearTimeout(timer);
+			controller.abort();
+		};
+	});
 
-		name = '';
-		quantityInfo = '';
-		adding = false;
-		await tick();
-		nameInput?.focus();
+	const filtered = $derived.by(() => {
+		const query = name.trim().toLowerCase();
+		if (!query) return [];
+		const seen = new Set<string>();
+		return [...remoteSuggestions, ...suggestions]
+			.filter((suggestion) => {
+				const normalized = suggestion.toLowerCase();
+				if (normalized === query || !normalized.includes(query) || seen.has(normalized)) return false;
+				seen.add(normalized);
+				return true;
+			})
+			.slice(0, 5);
+	});
+
+	function enqueueItems(entries: Array<{ name: string; quantityInfo: string }>) {
+		submissionChain = submissionChain
+			.then(async () => {
+				for (const item of entries) await onAdd(item.name, item.quantityInfo);
+			})
+			.catch((error) => {
+				console.error('Could not queue item creation:', error);
+			});
 	}
 
-	async function pickSuggestion(s: string) {
+	function handleAdd() {
+		if (!name.trim()) return;
+		showSuggestions = false;
+		const entries = isMultiItem
+			? parsedItems.filter((item) => item.name).map((item) => ({ ...item }))
+			: [{ name: name.trim(), quantityInfo: quantityInfo.trim() }];
+		name = '';
+		quantityInfo = '';
+		nameInput?.focus({ preventScroll: true });
+		enqueueItems(entries);
+	}
+
+	function pickSuggestion(s: string) {
 		showSuggestions = false;
 		name = '';
 		quantityInfo = '';
-		await onAdd(s, '');
-		await tick();
-		nameInput?.focus();
+		nameInput?.focus({ preventScroll: true });
+		enqueueItems([{ name: s, quantityInfo: '' }]);
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter') handleAdd();
+		if (e.key === 'Enter') { e.preventDefault(); handleAdd(); }
 		if (e.key === 'Escape') onClose();
 	}
 
@@ -408,12 +436,13 @@
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						bind:this={nameInput}
+						data-add-item-name
 						type="text"
 						placeholder={t.item_name_placeholder}
 						bind:value={name}
 						oninput={() => showSuggestions = true}
 						onkeydown={handleKeydown}
-						autofocus={!autoOpenScanner}
+						autofocus={!autoOpenScanner && !autoOpenFavorites}
 						autocomplete="off"
 						class="w-full px-4 text-base font-medium outline-none bg-transparent"
 						style="color: var(--color-on-surface); height: 44px"
@@ -475,9 +504,10 @@
 					{t.close}
 				</button>
 				<button
+					type="button"
 					onpointerdown={(e) => e.preventDefault()}
 					onclick={handleAdd}
-					disabled={!name.trim() || adding}
+					disabled={!name.trim()}
 					class="h-12 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
 					style="flex: 2; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 				>

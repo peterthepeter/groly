@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.2-beta.1',
+		de: [
+			'Artikel können direkt nacheinander hinzugefügt werden, ohne das Eingabefeld erneut anzutippen',
+			'Neue Artikel erscheinen wieder zuverlässig in den Vorschlägen'
+		],
+		en: [
+			'Add items consecutively without having to refocus the input',
+			'New items now appear reliably in suggestions'
+		]
+	},
+	{
 		version: '0.9.1',
 		de: [
 			'Gängige Obst- und Gemüsesorten sowie alkoholische Getränke werden jetzt mit passenden Symbolen angezeigt'
