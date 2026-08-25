@@ -428,7 +428,7 @@
 		<div class="px-4 py-3 flex flex-col gap-2">
 			<!-- Supplements group -->
 			{#if supplements.length > 0}
-				<div class="flex items-center justify-between gap-2 px-1">
+				<div class="order-2 flex items-center justify-between gap-2 px-1">
 					<p class="text-[10px] font-semibold uppercase tracking-widest" style="color: var(--color-on-surface-variant)">Supplements</p>
 					<div class="flex gap-0.5 rounded-xl p-0.5" style="background-color: var(--color-surface-container)">
 						<button
@@ -447,7 +447,7 @@
 						</button>
 					</div>
 				</div>
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+				<div class="order-2 rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				{#if supplementView === 'weekplan'}
 					{#if allSchedules.length === 0}
 						<p class="text-sm text-center px-4 py-8" style="color: var(--color-on-surface-variant)">{t.supplement_weekplan_empty}</p>
@@ -541,8 +541,8 @@
 			{/if}
 
 			<!-- Tracker group -->
-			<p class="text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Tracker</p>
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+			<p class="order-1 text-[10px] font-semibold uppercase tracking-widest px-1" style="color: var(--color-on-surface-variant)">Tracker</p>
+			<div class="order-1 rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<!-- Water -->
 				<div class="px-3 py-2 flex items-center gap-3{!userSettings.waterTrackerEnabled ? ' opacity-50' : ''}"
 				     style="border-color: var(--color-outline-variant)">

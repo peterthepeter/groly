@@ -285,9 +285,9 @@
 		}
 	}
 
-	function handleCaffeineShortcut(drink: CaffeineDrink) {
+	function handleCaffeineTrackerClick() {
 		quickLogOpen = false;
-		caffeinePickerPreselect = drink;
+		caffeinePickerPreselect = null;
 		caffeinePickerOpen = true;
 	}
 
@@ -1448,7 +1448,7 @@
 	onstartmeditation={startMeditation}
 	onrateMood={() => { quickLogOpen = false; moodEntryOpen = true; }}
 	onlogged={() => { Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]); if (activeTab === 'history') loadHistory(); }}
-	onCaffeineShortcutClick={handleCaffeineShortcut}
+	onCaffeineTrackerClick={handleCaffeineTrackerClick}
 	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
 	initialTab={quickLogInitialTab}
 />

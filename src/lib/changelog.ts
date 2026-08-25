@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.1',
+		de: [
+			'Neues kompaktes Quick-Log mit Supplement-Kacheln und optimierter Sortierung',
+			'Mengen per Plus/Minus, Uhrzeiten direkt und Notizen per langem Druck bearbeiten'
+		],
+		en: [
+			'New compact quick log with supplement tiles and optimized sorting',
+			'Edit amounts with plus/minus, times directly, and notes with a long press'
+		]
+	},
+	{
 		version: '0.9.2',
 		de: [
 			'Artikel können direkt nacheinander hinzugefügt werden, ohne das Eingabefeld erneut anzutippen',

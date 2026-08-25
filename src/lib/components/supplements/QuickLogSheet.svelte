@@ -7,6 +7,8 @@
 	import { untrack, tick } from 'svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
 	import { todayKey as todayStr } from '$lib/dates';
+	import SupplementQuickLogTile from './SupplementQuickLogTile.svelte';
+	import { layoutBottomUp, paginateQuickLogItems, sortQuickLogItems } from '$lib/supplements/quickLogGrid';
 
 	type Supplement = {
 		id: string; name: string; unit: string;
@@ -26,7 +28,7 @@
 		caffeineTotalMg = 0,
 		caffeineLimitMg = 400,
 		caffeineDrinks = [],
-		onCaffeineShortcutClick = null,
+		onCaffeineTrackerClick = null,
 		meditationEnabled = false,
 		meditationTotalMinutes = 0,
 		meditationGoalMinutes = 15,
@@ -51,7 +53,7 @@
 		caffeineTotalMg?: number;
 		caffeineLimitMg?: number;
 		caffeineDrinks?: CaffeineDrink[];
-		onCaffeineShortcutClick?: ((drink: CaffeineDrink) => void) | null;
+		onCaffeineTrackerClick?: (() => void) | null;
 		meditationEnabled?: boolean;
 		meditationTotalMinutes?: number;
 		meditationGoalMinutes?: number;
@@ -100,14 +102,17 @@
 	function switchTab(tab: 'tracker' | 'supplements') {
 		activeSheetTab = tab;
 		try { localStorage.setItem('supplement_sheet_tab', tab); } catch {}
-		if (sheetEl) sheetEl.scrollTop = 0;
+		void tick().then(() => {
+			if (!sheetEl) return;
+			sheetEl.scrollTop = tab === 'supplements' ? sheetEl.scrollHeight : 0;
+		});
 	}
 
 	let amounts = $state<Record<string, number>>({});
 	let times = $state<Record<string, string>>({});
 	let notes = $state<Record<string, string>>({});
-	let expandedNoteIds = $state(new Set<string>());
-	let editingAmountId = $state<string | null>(null);
+	let noteEditorId = $state<string | null>(null);
+	let noteInputEl = $state<HTMLInputElement | null>(null);
 	let waterSaving = $state(false);
 	let waterDone = $state(false);
 	let waterError = $state<string | null>(null);
@@ -126,6 +131,7 @@
 	let waterRetroMl = $state('');
 	let caffeineSaving = $state<string | null>(null); // drinkId being saved
 	let caffeineDone = $state<string | null>(null);   // drinkId just logged
+	let caffeinePage = $state(0);
 	let saving = $state<Record<string, boolean>>({});
 	let done = $state<Record<string, boolean>>({});
 	let logCounts = $state<Record<string, number>>({});
@@ -142,8 +148,8 @@
 	}
 
 	$effect(() => {
-		if (open && userSettings.supplementSortOrder === 'freq' && Object.keys(logCounts).length === 0) {
-			fetchLogCounts();
+		if (open && userSettings.supplementSortOrder === 'freq') {
+			void fetchLogCounts();
 		}
 	});
 
@@ -152,32 +158,38 @@
 		const current = userSettings.supplementSortOrder ?? 'az';
 		const next = order[(order.indexOf(current) + 1) % order.length];
 		userSettings.supplementSortOrder = next;
-		if (next === 'freq' && Object.keys(logCounts).length === 0) fetchLogCounts();
+	}
+
+	function manageSupplements() {
+		open = false;
+		void goto('/tracker/verwalten');
 	}
 
 	const trackerList = $derived(
 		([
 			caffeineEnabled && caffeineDrinks.length > 0 ? 'caffeine' : null,
 			waterEnabled ? 'water' : null,
+			nutritionEnabled ? 'nutrition' : null,
 			meditationEnabled ? 'meditation' : null,
-			moodEnabled ? 'mood' : null,
-			nutritionEnabled ? 'nutrition' : null
+			moodEnabled ? 'mood' : null
 		] as (string | null)[]).filter((x): x is string => x !== null)
 	);
 
-	const sortedSupplements = $derived.by(() => {
-		const mode = userSettings.supplementSortOrder ?? 'az';
-		const arr = [...supplements];
-		if (mode === 'az') return arr.sort((a, b) => a.name.localeCompare(b.name));
-		if (mode === 'za') return arr.sort((a, b) => b.name.localeCompare(a.name));
-		// freq: unused alphabetically at top, most-used at bottom
-		return arr.sort((a, b) => {
-			const ca = logCounts[a.id] ?? 0;
-			const cb = logCounts[b.id] ?? 0;
-			if (ca === cb) return a.name.localeCompare(b.name);
-			return ca - cb;
-		});
-	});
+	const sortedSupplements = $derived(sortQuickLogItems(
+		supplements,
+		userSettings.supplementSortOrder ?? 'az',
+		logCounts,
+		currentLang()
+	));
+	const supplementGrid = $derived(layoutBottomUp(sortedSupplements, 3));
+	const trackerGrid = $derived(layoutBottomUp(trackerList, 2));
+	const caffeinePages = $derived(paginateQuickLogItems(caffeineDrinks, 4));
+	const noteEditorSupplement = $derived(supplements.find(s => s.id === noteEditorId) ?? null);
+
+	function updateCaffeinePage(event: Event) {
+		const scroller = event.currentTarget as HTMLDivElement;
+		if (scroller.clientWidth > 0) caffeinePage = Math.round(scroller.scrollLeft / scroller.clientWidth);
+	}
 
 	async function logCaffeine(drink: CaffeineDrink) {
 		if (caffeineSaving) return;
@@ -202,14 +214,14 @@
 			try { localStorage.setItem('quicklog_opened', '1'); } catch {}
 			caffeineDone = null;
 			caffeineSaving = null;
+			caffeinePage = 0;
 			// Session-Reset beim Öffnen. supplements wird hier bewusst NICHT befüllt,
 			// das übernimmt der zweite Effekt unten — sonst Race im Cold-Start, wenn
 			// das Sheet via Push-Deep-Link aufgeht bevor loadSupplements() resolved hat.
 			amounts = {};
 			times = {};
 			notes = {};
-			expandedNoteIds = new Set();
-			editingAmountId = null;
+			noteEditorId = null;
 			saving = {};
 			done = {};
 			waterDone = false;
@@ -313,24 +325,9 @@
 		startMeditation(totalMin);
 	}
 
-	function adjustAmount(id: string, delta: number) {
-		const cur = amounts[id] ?? 1;
-		const next = Math.round(Math.max(0.5, cur + delta) * 10) / 10;
-		amounts = { ...amounts, [id]: next };
-	}
-
-	function toggleNote(id: string) {
-		const next = new Set(expandedNoteIds);
-		if (next.has(id)) next.delete(id); else next.add(id);
-		expandedNoteIds = next;
-	}
-
-	function commitAmount(id: string, raw: string) {
-		const val = parseFloat(raw);
-		if (isFinite(val) && val > 0) {
-			amounts = { ...amounts, [id]: Math.round(val * 10) / 10 };
-		}
-		editingAmountId = null;
+	function openNoteEditor(id: string) {
+		noteEditorId = id;
+		void tick().then(() => noteInputEl?.focus());
 	}
 
 	async function logOne(supplementId: string) {
@@ -345,6 +342,7 @@
 		// stößt logSupplementOffline den Server-Sync an (idempotent über clientLogId).
 		await logSupplementOffline({ supplementId, amount, loggedAt, note, clientLogId });
 
+		logCounts = { ...logCounts, [supplementId]: (logCounts[supplementId] ?? 0) + 1 };
 		done = { ...done, [supplementId]: true };
 		setTimeout(() => { done = { ...done, [supplementId]: false }; }, 2500);
 		onlogged();
@@ -374,6 +372,13 @@
 .supplement-done-confirm {
 	animation: confirm-pop 0.2s ease forwards;
 }
+.caffeine-pager {
+	scrollbar-width: none;
+	overscroll-behavior-inline: contain;
+}
+.caffeine-pager::-webkit-scrollbar {
+	display: none;
+}
 </style>
 
 {#if open}
@@ -382,15 +387,12 @@
 	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => open = false}></div>
 	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl flex flex-col"
 	     style="background-color: var(--modal-bg); max-height: 85vh">
-		<!-- Scrollable content area -->
-		<div bind:this={sheetEl} class="flex-1 min-h-0 overflow-y-auto">
-			<div class="px-5 pt-4" class:pb-4={trackerList.length > 0 && sortedSupplements.length > 0} class:pb-6={!(trackerList.length > 0 && sortedSupplements.length > 0)}>
-				<!-- Handle -->
-				<div class="flex justify-center mb-4">
-					<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
-				</div>
-				<!-- Header row: title + date + sort + X -->
-				<div class="flex items-center justify-between mb-4">
+		<!-- Fixed handle + header -->
+		<div class="flex-shrink-0 px-5 pt-4 pb-3">
+			<div class="flex justify-center mb-4">
+				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
+			</div>
+			<div class="flex items-center justify-between">
 					<div class="flex flex-col gap-0.5">
 						<p class="font-semibold text-base" style="color: var(--color-on-surface)">{t.supplement_log_save}</p>
 						<p class="text-xs font-semibold" style="color: {isRetro ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">
@@ -418,6 +420,11 @@
 							</button>
 						{/if}
 						<button
+							onclick={manageSupplements}
+							class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold active:opacity-60 transition-opacity"
+							style="background-color: var(--bubble-interactive-bg); color: var(--color-primary)"
+						>{t.supplement_manage}</button>
+						<button
 							onclick={() => open = false}
 							aria-label={t.close}
 							class="w-8 h-8 flex items-center justify-center rounded-xl active:opacity-60 transition-opacity"
@@ -428,67 +435,114 @@
 							</svg>
 						</button>
 					</div>
-				</div>
+			</div>
+		</div>
 
+		<!-- Only the active content scrolls; header and tabs stay reachable. -->
+		<div bind:this={sheetEl} class="flex-1 min-h-0 overflow-y-auto">
+			<div
+				class="px-5 min-h-full flex flex-col justify-end"
+				class:pb-4={trackerList.length > 0 && sortedSupplements.length > 0}
+				class:pb-6={!(trackerList.length > 0 && sortedSupplements.length > 0)}
+			>
 				<div class="flex flex-col gap-2">
 				{#if activeSheetTab === 'tracker' && trackerList.length > 0}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+					<div class="grid grid-cols-2 gap-2" aria-label="Tracker">
+						{#each trackerGrid as tracker, index}
+							{#if tracker === null}
+								<div class="min-h-[128px]" style="order: {index}" aria-hidden="true"></div>
+							{/if}
+						{/each}
 						{#if caffeineEnabled && caffeineDrinks.length > 0}
-							<div class="px-2 py-2.5">
-								<div class="flex items-center gap-1.5">
-									<div class="flex flex-col justify-center leading-none gap-[3px] shrink-0">
-										<span class="text-sm font-semibold" style="color: #C8956C">{t.caffeine_title}</span>
-										<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{caffeineTotalMg} / {caffeineLimitMg} mg</span>
+							<div
+								class="h-[128px] rounded-3xl px-3 py-2.5 flex flex-col overflow-hidden"
+								style="order: {trackerGrid.indexOf('caffeine')}; background-color: var(--bubble-container-bg); border: 1px solid {caffeineDone ? '#C8956C' : 'var(--bubble-container-border)'}"
+							>
+								{#if caffeineDone}
+									<div class="h-full flex items-center justify-center px-2 text-center supplement-done-confirm" role="status" aria-live="polite">
+										<span class="text-xs font-bold leading-snug" style="color: #C8956C">{t.supplement_taken}</span>
 									</div>
-									<div class="flex gap-1 overflow-x-auto flex-1 min-w-0" style="-webkit-overflow-scrolling: touch; scrollbar-width: none">
-										{#each caffeineDrinks as drink (drink.id)}
-											{@const isThisDone = caffeineDone === drink.id}
-											{@const isThisSaving = caffeineSaving === drink.id}
-											<button
-												onclick={() => onCaffeineShortcutClick ? onCaffeineShortcutClick(drink) : logCaffeine(drink)}
-												disabled={!!caffeineSaving}
-												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity shrink-0"
-												style="background-color: transparent; color: #C8956C"
-											>
-												{#if isThisSaving}…{:else if isThisDone}✓ {drink.name}{:else}{drink.name}{/if}
-											</button>
-										{/each}
+								{:else}
+									<div class="min-w-0">
+										<button
+											type="button"
+											onclick={() => onCaffeineTrackerClick?.()}
+											class="text-sm font-bold leading-tight line-clamp-2 text-left active:opacity-60"
+											style="color: #C8956C"
+										>{t.caffeine_title}</button>
+										<p class="mt-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-on-surface-variant)">{caffeineTotalMg} / {caffeineLimitMg} mg</p>
 									</div>
-								</div>
+									<div
+										class="caffeine-pager mt-1.5 min-w-0 overflow-x-auto snap-x snap-mandatory"
+										onscroll={updateCaffeinePage}
+										aria-label={t.caffeine_title}
+									>
+										<div class="flex">
+											{#each caffeinePages as page, pageIndex}
+												<div class="w-full shrink-0 snap-start grid grid-cols-2 grid-rows-2 gap-x-1 gap-y-0.5" aria-label={`${pageIndex + 1} / ${caffeinePages.length}`}>
+													{#each page as drink (drink.id)}
+														{@const isThisSaving = caffeineSaving === drink.id}
+														<button
+																	onclick={() => logCaffeine(drink)}
+															disabled={!!caffeineSaving}
+															class="min-w-0 h-7 px-1 rounded-lg text-[11px] font-semibold truncate active:opacity-60 disabled:opacity-50 transition-opacity"
+															style="background-color: transparent; color: #C8956C"
+															aria-label={drink.name}
+															title={drink.name}
+														>
+															{#if isThisSaving}…{:else}{drink.name}{/if}
+														</button>
+													{/each}
+												</div>
+											{/each}
+										</div>
+									</div>
+									{#if caffeinePages.length > 1}
+										<div class="mt-0.5 flex h-1 items-center justify-center gap-1" aria-hidden="true">
+											{#each caffeinePages as _, index}
+												<span
+													class="h-1 rounded-full transition-all duration-150"
+													class:w-3={caffeinePage === index}
+													class:w-1={caffeinePage !== index}
+													style="background-color: {caffeinePage === index ? '#C8956C' : 'var(--color-outline-variant)'}"
+												></span>
+											{/each}
+										</div>
+									{/if}
+								{/if}
 							</div>
 						{/if}
 						{#if waterEnabled}
-							<div class="px-2 py-2.5">
-								<div class="flex items-center gap-1.5">
-									<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
-										{#if waterDone}
-											<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.water_logged}</span>
-										{:else}
-											<span class="text-sm font-semibold" style="color: #60A5FA">{t.water_title}</span>
-											<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{waterTotalMl} / {waterGoalMl} ml</span>
-										{/if}
+							<div
+								class="min-h-[128px] rounded-3xl px-3 py-2.5 flex flex-col relative overflow-hidden"
+								style="order: {trackerGrid.indexOf('water')}; background-color: var(--bubble-container-bg); border: 1px solid {waterDone ? '#60A5FA' : 'var(--bubble-container-border)'}"
+							>
+								<div class="flex-1 min-h-0 flex flex-col transition-opacity duration-150" class:opacity-0={waterDone}>
+									<div class="min-w-0">
+										<p class="text-sm font-bold leading-tight line-clamp-2" style="color: #60A5FA">{t.water_title}</p>
+										<p class="mt-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-on-surface-variant)">{waterTotalMl} / {waterGoalMl} ml</p>
 									</div>
 									{#if !waterDone}
 										{#if isRetro}
 											<button
 												onclick={() => waterRetroOpen = !waterRetroOpen}
-												class="px-2.5 py-1.5 rounded-lg text-xs font-semibold active:opacity-70 shrink-0"
+												class="mt-2 self-start h-8 px-1 rounded-lg text-xs font-semibold active:opacity-60"
 												style="background-color: transparent; color: #60A5FA"
 											>+ {t.water_add}</button>
 										{:else}
-											<div class="shrink-0 flex items-center gap-1">
+											<div class="mt-2 flex flex-wrap items-center gap-1">
 												{#each (userSettings.waterPresets ?? [100, 200]).slice(0, 2) as ml}
 													<button
 														onclick={() => logWater(ml)}
 														disabled={waterSaving}
-														class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50"
+														class="h-8 px-1.5 rounded-lg text-xs font-semibold active:opacity-60 disabled:opacity-50"
 														style="background-color: transparent; color: #60A5FA"
 													>+{ml}</button>
 												{/each}
 												<button
 													onclick={() => { waterShowCustom = !waterShowCustom; waterCustomAmount = ''; }}
 													disabled={waterSaving}
-													class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 disabled:opacity-50"
+													class="h-8 min-w-0 px-1 rounded-lg text-xs font-semibold truncate active:opacity-60 disabled:opacity-50"
 													style="background-color: transparent; color: var(--color-on-surface-variant)"
 												>{t.water_custom}</button>
 											</div>
@@ -496,24 +550,24 @@
 									{/if}
 								</div>
 								{#if isRetro && waterRetroOpen && !waterDone}
-									<div class="flex gap-1.5 mt-1.5 items-center">
+									<div class="grid grid-cols-2 gap-1.5 mt-2 items-center">
 										<input type="time" bind:value={waterRetroTime}
-											class="h-9 px-2 rounded-xl border-0 outline-none text-center shrink-0"
-											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 14px; width: 90px"/>
+											class="w-full h-9 px-1 rounded-xl border-0 outline-none text-center min-w-0"
+											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"/>
 										<input type="number" inputmode="numeric" min="1" bind:value={waterRetroMl} placeholder="ml"
-											class="flex-1 h-9 px-3 rounded-xl border-0 outline-none"
+											class="w-full h-9 px-2 rounded-xl border-0 outline-none min-w-0"
 											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
 											onkeydown={(e) => e.key === 'Enter' && logWaterRetro()}/>
 										<button onclick={logWaterRetro} disabled={waterSaving || !waterRetroMl || Number(waterRetroMl) <= 0}
-											class="h-9 px-3 rounded-xl text-xs font-semibold disabled:opacity-40 active:opacity-70 shrink-0"
+											class="col-span-2 h-9 px-3 rounded-xl text-xs font-semibold disabled:opacity-40 active:opacity-70"
 											style="background: linear-gradient(135deg, #60A5FA, #3B82F6); color: white"
 										>{t.water_add}</button>
 									</div>
 								{/if}
 								{#if !isRetro && waterShowCustom && !waterDone}
-									<div class="flex gap-1.5 mt-1.5 items-center">
+									<div class="grid grid-cols-[1fr_auto] gap-1.5 mt-2 items-center">
 										<input type="number" inputmode="numeric" min="1" bind:value={waterCustomAmount} placeholder="ml"
-											class="flex-1 h-9 px-3 rounded-xl border-0 outline-none"
+											class="w-full min-w-0 h-9 px-2 rounded-xl border-0 outline-none"
 											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
 											onkeydown={(e) => e.key === 'Enter' && submitWaterCustom()}/>
 										<button onclick={submitWaterCustom} disabled={waterSaving || !waterCustomAmount || Number(waterCustomAmount) <= 0}
@@ -525,33 +579,41 @@
 								{#if waterError}
 									<p class="text-[11px] mt-1" style="color: var(--color-error)">{waterError}</p>
 								{/if}
+								{#if waterDone}
+									<div class="absolute inset-0 flex items-center justify-center px-2 text-center supplement-done-confirm" role="status" aria-live="polite">
+										<span class="text-xs font-bold leading-snug" style="color: #60A5FA">{t.water_logged}</span>
+									</div>
+								{/if}
 							</div>
 						{/if}
 						{#if meditationEnabled}
-							<div class="px-2 py-2.5">
-								<div class="flex items-center gap-1.5">
-									<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
-										<span class="text-sm font-semibold" style="color: #9F7AEA">{t.meditation_title}</span>
-										<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{meditationTotalMinutes} / {meditationGoalMinutes} min</span>
+							<div
+								class="min-h-[128px] rounded-3xl px-3 py-2.5 flex flex-col overflow-hidden"
+								style="order: {trackerGrid.indexOf('meditation')}; background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
+							>
+								<div class="flex-1 min-h-0 flex flex-col">
+									<div class="min-w-0">
+										<p class="text-sm font-bold leading-tight line-clamp-2" style="color: #9F7AEA">{t.meditation_title}</p>
+										<p class="mt-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-on-surface-variant)">{meditationTotalMinutes} / {meditationGoalMinutes} min</p>
 									</div>
 									{#if isRetro}
 										<button
 											onclick={() => meditationRetroOpen = !meditationRetroOpen}
-											class="px-2.5 py-1.5 rounded-lg text-xs font-semibold active:opacity-70 shrink-0"
+											class="mt-2 self-start h-7 px-1 rounded-lg text-xs font-semibold active:opacity-60"
 											style="background-color: transparent; color: #9F7AEA"
 										>+ {t.water_add}</button>
 									{:else}
-										<div class="shrink-0 flex items-center gap-1">
+										<div class="mt-2 grid grid-cols-3 gap-x-1 gap-y-1">
 											{#each [5, 10, 15, 20] as min}
-												<button
-													onclick={() => startMeditation(min)}
-													class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+											<button
+												onclick={() => startMeditation(min)}
+												class="h-7 px-1 rounded-lg text-xs font-semibold active:opacity-60"
 													style="background-color: transparent; color: #9F7AEA"
 												>{min}m</button>
 											{/each}
 											<button
 												onclick={() => { meditationShowCustom = !meditationShowCustom; meditationCustomTime = '00:10'; }}
-												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+											class="h-7 px-1 rounded-lg text-xs font-semibold active:opacity-60"
 												style="background-color: transparent; color: var(--color-on-surface-variant)"
 											>{t.water_custom}</button>
 										</div>
@@ -559,24 +621,24 @@
 								</div>
 								{#if isRetro && meditationRetroOpen}
 									<div class="mt-2 space-y-1.5">
-										<div class="flex items-center gap-1.5">
-											<span class="text-[10px] font-semibold shrink-0" style="color: var(--color-on-surface-variant)">Startzeit</span>
+										<div class="grid grid-cols-[auto_1fr] items-center gap-1.5">
+											<span class="text-[10px] font-semibold" style="color: var(--color-on-surface-variant)">Startzeit</span>
 											<input type="time" bind:value={meditationRetroStartTime}
-												class="h-8 px-2 rounded-xl border-0 outline-none text-center"
-												style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 14px; width: 90px"/>
+												class="w-full min-w-0 h-8 px-1 rounded-xl border-0 outline-none text-center"
+												style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"/>
 										</div>
-										<div class="flex items-center gap-1 flex-wrap">
+										<div class="flex items-center gap-0.5 flex-wrap">
 											<span class="text-[10px] font-semibold shrink-0" style="color: var(--color-on-surface-variant)">Dauer</span>
 											{#each [5, 10, 15, 20] as min}
-												<button
-													onclick={() => { meditationRetroDuration = min; meditationRetroShowCustom = false; }}
-													class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+											<button
+												onclick={() => { meditationRetroDuration = min; meditationRetroShowCustom = false; }}
+												class="h-7 px-1 rounded-lg text-[10px] font-semibold active:opacity-60"
 													style="background-color: transparent; color: #9F7AEA"
 												>{min}m</button>
 											{/each}
 											<button
 												onclick={() => { meditationRetroShowCustom = !meditationRetroShowCustom; meditationRetroCustomTime = '00:10'; }}
-												class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
+												class="h-7 px-1 rounded-lg text-[10px] font-semibold active:opacity-60"
 												style="background-color: transparent; color: var(--color-on-surface-variant)"
 											>{t.water_custom}</button>
 										</div>
@@ -601,13 +663,13 @@
 									</div>
 								{/if}
 								{#if !isRetro && meditationShowCustom}
-									<div class="flex gap-1.5 mt-1.5 items-center">
+									<div class="grid grid-cols-1 gap-1.5 mt-2">
 										<input type="time" bind:value={meditationCustomTime}
-											class="flex-1 px-3 rounded-xl border-0 outline-none text-center"
+											class="w-full min-w-0 px-2 rounded-xl border-0 outline-none text-center"
 											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px; height: 36px"
 											onkeydown={(e) => e.key === 'Enter' && submitMeditationCustom()}/>
 										<button onclick={submitMeditationCustom}
-											class="px-3 rounded-xl text-xs font-semibold active:opacity-70 shrink-0"
+											class="w-full px-3 rounded-xl text-xs font-semibold active:opacity-70"
 											style="background: linear-gradient(135deg, #9F7AEA, #7C3AED); color: white; height: 36px"
 										>{t.meditation_start}</button>
 									</div>
@@ -615,41 +677,43 @@
 							</div>
 						{/if}
 						{#if moodEnabled}
-							<div class="px-2 py-2.5">
-								<div class="flex items-center gap-1.5">
-									<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
-										<span class="text-sm font-semibold" style="color: #F472B6">{t.mood_tracker_label}</span>
-										<span class="text-[10px]" style="color: var(--color-on-surface-variant)">{moodHasEntry ? t.mood_today_rated : t.mood_entry_title}</span>
-									</div>
-									<button
-										onclick={() => onrateMood?.()}
-										class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70 shrink-0"
-										style="background-color: transparent; color: #F472B6"
-									>{moodHasEntry ? t.mood_edit : t.mood_bewerten}</button>
+							<div
+								class="min-h-[128px] rounded-3xl px-3 py-2.5 flex flex-col overflow-hidden"
+								style="order: {trackerGrid.indexOf('mood')}; background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
+							>
+								<div class="min-w-0">
+									<p class="text-sm font-bold leading-tight line-clamp-2" style="color: #F472B6">{t.mood_tracker_label}</p>
+									<p class="mt-1 text-[11px] leading-tight" style="color: var(--color-on-surface-variant)">{moodHasEntry ? t.mood_today_rated : t.mood_entry_title}</p>
 								</div>
+								<button
+									onclick={() => onrateMood?.()}
+									class="mt-2 self-start h-8 px-1 rounded-lg text-xs font-semibold active:opacity-60"
+									style="background-color: transparent; color: #F472B6"
+								>{moodHasEntry ? t.mood_edit : t.mood_bewerten}</button>
 							</div>
 						{/if}
 						{#if nutritionEnabled}
-							<div class="px-2 py-2.5">
-								<div class="flex items-center gap-1.5">
-									<div class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px]">
-										<span class="text-sm font-semibold" style="color: #FB923C">{t.nutrition_label}</span>
-										<span class="text-[10px]" style="color: var(--color-on-surface-variant)">
-											{Math.round(nutritionTotalKcal).toLocaleString(currentLang())}{nutritionGoalKcal ? ` / ${nutritionGoalKcal.toLocaleString(currentLang())}` : ''} kcal
-										</span>
-									</div>
-									<div class="flex items-center gap-1 shrink-0">
-										<button
-											onclick={() => onaddmeal?.()}
-											class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
-											style="background-color: transparent; color: #FB923C"
-										>{t.nutrition_add_meal}</button>
-										<button
-											onclick={() => { open = false; goto('/tracker/nutrition'); }}
-											class="px-2 py-1 rounded-lg text-xs font-semibold active:opacity-70"
-											style="background-color: transparent; color: var(--color-on-surface-variant)"
-										>{t.nutrition_open}</button>
-									</div>
+							<div
+								class="min-h-[128px] rounded-3xl px-3 py-2.5 flex flex-col overflow-hidden"
+								style="order: {trackerGrid.indexOf('nutrition')}; background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
+							>
+								<div class="min-w-0">
+									<p class="text-sm font-bold leading-tight line-clamp-2" style="color: #FB923C">{t.nutrition_label}</p>
+									<p class="mt-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-on-surface-variant)">
+										{Math.round(nutritionTotalKcal).toLocaleString(currentLang())}{nutritionGoalKcal ? ` / ${nutritionGoalKcal.toLocaleString(currentLang())}` : ''} kcal
+									</p>
+								</div>
+								<div class="mt-2 flex flex-wrap items-center gap-1">
+									<button
+										onclick={() => onaddmeal?.()}
+										class="h-8 min-w-0 px-1 rounded-lg text-xs font-semibold active:opacity-60"
+										style="background-color: transparent; color: #FB923C"
+									>{t.nutrition_add_meal}</button>
+									<button
+										onclick={() => { open = false; goto('/tracker/nutrition'); }}
+										class="h-8 min-w-0 px-1 rounded-lg text-xs font-semibold active:opacity-60"
+										style="background-color: transparent; color: var(--color-on-surface-variant)"
+									>{t.nutrition_open}</button>
 								</div>
 							</div>
 						{/if}
@@ -657,112 +721,90 @@
 				{/if}
 				{#if (activeSheetTab === 'supplements' || trackerList.length === 0) && sortedSupplements.length === 0}
 					<div class="rounded-2xl px-4 py-6 flex flex-col items-center gap-3 text-center" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-						<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_empty_hint}</p>
-						<button
-							onclick={() => { open = false; goto('/tracker/verwalten'); }}
+					<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_empty_hint}</p>
+					<button
+						onclick={manageSupplements}
 							class="px-5 py-2 rounded-xl text-sm font-semibold active:opacity-70"
 							style="background-color: var(--color-surface-high); color: var(--color-primary)"
 						>{t.supplement_manage}</button>
 					</div>
 				{/if}
 				{#if (activeSheetTab === 'supplements' || trackerList.length === 0) && sortedSupplements.length > 0}
-					<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-						{#each sortedSupplements as s, i (s.id)}
-							{@const isSaving = saving[s.id] ?? false}
-							{@const isDone = done[s.id] ?? false}
-							{@const noteOpen = expandedNoteIds.has(s.id)}
-							{@const isEditingAmount = editingAmountId === s.id}
-							<div class="px-2 py-2.5">
-								<div class="flex items-center gap-1.5">
-									<button
-										onclick={() => !isDone && toggleNote(s.id)}
-										class="flex-1 min-w-0 flex flex-col justify-center leading-none gap-[3px] text-left active:opacity-70 transition-opacity"
-									>
-										{#if isDone}
-											<span class="text-sm font-semibold supplement-done-confirm" style="color: var(--color-primary)">{t.supplement_taken}</span>
-										{:else}
-											<span class="flex items-center gap-1 min-w-0">
-												<span class="truncate text-sm font-semibold" style="color: var(--color-primary)">{s.name}</span>
-												<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" style="color: var(--color-on-surface-variant); opacity: 0.45"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-											</span>
-											{#if s.brand}
-												<span class="truncate text-[10px]" style="color: var(--color-on-surface-variant); opacity: 0.7">{s.brand}</span>
-											{/if}
-										{/if}
-									</button>
-									<div class="shrink-0 flex items-center gap-0 rounded-lg overflow-hidden">
-										<button
-											onclick={() => adjustAmount(s.id, -0.5)}
-											class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
-											style="color: var(--color-on-surface)"
-											aria-label="Weniger"
-										>−</button>
-										{#if isEditingAmount}
-											<!-- svelte-ignore a11y_autofocus -->
-											<input
-												type="number"
-												inputmode="decimal"
-												autofocus
-												value={amounts[s.id] ?? 1}
-												onblur={(e) => commitAmount(s.id, (e.target as HTMLInputElement).value)}
-												onkeydown={(e) => { if (e.key === 'Enter') commitAmount(s.id, (e.target as HTMLInputElement).value); if (e.key === 'Escape') editingAmountId = null; }}
-												class="text-xs font-semibold text-center border-0 outline-none"
-												style="color: var(--color-on-surface); background: transparent; min-width: 2.8rem; width: 2.8rem; font-size: 12px"
-											/>
-										{:else}
-											<button
-												onclick={() => { editingAmountId = s.id; }}
-												class="text-xs font-semibold text-center active:opacity-60"
-												style="color: var(--color-on-surface); min-width: 2.8rem; line-height: 2rem"
-											>{amounts[s.id] ?? 1} {abbreviateUnit(s.unit)}</button>
-										{/if}
-										<button
-											onclick={() => adjustAmount(s.id, 0.5)}
-											class="w-6 h-8 flex items-center justify-center text-base font-bold active:scale-95 transition-transform"
-											style="color: var(--color-on-surface)"
-											aria-label="Mehr"
-										>+</button>
-									</div>
-									<input
-										type="time"
-										bind:value={times[s.id]}
-										class="w-16 h-8 shrink-0 px-1 rounded-lg border-0 outline-none text-center"
-										style="background-color: transparent; color: var(--color-on-surface); font-size: 13px; font-family: inherit"
-									/>
-									<button
-										onclick={() => logOne(s.id)}
-										disabled={isSaving || isDone}
-										class="w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all shrink-0"
-										style="background: {isDone ? 'var(--color-surface-high)' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))'}; color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-on-primary)'}; opacity: {isDone ? '0.4' : '1'}"
-										aria-label={t.supplement_log_save}
-									>
-										{#if isSaving}
-											<div class="w-3.5 h-3.5 rounded-full border-2 animate-spin" style="border-color: white; border-top-color: transparent"></div>
-										{:else}
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-												<polyline points="20 6 9 17 4 12"/>
-											</svg>
-										{/if}
-									</button>
-								</div>
-								{#if noteOpen && !isDone}
-									<div class="mt-1.5">
-										<input
-											type="text"
-											placeholder={t.supplement_log_note_placeholder}
-											bind:value={notes[s.id]}
-											class="w-full h-8 px-2.5 rounded-lg border-0 outline-none text-xs"
-											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 13px; font-family: inherit"
-										/>
-									</div>
-								{/if}
-							</div>
+					<div class="grid grid-cols-3 gap-2" aria-label={t.supplement_title}>
+						{#each supplementGrid as supplement, index (supplement?.id ?? `empty-${index}`)}
+							{#if supplement}
+								<SupplementQuickLogTile
+									{supplement}
+									amount={amounts[supplement.id] ?? supplement.defaultAmount ?? 1}
+									unitLabel={abbreviateUnit(supplement.unit)}
+									time={times[supplement.id] ?? ''}
+									hasNote={!!notes[supplement.id]?.trim()}
+									saving={saving[supplement.id] ?? false}
+									done={done[supplement.id] ?? false}
+									takenLabel={t.supplement_taken}
+									decreaseAmountLabel={t.supplement_amount_decrease}
+									increaseAmountLabel={t.supplement_amount_increase}
+									doneEditingLabel={t.sort_mode_done}
+									onLog={() => void logOne(supplement.id)}
+									onAmountChange={(amount) => amounts = { ...amounts, [supplement.id]: amount }}
+									onTimeChange={(time) => times = { ...times, [supplement.id]: time }}
+									onLongPress={() => openNoteEditor(supplement.id)}
+								/>
+							{:else}
+								<div class="aspect-square" aria-hidden="true"></div>
+							{/if}
 						{/each}
 					</div>
 				{/if}
 				</div>
 			</div>
 		</div>
+
+		{#if noteEditorSupplement}
+			<!-- Long-press note editor; overlays the sheet without disturbing the tile grid. -->
+			<div class="absolute inset-0 z-20 flex items-end">
+				<button
+					onclick={() => noteEditorId = null}
+					class="absolute inset-0 w-full h-full"
+					style="background-color: rgba(0,0,0,0.48)"
+					aria-label={t.close}
+				></button>
+				<div class="relative z-10 w-full mx-4 mb-4 p-4 rounded-3xl shadow-2xl"
+					style="background-color: var(--color-surface-elevated); border: 1px solid var(--color-outline-variant); margin-bottom: max(1rem, env(safe-area-inset-bottom))">
+					<div class="flex items-start justify-between gap-3 mb-3">
+						<div class="min-w-0">
+							<p class="text-sm font-bold truncate" style="color: var(--color-primary)">{noteEditorSupplement.name}</p>
+							<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant)">{t.supplement_notes_label}</p>
+						</div>
+						<button
+							onclick={() => noteEditorId = null}
+							class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 active:opacity-60"
+							style="background-color: var(--bubble-interactive-bg); color: var(--color-on-surface-variant)"
+							aria-label={t.close}
+						>
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+								<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+							</svg>
+						</button>
+					</div>
+					<input
+						bind:this={noteInputEl}
+						type="text"
+						value={notes[noteEditorSupplement.id] ?? ''}
+						oninput={(e) => notes = { ...notes, [noteEditorSupplement.id]: (e.target as HTMLInputElement).value }}
+						onkeydown={(e) => { if (e.key === 'Enter') noteEditorId = null; if (e.key === 'Escape') noteEditorId = null; }}
+						placeholder={t.supplement_log_note_placeholder}
+						class="w-full h-11 px-3 rounded-xl border-0 outline-none"
+						style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
+					/>
+					<button
+						onclick={() => noteEditorId = null}
+						class="w-full h-10 mt-3 rounded-xl text-sm font-semibold active:opacity-70"
+						style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+					>{t.supplement_save}</button>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Bottom tab bar — always when trackers are available -->
 		{#if trackerList.length > 0}

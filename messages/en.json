@@ -252,6 +252,8 @@
 	"supplement_nutrient_add": "Add nutrient",
 	"supplement_nutrient_remove": "Remove",
 	"supplement_log_amount": "Amount",
+	"supplement_amount_decrease": "Decrease amount",
+	"supplement_amount_increase": "Increase amount",
 	"supplement_log_time": "Time",
 	"supplement_log_save": "Log",
 	"supplement_log_delete": "Delete entry",

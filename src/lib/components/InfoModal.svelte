@@ -124,7 +124,7 @@
 				},
 				{
 					title: 'Today',
-					text: 'The Today tab shows all supplements you\'ve logged today. Tap + (FAB) to open the quick-log and record your intake. Each supplement shows the total amount taken and the time of the last log entry. Long-press a log entry to edit or delete it.',
+					text: 'The Today tab shows all supplements you\'ve logged today. Tap + (FAB) to open the quick-log. In the Supplements tab, tap a tile to log its displayed amount and time. Tap the amount to open the compact −/+ control, then tap the amount with the check mark to finish. Tap the time to change it; long-press a tile to add a note. The Tracker tab uses compact two-column tiles. Caffeine drinks are arranged in horizontal pages of four — swipe within the tile to see the next page. Use Manage in the quick-log header to configure trackers and supplements. Each supplement on the Today page shows the total amount taken and the time of the last log entry. Long-press a logged entry to edit or delete it.',
 					svg: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`
 				},
 				{
@@ -306,7 +306,7 @@
 				},
 				{
 					title: 'Heute',
-					text: 'Der Heute-Tab zeigt alle Supplements, die du heute bereits geloggt hast. Tippe auf + (FAB), um den Quick-Log zu öffnen und deine Einnahme einzutragen. Jedes Supplement zeigt die Gesamtmenge und die Uhrzeit der letzten Einnahme. Langer Druck auf einen Eintrag ermöglicht Bearbeiten oder Löschen.',
+					text: 'Der Heute-Tab zeigt alle Supplements, die du heute bereits geloggt hast. Tippe auf + (FAB), um den Quick-Log zu öffnen. Im Supplements-Tab trägt ein Tipp auf eine Kachel die angezeigte Menge und Uhrzeit ein. Tippe auf die Menge, um den kompakten −/+-Regler zu öffnen, und anschließend zum Beenden auf die Menge mit dem Haken. Tippe auf die Uhrzeit, um sie zu ändern; ein langer Druck auf die Kachel öffnet die Notiz. Der Tracker-Tab nutzt kompakte Kacheln in zwei Spalten. Koffeingetränke sind in horizontal wischbaren Vierergruppen angeordnet — wische innerhalb der Kachel zur nächsten Gruppe. Über „Verwalten“ im Quick-Log-Kopf konfigurierst du Tracker und Supplements. Auf der Heute-Seite zeigt jedes Supplement die Gesamtmenge und die Uhrzeit der letzten Einnahme. Langer Druck auf einen geloggten Eintrag ermöglicht Bearbeiten oder Löschen.',
 					svg: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`
 				},
 				{

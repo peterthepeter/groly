@@ -252,6 +252,8 @@
 	"supplement_nutrient_add": "Nährstoff hinzufügen",
 	"supplement_nutrient_remove": "Entfernen",
 	"supplement_log_amount": "Menge",
+	"supplement_amount_decrease": "Menge verringern",
+	"supplement_amount_increase": "Menge erhöhen",
 	"supplement_log_time": "Uhrzeit",
 	"supplement_log_save": "Eintragen",
 	"supplement_log_delete": "Eintrag löschen",
