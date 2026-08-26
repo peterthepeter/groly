@@ -3,6 +3,7 @@
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { MEDITATION_SOUNDS } from '$lib/audio/meditationSounds';
 	import { playMeditationSound, stopAllMeditationSounds } from '$lib/audio/meditationAudio';
+	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	let {
 		open = $bindable<boolean>(false)
@@ -31,63 +32,53 @@
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={close}></div>
-	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl overflow-y-auto"
-	     style="background-color: var(--modal-bg); max-height: 90vh">
-		<div class="p-6 space-y-5">
-			<div class="flex justify-center mb-1">
-				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
-			</div>
-			<p class="font-semibold text-base" style="color: var(--color-on-surface)">
-				{t.meditation_edit_title}
-			</p>
-
+	<ManageSheetShell accent="#9F7AEA" title={t.meditation_edit_title} onclose={close} density="comfortable">
+		{#snippet body()}
+			<div class="manage-stack">
 			<!-- Daily goal -->
-			<div>
-				<p class="text-xs font-medium mb-2" style="color: var(--color-on-surface-variant)">{t.meditation_goal_label}</p>
-				<div class="flex gap-1.5 flex-wrap">
+			<div class="manage-section">
+				<p class="manage-label">{t.meditation_goal_label}</p>
+				<div class="manage-chip-grid">
 					{#each GOAL_OPTIONS as min}
 						<button
 							onclick={() => userSettings.meditationDailyGoalMinutes = min}
-							class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors active:opacity-70"
-							style="background-color: {userSettings.meditationDailyGoalMinutes === min ? '#9F7AEA' : 'var(--color-surface-container)'}; color: {userSettings.meditationDailyGoalMinutes === min ? 'white' : 'var(--color-on-surface-variant)'}"
+							class="manage-chip active:opacity-70"
+							data-selected={userSettings.meditationDailyGoalMinutes === min}
 						>{min} min</button>
 					{/each}
 				</div>
 			</div>
 
 			<!-- Default duration -->
-			<div>
-				<p class="text-xs font-medium mb-2" style="color: var(--color-on-surface-variant)">{t.meditation_default_duration}</p>
-				<div class="flex gap-1.5 flex-wrap">
+			<div class="manage-section">
+				<p class="manage-label">{t.meditation_default_duration}</p>
+				<div class="manage-chip-grid">
 					{#each DURATION_OPTIONS as min}
 						<button
 							onclick={() => userSettings.meditationDefaultDurationMinutes = min}
-							class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors active:opacity-70"
-							style="background-color: {userSettings.meditationDefaultDurationMinutes === min ? '#9F7AEA' : 'var(--color-surface-container)'}; color: {userSettings.meditationDefaultDurationMinutes === min ? 'white' : 'var(--color-on-surface-variant)'}"
+							class="manage-chip active:opacity-70"
+							data-selected={userSettings.meditationDefaultDurationMinutes === min}
 						>{min} min</button>
 					{/each}
 				</div>
 			</div>
 
 			<!-- Prep seconds -->
-			<div>
-				<p class="text-xs font-medium mb-2" style="color: var(--color-on-surface-variant)">{t.meditation_prep_seconds}</p>
-				<div class="flex gap-1.5 flex-wrap">
+			<div class="manage-section">
+				<p class="manage-label">{t.meditation_prep_seconds}</p>
+				<div class="manage-chip-grid">
 					{#each PREP_OPTIONS as sec}
 						<button
 							onclick={() => userSettings.meditationPrepSeconds = sec}
-							class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors active:opacity-70"
-							style="background-color: {userSettings.meditationPrepSeconds === sec ? '#9F7AEA' : 'var(--color-surface-container)'}; color: {userSettings.meditationPrepSeconds === sec ? 'white' : 'var(--color-on-surface-variant)'}"
+							class="manage-chip active:opacity-70"
+							data-selected={userSettings.meditationPrepSeconds === sec}
 						>{sec === 0 ? t.meditation_prep_none : `${sec} s`}</button>
 					{/each}
 				</div>
 			</div>
 
 			<!-- Volume -->
-			<div>
+			<div class="manage-section">
 				<div class="flex items-center justify-between mb-2">
 					<p class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.meditation_volume}</p>
 					<p class="text-xs font-semibold" style="color: #9F7AEA">{userSettings.meditationVolume ?? 70}%</p>
@@ -105,20 +96,20 @@
 			</div>
 
 			<!-- Start sound -->
-			<div>
-				<p class="text-xs font-medium mb-2" style="color: var(--color-on-surface-variant)">{t.meditation_start_sound}</p>
+			<div class="manage-section">
+				<p class="manage-section-title">{t.meditation_start_sound}</p>
 				<div class="space-y-1.5">
 					{#each MEDITATION_SOUNDS as snd}
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => userSettings.meditationStartSound = snd.filename}
-								class="flex-1 px-3 py-2 rounded-xl text-xs font-semibold text-left active:opacity-70"
-								style="background-color: {userSettings.meditationStartSound === snd.filename ? '#9F7AEA' : 'var(--color-surface-container)'}; color: {userSettings.meditationStartSound === snd.filename ? 'white' : 'var(--color-on-surface)'}"
+								class="manage-chip flex-1 text-left active:opacity-70"
+								data-selected={userSettings.meditationStartSound === snd.filename}
 							>{soundLabel(snd.filename)}</button>
 							<button
 								onclick={() => preview(snd.filename)}
-								class="w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60"
-								style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+								class="manage-icon-button active:opacity-60"
+								style="width: 36px; height: 36px; color: var(--color-on-surface-variant)"
 								aria-label="Play"
 							>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
@@ -129,20 +120,20 @@
 			</div>
 
 			<!-- End sound -->
-			<div>
-				<p class="text-xs font-medium mb-2" style="color: var(--color-on-surface-variant)">{t.meditation_end_sound}</p>
+			<div class="manage-section">
+				<p class="manage-section-title">{t.meditation_end_sound}</p>
 				<div class="space-y-1.5">
 					{#each MEDITATION_SOUNDS as snd}
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => userSettings.meditationEndSound = snd.filename}
-								class="flex-1 px-3 py-2 rounded-xl text-xs font-semibold text-left active:opacity-70"
-								style="background-color: {userSettings.meditationEndSound === snd.filename ? '#9F7AEA' : 'var(--color-surface-container)'}; color: {userSettings.meditationEndSound === snd.filename ? 'white' : 'var(--color-on-surface)'}"
+								class="manage-chip flex-1 text-left active:opacity-70"
+								data-selected={userSettings.meditationEndSound === snd.filename}
 							>{soundLabel(snd.filename)}</button>
 							<button
 								onclick={() => preview(snd.filename)}
-								class="w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60"
-								style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+								class="manage-icon-button active:opacity-60"
+								style="width: 36px; height: 36px; color: var(--color-on-surface-variant)"
 								aria-label="Play"
 							>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
@@ -152,11 +143,13 @@
 				</div>
 			</div>
 
+			</div>
+		{/snippet}
+		{#snippet footer()}
 			<button
 				onclick={close}
-				class="w-full py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-				style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
+				class="manage-primary col-span-2 active:opacity-70"
 			>{t.close}</button>
-		</div>
-	</div>
+		{/snippet}
+	</ManageSheetShell>
 {/if}

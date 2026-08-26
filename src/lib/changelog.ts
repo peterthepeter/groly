@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.2',
+		de: [
+			'Tracker- und Quick-Log-Ansichten kompakter, einheitlicher und leichter bedienbar gestaltet',
+			'Verwalten- und Reminder-Ansichten modernisiert und platzsparend vereinheitlicht'
+		],
+		en: [
+			'Redesigned tracker and Quick Log views for a more compact, consistent, and accessible experience',
+			'Modernized and streamlined Manage and reminder views'
+		]
+	},
+	{
 		version: '0.9.5-beta.1',
 		de: [
 			'Neues kompaktes Quick-Log mit Supplement-Kacheln und optimierter Sortierung',

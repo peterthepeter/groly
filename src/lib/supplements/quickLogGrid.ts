@@ -40,6 +40,14 @@ export function sortQuickLogItems<T extends QuickLogSortable>(
  * top row is padded on the right so its first item remains in the left column.
  */
 export function layoutBottomUp<T>(items: readonly T[], columns = 3): Array<T | null> {
+	return layoutBottomUpRows(items, columns).flat();
+}
+
+/**
+ * Row-preserving variant for grids that insert expandable full-width content
+ * between tile rows.
+ */
+export function layoutBottomUpRows<T>(items: readonly T[], columns = 3): Array<Array<T | null>> {
 	if (!Number.isInteger(columns) || columns < 1) {
 		throw new RangeError('columns must be a positive integer');
 	}
@@ -51,7 +59,7 @@ export function layoutBottomUp<T>(items: readonly T[], columns = 3): Array<T | n
 		rows.push(row);
 	}
 
-	return rows.reverse().flat();
+	return rows.reverse();
 }
 
 /** Splits quick-log actions into stable, swipeable pages without mutating them. */

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
@@ -16,7 +16,6 @@
 	import WaterEditLogSheet from '$lib/components/supplements/WaterEditLogSheet.svelte';
 	import WaterTrackerCard from '$lib/components/supplements/WaterTrackerCard.svelte';
 	import CaffeineTrackerCard from '$lib/components/supplements/CaffeineTrackerCard.svelte';
-	import CaffeineDrinkPickerSheet from '$lib/components/supplements/CaffeineDrinkPickerSheet.svelte';
 	import MeditationTrackerCard from '$lib/components/supplements/MeditationTrackerCard.svelte';
 	import MeditationTimerSheet from '$lib/components/supplements/MeditationTimerSheet.svelte';
 	import MoodTrackerCard from '$lib/components/supplements/MoodTrackerCard.svelte';
@@ -27,6 +26,7 @@
 	import { exportReport, type ReportSections } from '$lib/pdfExport';
 	import { findTag } from '$lib/mood';
 	import { toLocalDateKey } from '$lib/dates';
+	import { layoutBottomUpRows } from '$lib/supplements/quickLogGrid';
 	import type { WaterLog, CaffeineLog, CaffeineDrink, MeditationLog } from '$lib/db/schema';
 
 	let { data } = $props();
@@ -70,12 +70,22 @@
 		meditationTimerDuration = minutes;
 		meditationTimerOpen = true;
 	}
-	const hasVisibleTrackerCards = $derived(
-		(userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday)) ||
-		(userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0) ||
-		(userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0) ||
-		(userSettings.moodTrackerEnabled && todayMoodEntry !== null) ||
-		(userSettings.nutritionTrackerEnabled && todayMeals.length > 0)
+	type TodayTrackerId = 'caffeine' | 'water' | 'nutrition' | 'meditation' | 'mood';
+	type TodayTrackerFocus = 'caffeine' | 'water' | 'meditation';
+	let todayTrackerFocus = $state<TodayTrackerFocus | null>(null);
+	const visibleTodayTrackers = $derived(
+		([
+			userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0 ? 'caffeine' : null,
+			userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday) ? 'water' : null,
+			userSettings.nutritionTrackerEnabled && todayMeals.length > 0 ? 'nutrition' : null,
+			userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0 ? 'meditation' : null,
+			userSettings.moodTrackerEnabled && todayMoodEntry !== null ? 'mood' : null
+		] as Array<TodayTrackerId | null>).filter((tracker): tracker is TodayTrackerId => tracker !== null)
+	);
+	const hasVisibleTrackerCards = $derived(visibleTodayTrackers.length > 0);
+	const todayTrackerRows = $derived(layoutBottomUpRows(visibleTodayTrackers, 2));
+	const displayedTodayTrackerRows = $derived(
+		todayTrackerFocus ? [[todayTrackerFocus] as TodayTrackerId[]] : todayTrackerRows
 	);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
 	const visibleCaffeineDrinks = $derived(
@@ -155,6 +165,28 @@
 
 	// Expand/collapse per supplement card (today tab)
 	let expandedIds = $state(new Set<string>());
+	let waterTodayExpanded = $state(false);
+	let caffeineTodayExpanded = $state(false);
+	let meditationTodayExpanded = $state(false);
+	let moodTodayExpanded = $state(false);
+	let nutritionTodayExpanded = $state(false);
+
+	function openTodayTrackerFocus(tracker: TodayTrackerFocus) {
+		waterTodayExpanded = false;
+		caffeineTodayExpanded = false;
+		meditationTodayExpanded = false;
+		moodTodayExpanded = false;
+		nutritionTodayExpanded = false;
+		todayTrackerFocus = tracker;
+		void tick().then(() => {
+			const card = bubbleContainerEl?.querySelector<HTMLElement>(`#today-${tracker}-tracker`);
+			card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		});
+	}
+
+	function closeTodayTrackerFocus() {
+		todayTrackerFocus = null;
+	}
 
 	function toggleExpand(id: string) {
 		const next = new Set(expandedIds);
@@ -243,8 +275,6 @@
 	// Quick-log sheet (opened from FAB)
 	let quickLogOpen = $state(false);
 	let quickLogInitialTab = $state<'tracker' | 'supplements' | null>(null);
-	let caffeinePickerOpen = $state(false);
-	let caffeinePickerPreselect = $state<CaffeineDrink | null>(null);
 
 	function openQuickLog() {
 		quickLogInitialTab = null;
@@ -285,12 +315,6 @@
 		}
 	}
 
-	function handleCaffeineTrackerClick() {
-		quickLogOpen = false;
-		caffeinePickerPreselect = null;
-		caffeinePickerOpen = true;
-	}
-
 	function allLogTimes(supplementId: string): string {
 		const logs = logsForSupplement(supplementId);
 		if (logs.length === 0) return '';
@@ -304,6 +328,7 @@
 
 	const activeSupplements = $derived(supplements.filter(s => s.active));
 	const loggedTodaySupplements = $derived(activeSupplements.filter(s => logsForSupplement(s.id).length > 0));
+	const todaySupplementRows = $derived(layoutBottomUpRows(loggedTodaySupplements, 3));
 	const trackerInfoLine = $derived.by(() => {
 		const parts: string[] = [];
 		if (loggedTodaySupplements.length > 0) {
@@ -831,6 +856,7 @@
 	let addLogSheet = $state<{ date: string } | null>(null);
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let pressStart = { x: 0, y: 0 };
+	let suppressSupplementClick = false;
 
 	function openEditLog(log: Log, supplement: Supplement) {
 		const d = new Date(log.loggedAt);
@@ -845,10 +871,11 @@
 	}
 
 	function startPress(e: PointerEvent, log: Log, supplement: Supplement) {
-		e.preventDefault();
+		suppressSupplementClick = false;
 		pressStart = { x: e.clientX, y: e.clientY };
 		pressTimer = setTimeout(() => {
 			pressTimer = null;
+			suppressSupplementClick = true;
 			openEditLog(log, supplement);
 		}, 500);
 	}
@@ -859,7 +886,18 @@
 
 	function movePress(e: PointerEvent) {
 		if (!pressTimer) return;
-		if (Math.abs(e.clientX - pressStart.x) > 8 || Math.abs(e.clientY - pressStart.y) > 8) cancelPress();
+		if (Math.abs(e.clientX - pressStart.x) > 8 || Math.abs(e.clientY - pressStart.y) > 8) {
+			suppressSupplementClick = true;
+			cancelPress();
+		}
+	}
+
+	function handleSupplementCardClick(id: string) {
+		if (suppressSupplementClick) {
+			suppressSupplementClick = false;
+			return;
+		}
+		toggleExpand(id);
 	}
 
 	$effect(() => {
@@ -869,6 +907,66 @@
 			// Tab-Wechsel zurück zu Today: Header wieder sichtbar
 			headerHidden = false;
 		}
+	});
+
+	// Today follows the app's bottom-up model. Keep the initial view pinned to
+	// the true lower edge while SvelteKit, iOS and late tracker data finish their
+	// layout work. The first deliberate user interaction releases the anchor so
+	// normal scrolling and card interactions are never pulled back down.
+	$effect(() => {
+		if (activeTab !== 'today' || loading || !scrollContainer || !bubbleContainerEl) return;
+		let cancelled = false;
+		let frame = 0;
+		const container = scrollContainer;
+		const content = bubbleContainerEl;
+		const viewport = window.visualViewport;
+
+		function stopInitialAnchor() {
+			cancelled = true;
+			cancelAnimationFrame(frame);
+		}
+
+		function anchorToBottom() {
+			if (cancelled || activeTab !== 'today') return;
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(() => {
+				if (cancelled || activeTab !== 'today') return;
+				const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+				if (Math.abs(container.scrollTop - maxScrollTop) > 1) {
+					container.scrollTop = maxScrollTop;
+				}
+				lastScrollY = container.scrollTop;
+				updateGreetingOpacity();
+			});
+		}
+
+		function keepInitialAnchor() {
+			if (cancelled) return;
+			const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+			if (container.scrollTop < maxScrollTop - 1) anchorToBottom();
+		}
+
+		const resizeObserver = new ResizeObserver(anchorToBottom);
+		resizeObserver.observe(container);
+		resizeObserver.observe(content);
+		container.addEventListener('scroll', keepInitialAnchor, { passive: true });
+		container.addEventListener('pointerdown', stopInitialAnchor, { passive: true, once: true });
+		container.addEventListener('wheel', stopInitialAnchor, { passive: true, once: true });
+		container.addEventListener('keydown', stopInitialAnchor, { once: true });
+		viewport?.addEventListener('resize', anchorToBottom);
+
+		void tick().then(anchorToBottom);
+		void document.fonts?.ready.then(anchorToBottom);
+
+		return () => {
+			stopInitialAnchor();
+			resizeObserver.disconnect();
+			container.removeEventListener('scroll', keepInitialAnchor);
+			container.removeEventListener('pointerdown', stopInitialAnchor);
+			container.removeEventListener('wheel', stopInitialAnchor);
+			container.removeEventListener('keydown', stopInitialAnchor);
+			viewport?.removeEventListener('resize', anchorToBottom);
+		};
 	});
 
 	$effect(() => {
@@ -1221,124 +1319,144 @@
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_today_empty}</p>
 			</div>
 		{:else}
-			{@const visibleTrackers = [
-				userSettings.moodTrackerEnabled && todayMoodEntry !== null ? 'mood' : null,
-				userSettings.waterTrackerEnabled && (waterLogsToday.length > 0 || waterHasReminderToday) ? 'water' : null,
-				userSettings.caffeineTrackerEnabled && caffeineLogsToday.length > 0 ? 'caffeine' : null,
-				userSettings.meditationTrackerEnabled && meditationLogsToday.length > 0 ? 'meditation' : null
-			].filter(Boolean)}
-			<div bind:this={bubbleContainerEl} class="px-4 flex flex-col gap-2">
-			{#if visibleTrackers.includes('mood') && todayMoodEntry !== null}
-				<MoodTrackerCard
-					todayEntry={todayMoodEntry}
-					todayDate={toLocalDateStr(new Date())}
-					onreload={loadTodayMoodEntry}
-				/>
-			{/if}
-			{#if userSettings.nutritionTrackerEnabled && todayMeals.length > 0}
-				<EatTrackerCard
-					meals={todayMeals}
-					goalKcal={nutritionGoalKcal}
-					goalProtein={nutritionGoalProtein}
-					goalFat={nutritionGoalFat}
-					goalCarbs={nutritionGoalCarbs}
-					goalFiber={nutritionGoalFiber}
-				/>
-			{/if}
-			{#if visibleTrackers.filter(v => v !== 'mood').length > 0}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-					<div class="px-4 pt-3 pb-0 -mb-1 flex items-center gap-2">
-						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
+			<div bind:this={bubbleContainerEl} class="px-4 flex flex-col gap-3">
+			{#if hasVisibleTrackerCards}
+				<section>
+					<div class="pb-2">
 						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Tracker</p>
 					</div>
-						{#if visibleTrackers.includes('water')}
-							<div>
-								<WaterTrackerCard
-									logs={waterLogsToday}
-									goalMl={userSettings.waterGoalMl ?? 2500}
-									onlogged={loadWaterLogs}
-									ondeleted={deleteWaterLog}
-									embedded={true}
-								/>
+					<div class="flex flex-col gap-2">
+						{#each displayedTodayTrackerRows as row, rowIndex (`tracker-row-${todayTrackerFocus ?? 'all'}-${rowIndex}`)}
+							<div class="grid grid-cols-2 gap-2 items-start">
+								{#each row as tracker, columnIndex (`tracker-${rowIndex}-${columnIndex}`)}
+									{#if tracker === 'caffeine'}
+									<div class={todayTrackerFocus === 'caffeine' || caffeineTodayExpanded ? 'col-span-2' : ''}>
+										<CaffeineTrackerCard
+											anchorId="today-caffeine-tracker"
+											logs={caffeineLogsToday}
+												limitMg={userSettings.caffeineLimitMg ?? 400}
+												drinks={visibleCaffeineDrinks}
+												onlogged={loadCaffeineLogs}
+												ondeleted={deleteCaffeineLog}
+											tileMode={true}
+											focusMode={todayTrackerFocus === 'caffeine'}
+											onfocus={() => openTodayTrackerFocus('caffeine')}
+											oncollapse={closeTodayTrackerFocus}
+											bind:expanded={caffeineTodayExpanded}
+											/>
+										</div>
+									{:else if tracker === 'water'}
+									<div class={todayTrackerFocus === 'water' || waterTodayExpanded ? 'col-span-2' : ''}>
+										<WaterTrackerCard
+											anchorId="today-water-tracker"
+												logs={waterLogsToday}
+												goalMl={userSettings.waterGoalMl ?? 2500}
+												onlogged={loadWaterLogs}
+												ondeleted={deleteWaterLog}
+											tileMode={true}
+											focusMode={todayTrackerFocus === 'water'}
+											onfocus={() => openTodayTrackerFocus('water')}
+											oncollapse={closeTodayTrackerFocus}
+											bind:expanded={waterTodayExpanded}
+											/>
+										</div>
+									{:else if tracker === 'nutrition'}
+										<div class={nutritionTodayExpanded ? 'col-span-2' : ''}>
+											<EatTrackerCard
+												meals={todayMeals}
+												goalKcal={nutritionGoalKcal}
+												goalProtein={nutritionGoalProtein}
+												goalFat={nutritionGoalFat}
+												goalCarbs={nutritionGoalCarbs}
+												goalFiber={nutritionGoalFiber}
+												tileMode={true}
+												bind:expanded={nutritionTodayExpanded}
+											/>
+										</div>
+									{:else if tracker === 'meditation'}
+									<div class={todayTrackerFocus === 'meditation' || meditationTodayExpanded ? 'col-span-2' : ''}>
+										<MeditationTrackerCard
+											anchorId="today-meditation-tracker"
+												logs={meditationLogsToday}
+												goalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
+												onlogged={loadMeditationLogs}
+												ondeleted={deleteMeditationLog}
+											tileMode={true}
+											focusMode={todayTrackerFocus === 'meditation'}
+											onfocus={() => openTodayTrackerFocus('meditation')}
+											oncollapse={closeTodayTrackerFocus}
+											bind:expanded={meditationTodayExpanded}
+											/>
+										</div>
+									{:else if tracker === 'mood' && todayMoodEntry !== null}
+										<div class={moodTodayExpanded ? 'col-span-2' : ''}>
+											<MoodTrackerCard
+												todayEntry={todayMoodEntry}
+												todayDate={toLocalDateStr(new Date())}
+												onreload={loadTodayMoodEntry}
+												tileMode={true}
+												bind:expanded={moodTodayExpanded}
+											/>
+										</div>
+									{/if}
+								{/each}
 							</div>
-						{/if}
-						{#if visibleTrackers.includes('caffeine')}
-							<div>
-								<CaffeineTrackerCard
-									logs={caffeineLogsToday}
-									limitMg={userSettings.caffeineLimitMg ?? 400}
-									drinks={visibleCaffeineDrinks}
-									onlogged={loadCaffeineLogs}
-									ondeleted={deleteCaffeineLog}
-									embedded={true}
-								/>
-							</div>
-						{/if}
-						{#if visibleTrackers.includes('meditation')}
-							<MeditationTrackerCard
-								logs={meditationLogsToday}
-								goalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
-								onlogged={loadMeditationLogs}
-								ondeleted={deleteMeditationLog}
-								embedded={true}
-							/>
-						{/if}
-				</div>
+						{/each}
+					</div>
+				</section>
 			{/if}
 			{#if loggedTodaySupplements.length > 0}
-				<div class="rounded-2xl flex flex-col select-none" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-					<div class="px-4 pt-3 pb-0.5 flex items-center gap-2">
-						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
+				<section class="select-none">
+					<div class="pb-2">
 						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Supplements</p>
 					</div>
-					{#each loggedTodaySupplements as supplement, i (supplement.id)}
-						{@const logs = logsForSupplement(supplement.id)}
-						{@const total = totalTodayAmount(supplement.id)}
-						{@const expanded = expandedIds.has(supplement.id)}
-						{@const logTimes = allLogTimes(supplement.id)}
-						<div
-							class="px-4 py-2 flex flex-col min-h-[52px] justify-center"
-							style=""
-							>
-								<!-- Header row — long-press on info area opens edit for most recent log -->
-								<div class="flex items-center justify-between gap-3">
+					<div class="flex flex-col gap-2">
+					{#each todaySupplementRows as row, rowIndex (`supplement-row-${rowIndex}`)}
+						<div class="grid grid-cols-3 gap-2 items-start">
+						{#each row as supplement, columnIndex (`supplement-${rowIndex}-${columnIndex}`)}
+							{#if supplement}
+								{@const logs = logsForSupplement(supplement.id)}
+								{@const total = totalTodayAmount(supplement.id)}
+								{@const expanded = expandedIds.has(supplement.id)}
+								{@const logTimes = allLogTimes(supplement.id)}
+								{@const latestLog = logs.reduce((a, b) => a.loggedAt > b.loggedAt ? a : b)}
+								<article
+									class="{expanded ? 'col-span-3' : 'aspect-square'} rounded-3xl px-2.5 py-2.5 flex flex-col overflow-hidden transition-[border-color,background-color] duration-150"
+									style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
+								>
+									<!-- Tap expands; long press keeps editing the newest log. -->
 									<button
-										class="flex-1 min-w-0 text-left active:opacity-70"
-										onpointerdown={(e) => startPress(e, logs.reduce((a, b) => a.loggedAt > b.loggedAt ? a : b), supplement)}
+										type="button"
+										class="flex-1 min-w-0 active:opacity-70 {expanded ? 'text-left' : 'text-center flex flex-col h-full'}"
+										onpointerdown={(e) => startPress(e, latestLog, supplement)}
 										onpointermove={movePress}
 										onpointerup={cancelPress}
 										onpointercancel={cancelPress}
+										oncontextmenu={(e) => e.preventDefault()}
+										onclick={() => handleSupplementCardClick(supplement.id)}
+										aria-expanded={expanded}
 									>
-										<div class="flex items-baseline gap-1 flex-wrap">
-											<p class="font-semibold text-sm" style="color: var(--color-on-surface)">{supplement.name}</p>
+										<div class="{expanded ? 'flex items-baseline gap-1 flex-wrap' : 'flex flex-col items-center justify-center gap-0.5 flex-1 min-h-0'}">
+											<p class="font-semibold text-sm leading-tight {expanded ? '' : 'line-clamp-2'}" style="color: var(--color-on-surface)">{supplement.name}</p>
 											{#if supplement.stockQuantity != null}
-												<span class="text-xs font-medium" style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-on-surface-variant)'}">({supplement.stockQuantity} {t.supplement_stock_left})</span>
+												<span class="text-[10px] font-medium {expanded ? '' : 'line-clamp-1'}" style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-on-surface-variant)'}">({supplement.stockQuantity} {t.supplement_stock_left})</span>
 											{/if}
 											{#if supplement.brand}
-												<span class="text-[10px]" style="color: var(--color-on-surface-variant); opacity: 0.5">· {supplement.brand}</span>
+												<span class="text-[10px] {expanded ? '' : 'max-w-full truncate'}" style="color: var(--color-on-surface-variant); opacity: 0.55">{expanded ? '· ' : ''}{supplement.brand}</span>
 											{/if}
 										</div>
-										{#if total > 0}
-											<p class="text-xs mt-0.5" style="color: var(--color-primary)">
+										{#if expanded}
+											<p class="text-[11px] leading-tight mt-0.5 text-left" style="color: var(--color-primary)">
 												{total} {displayUnit(supplement.unit, currentLang())} {t.supplement_taken_today}{logTimes ? ` ${logTimes}` : ''}
 											</p>
+										{:else}
+											<div class="mt-auto pt-1.5 w-full grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-primary)">
+												<span class="truncate text-left">{total} {displayUnit(supplement.unit, currentLang())}</span>
+												<span class="shrink-0 text-right">{logs.length > 1 ? `${logs.length}× · ` : ''}{formatTime(latestLog.loggedAt)}</span>
+											</div>
 										{/if}
 									</button>
-									{#if logs.length > 0 || (supplement.nutrients.length > 0 && total > 0)}
-										<button
-											onclick={() => toggleExpand(supplement.id)}
-											class="shrink-0 w-9 h-9 flex items-center justify-center active:opacity-60"
-											style="color: var(--color-on-surface-variant)"
-											aria-label={expanded ? 'Einklappen' : 'Ausklappen'}
-										>
-											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-											     style="transition: transform 0.2s; transform: rotate({expanded ? '90' : '0'}deg)">
-												<polyline points="9 6 15 12 9 18"/>
-											</svg>
-										</button>
-									{/if}
-								</div>
-								<!-- Expanded content — opens downward -->
+									<!-- Expanded content retains every prior log action. -->
 								{#if expanded}
 									<div class="mt-2 pt-2 border-t space-y-1.5" style="border-color: var(--color-outline-variant)">
 										{#each logs as log (log.id)}
@@ -1350,8 +1468,8 @@
 														onpointerup={cancelPress}
 														onpointercancel={cancelPress}
 														class="flex-1 text-left py-0.5 active:opacity-60"
-														style="color: var(--color-on-surface-variant)"
-													><span style="color: var(--color-primary)">{log.amount} {displayUnit(supplement.unit, currentLang())}</span> {t.supplement_log_at} {formatTime(log.loggedAt)}</button>
+														style="color: var(--color-primary)"
+													>{log.amount} {displayUnit(supplement.unit, currentLang())} {t.supplement_log_at} {formatTime(log.loggedAt)}</button>
 													<button
 														onclick={() => openEditLog(log, supplement)}
 														class="p-1 rounded active:opacity-50 shrink-0"
@@ -1390,9 +1508,13 @@
 										{/if}
 									</div>
 								{/if}
-							</div>
+								</article>
+							{/if}
 						{/each}
-				</div>
+						</div>
+					{/each}
+					</div>
+				</section>
 			{/if}
 			</div>
 		{/if}
@@ -1441,6 +1563,7 @@
 	meditationGoalMinutes={userSettings.meditationDailyGoalMinutes ?? 15}
 	moodEnabled={userSettings.moodTrackerEnabled}
 	moodHasEntry={todayMoodEntry !== null}
+	moodValue={todayMoodEntry?.mood ?? null}
 	nutritionEnabled={userSettings.nutritionTrackerEnabled}
 	nutritionTotalKcal={todayMeals.reduce((s, m) => s + m.components.reduce((cs, c) => cs + (c.kcal ?? 0), 0), 0)}
 	nutritionGoalKcal={nutritionGoalKcal}
@@ -1448,7 +1571,6 @@
 	onstartmeditation={startMeditation}
 	onrateMood={() => { quickLogOpen = false; moodEntryOpen = true; }}
 	onlogged={() => { Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]); if (activeTab === 'history') loadHistory(); }}
-	onCaffeineTrackerClick={handleCaffeineTrackerClick}
 	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
 	initialTab={quickLogInitialTab}
 />
@@ -1471,14 +1593,6 @@
 	bind:open={meditationTimerOpen}
 	durationMinutes={meditationTimerDuration}
 	onsaved={() => { loadMeditationLogs(); if (activeTab === 'history') loadHistory(); }}
-/>
-
-<CaffeineDrinkPickerSheet
-	bind:open={caffeinePickerOpen}
-	drinks={visibleCaffeineDrinks}
-	preselectedDrink={caffeinePickerPreselect}
-	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
-	onlogged={() => { Promise.all([loadTodayLogs(), loadCaffeineLogs()]); if (activeTab === 'history') loadHistory(); }}
 />
 
 <AppBottomNav

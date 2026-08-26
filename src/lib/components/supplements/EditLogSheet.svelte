@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
+	import { displayUnit } from '$lib/units';
+	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	type EditLogSheetType = {
 		id: string;
@@ -9,9 +11,7 @@
 		time: string;
 		note: string | null;
 	};
-
 	type CreateLogSheetType = { date: string };
-
 	type SupplementOption = { id: string; name: string; unit: string; defaultAmount: number };
 
 	let {
@@ -28,8 +28,6 @@
 
 	let saving = $state(false);
 
-	// ─── Edit mode ──────────────────────────────────────────────────────────────
-
 	function adjustAmount(delta: number) {
 		if (!sheet) return;
 		sheet.amount = Math.round(Math.max(0.5, sheet.amount + delta) * 10) / 10;
@@ -39,13 +37,13 @@
 		if (!sheet) return;
 		saving = true;
 		try {
-			const [h, min] = sheet.time.split(':').map(Number);
-			const d = new Date();
-			d.setHours(h, min, 0, 0);
+			const [hours, minutes] = sheet.time.split(':').map(Number);
+			const date = new Date();
+			date.setHours(hours, minutes, 0, 0);
 			await fetch(`/api/supplement-logs/${sheet.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ amount: sheet.amount, loggedAt: d.getTime(), note: sheet.note || null })
+				body: JSON.stringify({ amount: sheet.amount, loggedAt: date.getTime(), note: sheet.note || null })
 			});
 			sheet = null;
 			onreload();
@@ -56,20 +54,17 @@
 
 	async function del() {
 		if (!sheet) return;
-		const res = await fetch(`/api/supplement-logs/${sheet.id}`, { method: 'DELETE' });
-		if (!res.ok) return;
+		const response = await fetch(`/api/supplement-logs/${sheet.id}`, { method: 'DELETE' });
+		if (!response.ok) return;
 		sheet = null;
 		onreload();
 	}
-
-	// ─── Create mode ─────────────────────────────────────────────────────────────
 
 	let createSupplementId = $state('');
 	let createAmount = $state(1);
 	let createTime = $state('');
 	let createNote = $state('');
 	let createDate = $state('');
-
 	const today = new Date().toISOString().split('T')[0];
 
 	$effect(() => {
@@ -83,11 +78,11 @@
 		}
 	});
 
-	const createSupplement = $derived(supplements.find(s => s.id === createSupplementId));
+	const createSupplement = $derived(supplements.find((supplement) => supplement.id === createSupplementId));
 
 	function onSupplementChange() {
-		const supp = supplements.find(s => s.id === createSupplementId);
-		if (supp) createAmount = supp.defaultAmount;
+		const supplement = supplements.find((entry) => entry.id === createSupplementId);
+		if (supplement) createAmount = supplement.defaultAmount;
 	}
 
 	function adjustCreateAmount(delta: number) {
@@ -98,16 +93,16 @@
 		if (!createSupplement || !createSheet) return;
 		saving = true;
 		try {
-			const [h, min] = createTime.split(':').map(Number);
-			const d = new Date(createDate + 'T00:00:00');
-			d.setHours(h, min, 0, 0);
+			const [hours, minutes] = createTime.split(':').map(Number);
+			const date = new Date(createDate + 'T00:00:00');
+			date.setHours(hours, minutes, 0, 0);
 			await fetch('/api/supplement-logs', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					supplementId: createSupplement.id,
 					amount: createAmount,
-					loggedAt: d.getTime(),
+					loggedAt: date.getTime(),
 					note: createNote.trim() || null
 				})
 			});
@@ -120,187 +115,90 @@
 </script>
 
 {#if sheet}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => sheet = null}></div>
-	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl"
-	     style="background-color: var(--modal-bg)">
-		<div class="p-6 space-y-5">
-			<div class="flex justify-center">
-				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
-			</div>
-			<p class="font-semibold text-base" style="color: var(--color-on-surface)">
-				{t.supplement_log_edit_title} · {sheet.supplementName}
-			</p>
-
-			<!-- Amount + Time in one row -->
-			<div class="flex gap-2">
-				<!-- Amount -->
-				<div class="flex-1">
-					<!-- svelte-ignore a11y_label_has_associated_control -->
-					<label class="text-xs font-medium mb-1.5 block" style="color: var(--color-on-surface-variant)">{t.supplement_log_amount}</label>
-					<div class="flex items-center gap-0 rounded-xl overflow-hidden h-10" style="background-color: var(--color-surface-container)">
-						<button
-							onclick={() => adjustAmount(-0.5)}
-							class="w-9 h-10 flex items-center justify-center text-base font-bold active:opacity-60 transition-opacity shrink-0"
-							style="color: var(--color-on-surface)"
-						>−</button>
-						<span class="flex-1 text-center text-sm font-semibold" style="color: var(--color-on-surface)">
-							{sheet.amount} {sheet.unit}
-						</span>
-						<button
-							onclick={() => adjustAmount(0.5)}
-							class="w-9 h-10 flex items-center justify-center text-base font-bold active:opacity-60 transition-opacity shrink-0"
-							style="color: var(--color-on-surface)"
-						>+</button>
+	{@const activeSheet = sheet}
+	<ManageSheetShell
+		accent="var(--color-primary)"
+		title={activeSheet.supplementName}
+		subtitle={t.supplement_log_edit_title}
+		onclose={() => (sheet = null)}
+		maxHeight="78dvh"
+	>
+		{#snippet body()}
+			<section class="manage-section">
+				<div class="grid grid-cols-[minmax(0,1.18fr)_minmax(128px,.82fr)] gap-2">
+					<div class="min-w-0">
+						<span class="manage-label">{t.supplement_log_amount}</span>
+						<div class="manage-control grid grid-cols-[38px_minmax(0,1fr)_38px] overflow-hidden">
+							<button type="button" onclick={() => adjustAmount(-0.5)} class="flex items-center justify-center border-r text-lg font-semibold active:opacity-60" style="border-color: var(--bubble-container-border); color: var(--color-on-surface-variant)" aria-label={t.supplement_amount_decrease}>−</button>
+							<span class="flex min-w-0 items-center justify-center truncate px-1 text-center text-base font-semibold tabular-nums" style="color: var(--color-primary)">{activeSheet.amount} {displayUnit(activeSheet.unit, currentLang())}</span>
+							<button type="button" onclick={() => adjustAmount(0.5)} class="flex items-center justify-center border-l text-lg font-semibold active:opacity-60" style="border-color: var(--bubble-container-border); color: var(--color-on-surface-variant)" aria-label={t.supplement_amount_increase}>+</button>
+						</div>
 					</div>
+					<label class="min-w-0">
+						<span class="manage-label">{t.supplement_log_time}</span>
+						<input id="edit-log-time" type="time" bind:value={activeSheet.time} class="manage-input min-w-0 font-semibold tabular-nums" style="color: var(--color-primary)" />
+					</label>
 				</div>
-				<!-- Time -->
-				<div class="shrink-0">
-					<label for="edit-log-time" class="text-xs font-medium mb-1.5 block" style="color: var(--color-on-surface-variant)">{t.supplement_log_time}</label>
-					<input
-						id="edit-log-time"
-						type="time"
-						bind:value={sheet.time}
-						class="w-28 px-3 rounded-xl border-0 outline-none"
-						style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; height: 40px"
-					/>
-				</div>
-			</div>
 
-			<!-- Note -->
-			<div>
-				<!-- svelte-ignore a11y_label_has_associated_control -->
-				<label class="text-xs font-medium mb-1.5 block" style="color: var(--color-on-surface-variant)">{t.supplement_notes_label}</label>
-				<input
-					type="text"
-					bind:value={sheet.note}
-					placeholder={t.supplement_log_note_placeholder}
-					class="w-full h-10 px-3 rounded-xl border-0 outline-none text-sm"
-					style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px"
-				/>
-			</div>
-
-			<!-- Actions -->
-			<div class="flex gap-2 pt-1">
-				<button
-					onclick={del}
-					class="px-4 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-					style="background-color: var(--color-surface-container); color: var(--color-error)"
-				>{t.supplement_log_delete}</button>
-				<button
-					onclick={save}
-					disabled={saving}
-					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50"
-					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-				>{saving ? '…' : t.supplement_reminders_save}</button>
-			</div>
-		</div>
-	</div>
+				<label class="mt-3 block">
+					<span class="manage-label">{t.supplement_notes_label}</span>
+					<input id="edit-log-note" type="text" bind:value={activeSheet.note} placeholder={t.supplement_log_note_placeholder} class="manage-input" />
+				</label>
+			</section>
+		{/snippet}
+		{#snippet footer()}
+			<button type="button" onclick={del} class="manage-danger gap-1.5 active:opacity-70">
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+				{t.supplement_log_delete}
+			</button>
+			<button type="button" onclick={save} disabled={saving} class="manage-primary active:opacity-80 disabled:opacity-50">{saving ? '…' : t.supplement_reminders_save}</button>
+		{/snippet}
+	</ManageSheetShell>
 {/if}
 
 {#if createSheet}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => createSheet = null}></div>
-	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl"
-	     style="background-color: var(--modal-bg)">
-		<div class="p-6 space-y-4">
-			<div class="flex justify-center">
-				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
-			</div>
-			<p class="font-semibold text-base" style="color: var(--color-on-surface)">
-				{t.supplement_log_add_title}
-			</p>
-
-			<!-- Single card bubble -->
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-
-				<!-- Supplement picker row — invisible select covers full row -->
-				<div class="relative px-4 h-14 flex items-center">
-					<span class="text-sm truncate" style="color: {createSupplementId ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}; font-size: 16px">
-						{createSupplement?.name ?? t.supplement_log_select_supplement}
-					</span>
-					<select
-						id="create-log-supplement"
-						bind:value={createSupplementId}
-						onchange={onSupplementChange}
-						class="absolute inset-0 w-full h-full cursor-pointer"
-						style="opacity: 0; font-size: 16px"
-					>
-						<option value="" disabled>—</option>
-						{#each supplements as supp}
-							<option value={supp.id}>{supp.name}</option>
-						{/each}
+	<ManageSheetShell accent="var(--color-primary)" title={t.supplement_log_add_title} onclose={() => (createSheet = null)} maxHeight="82dvh">
+		{#snippet body()}
+			<section class="manage-section">
+				<label class="block">
+					<span class="manage-label">{t.supplement_name_label}</span>
+					<select id="create-log-supplement" bind:value={createSupplementId} onchange={onSupplementChange} class="manage-select">
+						<option value="" disabled>{t.supplement_log_select_supplement}</option>
+						{#each supplements as supplement}<option value={supplement.id}>{supplement.name}</option>{/each}
 					</select>
+				</label>
+
+				<div class="mt-3 grid grid-cols-2 gap-2">
+					<label>
+						<span class="manage-label">{t.supplement_log_date}</span>
+						<input id="create-log-date" type="date" bind:value={createDate} max={today} class="manage-input font-semibold" />
+					</label>
+					<label>
+						<span class="manage-label">{t.supplement_log_time}</span>
+						<input id="create-log-time" type="time" bind:value={createTime} class="manage-input font-semibold" />
+					</label>
 				</div>
 
-				<!-- Date + Time row -->
-				<div class="flex">
-					<div class="flex-1 px-4 py-3 flex flex-col gap-0.5">
-						<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.supplement_log_date}</span>
-						<input
-							id="create-log-date"
-							type="date"
-							bind:value={createDate}
-							max={today}
-							class="border-0 outline-none text-sm font-semibold w-full"
-							style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
-						/>
-					</div>
-					<div class="px-4 py-3 flex flex-col gap-0.5">
-						<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.supplement_log_time}</span>
-						<input
-							id="create-log-time"
-							type="time"
-							bind:value={createTime}
-							class="border-0 outline-none text-sm font-semibold"
-							style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0; width: 5.5rem"
-						/>
-					</div>
-				</div>
-
-				<!-- Amount row (only when supplement selected) -->
 				{#if createSupplement}
-					<div class="px-4 py-3 flex items-center justify-between">
-						<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.supplement_log_amount}</span>
-						<div class="flex items-center rounded-xl overflow-hidden" style="background-color: var(--color-surface-high)">
-							<button
-								onclick={() => adjustCreateAmount(-0.5)}
-								class="w-9 h-9 flex items-center justify-center text-base font-bold active:opacity-60 transition-opacity"
-								style="color: var(--color-on-surface)"
-							>−</button>
-							<span class="px-2 text-sm font-semibold" style="color: var(--color-on-surface)">
-								{createAmount} {createSupplement.unit}
-							</span>
-							<button
-								onclick={() => adjustCreateAmount(0.5)}
-								class="w-9 h-9 flex items-center justify-center text-base font-bold active:opacity-60 transition-opacity"
-								style="color: var(--color-on-surface)"
-							>+</button>
+					<div class="mt-3">
+						<span class="manage-label">{t.supplement_log_amount}</span>
+						<div class="manage-control grid grid-cols-[38px_minmax(0,1fr)_38px] overflow-hidden">
+							<button type="button" onclick={() => adjustCreateAmount(-0.5)} class="flex items-center justify-center border-r text-lg font-semibold" style="border-color: var(--bubble-container-border)">−</button>
+							<span class="flex min-w-0 items-center justify-center truncate px-1 text-base font-semibold">{createAmount} {displayUnit(createSupplement.unit, currentLang())}</span>
+							<button type="button" onclick={() => adjustCreateAmount(0.5)} class="flex items-center justify-center border-l text-lg font-semibold" style="border-color: var(--bubble-container-border)">+</button>
 						</div>
 					</div>
 				{/if}
 
-				<!-- Note row -->
-				<div class="px-4 py-3">
-					<input
-						type="text"
-						bind:value={createNote}
-						placeholder={t.supplement_log_note_placeholder}
-						class="w-full border-0 outline-none text-sm"
-						style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
-					/>
-				</div>
-			</div>
-
-			<!-- Save -->
-			<button
-				onclick={saveCreate}
-				disabled={saving || !createSupplement}
-				class="w-full py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-40"
-				style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-			>{saving ? '…' : t.supplement_reminders_save}</button>
-		</div>
-	</div>
+				<label class="mt-3 block">
+					<span class="manage-label">{t.supplement_notes_label}</span>
+					<input type="text" bind:value={createNote} placeholder={t.supplement_log_note_placeholder} class="manage-input" />
+				</label>
+			</section>
+		{/snippet}
+		{#snippet footer()}
+			<button type="button" onclick={() => (createSheet = null)} class="manage-secondary">{t.close}</button>
+			<button type="button" onclick={saveCreate} disabled={saving || !createSupplement} class="manage-primary active:opacity-80 disabled:opacity-40">{saving ? '…' : t.supplement_reminders_save}</button>
+		{/snippet}
+	</ManageSheetShell>
 {/if}

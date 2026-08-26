@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutBottomUp, paginateQuickLogItems, sortQuickLogItems } from './quickLogGrid';
+import { layoutBottomUp, layoutBottomUpRows, paginateQuickLogItems, sortQuickLogItems } from './quickLogGrid';
 
 type Item = { id: string; name: string };
 
@@ -100,6 +100,14 @@ describe('bottom-up quick-log grid', () => {
 		expect(grid.slice(0, 3)).toEqual(['19', '20', null]);
 		expect(grid.slice(-3)).toEqual(['01', '02', '03']);
 		expect(grid).toHaveLength(21);
+	});
+
+	it('preserves visual rows for expandable grid sections', () => {
+		const rows = layoutBottomUpRows(items(['A', 'B', 'C', 'D']), 3);
+		expect(rows.map(names)).toEqual([
+			['D', null, null],
+			['A', 'B', 'C']
+		]);
 	});
 
 	it('rejects invalid column counts', () => {

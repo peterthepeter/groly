@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { generateClientId, logCaffeineOffline } from '$lib/sync/manager';
 	import type { CaffeineDrink } from '$lib/db/schema';
+	import CaffeineDrinkPickerContent from './CaffeineDrinkPickerContent.svelte';
 
 	let {
 		open = $bindable<boolean>(false),
@@ -18,71 +17,8 @@
 		logDate?: string | null;
 	} = $props();
 
-	let selected = $state<CaffeineDrink | null>(null);
-	let amountMl = $state(0);
-	let logTime = $state('');
-	let saving = $state(false);
-	let errorMsg = $state<string | null>(null);
-
-	function currentTimeString() {
-		const now = new Date();
-		return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-	}
-
-	$effect(() => {
-		if (open) {
-			logTime = currentTimeString();
-			if (preselectedDrink) selectDrink(preselectedDrink);
-		}
-	});
-
-	const scaledCaffeine = $derived(
-		selected && amountMl > 0
-			? Math.round(selected.caffeineMg * amountMl / selected.defaultMl)
-			: 0
-	);
-
-	function selectDrink(drink: CaffeineDrink) {
-		selected = drink;
-		amountMl = userSettings.caffeineCustomAmounts[drink.id] ?? drink.defaultMl;
-	}
-
-	function adjustAmount(delta: number) {
-		amountMl = Math.max(10, amountMl + delta);
-	}
-
 	function close() {
 		open = false;
-		selected = null;
-		amountMl = 0;
-		logTime = '';
-		errorMsg = null;
-	}
-
-	async function log() {
-		if (!selected || amountMl <= 0) return;
-		saving = true;
-		errorMsg = null;
-		const [hh, mm] = logTime.split(':').map(Number);
-		const d = new Date((logDate ?? new Date().toISOString().slice(0, 10)) + 'T00:00:00');
-		d.setHours(hh, mm, 0, 0);
-		try {
-			// Offline-first wie die übrigen Logger: erst dauerhaft sichern + Queue,
-			// dann Sync. Funktioniert auch offline, idempotent über clientLogId.
-			await logCaffeineOffline({
-				drinkName: selected.name,
-				amountMl,
-				caffeineMg: scaledCaffeine,
-				loggedAt: d.getTime(),
-				clientLogId: generateClientId()
-			});
-			close();
-			onlogged();
-		} catch {
-			errorMsg = t.caffeine_error_offline;
-			setTimeout(() => { errorMsg = null; }, 3000);
-		}
-		saving = false;
 	}
 </script>
 
@@ -101,99 +37,14 @@
 
 			<p class="font-semibold text-base" style="color: var(--color-on-surface)">{t.caffeine_drink_picker_title}</p>
 
-			<!-- Amount + Time bar — always visible -->
-			<div class="flex items-center gap-2 px-3 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); height: 3rem">
-				<!-- − input + -->
-				<button
-					onclick={() => adjustAmount(-10)}
-					disabled={!selected}
-					class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 active:opacity-70 disabled:opacity-30"
-					style="background-color: var(--color-surface-container)"
-					aria-label="Weniger"
-				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
-						<line x1="5" y1="12" x2="19" y2="12"/>
-					</svg>
-				</button>
-
-				<input
-					type="number"
-					inputmode="numeric"
-					min="10"
-					bind:value={amountMl}
-					disabled={!selected}
-					class="w-12 h-8 text-center rounded-xl border-0 outline-none font-bold shrink-0 disabled:opacity-30"
-					style="background-color: var(--color-surface-container); color: #C8956C; font-size: 16px"
-					aria-label="Menge in ml"
-				/>
-				<span class="text-sm shrink-0" style="color: var(--color-on-surface-variant); opacity: {selected ? 1 : 0.3}">ml</span>
-
-				<button
-					onclick={() => adjustAmount(10)}
-					disabled={!selected}
-					class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 active:opacity-70 disabled:opacity-30"
-					style="background-color: var(--color-surface-container)"
-					aria-label="Mehr"
-				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
-						<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-					</svg>
-				</button>
-
-				<!-- Divider -->
-				<div class="w-px self-stretch my-2.5 shrink-0" style="background-color: var(--color-surface-high)"></div>
-
-				<!-- Time -->
-				<input
-					type="time"
-					bind:value={logTime}
-					class="shrink-0 h-8 px-1 rounded-lg border-0 outline-none text-center font-semibold"
-					style="width: 5.5rem; background-color: var(--color-surface-high); color: #C8956C; font-size: 16px; font-family: inherit"
-				/>
-
-				<!-- mg — only when drink selected -->
-				{#if selected}
-					<div class="shrink-0 text-right ml-auto">
-						<p class="text-xs font-bold leading-tight" style="color: #C8956C">{scaledCaffeine} mg</p>
-						<p class="text-[10px]" style="color: var(--color-on-surface-variant)">{t.caffeine_mg_preview}</p>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Drink grid — scrollable -->
-			<div class="grid grid-cols-2 gap-2 overflow-y-auto pr-0.5" style="max-height: 46dvh">
-				{#each drinks as drink (drink.id)}
-					<button
-						onclick={() => selectDrink(drink)}
-						class="rounded-2xl px-3 py-2.5 text-left transition-all active:opacity-70"
-						style="background-color: {selected?.id === drink.id ? 'color-mix(in srgb, #C8956C 15%, transparent)' : 'var(--color-surface-container)'};
-						       box-shadow: {selected?.id === drink.id ? 'inset 0 0 0 1.5px #C8956C' : 'none'}"
-					>
-						<p class="text-sm font-semibold leading-tight" style="color: {selected?.id === drink.id ? '#C8956C' : 'var(--color-on-surface)'}">{drink.name}</p>
-						<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant)">
-							{userSettings.caffeineCustomAmounts[drink.id] ?? drink.defaultMl} ml · {drink.caffeineMg} mg
-						</p>
-					</button>
-				{/each}
-			</div>
-
-			{#if errorMsg}
-				<p class="text-xs text-center" style="color: var(--color-error)">{errorMsg}</p>
-			{/if}
-
-			<div class="flex gap-2">
-				<button
-					onclick={close}
-					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
-				>{t.close}</button>
-				<button
-					onclick={log}
-					disabled={saving || !selected || amountMl <= 0}
-					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-40"
-					style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
-				>{saving ? '…' : t.caffeine_add}</button>
-			</div>
+			<CaffeineDrinkPickerContent
+				{drinks}
+				{preselectedDrink}
+				{logDate}
+				showCancel
+				oncancel={close}
+				onlogged={() => { close(); onlogged(); }}
+			/>
 		</div>
 	</div>
 {/if}

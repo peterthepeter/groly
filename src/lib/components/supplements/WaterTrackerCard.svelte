@@ -5,22 +5,35 @@
 	import { userSettings } from '$lib/userSettings.svelte';
 	import WaterEditLogSheet from './WaterEditLogSheet.svelte';
 	import WaterReminderSheet from './WaterReminderSheet.svelte';
+	import TrackerTileShell from './TrackerTileShell.svelte';
+	import WaterQuickAddContent from './WaterQuickAddContent.svelte';
 
 	let {
 		logs,
 		goalMl,
 		onlogged,
 		ondeleted,
-		embedded = false
+		embedded = false,
+		tileMode = false,
+		expanded = $bindable(false),
+		focusMode = false,
+		onfocus,
+		oncollapse,
+		anchorId
 	}: {
 		logs: { id: string; amountMl: number; loggedAt: number }[];
 		goalMl: number;
 		onlogged: () => void;
 		ondeleted: (id: string) => void;
 		embedded?: boolean;
+		tileMode?: boolean;
+		expanded?: boolean;
+		focusMode?: boolean;
+		onfocus?: () => void;
+		oncollapse?: () => void;
+		anchorId?: string;
 	} = $props();
 
-	let expanded = $state(false);
 	let saving = $state(false);
 	let errorMsg = $state<string | null>(null);
 	let showCustomInput = $state(false);
@@ -64,8 +77,8 @@
 		editSheet = { id: log.id, amountMl: log.amountMl, time: toHHMM(log.loggedAt) };
 	}
 
-	async function addWater(ml: number) {
-		if (saving) return;
+	async function addWater(ml: number): Promise<boolean> {
+		if (saving) return false;
 		saving = true;
 		errorMsg = null;
 		try {
@@ -76,11 +89,23 @@
 			});
 			if (!res.ok) throw new Error();
 			onlogged();
+			return true;
 		} catch {
 			errorMsg = t.water_error_offline;
 			setTimeout(() => { errorMsg = null; }, 3000);
+			return false;
+		} finally {
+			saving = false;
 		}
-		saving = false;
+	}
+
+	async function addWaterFromFocus(amountMl: number) {
+		if (await addWater(amountMl)) oncollapse?.();
+	}
+
+	function openLog() {
+		if (onfocus) onfocus();
+		else expanded = true;
 	}
 
 	function submitCustom() {
@@ -90,34 +115,86 @@
 		customAmount = '';
 		showCustomInput = false;
 	}
+
+	function toggleCustomInput() {
+		showCustomInput = !showCustomInput;
+		customAmount = '';
+		if (showCustomInput && tileMode) expanded = true;
+	}
 </script>
 
-<div class={embedded ? 'flex flex-col px-4 py-2' : 'rounded-2xl px-4 py-3 flex flex-col'} style={embedded ? '' : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}>
+{#if tileMode}
+	<TrackerTileShell
+		{anchorId}
+		accent="#60A5FA"
+		title={t.water_title}
+		expandable={!focusMode && logs.length > 0}
+		expanded={focusMode || expanded}
+		ontoggle={(value) => expanded = value}
+		inlineExpansion={focusMode}
+		{oncollapse}
+		expandLabel={t.water_expand}
+		collapseLabel={t.water_collapse}
+	>
+		{#snippet body()}
+			{#if !focusMode}
+				<div class="h-7 flex items-center">
+					<button onclick={openLog} disabled={saving} class="w-full h-7 text-center text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity touch-manipulation" style="color: #60A5FA">{t.tracker_log_action}</button>
+				</div>
+			{/if}
+			<div class="h-8 pt-1 flex flex-col justify-end">
+				<div class="h-[18px] flex items-center gap-1.5 text-[11px] leading-none tabular-nums" style="color: #60A5FA">
+					<span>{totalMl} / {goalMl} ml</span>
+					{#if hasReminders}
+						<button onclick={() => reminderSheetOpen = true} class="flex items-center justify-center active:opacity-60" aria-label="Erinnerungen">
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+						</button>
+					{/if}
+				</div>
+				<div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-surface-container)">
+					<div class="h-full rounded-full" style="width: {animatedPercent}%; background: linear-gradient(90deg, rgba(96,165,250,0.35), rgba(96,165,250,0.75)); transition: width {isMounted ? '0.3s ease' : '0.9s cubic-bezier(0.25,0.46,0.45,0.94)'}"></div>
+				</div>
+			</div>
+		{/snippet}
+		{#snippet details()}
+			{#if focusMode}
+				<WaterQuickAddContent {presets} onadd={addWaterFromFocus} {saving} />
+			{:else}
+				{#if showCustomInput}
+					<div class="flex gap-2 items-center mb-2">
+						<input type="number" inputmode="numeric" min="1" bind:value={customAmount} placeholder={t.water_custom_placeholder} class="flex-1 h-9 px-3 rounded-xl border-0 outline-none" style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px" onkeydown={(e) => { if (e.key === 'Enter') submitCustom(); }} />
+						<button onclick={submitCustom} disabled={saving || !customAmount || Number(customAmount) <= 0} class="h-9 px-4 rounded-xl text-sm font-semibold active:opacity-70 disabled:opacity-40 shrink-0" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)">{t.water_add}</button>
+					</div>
+				{/if}
+				{#if errorMsg}<p class="text-xs mb-1.5 text-center" style="color: var(--color-error)">{errorMsg}</p>{/if}
+				{#if sortedLogs.length > 0}
+					<div class="space-y-1.5">
+						{#each sortedLogs as log (log.id)}
+							<div class="flex items-center justify-between text-xs">
+								<span style="color: var(--color-on-surface-variant)"><span style="color: #60A5FA">{log.amountMl} ml</span> {t.supplement_log_at} {formatTime(log.loggedAt)}</span>
+								<div class="flex items-center gap-0.5 shrink-0">
+									<button onclick={() => openEdit(log)} class="p-1 rounded active:opacity-50" aria-label="Bearbeiten" style="color: var(--color-on-surface-variant)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+									<button onclick={() => ondeleted(log.id)} class="p-1 rounded active:opacity-50" aria-label={t.water_log_delete} style="color: var(--color-on-surface-variant)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			{/if}
+		{/snippet}
+	</TrackerTileShell>
+{:else}
+<div
+	class={embedded ? 'flex flex-col px-4 py-2' : 'rounded-2xl px-4 py-3 flex flex-col'}
+	style={embedded ? '' : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}
+>
 
-	<!-- Header row: title left, buttons right -->
 	<div class="flex items-center gap-2">
-		<p class="font-semibold text-sm shrink-0" style="color: var(--color-on-surface)">{t.water_title}</p>
-		<!-- Quick-add buttons -->
-		<div class="flex gap-1 flex-1 justify-end">
-			{#each presets.slice(0, 2) as ml}
-				<button
-					onclick={() => addWater(ml)}
-					disabled={saving}
-					class="px-2 py-0.5 text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity"
-					style="color: #60A5FA"
-				>+{ml}</button>
-			{/each}
-			<button
-				onclick={() => { showCustomInput = !showCustomInput; customAmount = ''; }}
-				disabled={saving}
-				class="px-2 py-0.5 text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity"
-				style="color: var(--color-on-surface-variant)"
-			>{t.water_custom}</button>
-		</div>
+		<p class="font-semibold text-sm leading-tight shrink-0" style="color: var(--color-on-surface)">{t.water_title}</p>
 		{#if logs.length > 0}
 			<button
 				onclick={() => expanded = !expanded}
-				class="shrink-0 w-7 h-7 flex items-center justify-center active:opacity-60"
+				class="shrink-0 w-7 h-7 ml-auto flex items-center justify-center active:opacity-60"
 				style="color: var(--color-on-surface-variant)"
 				aria-label={expanded ? t.water_collapse : t.water_expand}
 			>
@@ -127,6 +204,23 @@
 				</svg>
 			</button>
 		{/if}
+	</div>
+	<!-- Quick-add content zone -->
+	<div class="flex gap-1 flex-1 justify-end">
+			{#each presets.slice(0, 2) as ml}
+				<button
+					onclick={() => addWater(ml)}
+					disabled={saving}
+					class="px-2 py-0.5 text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity"
+					style="color: #60A5FA"
+				>+{ml}</button>
+			{/each}
+			<button
+				onclick={toggleCustomInput}
+				disabled={saving}
+				class="px-2 py-0.5 text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity"
+				style="color: var(--color-on-surface-variant)"
+			>{t.water_custom}</button>
 	</div>
 
 	<!-- Progress row -->
@@ -223,6 +317,7 @@
 		</div>
 	{/if}
 </div>
+{/if}
 
 <WaterEditLogSheet bind:sheet={editSheet} onreload={onlogged} />
 <WaterReminderSheet bind:open={reminderSheetOpen} />

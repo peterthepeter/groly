@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
+	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	let {
 		initialKcal = null,
@@ -177,38 +178,23 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-[55]" style="background: rgba(0,0,0,0.5)" onclick={onclose}></div>
-
-<div class="fixed left-0 right-0 z-[60] rounded-t-3xl flex flex-col max-w-[430px] mx-auto"
-     style="background-color: var(--modal-bg); bottom: {bottomOffset}px; max-height: {maxHeight}px">
-	<!-- Handle -->
-	<div class="flex justify-center pt-3 pb-1 shrink-0">
-		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-outline-variant)"></div>
-	</div>
-
-	<div class="px-5 pb-2 shrink-0">
-		<p class="font-bold text-lg" style="color: #FB923C">{t.nutrition_daily_goal}</p>
-	</div>
-
-	<div class="overflow-y-auto px-5 py-2 flex-1" style="min-height: 0">
-		<div class="rounded-2xl p-4" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+<ManageSheetShell accent="#FB923C" title={t.nutrition_daily_goal} {onclose} zIndex={60} bottom={`${bottomOffset}px`} maxHeight={`${maxHeight}px`}>
+	{#snippet body()}
+		<div class="manage-stack">
+			<section class="manage-section">
 				<!-- Rechner: zuerst Daten eingeben, dann wird berechnet -->
 				<p class="text-xs mb-3" style="color: var(--color-on-surface-variant)">
 					{t.nutrition_calc_intro}
 				</p>
 
 				<!-- Geschlecht -->
-				<div class="flex gap-2 mb-3">
+				<div class="manage-chip-grid mb-3 !grid-cols-2">
 					<button type="button" onclick={() => (sex = 'female')}
-					        class="flex-1 py-1.5 rounded-xl text-sm active:opacity-70"
-					        style="background-color: {sex === 'female' ? '#FB923C' : 'var(--bubble-interactive-bg)'}; color: {sex === 'female' ? '#fff' : 'var(--color-on-surface)'}; border: 1px solid {sex === 'female' ? '#FB923C' : 'var(--bubble-interactive-border)'}">
+					        class="manage-chip" data-selected={sex === 'female'}>
 						{t.nutrition_female}
 					</button>
 					<button type="button" onclick={() => (sex = 'male')}
-					        class="flex-1 py-1.5 rounded-xl text-sm active:opacity-70"
-					        style="background-color: {sex === 'male' ? '#FB923C' : 'var(--bubble-interactive-bg)'}; color: {sex === 'male' ? '#fff' : 'var(--color-on-surface)'}; border: 1px solid {sex === 'male' ? '#FB923C' : 'var(--bubble-interactive-border)'}">
+					        class="manage-chip" data-selected={sex === 'male'}>
 						{t.nutrition_male}
 					</button>
 				</div>
@@ -218,30 +204,26 @@
 						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_age}</span>
 						<input type="text" inputmode="numeric" value={age}
 						       oninput={(e) => (age = digitsOnly((e.target as HTMLInputElement).value))}
-						       class="w-full mt-1 px-3 py-1.5 rounded-xl bg-transparent outline-none"
-						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
+						       class="manage-input mt-1" />
 					</label>
 					<label class="block">
 						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_height_cm}</span>
 						<input type="text" inputmode="numeric" value={height}
 						       oninput={(e) => (height = digitsOnly((e.target as HTMLInputElement).value))}
-						       class="w-full mt-1 px-3 py-1.5 rounded-xl bg-transparent outline-none"
-						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
+						       class="manage-input mt-1" />
 					</label>
 					<label class="block">
 						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_weight_kg}</span>
 						<input type="text" inputmode="decimal" value={weight}
 						       oninput={(e) => (weight = decimalOnly((e.target as HTMLInputElement).value))}
-						       class="w-full mt-1 px-3 py-1.5 rounded-xl bg-transparent outline-none"
-						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
+						       class="manage-input mt-1" />
 					</label>
 				</div>
 
 				<label class="block mb-3">
 					<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_activity}</span>
 					<select bind:value={activity}
-					        class="w-full mt-1 px-3 py-1.5 rounded-xl bg-transparent outline-none appearance-none"
-					        style="border: 1px solid var(--bubble-interactive-border); font-size: 16px">
+					        class="manage-select mt-1 appearance-none">
 						<option value="sedentary">{t.nutrition_activity_sedentary}</option>
 						<option value="light">{t.nutrition_activity_light}</option>
 						<option value="moderate">{t.nutrition_activity_moderate}</option>
@@ -266,8 +248,7 @@
 			<input type="text" inputmode="numeric" value={kcal}
 			       oninput={(e) => (kcal = digitsOnly((e.target as HTMLInputElement).value))}
 			       placeholder="2000"
-			       class="w-full mt-1 px-4 py-1.5 rounded-xl bg-transparent outline-none"
-			       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
+		       class="manage-input mt-1" />
 		</label>
 
 		<!-- Makros (optional) -->
@@ -279,45 +260,32 @@
 				<span class="text-[11px]" style="color: var(--color-on-surface-variant)">{t.nutrition_protein_g}</span>
 				<input type="text" inputmode="numeric" value={protein}
 				       oninput={(e) => (protein = digitsOnly((e.target as HTMLInputElement).value))}
-				       class="w-full mt-1 px-2 py-1.5 rounded-xl bg-transparent outline-none"
-				       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
+				       class="manage-input mt-1 !px-2" />
 			</label>
 			<label class="block">
 				<span class="text-[11px]" style="color: var(--color-on-surface-variant)">{t.nutrition_fat_g}</span>
 				<input type="text" inputmode="numeric" value={fat}
 				       oninput={(e) => (fat = digitsOnly((e.target as HTMLInputElement).value))}
-				       class="w-full mt-1 px-2 py-1.5 rounded-xl bg-transparent outline-none"
-				       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
+				       class="manage-input mt-1 !px-2" />
 			</label>
 			<label class="block">
 				<span class="text-[11px]" style="color: var(--color-on-surface-variant)">{t.nutrition_carbs_g}</span>
 				<input type="text" inputmode="numeric" value={carbs}
 				       oninput={(e) => (carbs = digitsOnly((e.target as HTMLInputElement).value))}
-				       class="w-full mt-1 px-2 py-1.5 rounded-xl bg-transparent outline-none"
-				       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
+				       class="manage-input mt-1 !px-2" />
 			</label>
 			<label class="block">
 				<span class="text-[11px]" style="color: var(--color-on-surface-variant)">{t.nutrition_fiber_g}</span>
 				<input type="text" inputmode="numeric" value={fiber}
 				       oninput={(e) => (fiber = digitsOnly((e.target as HTMLInputElement).value))}
-				       class="w-full mt-1 px-2 py-1.5 rounded-xl bg-transparent outline-none"
-				       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
+				       class="manage-input mt-1 !px-2" />
 			</label>
 		</div>
+			</section>
 		</div>
-	</div>
-
-	<!-- Bottom buttons -->
-	<div class="px-5 pt-2 shrink-0 flex gap-2" style="padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)">
-		<button onclick={onclose}
-		        class="flex-1 py-3 rounded-full text-sm font-semibold active:opacity-70"
-		        style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)">
-			{t.nutrition_cancel}
-		</button>
-		<button onclick={save} disabled={saving}
-		        class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-40"
-		        style="background: #FB923C; color: #fff">
-			{saving ? '…' : t.nutrition_save}
-		</button>
-	</div>
-</div>
+	{/snippet}
+	{#snippet footer()}
+		<button type="button" onclick={onclose} class="manage-secondary">{t.nutrition_cancel}</button>
+		<button type="button" onclick={save} disabled={saving} class="manage-primary disabled:opacity-40">{saving ? '…' : t.nutrition_save}</button>
+	{/snippet}
+</ManageSheetShell>

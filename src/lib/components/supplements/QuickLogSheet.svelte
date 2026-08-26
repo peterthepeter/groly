@@ -2,13 +2,18 @@
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { displayUnit } from '$lib/units';
 	import { goto } from '$app/navigation';
-	import { generateClientId, logSupplementOffline, logWaterOffline, logCaffeineOffline, logMeditationOffline } from '$lib/sync/manager';
+	import { generateClientId, logSupplementOffline, logWaterOffline, logMeditationOffline } from '$lib/sync/manager';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { untrack, tick } from 'svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
 	import { todayKey as todayStr } from '$lib/dates';
 	import SupplementQuickLogTile from './SupplementQuickLogTile.svelte';
-	import { layoutBottomUp, paginateQuickLogItems, sortQuickLogItems } from '$lib/supplements/quickLogGrid';
+	import TrackerTileShell from './TrackerTileShell.svelte';
+	import CaffeineDrinkPickerContent from './CaffeineDrinkPickerContent.svelte';
+	import WaterQuickAddContent from './WaterQuickAddContent.svelte';
+	import MeditationStartContent from './MeditationStartContent.svelte';
+	import { layoutBottomUp, sortQuickLogItems } from '$lib/supplements/quickLogGrid';
+	import { getMoodLevel } from '$lib/mood';
 
 	type Supplement = {
 		id: string; name: string; unit: string;
@@ -28,13 +33,13 @@
 		caffeineTotalMg = 0,
 		caffeineLimitMg = 400,
 		caffeineDrinks = [],
-		onCaffeineTrackerClick = null,
 		meditationEnabled = false,
 		meditationTotalMinutes = 0,
 		meditationGoalMinutes = 15,
 		onstartmeditation = null,
 		moodEnabled = false,
 		moodHasEntry = false,
+		moodValue = null as number | null,
 		onrateMood = null,
 		nutritionEnabled = false,
 		nutritionTotalKcal = 0,
@@ -53,13 +58,13 @@
 		caffeineTotalMg?: number;
 		caffeineLimitMg?: number;
 		caffeineDrinks?: CaffeineDrink[];
-		onCaffeineTrackerClick?: (() => void) | null;
 		meditationEnabled?: boolean;
 		meditationTotalMinutes?: number;
 		meditationGoalMinutes?: number;
 		onstartmeditation?: ((minutes: number) => void) | null;
 		moodEnabled?: boolean;
 		moodHasEntry?: boolean;
+		moodValue?: number | null;
 		onrateMood?: (() => void) | null;
 		nutritionEnabled?: boolean;
 		nutritionTotalKcal?: number;
@@ -81,6 +86,12 @@
 	}
 
 	const isRetro = $derived(!!logDate && logDate !== todayStr());
+	const moodLevel = $derived(moodValue === null ? null : getMoodLevel(moodValue));
+	const moodStatus = $derived(
+		moodHasEntry && moodLevel
+			? `${t.mood_today_prefix} ${(t[moodLevel.labelKey as keyof typeof t] as string) ?? ''}`
+			: t.mood_entry_title
+	);
 
 	let sheetEl = $state<HTMLElement | null>(null);
 	let activeSheetTab = $state<'tracker' | 'supplements'>('supplements');
@@ -100,6 +111,7 @@
 	}
 
 	function switchTab(tab: 'tracker' | 'supplements') {
+		trackerDrillIn = null;
 		activeSheetTab = tab;
 		try { localStorage.setItem('supplement_sheet_tab', tab); } catch {}
 		void tick().then(() => {
@@ -116,10 +128,8 @@
 	let waterSaving = $state(false);
 	let waterDone = $state(false);
 	let waterError = $state<string | null>(null);
-	let waterShowCustom = $state(false);
-	let waterCustomAmount = $state('');
-	let meditationShowCustom = $state(false);
-	let meditationCustomTime = $state('00:10');
+	type TrackerDrillIn = 'caffeine' | 'water' | 'meditation';
+	let trackerDrillIn = $state<TrackerDrillIn | null>(null);
 	let meditationRetroOpen = $state(false);
 	let meditationRetroStartTime = $state('');
 	let meditationRetroDuration = $state<number | null>(null);
@@ -129,9 +139,6 @@
 	let waterRetroOpen = $state(false);
 	let waterRetroTime = $state('');
 	let waterRetroMl = $state('');
-	let caffeineSaving = $state<string | null>(null); // drinkId being saved
-	let caffeineDone = $state<string | null>(null);   // drinkId just logged
-	let caffeinePage = $state(0);
 	let saving = $state<Record<string, boolean>>({});
 	let done = $state<Record<string, boolean>>({});
 	let logCounts = $state<Record<string, number>>({});
@@ -183,38 +190,12 @@
 	));
 	const supplementGrid = $derived(layoutBottomUp(sortedSupplements, 3));
 	const trackerGrid = $derived(layoutBottomUp(trackerList, 2));
-	const caffeinePages = $derived(paginateQuickLogItems(caffeineDrinks, 4));
 	const noteEditorSupplement = $derived(supplements.find(s => s.id === noteEditorId) ?? null);
-
-	function updateCaffeinePage(event: Event) {
-		const scroller = event.currentTarget as HTMLDivElement;
-		if (scroller.clientWidth > 0) caffeinePage = Math.round(scroller.scrollLeft / scroller.clientWidth);
-	}
-
-	async function logCaffeine(drink: CaffeineDrink) {
-		if (caffeineSaving) return;
-		caffeineSaving = drink.id;
-		const ml = userSettings.caffeineCustomAmounts?.[drink.id] ?? drink.defaultMl;
-		const mg = Math.round(drink.caffeineMg * ml / drink.defaultMl);
-		const loggedAt = makeTimestamp(logDate ?? todayStr(), new Date().toTimeString().slice(0, 5));
-		const clientLogId = generateClientId();
-
-		// Erst dauerhaft in den Ausgangskorb (überlebt App-Kill/iOS-Suspend), dann
-		// stößt logCaffeineOffline den Server-Sync an. Haken erscheint erst danach.
-		await logCaffeineOffline({ drinkName: drink.name, amountMl: ml, caffeineMg: mg, loggedAt, clientLogId });
-		caffeineDone = drink.id;
-		setTimeout(() => { caffeineDone = null; }, 2500);
-		onlogged();
-		caffeineSaving = null;
-	}
 
 	$effect(() => {
 		if (open) {
 			activeSheetTab = untrack(() => initialTab ?? getSmartDefault());
 			try { localStorage.setItem('quicklog_opened', '1'); } catch {}
-			caffeineDone = null;
-			caffeineSaving = null;
-			caffeinePage = 0;
 			// Session-Reset beim Öffnen. supplements wird hier bewusst NICHT befüllt,
 			// das übernimmt der zweite Effekt unten — sonst Race im Cold-Start, wenn
 			// das Sheet via Push-Deep-Link aufgeht bevor loadSupplements() resolved hat.
@@ -225,11 +206,8 @@
 			saving = {};
 			done = {};
 			waterDone = false;
-			waterShowCustom = false;
-			waterCustomAmount = '';
+			trackerDrillIn = null;
 			waterError = null;
-			meditationShowCustom = false;
-			meditationCustomTime = '00:10';
 			meditationRetroOpen = false;
 			meditationRetroDuration = null;
 			meditationRetroShowCustom = false;
@@ -302,32 +280,40 @@
 		waterSaving = false;
 	}
 
-	function submitWaterCustom() {
-		const ml = Math.round(Number(waterCustomAmount));
-		if (!ml || ml <= 0) return;
-		logWater(ml);
-		waterCustomAmount = '';
-		waterShowCustom = false;
+	function openTrackerDrillIn(view: TrackerDrillIn) {
+		trackerDrillIn = view;
+		void tick().then(() => {
+			const card = sheetEl?.querySelector<HTMLElement>(`#quick-log-${view}-tracker`);
+			card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		});
+	}
+
+	function closeTrackerDrillIn() {
+		trackerDrillIn = null;
+		void tick().then(() => { if (sheetEl) sheetEl.scrollTop = 0; });
+	}
+
+	function logWaterQuick(ml: number) {
+		if (!ml || ml <= 0 || waterSaving) return;
+		closeTrackerDrillIn();
+		void logWater(ml);
 	}
 
 	function startMeditation(minutes: number) {
 		if (!onstartmeditation || minutes <= 0) return;
+		trackerDrillIn = null;
 		open = false;
-		meditationShowCustom = false;
-		meditationCustomTime = '00:10';
 		onstartmeditation(minutes);
-	}
-
-	function submitMeditationCustom() {
-		const [h, m] = meditationCustomTime.split(':').map(Number);
-		const totalMin = (h || 0) * 60 + (m || 0);
-		if (totalMin <= 0) return;
-		startMeditation(totalMin);
 	}
 
 	function openNoteEditor(id: string) {
 		noteEditorId = id;
 		void tick().then(() => noteInputEl?.focus());
+	}
+
+	function handleCaffeineLogged() {
+		closeTrackerDrillIn();
+		onlogged();
 	}
 
 	async function logOne(supplementId: string) {
@@ -372,12 +358,15 @@
 .supplement-done-confirm {
 	animation: confirm-pop 0.2s ease forwards;
 }
-.caffeine-pager {
-	scrollbar-width: none;
-	overscroll-behavior-inline: contain;
+@keyframes tracker-drill-in {
+	from { opacity: 0; transform: translateX(18px); }
+	to { opacity: 1; transform: translateX(0); }
 }
-.caffeine-pager::-webkit-scrollbar {
-	display: none;
+.tracker-drill-in {
+	animation: tracker-drill-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+	.tracker-drill-in { animation: none; }
 }
 </style>
 
@@ -392,14 +381,14 @@
 			<div class="flex justify-center mb-4">
 				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 			</div>
-			<div class="flex items-center justify-between">
-					<div class="flex flex-col gap-0.5">
-						<p class="font-semibold text-base" style="color: var(--color-on-surface)">{t.supplement_log_save}</p>
-						<p class="text-xs font-semibold" style="color: {isRetro ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">
-							{formatLogDate(logDate ?? todayStr())}
-						</p>
-					</div>
-					<div class="flex items-center gap-2">
+			<div class="flex items-center justify-between min-h-10">
+				<div class="flex flex-col gap-0.5">
+					<p class="font-semibold text-base" style="color: var(--color-on-surface)">{t.supplement_log_save}</p>
+					<p class="text-xs font-semibold" style="color: {isRetro ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">
+						{formatLogDate(logDate ?? todayStr())}
+					</p>
+				</div>
+				<div class="flex items-center gap-2">
 						{#if activeSheetTab === 'supplements' || !(trackerList.length > 0 && sortedSupplements.length > 0)}
 							<button
 								onclick={cycleSortOrder}
@@ -424,17 +413,7 @@
 							class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold active:opacity-60 transition-opacity"
 							style="background-color: var(--bubble-interactive-bg); color: var(--color-primary)"
 						>{t.supplement_manage}</button>
-						<button
-							onclick={() => open = false}
-							aria-label={t.close}
-							class="w-8 h-8 flex items-center justify-center rounded-xl active:opacity-60 transition-opacity"
-							style="background-color: var(--bubble-interactive-bg); color: var(--color-on-surface-variant)"
-						>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-								<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-							</svg>
-						</button>
-					</div>
+				</div>
 			</div>
 		</div>
 
@@ -448,109 +427,78 @@
 				<div class="flex flex-col gap-2">
 				{#if activeSheetTab === 'tracker' && trackerList.length > 0}
 					<div class="grid grid-cols-2 gap-2" aria-label="Tracker">
-						{#each trackerGrid as tracker, index}
-							{#if tracker === null}
-								<div class="min-h-[128px]" style="order: {index}" aria-hidden="true"></div>
-							{/if}
-						{/each}
-						{#if caffeineEnabled && caffeineDrinks.length > 0}
-							<div
-								class="h-[128px] rounded-3xl px-3 py-2.5 flex flex-col overflow-hidden"
-								style="order: {trackerGrid.indexOf('caffeine')}; background-color: var(--bubble-container-bg); border: 1px solid {caffeineDone ? '#C8956C' : 'var(--bubble-container-border)'}"
+						{#if !trackerDrillIn}
+							{#each trackerGrid as tracker, index}
+								{#if tracker === null}
+									<div class="h-[108px]" style="order: {index}" aria-hidden="true"></div>
+								{/if}
+							{/each}
+						{/if}
+						{#if caffeineEnabled && caffeineDrinks.length > 0 && (!trackerDrillIn || trackerDrillIn === 'caffeine')}
+							<TrackerTileShell
+								anchorId="quick-log-caffeine-tracker"
+								accent="#C8956C"
+								title={t.caffeine_title}
+								expanded={trackerDrillIn === 'caffeine'}
+								inlineExpansion={trackerDrillIn === 'caffeine'}
+								oncollapse={closeTrackerDrillIn}
+								collapseLabel={t.caffeine_collapse}
+								ontitleclick={() => trackerDrillIn === 'caffeine' ? closeTrackerDrillIn() : openTrackerDrillIn('caffeine')}
+								order={trackerGrid.indexOf('caffeine')}
 							>
-								{#if caffeineDone}
-									<div class="h-full flex items-center justify-center px-2 text-center supplement-done-confirm" role="status" aria-live="polite">
-										<span class="text-xs font-bold leading-snug" style="color: #C8956C">{t.supplement_taken}</span>
-									</div>
-								{:else}
-									<div class="min-w-0">
-										<button
-											type="button"
-											onclick={() => onCaffeineTrackerClick?.()}
-											class="text-sm font-bold leading-tight line-clamp-2 text-left active:opacity-60"
-											style="color: #C8956C"
-										>{t.caffeine_title}</button>
-										<p class="mt-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-on-surface-variant)">{caffeineTotalMg} / {caffeineLimitMg} mg</p>
-									</div>
-									<div
-										class="caffeine-pager mt-1.5 min-w-0 overflow-x-auto snap-x snap-mandatory"
-										onscroll={updateCaffeinePage}
-										aria-label={t.caffeine_title}
-									>
-										<div class="flex">
-											{#each caffeinePages as page, pageIndex}
-												<div class="w-full shrink-0 snap-start grid grid-cols-2 grid-rows-2 gap-x-1 gap-y-0.5" aria-label={`${pageIndex + 1} / ${caffeinePages.length}`}>
-													{#each page as drink (drink.id)}
-														{@const isThisSaving = caffeineSaving === drink.id}
-														<button
-																	onclick={() => logCaffeine(drink)}
-															disabled={!!caffeineSaving}
-															class="min-w-0 h-7 px-1 rounded-lg text-[11px] font-semibold truncate active:opacity-60 disabled:opacity-50 transition-opacity"
-															style="background-color: transparent; color: #C8956C"
-															aria-label={drink.name}
-															title={drink.name}
-														>
-															{#if isThisSaving}…{:else}{drink.name}{/if}
-														</button>
-													{/each}
-												</div>
-											{/each}
-										</div>
-									</div>
-									{#if caffeinePages.length > 1}
-										<div class="mt-0.5 flex h-1 items-center justify-center gap-1" aria-hidden="true">
-											{#each caffeinePages as _, index}
-												<span
-													class="h-1 rounded-full transition-all duration-150"
-													class:w-3={caffeinePage === index}
-													class:w-1={caffeinePage !== index}
-													style="background-color: {caffeinePage === index ? '#C8956C' : 'var(--color-outline-variant)'}"
-												></span>
-											{/each}
+								{#snippet body()}
+									<p class="h-4 pl-3.5 text-[11px] leading-4 tabular-nums" style="color: var(--color-on-surface-variant)">{caffeineTotalMg} / {caffeineLimitMg} mg</p>
+									{#if trackerDrillIn !== 'caffeine'}
+										<div class="h-11 flex items-center">
+											<button type="button" onclick={() => openTrackerDrillIn('caffeine')} class="w-full h-11 text-xs font-semibold active:opacity-60 touch-manipulation" style="color: #C8956C">{t.add}</button>
 										</div>
 									{/if}
-								{/if}
-							</div>
+								{/snippet}
+								{#snippet details()}
+									{#if trackerDrillIn === 'caffeine'}
+										<div class="tracker-drill-in">
+											<CaffeineDrinkPickerContent drinks={caffeineDrinks} {logDate} onlogged={handleCaffeineLogged} />
+										</div>
+									{/if}
+								{/snippet}
+							</TrackerTileShell>
 						{/if}
-						{#if waterEnabled}
-							<div
-								class="min-h-[128px] rounded-3xl px-3 py-2.5 flex flex-col relative overflow-hidden"
-								style="order: {trackerGrid.indexOf('water')}; background-color: var(--bubble-container-bg); border: 1px solid {waterDone ? '#60A5FA' : 'var(--bubble-container-border)'}"
+						{#if waterEnabled && (!trackerDrillIn || trackerDrillIn === 'water')}
+							<TrackerTileShell
+								anchorId="quick-log-water-tracker"
+								accent="#60A5FA"
+								title={t.water_title}
+								expanded={(isRetro && waterRetroOpen) || (!isRetro && trackerDrillIn === 'water')}
+								inlineExpansion={!isRetro && trackerDrillIn === 'water'}
+								oncollapse={closeTrackerDrillIn}
+								collapseLabel={t.water_collapse}
+								borderColor={waterDone ? '#60A5FA' : 'var(--bubble-container-border)'}
+								order={trackerGrid.indexOf('water')}
 							>
-								<div class="flex-1 min-h-0 flex flex-col transition-opacity duration-150" class:opacity-0={waterDone}>
-									<div class="min-w-0">
-										<p class="text-sm font-bold leading-tight line-clamp-2" style="color: #60A5FA">{t.water_title}</p>
-										<p class="mt-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-on-surface-variant)">{waterTotalMl} / {waterGoalMl} ml</p>
-									</div>
-									{#if !waterDone}
+								{#snippet body()}
+									{#if waterDone}
+										<div class="h-full flex items-center justify-center px-2 text-center supplement-done-confirm" role="status" aria-live="polite"><span class="text-xs font-bold" style="color: #60A5FA">{t.water_logged}</span></div>
+									{:else}
+										<p class="h-4 pl-3.5 text-[11px] leading-4 tabular-nums" style="color: var(--color-on-surface-variant)">{waterTotalMl} / {waterGoalMl} ml</p>
 										{#if isRetro}
 											<button
 												onclick={() => waterRetroOpen = !waterRetroOpen}
-												class="mt-2 self-start h-8 px-1 rounded-lg text-xs font-semibold active:opacity-60"
-												style="background-color: transparent; color: #60A5FA"
+												class="w-full h-11 px-1 text-xs font-semibold active:opacity-60"
+												style="color: #60A5FA"
 											>+ {t.water_add}</button>
-										{:else}
-											<div class="mt-2 flex flex-wrap items-center gap-1">
-												{#each (userSettings.waterPresets ?? [100, 200]).slice(0, 2) as ml}
-													<button
-														onclick={() => logWater(ml)}
-														disabled={waterSaving}
-														class="h-8 px-1.5 rounded-lg text-xs font-semibold active:opacity-60 disabled:opacity-50"
-														style="background-color: transparent; color: #60A5FA"
-													>+{ml}</button>
-												{/each}
-												<button
-													onclick={() => { waterShowCustom = !waterShowCustom; waterCustomAmount = ''; }}
-													disabled={waterSaving}
-													class="h-8 min-w-0 px-1 rounded-lg text-xs font-semibold truncate active:opacity-60 disabled:opacity-50"
-													style="background-color: transparent; color: var(--color-on-surface-variant)"
-												>{t.water_custom}</button>
+										{:else if trackerDrillIn !== 'water'}
+											<div class="h-11 flex items-center">
+												<button type="button" onclick={() => openTrackerDrillIn('water')} disabled={waterSaving} class="w-full h-11 text-xs font-semibold active:opacity-60 disabled:opacity-50 touch-manipulation" style="color: #60A5FA">{t.add}</button>
 											</div>
 										{/if}
 									{/if}
-								</div>
+								{/snippet}
+								{#snippet details()}
+								{#if !isRetro && trackerDrillIn === 'water'}
+									<WaterQuickAddContent presets={userSettings.waterPresets ?? [100, 200]} onadd={logWaterQuick} saving={waterSaving} />
+								{/if}
 								{#if isRetro && waterRetroOpen && !waterDone}
-									<div class="grid grid-cols-2 gap-1.5 mt-2 items-center">
+									<div class="grid grid-cols-2 gap-1.5 items-center">
 										<input type="time" bind:value={waterRetroTime}
 											class="w-full h-9 px-1 rounded-xl border-0 outline-none text-center min-w-0"
 											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"/>
@@ -564,63 +512,43 @@
 										>{t.water_add}</button>
 									</div>
 								{/if}
-								{#if !isRetro && waterShowCustom && !waterDone}
-									<div class="grid grid-cols-[1fr_auto] gap-1.5 mt-2 items-center">
-										<input type="number" inputmode="numeric" min="1" bind:value={waterCustomAmount} placeholder="ml"
-											class="w-full min-w-0 h-9 px-2 rounded-xl border-0 outline-none"
-											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-											onkeydown={(e) => e.key === 'Enter' && submitWaterCustom()}/>
-										<button onclick={submitWaterCustom} disabled={waterSaving || !waterCustomAmount || Number(waterCustomAmount) <= 0}
-											class="h-9 px-3 rounded-xl text-xs font-semibold disabled:opacity-40 active:opacity-70 shrink-0"
-											style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-										>{t.water_add}</button>
-									</div>
-								{/if}
 								{#if waterError}
 									<p class="text-[11px] mt-1" style="color: var(--color-error)">{waterError}</p>
 								{/if}
-								{#if waterDone}
-									<div class="absolute inset-0 flex items-center justify-center px-2 text-center supplement-done-confirm" role="status" aria-live="polite">
-										<span class="text-xs font-bold leading-snug" style="color: #60A5FA">{t.water_logged}</span>
-									</div>
-								{/if}
-							</div>
+								{/snippet}
+							</TrackerTileShell>
 						{/if}
-						{#if meditationEnabled}
-							<div
-								class="min-h-[128px] rounded-3xl px-3 py-2.5 flex flex-col overflow-hidden"
-								style="order: {trackerGrid.indexOf('meditation')}; background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
+						{#if meditationEnabled && (!trackerDrillIn || trackerDrillIn === 'meditation')}
+							<TrackerTileShell
+								anchorId="quick-log-meditation-tracker"
+								accent="#9F7AEA"
+								title={t.meditation_title}
+								expanded={(isRetro && meditationRetroOpen) || (!isRetro && trackerDrillIn === 'meditation')}
+								inlineExpansion={!isRetro && trackerDrillIn === 'meditation'}
+								oncollapse={closeTrackerDrillIn}
+								collapseLabel={t.meditation_collapse}
+								order={trackerGrid.indexOf('meditation')}
 							>
-								<div class="flex-1 min-h-0 flex flex-col">
-									<div class="min-w-0">
-										<p class="text-sm font-bold leading-tight line-clamp-2" style="color: #9F7AEA">{t.meditation_title}</p>
-										<p class="mt-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-on-surface-variant)">{meditationTotalMinutes} / {meditationGoalMinutes} min</p>
-									</div>
+								{#snippet body()}
+									<p class="h-4 pl-3.5 text-[11px] leading-4 tabular-nums" style="color: var(--color-on-surface-variant)">{meditationTotalMinutes} / {meditationGoalMinutes} min</p>
 									{#if isRetro}
 										<button
 											onclick={() => meditationRetroOpen = !meditationRetroOpen}
-											class="mt-2 self-start h-7 px-1 rounded-lg text-xs font-semibold active:opacity-60"
-											style="background-color: transparent; color: #9F7AEA"
+											class="w-full h-11 px-1 text-xs font-semibold active:opacity-60"
+											style="color: #9F7AEA"
 										>+ {t.water_add}</button>
-									{:else}
-										<div class="mt-2 grid grid-cols-3 gap-x-1 gap-y-1">
-											{#each [5, 10, 15, 20] as min}
-											<button
-												onclick={() => startMeditation(min)}
-												class="h-7 px-1 rounded-lg text-xs font-semibold active:opacity-60"
-													style="background-color: transparent; color: #9F7AEA"
-												>{min}m</button>
-											{/each}
-											<button
-												onclick={() => { meditationShowCustom = !meditationShowCustom; meditationCustomTime = '00:10'; }}
-											class="h-7 px-1 rounded-lg text-xs font-semibold active:opacity-60"
-												style="background-color: transparent; color: var(--color-on-surface-variant)"
-											>{t.water_custom}</button>
+									{:else if trackerDrillIn !== 'meditation'}
+										<div class="h-11 flex items-center">
+											<button type="button" onclick={() => openTrackerDrillIn('meditation')} class="w-full h-11 text-xs font-semibold active:opacity-60 touch-manipulation" style="color: #9F7AEA">{t.meditation_start}</button>
 										</div>
 									{/if}
-								</div>
+								{/snippet}
+								{#snippet details()}
+								{#if !isRetro && trackerDrillIn === 'meditation'}
+									<MeditationStartContent onstart={startMeditation} />
+								{/if}
 								{#if isRetro && meditationRetroOpen}
-									<div class="mt-2 space-y-1.5">
+									<div class="space-y-1.5">
 										<div class="grid grid-cols-[auto_1fr] items-center gap-1.5">
 											<span class="text-[10px] font-semibold" style="color: var(--color-on-surface-variant)">Startzeit</span>
 											<input type="time" bind:value={meditationRetroStartTime}
@@ -662,60 +590,45 @@
 										>{meditationRetroSaving ? '…' : t.water_add}</button>
 									</div>
 								{/if}
-								{#if !isRetro && meditationShowCustom}
-									<div class="grid grid-cols-1 gap-1.5 mt-2">
-										<input type="time" bind:value={meditationCustomTime}
-											class="w-full min-w-0 px-2 rounded-xl border-0 outline-none text-center"
-											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px; height: 36px"
-											onkeydown={(e) => e.key === 'Enter' && submitMeditationCustom()}/>
-										<button onclick={submitMeditationCustom}
-											class="w-full px-3 rounded-xl text-xs font-semibold active:opacity-70"
-											style="background: linear-gradient(135deg, #9F7AEA, #7C3AED); color: white; height: 36px"
-										>{t.meditation_start}</button>
-									</div>
-								{/if}
-							</div>
+								{/snippet}
+							</TrackerTileShell>
 						{/if}
-						{#if moodEnabled}
-							<div
-								class="min-h-[128px] rounded-3xl px-3 py-2.5 flex flex-col overflow-hidden"
-								style="order: {trackerGrid.indexOf('mood')}; background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
+						{#if moodEnabled && !trackerDrillIn}
+							<TrackerTileShell
+								accent="#F472B6"
+								title={t.mood_tracker_label}
+								order={trackerGrid.indexOf('mood')}
 							>
-								<div class="min-w-0">
-									<p class="text-sm font-bold leading-tight line-clamp-2" style="color: #F472B6">{t.mood_tracker_label}</p>
-									<p class="mt-1 text-[11px] leading-tight" style="color: var(--color-on-surface-variant)">{moodHasEntry ? t.mood_today_rated : t.mood_entry_title}</p>
-								</div>
-								<button
-									onclick={() => onrateMood?.()}
-									class="mt-2 self-start h-8 px-1 rounded-lg text-xs font-semibold active:opacity-60"
-									style="background-color: transparent; color: #F472B6"
-								>{moodHasEntry ? t.mood_edit : t.mood_bewerten}</button>
-							</div>
+								{#snippet body()}
+									<p class="h-5 pl-3.5 text-[11px] leading-5 truncate" style="color: var(--color-on-surface-variant)">{moodStatus}</p>
+									<div class="h-8 pl-3.5 flex items-center"><button onclick={() => onrateMood?.()} class="h-8 px-1 text-xs font-semibold active:opacity-60" style="color: #F472B6">{moodHasEntry ? t.mood_change_rating : t.mood_bewerten}</button></div>
+								{/snippet}
+							</TrackerTileShell>
 						{/if}
-						{#if nutritionEnabled}
-							<div
-								class="min-h-[128px] rounded-3xl px-3 py-2.5 flex flex-col overflow-hidden"
-								style="order: {trackerGrid.indexOf('nutrition')}; background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
+						{#if nutritionEnabled && !trackerDrillIn}
+							<TrackerTileShell
+								accent="#FB923C"
+								title={t.nutrition_label}
+								order={trackerGrid.indexOf('nutrition')}
 							>
-								<div class="min-w-0">
-									<p class="text-sm font-bold leading-tight line-clamp-2" style="color: #FB923C">{t.nutrition_label}</p>
-									<p class="mt-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-on-surface-variant)">
+								{#snippet body()}
+									<p class="h-4 pl-3.5 text-[11px] leading-4 tabular-nums truncate" style="color: var(--color-on-surface-variant)">
 										{Math.round(nutritionTotalKcal).toLocaleString(currentLang())}{nutritionGoalKcal ? ` / ${nutritionGoalKcal.toLocaleString(currentLang())}` : ''} kcal
 									</p>
-								</div>
-								<div class="mt-2 flex flex-wrap items-center gap-1">
+									<div class="h-11 px-1 grid grid-cols-2 gap-2 items-center">
 									<button
 										onclick={() => onaddmeal?.()}
-										class="h-8 min-w-0 px-1 rounded-lg text-xs font-semibold active:opacity-60"
-										style="background-color: transparent; color: #FB923C"
-									>{t.nutrition_add_meal}</button>
+										class="h-11 min-w-0 px-1 text-center text-xs whitespace-nowrap font-semibold active:opacity-60 touch-manipulation"
+										style="color: #FB923C"
+									>{t.nutrition_quick_add_meal}</button>
 									<button
 										onclick={() => { open = false; goto('/tracker/nutrition'); }}
-										class="h-8 min-w-0 px-1 rounded-lg text-xs font-semibold active:opacity-60"
-										style="background-color: transparent; color: var(--color-on-surface-variant)"
+										class="h-11 min-w-0 px-1 text-center text-xs whitespace-nowrap font-semibold active:opacity-60 touch-manipulation"
+										style="color: var(--color-on-surface-variant)"
 									>{t.nutrition_open}</button>
-								</div>
-							</div>
+									</div>
+								{/snippet}
+							</TrackerTileShell>
 						{/if}
 					</div>
 				{/if}
@@ -806,22 +719,35 @@
 			</div>
 		{/if}
 
-		<!-- Bottom tab bar — always when trackers are available -->
-		{#if trackerList.length > 0}
-			<div class="flex-shrink-0 px-4 pt-2" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom))">
-				<div class="flex gap-1.5 p-1 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+		<!-- Thumb-reachable close action + navigation stay fixed above the safe area. -->
+		<div class="flex-shrink-0 px-4 pt-2" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom))">
+			<div class="flex items-stretch gap-2">
+				<button
+					type="button"
+					onclick={() => open = false}
+					aria-label={t.close}
+					class="w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center active:opacity-60 transition-opacity"
+					style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); color: var(--color-on-surface-variant)"
+				>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+				</button>
+				<div class="flex-1 min-w-0 flex gap-1.5 p-1 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+					{#if trackerList.length > 0}
 					<button
 						onclick={() => switchTab('tracker')}
-						class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all active:opacity-70"
+						class="flex-1 min-w-0 rounded-xl text-sm font-semibold transition-all active:opacity-70"
 						style="background-color: {activeSheetTab === 'tracker' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeSheetTab === 'tracker' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 					>Tracker</button>
 					<button
 						onclick={() => switchTab('supplements')}
-						class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all active:opacity-70"
+						class="flex-1 min-w-0 rounded-xl text-sm font-semibold transition-all active:opacity-70"
 						style="background-color: {activeSheetTab === 'supplements' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeSheetTab === 'supplements' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 					>Supplements</button>
+					{:else}
+						<div class="flex-1 flex items-center justify-center rounded-xl text-sm font-semibold" style="background-color: rgba(255,255,255,0.06); color: var(--color-primary)">Supplements</div>
+					{/if}
 				</div>
 			</div>
-		{/if}
+		</div>
 	</div>
 {/if}

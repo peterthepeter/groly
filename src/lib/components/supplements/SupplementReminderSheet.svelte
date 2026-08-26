@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n.svelte';
+	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	type ReminderEntry = {
 		id: string | null;
@@ -89,26 +90,8 @@
 </script>
 
 {#if reminderSheet}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.5)" onclick={() => reminderSheet = null}></div>
-	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl overflow-y-auto"
-	     style="background-color: var(--modal-bg); max-height: 90vh">
-		<div class="p-6 space-y-4">
-			<div class="flex justify-center mb-1">
-				<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
-			</div>
-
-			<div class="flex items-center gap-2">
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-					<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-				</svg>
-				<p class="font-semibold text-base" style="color: var(--color-on-surface)">
-					{t.supplement_reminders_title} · {reminderSheet.supplementName}
-				</p>
-			</div>
-
+	<ManageSheetShell accent="var(--color-primary)" title={reminderSheet.supplementName} subtitle={t.supplement_reminders_title} onclose={() => reminderSheet = null}>
+		{#snippet body()}
 			{#if reminderLoading}
 				<div class="flex justify-center py-6">
 					<div class="w-6 h-6 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
@@ -118,18 +101,18 @@
 					<p class="text-sm text-center py-4" style="color: var(--color-on-surface-variant)">{t.supplement_reminders_empty}</p>
 				{/if}
 
-				<div class="space-y-3">
+				<div class="manage-stack">
 					{#each reminderEntries as entry}
-						<div class="rounded-2xl p-4 space-y-3" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+						<div class="manage-reminder-card">
 							<!-- Day chips -->
 							<div>
-								<p class="text-xs font-medium mb-2" style="color: var(--color-on-surface-variant)">{t.supplement_reminders_days_label}</p>
-								<div class="flex gap-1.5 flex-wrap">
+								<p class="manage-label">{t.supplement_reminders_days_label}</p>
+								<div class="manage-chip-grid">
 									{#each DAY_ORDER as day, i}
 										<button
 											onclick={() => toggleDay(entry, day)}
-											class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors active:opacity-70"
-											style="background-color: {entry.days.includes(day) ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {entry.days.includes(day) ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+											class="manage-chip active:opacity-70"
+											data-selected={entry.days.includes(day)}
 										>
 											{DAY_LABELS[i]}
 										</button>
@@ -139,19 +122,17 @@
 
 							<!-- Time + actions -->
 							<div>
-								<p class="text-xs font-medium mb-1.5" style="color: var(--color-on-surface-variant)">{t.supplement_reminders_time_label}</p>
-								<div class="flex items-center gap-2">
+								<p class="manage-label">{t.supplement_reminders_time_label}</p>
+								<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_40px] gap-2">
 									<input
 										type="time"
 										bind:value={entry.time}
-										class="w-32 px-3 rounded-xl border-0 outline-none"
-										style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; height: 42px"
+										class="manage-input"
 									/>
 									<button
 										onclick={() => saveReminderEntry(entry)}
 										disabled={entry.saving || entry.days.length === 0}
-										class="flex-1 rounded-xl text-sm font-semibold active:opacity-70 disabled:opacity-40 transition-all"
-										style="background: {entry.saved ? 'var(--color-primary)' : 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))'}; color: var(--color-on-primary); height: 42px"
+										class="manage-primary active:opacity-70 disabled:opacity-40"
 									>
 										{#if entry.saving}
 											…
@@ -166,8 +147,7 @@
 									<button
 										onclick={() => deleteReminderEntry(entry)}
 										disabled={entry.deleting}
-										class="rounded-xl active:opacity-60 disabled:opacity-40 flex items-center justify-center"
-										style="color: var(--color-error); width: 42px; height: 42px; background-color: var(--color-surface-container)"
+										class="manage-icon-button active:opacity-60 disabled:opacity-40"
 										aria-label={t.supplement_reminders_delete}
 									>
 										{#if entry.deleting}
@@ -183,29 +163,24 @@
 						</div>
 					{/each}
 				</div>
-
 			{/if}
-
-			<!-- Close + Add Reminder row -->
-			<div class="flex gap-2">
+		{/snippet}
+		{#snippet footer()}
 				<button
 					onclick={() => reminderSheet = null}
-					class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-					style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+					class="manage-secondary active:opacity-70"
 				>
 					{t.close}
 				</button>
 				<button
 					onclick={addReminderEntry}
-					class="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-					style="background-color: var(--color-primary-container); color: var(--color-primary)"
+					class="manage-primary gap-2 active:opacity-70"
 				>
 					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 						<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
 					</svg>
 					{t.supplement_reminders_add}
 				</button>
-			</div>
-		</div>
-	</div>
+		{/snippet}
+	</ManageSheetShell>
 {/if}

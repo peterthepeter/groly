@@ -157,7 +157,7 @@
 		<div class="flex-1 min-h-0 flex flex-col items-center justify-start pt-1">
 			<p
 				class="text-xs font-bold leading-snug line-clamp-3 max-[374px]:line-clamp-2 text-center w-full"
-				style="color: var(--color-primary)"
+				style="color: var(--color-on-surface)"
 			>{supplement.name}</p>
 			{#if supplement.brand}
 				<p
@@ -172,14 +172,14 @@
 				type="button"
 				onclick={() => editingAmount = true}
 				class="h-8 min-w-0 px-1 text-[10px] font-semibold truncate active:opacity-60"
-				style="background: transparent; color: {editingAmount ? 'var(--color-primary)' : 'var(--color-on-surface)'}"
+				style="background: transparent; color: var(--color-primary)"
 				aria-expanded={editingAmount}
 				aria-label={`${supplement.name}: ${amount} ${unitLabel}`}
 			>{amount} {unitLabel}</button>
 
 			<label
 				class="relative h-8 min-w-0 px-1 flex items-center justify-center text-[10px] font-semibold tabular-nums overflow-hidden"
-				style="background: transparent; color: var(--color-on-surface)"
+				style="background: transparent; color: var(--color-primary)"
 			>
 				<span>{time || '--:--'}</span>
 				<input
