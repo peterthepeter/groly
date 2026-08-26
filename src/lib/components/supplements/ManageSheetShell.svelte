@@ -188,6 +188,61 @@
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--manage-accent) 16%, transparent);
 	}
 
+	/* Native iOS date/time controls keep a large intrinsic width. The shell owns
+	   the visible bubble so the native picker can never paint outside its grid. */
+	:global(.manage-native-field) {
+		position: relative;
+		display: block;
+		width: 100%;
+		min-width: 0;
+		height: var(--manage-control-height);
+		overflow: hidden;
+		border: 1px solid var(--bubble-container-border);
+		border-radius: calc(var(--manage-radius) - 2px);
+		background: var(--color-surface-container);
+	}
+
+	:global(.manage-native-input) {
+		position: absolute;
+		inset: 0;
+		display: block;
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		height: 100%;
+		padding-inline: 13px;
+		border: 0;
+		outline: none;
+		background: transparent;
+		color: var(--color-on-surface);
+		font-size: 16px;
+	}
+
+	:global(.manage-native-value) {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding-inline: 8px;
+		pointer-events: none;
+		font-size: 17px;
+		font-weight: 650;
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+		color: var(--manage-accent);
+	}
+
+	:global(.manage-native-picker) {
+		opacity: 0;
+		cursor: pointer;
+	}
+
+	:global(.manage-native-field:focus-within) {
+		border-color: var(--manage-accent);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--manage-accent) 16%, transparent);
+	}
+
 	:global(.manage-chip-grid) {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));

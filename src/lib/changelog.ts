@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.3',
+		de: [
+			'Darstellung des Supplement-Log-Editors auf iPhones korrigiert'
+		],
+		en: [
+			'Fixed the supplement log editor layout on iPhones'
+		]
+	},
+	{
 		version: '0.9.5-beta.2',
 		de: [
 			'Tracker- und Quick-Log-Ansichten kompakter, einheitlicher und leichter bedienbar gestaltet',

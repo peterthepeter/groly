@@ -125,7 +125,7 @@
 	>
 		{#snippet body()}
 			<section class="manage-section">
-				<div class="grid grid-cols-[minmax(0,1.18fr)_minmax(128px,.82fr)] gap-2">
+				<div class="grid grid-cols-2 gap-2">
 					<div class="min-w-0">
 						<span class="manage-label">{t.supplement_log_amount}</span>
 						<div class="manage-control grid grid-cols-[38px_minmax(0,1fr)_38px] overflow-hidden">
@@ -136,7 +136,10 @@
 					</div>
 					<label class="min-w-0">
 						<span class="manage-label">{t.supplement_log_time}</span>
-						<input id="edit-log-time" type="time" bind:value={activeSheet.time} class="manage-input min-w-0 font-semibold tabular-nums" style="color: var(--color-primary)" />
+						<span class="manage-native-field">
+							<span class="manage-native-value">{activeSheet.time}</span>
+							<input id="edit-log-time" type="time" bind:value={activeSheet.time} class="manage-native-input manage-native-picker" />
+						</span>
 					</label>
 				</div>
 
@@ -171,11 +174,16 @@
 				<div class="mt-3 grid grid-cols-2 gap-2">
 					<label>
 						<span class="manage-label">{t.supplement_log_date}</span>
-						<input id="create-log-date" type="date" bind:value={createDate} max={today} class="manage-input font-semibold" />
+						<span class="manage-native-field">
+							<input id="create-log-date" type="date" bind:value={createDate} max={today} class="manage-native-input font-semibold" />
+						</span>
 					</label>
 					<label>
 						<span class="manage-label">{t.supplement_log_time}</span>
-						<input id="create-log-time" type="time" bind:value={createTime} class="manage-input font-semibold" />
+						<span class="manage-native-field">
+							<span class="manage-native-value">{createTime}</span>
+							<input id="create-log-time" type="time" bind:value={createTime} class="manage-native-input manage-native-picker" />
+						</span>
 					</label>
 				</div>
 
