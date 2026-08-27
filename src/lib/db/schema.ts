@@ -242,6 +242,7 @@ export const supplementLogs = sqliteTable('supplement_logs', {
 	loggedAt: integer('logged_at').notNull(), // Unix ms inkl. Uhrzeit
 	note: text('note'),
 	clientLogId: text('client_log_id'),
+	stockDeducted: real('stock_deducted'), // tatsächlich abgezogener Vorrat (für korrektes Edit/Delete bei 0)
 	createdAt: integer('created_at').notNull()
 }, (t) => [
 	index('supplement_logs_user_id_idx').on(t.userId),

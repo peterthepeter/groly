@@ -407,11 +407,42 @@ async function enqueueLog(
 }
 
 export async function logSupplementOffline(args: { supplementId: string; amount: number; loggedAt: number; note: string | null; clientLogId: string }): Promise<void> {
-	await enqueueLog(
-		'create_supplement_log',
-		{ supplementId: args.supplementId, amount: args.amount, loggedAt: args.loggedAt, note: args.note, clientLogId: args.clientLogId },
-		() => offlineDb.supplementLogs.put({ id: args.clientLogId, supplementId: args.supplementId, amount: args.amount, loggedAt: args.loggedAt, note: args.note, clientLogId: args.clientLogId })
+	await offlineDb.transaction(
+		'rw',
+		offlineDb.supplementLogs,
+		offlineDb.supplements,
+		offlineDb.pendingMutations,
+		async () => {
+			await offlineDb.supplementLogs.put({
+				id: args.clientLogId,
+				supplementId: args.supplementId,
+				amount: args.amount,
+				loggedAt: args.loggedAt,
+				note: args.note,
+				clientLogId: args.clientLogId
+			});
+			const supplement = await offlineDb.supplements.get(args.supplementId);
+			if (supplement?.stockQuantity != null) {
+				await offlineDb.supplements.update(args.supplementId, {
+					stockQuantity: Math.max(0, supplement.stockQuantity - args.amount)
+				});
+			}
+			await offlineDb.pendingMutations.add({
+				type: 'create_supplement_log',
+				payload: {
+					supplementId: args.supplementId,
+					amount: args.amount,
+					loggedAt: args.loggedAt,
+					note: args.note,
+					clientLogId: args.clientLogId
+				},
+				createdAt: Date.now(),
+				...(activeUserId ? { userId: activeUserId } : {})
+			});
+		}
 	);
+	networkStore.setPending(await countActivePendingMutations());
+	if (networkStore.online) void drainPendingMutations();
 }
 
 export async function logWaterOffline(args: { amountMl: number; loggedAt: number; clientLogId: string }): Promise<void> {
@@ -724,6 +755,36 @@ export async function deleteOfflineList(id: string) {
 
 export async function cacheSupplements(supplements: OfflineSupplement[]) {
 	await offlineDb.supplements.bulkPut(supplements);
+}
+
+// A server read can race with an unsynced local log and still return the old
+// stock. For supplements with pending logs, the IndexedDB value is the
+// authoritative optimistic value until the queue has been drained.
+export async function mergePendingSupplementStock<T extends { id: string; stockQuantity: number | null }>(
+	serverSupplements: T[]
+): Promise<T[]> {
+	const pending = (await offlineDb.pendingMutations
+		.where('type')
+		.equals('create_supplement_log')
+		.toArray())
+		.filter(belongsToActiveUser);
+	const pendingIds = new Set(
+		pending
+			.map(mutation => mutation.payload.supplementId)
+			.filter((id): id is string => typeof id === 'string')
+	);
+	if (pendingIds.size === 0) return serverSupplements;
+
+	const cachedRows = await offlineDb.supplements.bulkGet([...pendingIds]);
+	const cachedById = new Map(
+		cachedRows
+			.filter((row): row is OfflineSupplement => row !== undefined)
+			.map(row => [row.id, row])
+	);
+	return serverSupplements.map(supplement => {
+		const cached = cachedById.get(supplement.id);
+		return cached ? { ...supplement, stockQuantity: cached.stockQuantity } : supplement;
+	});
 }
 
 export async function getOfflineSupplements(): Promise<OfflineSupplement[]> {

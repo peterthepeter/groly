@@ -3,7 +3,8 @@ import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { supplementLogs, supplements } from '$lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { recalculateSupplementStock, restoreSupplementStock } from '$lib/supplementStock';
 
 export const PUT: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -31,18 +32,31 @@ export const PUT: RequestHandler = async (event) => {
 			return json({ error: 'Menge muss > 0 sein' }, { status: 400 });
 		}
 
-		db.update(supplementLogs)
-			.set({ amount: newAmount, loggedAt: newLoggedAt, note: newNote })
-			.where(eq(supplementLogs.id, id))
-			.run();
-
-		// Vorrat anpassen: Differenz zum alten Wert ausgleichen
-		if (newAmount !== existing.amount) {
-			db.update(supplements)
-				.set({ stockQuantity: sql`CASE WHEN ${supplements.stockQuantity} IS NOT NULL THEN ${supplements.stockQuantity} + ${existing.amount} - ${newAmount} ELSE NULL END` })
+		db.transaction(() => {
+			const supplement = db
+				.select({ stockQuantity: supplements.stockQuantity })
+				.from(supplements)
 				.where(eq(supplements.id, existing.supplementId))
+				.get();
+			const stock = recalculateSupplementStock(
+				supplement?.stockQuantity ?? null,
+				existing.amount,
+				existing.stockDeducted,
+				newAmount
+			);
+			db.update(supplementLogs)
+				.set({ amount: newAmount, loggedAt: newLoggedAt, note: newNote, stockDeducted: stock.stockDeducted })
+				.where(eq(supplementLogs.id, id))
 				.run();
-		}
+
+			// Alten Abzug zurücknehmen und die neue Menge anwenden.
+			if (newAmount !== existing.amount) {
+				db.update(supplements)
+					.set({ stockQuantity: stock.stockQuantity })
+					.where(eq(supplements.id, existing.supplementId))
+					.run();
+			}
+		});
 
 		return json({ ok: true });
 	} catch (e) {
@@ -64,13 +78,24 @@ export const DELETE: RequestHandler = async (event) => {
 
 	if (!existing) return json({ error: 'Not found' }, { status: 404 });
 
-	db.delete(supplementLogs).where(eq(supplementLogs.id, id)).run();
+	db.transaction(() => {
+		db.delete(supplementLogs).where(eq(supplementLogs.id, id)).run();
 
-	// Vorrat zurückbuchen
-	db.update(supplements)
-		.set({ stockQuantity: sql`CASE WHEN ${supplements.stockQuantity} IS NOT NULL THEN ${supplements.stockQuantity} + ${existing.amount} ELSE NULL END` })
-		.where(eq(supplements.id, existing.supplementId))
-		.run();
+		// Vorrat zurückbuchen
+		const supplement = db
+			.select({ stockQuantity: supplements.stockQuantity })
+			.from(supplements)
+			.where(eq(supplements.id, existing.supplementId))
+			.get();
+		db.update(supplements)
+			.set({ stockQuantity: restoreSupplementStock(
+				supplement?.stockQuantity ?? null,
+				existing.amount,
+				existing.stockDeducted
+			) })
+			.where(eq(supplements.id, existing.supplementId))
+			.run();
+	});
 
 	return json({ ok: true });
 };

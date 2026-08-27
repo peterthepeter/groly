@@ -3,8 +3,9 @@ import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { supplementLogs, supplements } from '$lib/db/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { deductSupplementStock } from '$lib/supplementStock';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -50,7 +51,7 @@ export const POST: RequestHandler = async (event) => {
 
 		// Verify supplement belongs to current user
 		const supplement = db
-			.select({ id: supplements.id })
+			.select({ id: supplements.id, stockQuantity: supplements.stockQuantity })
 			.from(supplements)
 			.where(and(eq(supplements.id, supplementId), eq(supplements.userId, user!.id)))
 			.get();
@@ -58,6 +59,7 @@ export const POST: RequestHandler = async (event) => {
 
 		const now = Date.now();
 		const id = randomUUID();
+		const stock = deductSupplementStock(supplement.stockQuantity, amount);
 
 		db.transaction(() => {
 			db.insert(supplementLogs).values({
@@ -68,13 +70,14 @@ export const POST: RequestHandler = async (event) => {
 				loggedAt: loggedAt ?? now,
 				note: (typeof note === 'string' && note.trim()) ? note.trim() : null,
 				clientLogId: (typeof clientLogId === 'string' && clientLogId.length > 0) ? clientLogId : null,
+				stockDeducted: stock.stockDeducted,
 				createdAt: now
 			}).run();
 
 			// Vorrat abziehen (nur wenn stockQuantity gesetzt und Supplement dem User gehört).
 			// Auf 0 deckeln — ein negativer Bestand ergibt physisch keinen Sinn.
 			db.update(supplements)
-				.set({ stockQuantity: sql`CASE WHEN ${supplements.stockQuantity} IS NOT NULL THEN MAX(0, ${supplements.stockQuantity} - ${amount}) ELSE NULL END` })
+				.set({ stockQuantity: stock.stockQuantity })
 				.where(and(eq(supplements.id, supplementId), eq(supplements.userId, user!.id)))
 				.run();
 		});

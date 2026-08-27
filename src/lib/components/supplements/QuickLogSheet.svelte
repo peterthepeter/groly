@@ -50,7 +50,7 @@
 	}: {
 		open: boolean;
 		supplements: Supplement[];
-		onlogged: () => void;
+		onlogged: (supplementLog?: { supplementId: string; amount: number }) => void;
 		waterEnabled?: boolean;
 		waterGoalMl?: number;
 		waterTotalMl?: number;
@@ -331,7 +331,7 @@
 		logCounts = { ...logCounts, [supplementId]: (logCounts[supplementId] ?? 0) + 1 };
 		done = { ...done, [supplementId]: true };
 		setTimeout(() => { done = { ...done, [supplementId]: false }; }, 2500);
-		onlogged();
+		onlogged({ supplementId, amount });
 		saving = { ...saving, [supplementId]: false };
 	}
 

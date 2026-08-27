@@ -330,6 +330,13 @@
       "when": 1784620587943,
       "tag": "0046_striped_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1787861509541,
+      "tag": "0047_short_micromacro",
+      "breakpoints": true
     }
   ]
 }

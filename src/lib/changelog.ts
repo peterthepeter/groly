@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.5',
+		de: [
+			'Supplement-Bestand und Mood-Entwürfe korrigiert'
+		],
+		en: [
+			'Fixed supplement stock and mood drafts'
+		]
+	},
+	{
 		version: '0.9.5-beta.3',
 		de: [
 			'Darstellung des Supplement-Log-Editors auf iPhones korrigiert'

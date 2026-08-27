@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { MOOD_LEVELS, ACTIVITY_CATEGORIES, type ActivityTag } from '$lib/mood';
+	import { clearMoodDraft, loadMoodDraft, saveMoodDraft } from '$lib/moodDraft';
 	import { userSettings } from '$lib/userSettings.svelte';
+	import { page } from '$app/stores';
+	import { untrack } from 'svelte';
 	import MoodIcon from './MoodIcon.svelte';
 	import ActivityIcon from './ActivityIcon.svelte';
 
@@ -30,17 +33,84 @@
 	let saving = $state(false);
 	let collapsedCats = $state<Set<string>>(new Set());
 	let scrollEl = $state<HTMLElement | null>(null);
+	let initializedKey = $state<string | null>(null);
+	let draftReady = $state(false);
+	let baselineSignature = $state('');
+	const draftUserId = $derived($page.data.user?.id ?? 'anonymous');
+
+	type DraftValues = {
+		mood: number | null;
+		activities: string[];
+		note: string;
+		gratitude: string;
+	};
+
+	function getDraftStorage(): Storage | null {
+		try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
+	}
+
+	function draftSignature(draft: DraftValues): string {
+		return JSON.stringify([
+			draft.mood,
+			[...draft.activities].sort(),
+			draft.note,
+			draft.gratitude
+		]);
+	}
+
+	function currentDraft(): DraftValues {
+		return {
+			mood: selectedMood,
+			activities: [...selectedActivities],
+			note,
+			gratitude
+		};
+	}
 
 	$effect(() => {
-		if (open) {
-			selectedMood = initialMood ?? null;
-			selectedActivities = new Set(initialActivities);
-			note = initialNote ?? '';
-			gratitude = initialGratitude ?? '';
-			// Scroll to bottom so Sport category is visible first
-			Promise.resolve().then(() => {
-				if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
-			});
+		const nextKey = open && date ? `${draftUserId}:${date}` : null;
+		if (!nextKey) {
+			initializedKey = null;
+			draftReady = false;
+			return;
+		}
+		if (initializedKey === nextKey) return;
+
+		initializedKey = nextKey;
+		draftReady = false;
+		const initial = untrack((): DraftValues => ({
+			mood: initialMood ?? null,
+			activities: [...initialActivities],
+			note: initialNote ?? '',
+			gratitude: initialGratitude ?? ''
+		}));
+		baselineSignature = draftSignature(initial);
+		const storage = getDraftStorage();
+		const restored = storage ? loadMoodDraft(storage, draftUserId, date) : null;
+		const values = restored ?? initial;
+		selectedMood = values.mood;
+		selectedActivities = new Set(values.activities);
+		note = values.note;
+		gratitude = values.gratitude;
+		draftReady = true;
+
+		// Scroll to bottom so Sport category is visible first
+		Promise.resolve().then(() => {
+			if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+		});
+	});
+
+	// Persist only values that differ from the last saved server state. The key
+	// includes the user and date, so drafts never leak between accounts or days.
+	$effect(() => {
+		if (!open || !date || !draftReady) return;
+		const storage = getDraftStorage();
+		if (!storage) return;
+		const draft = currentDraft();
+		if (draftSignature(draft) === baselineSignature) {
+			clearMoodDraft(storage, draftUserId, date);
+		} else {
+			saveMoodDraft(storage, draftUserId, date, draft);
 		}
 	});
 
@@ -86,6 +156,9 @@
 				})
 			});
 			if (res.ok) {
+				const storage = getDraftStorage();
+				if (storage) clearMoodDraft(storage, draftUserId, date);
+				draftReady = false;
 				open = false;
 				onsaved();
 			}

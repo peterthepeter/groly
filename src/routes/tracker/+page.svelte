@@ -5,7 +5,7 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang, today_reminders_label } from '$lib/i18n.svelte';
-	import { cacheSupplements, getOfflineSupplements, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs } from '$lib/sync/manager';
+	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { formatTime } from '$lib/dates';
 	import { userSettings } from '$lib/userSettings.svelte';
@@ -35,7 +35,7 @@
 	type Supplement = {
 		id: string; name: string; unit: string; notes: string | null;
 		brand: string | null;
-		active: boolean; sortOrder: number;
+		active: boolean; sortOrder: number; updatedAt: number;
 		stockQuantity: number | null; defaultAmount: number;
 		nutrients: Nutrient[];
 	};
@@ -368,12 +368,21 @@
 		try {
 			const res = await fetch('/api/supplements');
 			if (!res.ok) throw new Error();
-			const data = await res.json();
-			supplements = data.supplements;
-			cacheSupplements(data.supplements).catch(() => {});
+			const data = await res.json() as { supplements: Supplement[] };
+			const merged = await mergePendingSupplementStock(data.supplements);
+			supplements = merged;
+			cacheSupplements(merged).catch(() => {});
 		} catch {
 			supplements = (await getOfflineSupplements()) as Supplement[];
 		}
+	}
+
+	function applySupplementLogToStock(supplementId: string, amount: number) {
+		supplements = supplements.map(supplement =>
+			supplement.id === supplementId && supplement.stockQuantity != null
+				? { ...supplement, stockQuantity: Math.max(0, supplement.stockQuantity - amount) }
+				: supplement
+		);
 	}
 
 	async function loadTodayLogs() {
@@ -1570,7 +1579,11 @@
 	onaddmeal={() => { quickLogOpen = false; goto('/tracker/nutrition?new=1'); }}
 	onstartmeditation={startMeditation}
 	onrateMood={() => { quickLogOpen = false; moodEntryOpen = true; }}
-	onlogged={() => { Promise.all([loadTodayLogs(), loadSupplements(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]); if (activeTab === 'history') loadHistory(); }}
+	onlogged={(supplementLog) => {
+		if (supplementLog) applySupplementLogToStock(supplementLog.supplementId, supplementLog.amount);
+		Promise.all([loadTodayLogs(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]);
+		if (activeTab === 'history') loadHistory();
+	}}
 	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
 	initialTab={quickLogInitialTab}
 />
