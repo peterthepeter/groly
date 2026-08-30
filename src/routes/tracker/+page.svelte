@@ -1129,7 +1129,6 @@
 		<TrackerSectionNav
 			activeSection={activeTab}
 			nutritionEnabled={userSettings.nutritionTrackerEnabled}
-			{supplements}
 			todayLogs={todayLogs}
 			historyControls={trackerHistoryControls}
 		/>

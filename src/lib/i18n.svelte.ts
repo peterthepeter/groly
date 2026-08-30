@@ -38,6 +38,10 @@ export async function initLanguage(
 	// Load the user-scoped offline cache first, then reconcile with the server.
 	const effectiveSettings = await initUserSettings(userId, serverSettings, settingsRevision);
 	if (token !== initializationToken) return;
+	if (userId) {
+		const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		if (timeZone && effectiveSettings?.timeZone !== timeZone) userSettings.timeZone = timeZone;
+	}
 	const lang = userSettings.lang;
 	setLanguageTag(lang);
 	_lang = lang;
@@ -127,6 +131,6 @@ export function nutrition_meals_count(count: number): string {
 
 export function today_reminders_label(count: number): string {
 	void _lang;
-	if (_lang === 'en') return count === 1 ? '1 reminder today' : `${count} reminders today`;
-	return count === 1 ? 'heute 1 Erinnerung' : `heute ${count} Erinnerungen`;
+	if (_lang === 'en') return count === 0 ? 'All done' : count === 1 ? '1 open' : `${count} open`;
+	return count === 0 ? 'Alles erledigt' : count === 1 ? '1 offen' : `${count} offen`;
 }

@@ -5,7 +5,7 @@ import { db } from '$lib/db';
 import { supplementReminderSchedules, supplements, supplementReminderOverrides } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { toLocalDateKey } from '$lib/dates';
+import { getZonedDateTimeParts, resolveTimeZone } from '$lib/timeZones';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -36,11 +36,15 @@ export const GET: RequestHandler = async (event) => {
 	// ?today=1 → return today's active reminders grouped by time + today's overrides
 	if (event.url.searchParams.get('today') === '1') {
 		const now = new Date();
-		const todayDay = now.getDay(); // 0=Sun … 6=Sat
-		const todayDate = toLocalDateKey(now);
+		const timeZone = resolveTimeZone(event.url.searchParams.get('timeZone'));
+		const today = getZonedDateTimeParts(now, timeZone);
+		const todayDay = today.weekday; // 0=Sun … 6=Sat
+		const todayDate = today.dateKey;
 
 		const allActive = db
 			.select({
+				scheduleId: supplementReminderSchedules.id,
+				supplementId: supplements.id,
 				time: supplementReminderSchedules.time,
 				days: supplementReminderSchedules.days,
 				supplementName: supplements.name
@@ -49,24 +53,34 @@ export const GET: RequestHandler = async (event) => {
 			.innerJoin(supplements, eq(supplementReminderSchedules.supplementId, supplements.id))
 			.where(and(
 				eq(supplements.userId, user!.id),
+				eq(supplements.active, true),
 				eq(supplementReminderSchedules.active, true)
 			))
 			.all();
 
 		// Filter by today's weekday and group by time
-		const byTime = new Map<string, string[]>();
+		const byTime = new Map<string, { scheduleId: string; supplementId: string; name: string }[]>();
 		for (const row of allActive) {
 			try {
 				const days: number[] = JSON.parse(row.days);
 				if (!days.includes(todayDay)) continue;
 			} catch { continue; }
 			if (!byTime.has(row.time)) byTime.set(row.time, []);
-			byTime.get(row.time)!.push(row.supplementName);
+			byTime.get(row.time)!.push({
+				scheduleId: row.scheduleId,
+				supplementId: row.supplementId,
+				name: row.supplementName
+			});
 		}
 
 		const todayReminders = Array.from(byTime.entries())
 			.sort(([a], [b]) => a.localeCompare(b))
-			.map(([time, names]) => ({ time, names }));
+			.map(([time, entries]) => ({
+				time,
+				entries,
+				// Keep names during the service-worker rollout for older clients.
+				names: entries.map(entry => entry.name)
+			}));
 
 		// Load today's manual overrides
 		const overrideRows = db

@@ -96,7 +96,7 @@
 				},
 				{
 					title: 'Supplements & reminders',
-					text: 'Create supplements under Manage with a name, unit, and optional nutrients. Use the bell to schedule reminders; Week plan shows the complete reminder schedule.',
+					text: 'Create supplements under Manage with a name, unit, and optional nutrients. Use the bell to schedule reminders; logging a supplement up to 45 minutes early completes its closest reminder. Week plan shows the complete reminder schedule.',
 					link: { href: '/tracker/verwalten', label: 'Open Manage' }
 				},
 				{
@@ -229,7 +229,7 @@
 				},
 				{
 					title: 'Supplements & Erinnerungen',
-					text: 'Lege Supplements unter „Verwalten“ mit Name, Einheit und optionalen Nährstoffen an. Über die Glocke planst du Erinnerungen; der Wochenplan zeigt alle Termine auf einen Blick.',
+					text: 'Lege Supplements unter „Verwalten“ mit Name, Einheit und optionalen Nährstoffen an. Über die Glocke planst du Erinnerungen; ein Log bis zu 45 Minuten vorher erledigt den zeitlich passendsten Reminder. Der Wochenplan zeigt alle Termine auf einen Blick.',
 					link: { href: '/tracker/verwalten', label: 'Verwalten öffnen' }
 				},
 				{

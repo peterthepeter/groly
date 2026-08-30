@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.6.1',
+		de: [
+			'Tracker: Reminder-Zuordnung und 45-Minuten-Fenster korrigiert'
+		],
+		en: [
+			'Tracker: fixed reminder matching and the 45-minute window'
+		]
+	},
+	{
 		version: '0.9.5-beta.6',
 		de: [
 			'Nutrition-Tracker, Favoriten und Tracker-Navigation umfassend überarbeitet',

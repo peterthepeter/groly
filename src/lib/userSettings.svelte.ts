@@ -101,6 +101,7 @@ const cache: UserSettings = {};
 const initial = merge(cache);
 
 let _lang = $state(initial.lang);
+let _timeZone = $state<string>(cache.timeZone ?? '');
 let _categorySortEnabled = $state(initial.categorySortEnabled);
 let _categoryOrder = $state<string[]>(initial.categoryOrder);
 let _listCategorySettings = $state<Record<string, ListCategorySettings>>(cache.listCategorySettings ?? {});
@@ -154,6 +155,7 @@ export function onUserSettingsApplied(listener: (settings: UserSettings) => void
 function currentSettings(): UserSettings {
 	return {
 		lang: _lang,
+		timeZone: _timeZone,
 		theme: _theme,
 		colorScheme: _colorScheme,
 		categorySortEnabled: _categorySortEnabled,
@@ -211,6 +213,8 @@ function scheduleSave(patch: UserSettingsPatch) {
 export const userSettings = {
 	get lang() { return _lang; },
 	set lang(v: AvailableLanguageTag) { _lang = v; scheduleSave({ lang: v }); },
+	get timeZone() { return _timeZone; },
+	set timeZone(v: string) { _timeZone = v; scheduleSave({ timeZone: v }); },
 
 	get categorySortEnabled() { return _categorySortEnabled; },
 	set categorySortEnabled(v: boolean) { _categorySortEnabled = v; scheduleSave({ categorySortEnabled: v }); },
@@ -380,6 +384,7 @@ export const userSettings = {
 function applySettings(settings: UserSettings) {
 	const merged = merge(settings);
 	_lang = merged.lang;
+	_timeZone = settings.timeZone ?? '';
 	_categorySortEnabled = merged.categorySortEnabled;
 	_categoryOrder = merged.categoryOrder;
 	_listCategorySettings = settings.listCategorySettings ?? {};

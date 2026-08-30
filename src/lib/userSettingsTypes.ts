@@ -18,6 +18,7 @@ export type Shortcut = {
 
 export type UserSettings = {
 	lang?: AvailableLanguageTag;
+	timeZone?: string;
 	theme?: 'system' | 'light' | 'dark';
 	colorScheme?: 'forest' | 'classic' | 'indigo';
 	categorySortEnabled?: boolean;

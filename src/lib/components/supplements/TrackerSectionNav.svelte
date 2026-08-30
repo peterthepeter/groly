@@ -3,35 +3,31 @@
 	import { goto } from '$app/navigation';
 	import { t, today_reminders_label } from '$lib/i18n.svelte';
 	import { toLocalDateKey } from '$lib/dates';
+	import { matchSupplementReminderLogs } from '$lib/supplementReminderMatching';
 
 	type Section = 'today' | 'history' | 'nutrition';
-	type Reminder = { time: string; names: string[] };
-	type SupplementRef = { id: string; name: string };
+	type ReminderEntry = { scheduleId: string; supplementId: string; name: string };
+	type Reminder = { time: string; entries: ReminderEntry[]; names: string[] };
 	type LogRef = { supplementId: string; loggedAt: number };
 
 	let {
 		activeSection,
 		nutritionEnabled,
-		supplements = null,
 		todayLogs = null,
 		historyControls = null
 	}: {
 		activeSection: Section;
 		nutritionEnabled: boolean;
-		supplements?: SupplementRef[] | null;
 		todayLogs?: LogRef[] | null;
 		historyControls?: Snippet | null;
 	} = $props();
 
 	let reminders = $state<Reminder[]>([]);
 	let overrides = $state<Record<string, boolean>>({});
-	let loadedSupplements = $state<SupplementRef[]>([]);
 	let loadedLogs = $state<LogRef[]>([]);
 	let remindersExpanded = $state(false);
 
-	const effectiveSupplements = $derived(supplements ?? loadedSupplements);
 	const effectiveLogs = $derived(todayLogs ?? loadedLogs);
-	const PRE_WINDOW_MS = 30 * 60 * 1000;
 
 	function todayAtTime(time: string): number {
 		const [hours, minutes] = time.split(':').map(Number);
@@ -42,17 +38,21 @@
 
 	const doneMap = $derived.by(() => {
 		const map = new Map<string, boolean>();
+		const matchedSchedules = matchSupplementReminderLogs(
+			reminders.flatMap(reminder => reminder.entries.map(entry => ({
+				id: entry.scheduleId,
+				supplementId: entry.supplementId,
+				scheduledAt: todayAtTime(reminder.time)
+			}))),
+			effectiveLogs,
+			Date.now()
+		);
 		for (const reminder of reminders) {
 			if (reminder.time in overrides) {
 				map.set(reminder.time, overrides[reminder.time]);
 				continue;
 			}
-			const reminderAt = todayAtTime(reminder.time);
-			const windowStart = reminderAt - PRE_WINDOW_MS;
-			const done = reminder.names.every((name) => {
-				const supplement = effectiveSupplements.find((item) => item.name === name);
-				return !!supplement && effectiveLogs.some((log) => log.supplementId === supplement.id && log.loggedAt >= windowStart);
-			});
+			const done = reminder.entries.every(entry => matchedSchedules.has(entry.scheduleId));
 			map.set(reminder.time, done);
 		}
 		return map;
@@ -65,8 +65,8 @@
 			const now = new Date();
 			const from = new Date(now); from.setHours(0, 0, 0, 0);
 			const to = new Date(now); to.setHours(23, 59, 59, 999);
-			const requests: Promise<Response>[] = [fetch('/api/supplement-reminders?today=1')];
-			if (supplements === null) requests.push(fetch('/api/supplements'));
+			const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			const requests: Promise<Response>[] = [fetch(`/api/supplement-reminders?today=1&timeZone=${encodeURIComponent(timeZone)}`)];
 			if (todayLogs === null) requests.push(fetch(`/api/supplement-logs?from=${from.getTime()}&to=${to.getTime()}`));
 			const responses = await Promise.all(requests);
 			let index = 0;
@@ -75,10 +75,6 @@
 				const data = await reminderResponse.json();
 				reminders = data.todayReminders ?? [];
 				overrides = data.overrides ?? {};
-			}
-			if (supplements === null) {
-				const response = responses[index++];
-				if (response.ok) loadedSupplements = (await response.json()).supplements ?? [];
 			}
 			if (todayLogs === null) {
 				const response = responses[index];
@@ -191,7 +187,7 @@
 	.reminder-action span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.reminder-action svg:last-child { flex: none; color: var(--color-on-surface-variant); transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 	.tracker-section-history { border-top: 1px solid var(--bubble-container-border); }
-	.tracker-reminder-list { display: flex; flex-direction: column; gap: 6px; padding: 10px 16px 12px; border-top: 1px solid var(--bubble-container-border); }
+	.tracker-reminder-list { display: flex; flex-direction: column; gap: 2px; padding: 8px 16px 10px; border-top: 1px solid var(--bubble-container-border); }
 	.tracker-reminder-list button { display: grid; grid-template-columns: 16px auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 30px; text-align: left; }
 	.tracker-reminder-list button.done { opacity: .5; }
 	.tracker-reminder-check { display: flex; width: 16px; height: 16px; align-items: center; justify-content: center; border: 1.5px solid var(--color-primary); border-radius: 999px; }
