@@ -31,31 +31,35 @@
 		userSettings.waterPresets = [vals[0], vals[1]];
 		presetInputs = [String(vals[0]), String(vals[1])];
 	}
+
+	function selectValue(event: FocusEvent) {
+		(event.currentTarget as HTMLInputElement).select();
+	}
 </script>
 
 {#if open}
 	<ManageSheetShell accent="#60A5FA" title={t.water_edit_title} onclose={() => open = false}>
 		{#snippet body()}
-			<div class="manage-section">
-				<div class="grid grid-cols-[minmax(0,1fr)_128px] items-center gap-3 pb-2">
-					<p class="m-0 text-sm font-semibold" style="color: var(--color-on-surface-variant)">{t.water_goal_label}</p>
-					<div class="grid grid-cols-[minmax(0,1fr)_22px] items-center gap-1">
-						<input type="number" inputmode="numeric" min="1" bind:value={goalInput} onblur={saveGoal} onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && saveGoal()} class="manage-input text-center font-semibold" style="height: 36px; color: #60A5FA" />
-						<span class="text-xs" style="color: var(--color-on-surface-variant)">ml</span>
-					</div>
-				</div>
-				<div class="grid grid-cols-[minmax(0,1fr)_128px] items-center gap-3 border-t pt-2" style="border-color: var(--bubble-container-border)">
-					<p class="m-0 text-sm font-semibold" style="color: var(--color-on-surface-variant)">{t.water_presets_label}</p>
-					<div class="grid grid-cols-2 gap-1.5">
+			<section class="manage-settings-surface">
+				<label class="manage-settings-row grid grid-cols-[minmax(0,1fr)_128px] items-center gap-3">
+					<span class="manage-settings-label">{t.water_goal_label}</span>
+					<span class="grid grid-cols-[minmax(0,1fr)_22px] items-center gap-1">
+						<input type="number" inputmode="numeric" min="1" bind:value={goalInput} onfocus={selectValue} onblur={saveGoal} onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && saveGoal()} class="manage-settings-input text-right" />
+						<span class="manage-settings-unit">ml</span>
+					</span>
+				</label>
+				<div class="manage-settings-row grid grid-cols-[minmax(0,1fr)_128px] items-center gap-3">
+					<span class="manage-settings-label">{t.water_presets_label}</span>
+					<div class="grid grid-cols-2 gap-2">
 						{#each presetInputs as _, i}
-							<label class="relative">
-								<input type="number" inputmode="numeric" min="1" bind:value={presetInputs[i]} onblur={savePresets} onkeydown={(e) => e.key === 'Enter' && savePresets()} class="manage-input text-center font-semibold" style="height: 36px; padding-right: 16px; color: #60A5FA" />
-								<span class="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px]" style="color: var(--color-on-surface-variant)">ml</span>
+							<label class="grid grid-cols-[minmax(0,1fr)_20px] items-center gap-1">
+								<input type="number" inputmode="numeric" min="1" bind:value={presetInputs[i]} onfocus={selectValue} onblur={savePresets} onkeydown={(e) => e.key === 'Enter' && savePresets()} class="manage-settings-input text-right" aria-label="{t.water_presets_label} {i + 1}" />
+								<span class="manage-settings-unit">ml</span>
 							</label>
 						{/each}
 					</div>
 				</div>
-			</div>
+			</section>
 		{/snippet}
 		{#snippet footer()}
 				<button

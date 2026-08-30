@@ -246,9 +246,10 @@
 	async function logWaterRetro() {
 		const ml = Math.round(Number(waterRetroMl));
 		if (!ml || ml <= 0) return;
-		await logWater(ml, makeTimestamp(logDate ?? todayStr(), waterRetroTime));
-		waterRetroMl = '';
-		waterRetroOpen = false;
+		if (await logWater(ml, makeTimestamp(logDate ?? todayStr(), waterRetroTime))) {
+			waterRetroMl = '';
+			waterRetroOpen = false;
+		}
 	}
 
 	async function logMeditationRetro() {
@@ -266,18 +267,28 @@
 		} finally { meditationRetroSaving = false; }
 	}
 
-	async function logWater(ml: number, loggedAt?: number) {
-		if (waterSaving) return;
+	async function logWater(ml: number, loggedAt?: number): Promise<boolean> {
+		if (waterSaving) return false;
 		waterSaving = true;
 		waterError = null;
 		const ts = loggedAt ?? Date.now();
 		const clientLogId = generateClientId();
-		// Erst dauerhaft sichern, dann synchronisieren (siehe logCaffeine).
-		await logWaterOffline({ amountMl: ml, loggedAt: ts, clientLogId });
-		waterDone = true;
-		setTimeout(() => { waterDone = false; }, 2500);
-		onlogged();
-		waterSaving = false;
+		try {
+			// Erst dauerhaft sichern, dann synchronisieren (siehe logCaffeine).
+			await logWaterOffline({ amountMl: ml, loggedAt: ts, clientLogId });
+			waterDone = true;
+			setTimeout(() => { waterDone = false; }, 2500);
+			onlogged();
+			trackerDrillIn = null;
+			waterRetroOpen = false;
+			open = false;
+			return true;
+		} catch {
+			waterError = t.water_error_offline;
+			return false;
+		} finally {
+			waterSaving = false;
+		}
 	}
 
 	function openTrackerDrillIn(view: TrackerDrillIn) {
@@ -295,7 +306,6 @@
 
 	function logWaterQuick(ml: number) {
 		if (!ml || ml <= 0 || waterSaving) return;
-		closeTrackerDrillIn();
 		void logWater(ml);
 	}
 
@@ -312,7 +322,8 @@
 	}
 
 	function handleCaffeineLogged() {
-		closeTrackerDrillIn();
+		trackerDrillIn = null;
+		open = false;
 		onlogged();
 	}
 
@@ -364,6 +375,38 @@
 }
 .tracker-drill-in {
 	animation: tracker-drill-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.quick-log-tracker-body {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+.quick-log-tracker-stat {
+	width: 100%;
+	min-width: 0;
+	padding: 0 10px;
+	color: var(--color-on-surface-variant);
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 16px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.quick-log-tracker-action {
+	width: 100%;
+	min-height: 28px;
+	display: flex;
+	align-items: center;
+	padding: 0 9px;
+	border-radius: 9px;
+	background-color: var(--bubble-interactive-bg);
+	background-color: color-mix(in srgb, var(--color-on-surface) 4%, transparent);
+	color: var(--color-on-surface-variant);
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1;
 }
 @media (prefers-reduced-motion: reduce) {
 	.tracker-drill-in { animation: none; }
@@ -443,21 +486,22 @@
 								inlineExpansion={trackerDrillIn === 'caffeine'}
 								oncollapse={closeTrackerDrillIn}
 								collapseLabel={t.caffeine_collapse}
-								ontitleclick={() => trackerDrillIn === 'caffeine' ? closeTrackerDrillIn() : openTrackerDrillIn('caffeine')}
+								onactivate={trackerDrillIn === 'caffeine' ? undefined : () => openTrackerDrillIn('caffeine')}
 								order={trackerGrid.indexOf('caffeine')}
+								quickLog
 							>
 								{#snippet body()}
-									<p class="h-4 pl-3.5 text-[11px] leading-4 tabular-nums" style="color: var(--color-on-surface-variant)">{caffeineTotalMg} / {caffeineLimitMg} mg</p>
 									{#if trackerDrillIn !== 'caffeine'}
-										<div class="h-11 flex items-center">
-											<button type="button" onclick={() => openTrackerDrillIn('caffeine')} class="w-full h-11 text-xs font-semibold active:opacity-60 touch-manipulation" style="color: #C8956C">{t.add}</button>
+										<div class="quick-log-tracker-body">
+											<span class="quick-log-tracker-stat tabular-nums">{caffeineTotalMg} / {caffeineLimitMg} mg</span>
+											<span class="quick-log-tracker-action">{t.caffeine_add}</span>
 										</div>
 									{/if}
 								{/snippet}
 								{#snippet details()}
 									{#if trackerDrillIn === 'caffeine'}
 										<div class="tracker-drill-in">
-											<CaffeineDrinkPickerContent drinks={caffeineDrinks} {logDate} onlogged={handleCaffeineLogged} />
+											<CaffeineDrinkPickerContent drinks={caffeineDrinks} {logDate} onlogged={handleCaffeineLogged} integrated />
 										</div>
 									{/if}
 								{/snippet}
@@ -473,24 +517,19 @@
 								oncollapse={closeTrackerDrillIn}
 								collapseLabel={t.water_collapse}
 								borderColor={waterDone ? '#60A5FA' : 'var(--bubble-container-border)'}
+								onactivate={waterDone || (isRetro ? waterRetroOpen : trackerDrillIn === 'water') ? undefined : () => isRetro ? waterRetroOpen = true : openTrackerDrillIn('water')}
+								ontitleclick={isRetro && waterRetroOpen ? () => waterRetroOpen = false : undefined}
 								order={trackerGrid.indexOf('water')}
+								quickLog
 							>
 								{#snippet body()}
 									{#if waterDone}
-										<div class="h-full flex items-center justify-center px-2 text-center supplement-done-confirm" role="status" aria-live="polite"><span class="text-xs font-bold" style="color: #60A5FA">{t.water_logged}</span></div>
-									{:else}
-										<p class="h-4 pl-3.5 text-[11px] leading-4 tabular-nums" style="color: var(--color-on-surface-variant)">{waterTotalMl} / {waterGoalMl} ml</p>
-										{#if isRetro}
-											<button
-												onclick={() => waterRetroOpen = !waterRetroOpen}
-												class="w-full h-11 px-1 text-xs font-semibold active:opacity-60"
-												style="color: #60A5FA"
-											>+ {t.water_add}</button>
-										{:else if trackerDrillIn !== 'water'}
-											<div class="h-11 flex items-center">
-												<button type="button" onclick={() => openTrackerDrillIn('water')} disabled={waterSaving} class="w-full h-11 text-xs font-semibold active:opacity-60 disabled:opacity-50 touch-manipulation" style="color: #60A5FA">{t.add}</button>
-											</div>
-										{/if}
+										<div class="quick-log-tracker-body supplement-done-confirm" role="status" aria-live="polite"><span class="quick-log-tracker-action">{t.water_logged}</span></div>
+									{:else if !(isRetro ? waterRetroOpen : trackerDrillIn === 'water')}
+										<div class="quick-log-tracker-body">
+											<span class="quick-log-tracker-stat tabular-nums">{waterTotalMl} / {waterGoalMl} ml</span>
+											<span class="quick-log-tracker-action">{t.water_add}</span>
+										</div>
 									{/if}
 								{/snippet}
 								{#snippet details()}
@@ -527,19 +566,16 @@
 								inlineExpansion={!isRetro && trackerDrillIn === 'meditation'}
 								oncollapse={closeTrackerDrillIn}
 								collapseLabel={t.meditation_collapse}
+								onactivate={(isRetro ? meditationRetroOpen : trackerDrillIn === 'meditation') ? undefined : () => isRetro ? meditationRetroOpen = true : openTrackerDrillIn('meditation')}
+								ontitleclick={isRetro && meditationRetroOpen ? () => meditationRetroOpen = false : undefined}
 								order={trackerGrid.indexOf('meditation')}
+								quickLog
 							>
 								{#snippet body()}
-									<p class="h-4 pl-3.5 text-[11px] leading-4 tabular-nums" style="color: var(--color-on-surface-variant)">{meditationTotalMinutes} / {meditationGoalMinutes} min</p>
-									{#if isRetro}
-										<button
-											onclick={() => meditationRetroOpen = !meditationRetroOpen}
-											class="w-full h-11 px-1 text-xs font-semibold active:opacity-60"
-											style="color: #9F7AEA"
-										>+ {t.water_add}</button>
-									{:else if trackerDrillIn !== 'meditation'}
-										<div class="h-11 flex items-center">
-											<button type="button" onclick={() => openTrackerDrillIn('meditation')} class="w-full h-11 text-xs font-semibold active:opacity-60 touch-manipulation" style="color: #9F7AEA">{t.meditation_start}</button>
+									{#if !(isRetro ? meditationRetroOpen : trackerDrillIn === 'meditation')}
+										<div class="quick-log-tracker-body">
+											<span class="quick-log-tracker-stat tabular-nums">{meditationTotalMinutes} / {meditationGoalMinutes} min</span>
+											<span class="quick-log-tracker-action">{isRetro ? t.water_add : t.meditation_start}</span>
 										</div>
 									{/if}
 								{/snippet}
@@ -598,10 +634,14 @@
 								accent="#F472B6"
 								title={t.mood_tracker_label}
 								order={trackerGrid.indexOf('mood')}
+								onactivate={() => onrateMood?.()}
+								quickLog
 							>
 								{#snippet body()}
-									<p class="h-5 pl-3.5 text-[11px] leading-5 truncate" style="color: var(--color-on-surface-variant)">{moodStatus}</p>
-									<div class="h-8 pl-3.5 flex items-center"><button onclick={() => onrateMood?.()} class="h-8 px-1 text-xs font-semibold active:opacity-60" style="color: #F472B6">{moodHasEntry ? t.mood_change_rating : t.mood_bewerten}</button></div>
+									<div class="quick-log-tracker-body">
+										<span class="quick-log-tracker-stat">{moodStatus}</span>
+										<span class="quick-log-tracker-action">{moodHasEntry ? t.mood_change_rating : t.mood_bewerten}</span>
+									</div>
 								{/snippet}
 							</TrackerTileShell>
 						{/if}
@@ -610,22 +650,13 @@
 								accent="#FB923C"
 								title={t.nutrition_label}
 								order={trackerGrid.indexOf('nutrition')}
+								onactivate={() => onaddmeal?.()}
+								quickLog
 							>
 								{#snippet body()}
-									<p class="h-4 pl-3.5 text-[11px] leading-4 tabular-nums truncate" style="color: var(--color-on-surface-variant)">
-										{Math.round(nutritionTotalKcal).toLocaleString(currentLang())}{nutritionGoalKcal ? ` / ${nutritionGoalKcal.toLocaleString(currentLang())}` : ''} kcal
-									</p>
-									<div class="h-11 px-1 grid grid-cols-2 gap-2 items-center">
-									<button
-										onclick={() => onaddmeal?.()}
-										class="h-11 min-w-0 px-1 text-center text-xs whitespace-nowrap font-semibold active:opacity-60 touch-manipulation"
-										style="color: #FB923C"
-									>{t.nutrition_quick_add_meal}</button>
-									<button
-										onclick={() => { open = false; goto('/tracker/nutrition'); }}
-										class="h-11 min-w-0 px-1 text-center text-xs whitespace-nowrap font-semibold active:opacity-60 touch-manipulation"
-										style="color: var(--color-on-surface-variant)"
-									>{t.nutrition_open}</button>
+									<div class="quick-log-tracker-body">
+										<span class="quick-log-tracker-stat tabular-nums">{Math.round(nutritionTotalKcal).toLocaleString(currentLang())}{nutritionGoalKcal ? ` / ${nutritionGoalKcal.toLocaleString(currentLang())}` : ''} kcal</span>
+										<span class="quick-log-tracker-action">{t.nutrition_quick_add_meal}</span>
 									</div>
 								{/snippet}
 							</TrackerTileShell>

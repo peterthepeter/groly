@@ -7,6 +7,7 @@
 		subtitle = null,
 		onclose,
 		body,
+		headerActions = null,
 		footer = null,
 		showFooter = true,
 		density = 'compact',
@@ -19,6 +20,7 @@
 		subtitle?: string | null;
 		onclose: () => void;
 		body: Snippet;
+		headerActions?: Snippet | null;
 		footer?: Snippet | null;
 		showFooter?: boolean;
 		density?: 'compact' | 'comfortable';
@@ -39,10 +41,11 @@
 	<div class="manage-sheet-handle" aria-hidden="true"><span></span></div>
 	<header class="manage-sheet-header">
 		<span class="manage-sheet-dot" aria-hidden="true"></span>
-		<div class="min-w-0">
+		<div class="min-w-0 flex-1">
 			<h2>{title}</h2>
 			{#if subtitle}<p>{subtitle}</p>{/if}
 		</div>
+		{#if headerActions}<div class="manage-sheet-header-actions">{@render headerActions()}</div>{/if}
 	</header>
 	<div class="manage-sheet-body">{@render body()}</div>
 	{#if footer && showFooter}<footer class="manage-sheet-footer">{@render footer()}</footer>{/if}
@@ -108,6 +111,12 @@
 		color: var(--manage-accent);
 	}
 
+	.manage-sheet-header-actions {
+		display: flex;
+		flex: none;
+		align-items: center;
+	}
+
 	.manage-sheet-body {
 		min-height: 0;
 		flex: 1;
@@ -136,6 +145,66 @@
 		border: 1px solid var(--bubble-container-border);
 		border-radius: var(--manage-radius);
 		background: var(--bubble-container-bg);
+	}
+
+	:global(.manage-settings-surface) {
+		overflow: hidden;
+		border: 1px solid var(--bubble-container-border);
+		border-radius: var(--manage-radius);
+		background: var(--bubble-container-bg);
+	}
+
+	:global(.manage-settings-row) {
+		min-height: 48px;
+		padding: 4px 12px;
+		border-top: 1px solid var(--bubble-container-border);
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1);
+	}
+
+	:global(.manage-settings-row:first-child) {
+		border-top: 0;
+	}
+
+	:global(.manage-settings-row:focus-within) {
+		background: color-mix(in srgb, var(--manage-accent) 7%, transparent);
+	}
+
+	:global(.manage-settings-label) {
+		min-width: 0;
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.2;
+		color: var(--color-on-surface-variant);
+	}
+
+	:global(.manage-settings-input) {
+		width: 100%;
+		min-width: 0;
+		height: 32px;
+		padding: 0;
+		border: 0;
+		outline: none;
+		background: transparent;
+		color: var(--manage-accent);
+		font-size: 16px;
+		font-weight: 600;
+	}
+
+	:global(.manage-settings-unit) {
+		color: var(--manage-accent);
+		font-size: 16px;
+		font-weight: 600;
+		line-height: 1;
+	}
+
+	:global(.manage-settings-input[type='number']) {
+		appearance: textfield;
+	}
+
+	:global(.manage-settings-input[type='number']::-webkit-inner-spin-button),
+	:global(.manage-settings-input[type='number']::-webkit-outer-spin-button) {
+		margin: 0;
+		appearance: none;
 	}
 
 	:global(.manage-section-title),
@@ -366,6 +435,142 @@
 		border: 1px solid var(--bubble-container-border);
 		border-radius: var(--manage-radius);
 		background: var(--bubble-container-bg);
+	}
+
+	:global(.manage-reminder-card.reminder-flat-card) {
+		gap: 0;
+		overflow: hidden;
+		padding: 0;
+	}
+
+	:global(.reminder-days) {
+		padding: 9px;
+	}
+
+	:global(.reminder-schedule-row) {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+		padding: 6px 11px 4px;
+		border-top: 1px solid var(--bubble-container-border);
+	}
+
+	:global(.reminder-schedule-row.reminder-schedule-row-single) {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	:global(.single-time-reminder-row) {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 36px minmax(88px, 104px);
+		align-items: end;
+		gap: 8px;
+		padding: 6px 9px 8px 11px;
+		border-top: 1px solid var(--bubble-container-border);
+	}
+
+	:global(.reminder-condition-row) {
+		display: flex;
+		min-height: 48px;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 4px 11px;
+		border-top: 1px solid var(--bubble-container-border);
+	}
+
+	:global(.reminder-condition-row:first-child) {
+		border-top: 0;
+	}
+
+	:global(.reminder-time-cell),
+	:global(.reminder-interval-cell) {
+		display: block;
+		min-width: 0;
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1);
+	}
+
+	:global(.reminder-time-cell:focus-within),
+	:global(.reminder-interval-cell:focus-within) {
+		background: color-mix(in srgb, var(--manage-accent) 7%, transparent);
+	}
+
+	:global(.reminder-time-field) {
+		position: relative;
+		display: block;
+		width: 100%;
+		height: 30px;
+		min-width: 0;
+	}
+
+	:global(.reminder-time-picker) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		max-width: 100%;
+		height: 100%;
+		border: 0;
+		opacity: 0;
+		cursor: pointer;
+	}
+
+	:global(.reminder-time-value) {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		pointer-events: none;
+		color: var(--manage-accent);
+		font-size: 16px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+
+	:global(.reminder-interval-select) {
+		width: 100%;
+		height: 30px;
+		padding: 0;
+		border: 0;
+		outline: none;
+		appearance: none;
+		background: transparent;
+		color: var(--manage-accent);
+		font-size: 16px;
+		font-weight: 600;
+		text-align: left;
+		text-align-last: left;
+	}
+
+	:global(.reminder-entry-actions) {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		padding: 8px 9px;
+		border-top: 1px solid var(--bubble-container-border);
+	}
+
+	:global(.reminder-delete),
+	:global(.reminder-save) {
+		display: flex;
+		height: 36px;
+		align-items: center;
+		justify-content: center;
+		border-radius: 12px;
+	}
+
+	:global(.reminder-delete) {
+		width: 36px;
+		border: 1px solid var(--bubble-container-border);
+		color: var(--color-error);
+	}
+
+	:global(.reminder-save) {
+		min-width: 104px;
+		padding-inline: 18px;
+		background: var(--manage-accent);
+		color: white;
+		font-size: 14px;
+		font-weight: 700;
 	}
 
 	:global(.manage-reminder-actions) {

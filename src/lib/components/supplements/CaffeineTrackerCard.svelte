@@ -99,6 +99,14 @@
 		onlogged();
 		oncollapse?.();
 	}
+
+	function toggleTodayDetails() {
+		if (focusMode) {
+			oncollapse?.();
+			return;
+		}
+		if (logs.length > 0) expanded = !expanded;
+	}
 </script>
 
 {#if tileMode}
@@ -109,31 +117,32 @@
 		expandable={!focusMode && logs.length > 0}
 		expanded={focusMode || expanded}
 		ontoggle={(value) => expanded = value}
+		onactivate={focusMode || logs.length > 0 ? toggleTodayDetails : undefined}
 		inlineExpansion={focusMode}
 		{oncollapse}
+		showToggle={false}
 		expandLabel={t.caffeine_expand}
 		collapseLabel={t.caffeine_collapse}
 	>
 		{#snippet body()}
-			{#if !focusMode}
-				<div class="h-7 flex items-center">
-					<button onclick={openLog} class="w-full h-7 text-center text-xs font-semibold active:opacity-70 transition-opacity touch-manipulation" style="color: #C8956C">{t.tracker_log_action}</button>
+			<div class="today-tracker-body">
+				<div class="today-tracker-status tabular-nums">
+					<span style="color: {exceeded ? '#EF4444' : 'var(--color-on-surface-variant)'}">{totalMg} / {limitMg} mg</span>
 				</div>
-			{/if}
-			<div class="h-8 pt-1 flex flex-col justify-end">
-				<div class="h-[18px] flex items-center gap-1 text-[11px] leading-none tabular-nums min-w-0" style="color: {exceeded ? '#EF4444' : '#C8956C'}">
-					<span class="shrink-0">{totalMg} / {limitMg} mg</span>
-					<span class="shrink-0">· {logs.length}×</span>
-					{#if totalMl > 0}<span class="min-w-0 truncate" style="color: var(--color-on-surface-variant)">· {totalMl} ml</span>{/if}
-				</div>
-				<div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-surface-container)">
+				<div class="today-tracker-progress">
 					<div class="h-full rounded-full" style="width: {animatedPercent}%; background: linear-gradient(90deg, rgba(200,149,108,0.35), rgba(200,149,108,0.75)); transition: width {isMounted ? '0.3s ease' : '0.9s cubic-bezier(0.25,0.46,0.45,0.94)'}"></div>
 				</div>
+				{#if !focusMode}
+					<button type="button" onclick={openLog} class="today-tracker-footer touch-manipulation">
+						<span class="truncate text-left tabular-nums">{logs.length}×{#if totalMl > 0} · {totalMl} ml{/if}</span>
+						<span class="today-tracker-footer-action">{t.tracker_log_action}</span>
+					</button>
+				{/if}
 			</div>
 		{/snippet}
 		{#snippet details()}
 			{#if focusMode}
-				<CaffeineDrinkPickerContent {drinks} onlogged={handleFocusLogged} />
+				<CaffeineDrinkPickerContent {drinks} onlogged={handleFocusLogged} integrated />
 			{:else}
 				{#if exceeded}<p class="text-[10px] mb-1.5" style="color: #EF4444">{t.caffeine_limit_exceeded}</p>{/if}
 				<div class="space-y-1.5">

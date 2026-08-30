@@ -3,6 +3,7 @@
 	import { userSettings } from '$lib/userSettings.svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
 	import ManageSheetShell from './ManageSheetShell.svelte';
+	import SupplementActiveToggle from './SupplementActiveToggle.svelte';
 
 	let { open = $bindable<boolean>(false) }: { open: boolean } = $props();
 
@@ -57,73 +58,72 @@
 			[drink.id]: val
 		};
 	}
+
+	function selectValue(event: FocusEvent) {
+		(event.currentTarget as HTMLInputElement).select();
+	}
 </script>
 
 {#if open}
 	<ManageSheetShell accent="#C8956C" title={t.caffeine_edit_title} onclose={() => open = false} maxHeight="85dvh">
 		{#snippet body()}
-			<div class="manage-stack">
-				<div class="manage-section grid grid-cols-[minmax(0,1fr)_118px] items-center gap-3">
-					<p class="m-0 text-sm font-semibold" style="color: var(--color-on-surface-variant)">{t.caffeine_limit_label}</p>
-					<div class="grid grid-cols-[minmax(0,1fr)_22px] items-center gap-1">
-						<input type="number" inputmode="numeric" min="1" bind:value={limitInput} onblur={saveLimit} onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && saveLimit()} class="manage-input text-center font-semibold" style="height: 36px; color: #C8956C" />
-						<span class="text-xs" style="color: var(--color-on-surface-variant)">mg</span>
-					</div>
-				</div>
+			<section class="manage-settings-surface">
+				<label class="manage-settings-row caffeine-limit-row">
+					<span class="manage-settings-label">{t.caffeine_limit_label}</span>
+					<span class="caffeine-amount-control caffeine-limit-control">
+						<input
+							type="text"
+							inputmode="numeric"
+							bind:value={limitInput}
+							onfocus={selectValue}
+							onblur={saveLimit}
+							onkeydown={(event: KeyboardEvent) => event.key === 'Enter' && saveLimit()}
+							class="caffeine-number-input"
+						/>
+						<span class="caffeine-unit">mg</span>
+					</span>
+				</label>
 
-				<div class="manage-section">
-					<p class="manage-section-title">{t.caffeine_visible_drinks}</p>
+				<div class="caffeine-list-heading">{t.caffeine_visible_drinks}</div>
 
 				{#if loading}
-					<div class="flex justify-center py-4">
+					<div class="caffeine-loading">
 						<div class="w-5 h-5 rounded-full border-2 animate-spin"
 						     style="border-color: #C8956C; border-top-color: transparent"></div>
 					</div>
 				{:else}
-					<div>
-						{#each drinks as drink (drink.id)}
-							{@const visible = isDrinkVisible(drink.id)}
-							<div class="grid min-h-11 grid-cols-[36px_minmax(0,1fr)_92px] items-center gap-2 border-b py-1 last:border-b-0" style="border-color: var(--bubble-container-border)">
-								<button
-									onclick={() => toggleDrink(drink.id)}
-									class="manage-toggle manage-toggle-small"
-									data-active={visible}
-									aria-label="{drink.name} ein-/ausblenden"
-								>
-									<span></span>
-								</button>
+					{#each drinks as drink (drink.id)}
+						{@const visible = isDrinkVisible(drink.id)}
+						<div class="caffeine-drink-row" data-visible={visible}>
+							<SupplementActiveToggle
+								active={visible}
+								label={`${drink.name}: ${t.caffeine_toggle_drink}`}
+								accent="#C8956C"
+								onclick={() => toggleDrink(drink.id)}
+							/>
 
-								<div class="min-w-0">
-									<p class="truncate text-sm font-semibold leading-tight"
-									   style="color: {visible ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}">
-										{drink.name}
-									</p>
-									<p class="truncate text-[10px] leading-tight" style="color: var(--color-on-surface-variant)">
-										{Math.round(drink.caffeineMg / drink.defaultMl * 100)} mg/100 ml
-									</p>
-								</div>
-
-								<div class="grid grid-cols-[68px_20px] items-center gap-1">
-									<input
-										type="number"
-										inputmode="numeric"
-										min="10"
-										value={getCustomMl(drink)}
-										onblur={(e) => setCustomMl(drink, (e.target as HTMLInputElement).value)}
-										onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && setCustomMl(drink, (e.target as HTMLInputElement).value)}
-										class="manage-input text-center font-semibold"
-										style="height: 34px; color: #C8956C"
-										aria-label="Standard-Menge {drink.name}"
-									/>
-									<span class="text-[10px]" style="color: var(--color-on-surface-variant)">ml</span>
-								</div>
+							<div class="caffeine-drink-copy">
+								<p>{drink.name}</p>
+								<small>{Math.round(drink.caffeineMg / drink.defaultMl * 100)} mg/100 ml</small>
 							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
 
-			</div>
+							<label class="caffeine-amount-control">
+								<input
+									type="text"
+									inputmode="numeric"
+									value={getCustomMl(drink)}
+									onfocus={selectValue}
+									onblur={(event) => setCustomMl(drink, event.currentTarget.value)}
+									onkeydown={(event) => event.key === 'Enter' && setCustomMl(drink, event.currentTarget.value)}
+									class="caffeine-number-input"
+									aria-label={`${t.caffeine_default_amount}: ${drink.name}`}
+								/>
+								<span class="caffeine-unit">ml</span>
+							</label>
+						</div>
+					{/each}
+				{/if}
+			</section>
 		{/snippet}
 		{#snippet footer()}
 				<button
@@ -137,3 +137,107 @@
 		{/snippet}
 	</ManageSheetShell>
 {/if}
+
+<style>
+	.caffeine-limit-row {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.caffeine-list-heading {
+		padding: 8px 12px 6px;
+		border-top: 1px solid var(--bubble-container-border);
+		color: var(--color-on-surface-variant);
+		font-size: 11px;
+		font-weight: 650;
+		line-height: 1.2;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+	}
+
+	.caffeine-loading {
+		display: flex;
+		min-height: 54px;
+		align-items: center;
+		justify-content: center;
+		border-top: 1px solid var(--bubble-container-border);
+	}
+
+	.caffeine-drink-row {
+		display: grid;
+		grid-template-columns: 40px minmax(0, 1fr) auto;
+		min-height: 52px;
+		align-items: center;
+		gap: 10px;
+		padding: 4px 11px;
+		border-top: 1px solid var(--bubble-container-border);
+	}
+
+	.caffeine-drink-row[data-visible='false'] .caffeine-drink-copy,
+	.caffeine-drink-row[data-visible='false'] .caffeine-amount-control {
+		opacity: 0.55;
+	}
+
+	.caffeine-drink-copy {
+		min-width: 0;
+		transition: opacity 140ms cubic-bezier(0.2, 0, 0, 1);
+	}
+
+	.caffeine-drink-copy p,
+	.caffeine-drink-copy small {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.caffeine-drink-copy p {
+		color: var(--color-on-surface);
+		font-size: 14px;
+		font-weight: 650;
+		line-height: 1.2;
+	}
+
+	.caffeine-drink-copy small {
+		display: block;
+		margin-top: 1px;
+		color: var(--color-on-surface-variant);
+		font-size: 11px;
+		font-weight: 500;
+		line-height: 1.15;
+	}
+
+	.caffeine-amount-control {
+		display: grid;
+		grid-template-columns: minmax(34px, 52px) 20px;
+		align-items: center;
+		gap: 3px;
+		transition: opacity 140ms cubic-bezier(0.2, 0, 0, 1);
+	}
+
+	.caffeine-limit-control {
+		grid-template-columns: minmax(42px, 62px) 22px;
+	}
+
+	.caffeine-number-input {
+		width: 100%;
+		min-width: 0;
+		height: 40px;
+		padding: 0;
+		border: 0;
+		outline: 0;
+		background: transparent;
+		color: #C8956C;
+		font-size: 16px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		text-align: right;
+	}
+
+	.caffeine-unit {
+		color: var(--color-on-surface-variant);
+		font-size: 11px;
+		font-weight: 550;
+	}
+</style>

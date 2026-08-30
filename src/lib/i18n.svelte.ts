@@ -109,6 +109,16 @@ export function nutrition_kcal_over(kcal: string): string {
 	return `${kcal} kcal über dem Ziel`;
 }
 
+export function nutrition_of_goal(goal: string): string {
+	void _lang;
+	return _lang === 'en' ? `of ${goal}` : `von ${goal}`;
+}
+
+export function nutrition_nutrients_per_100(unit: string): string {
+	void _lang;
+	return _lang === 'en' ? `Nutrients per 100 ${unit}` : `Nährwerte pro 100 ${unit}`;
+}
+
 export function nutrition_meals_count(count: number): string {
 	void _lang;
 	if (_lang === 'en') return count === 1 ? '1 meal' : `${count} meals`;

@@ -8,6 +8,7 @@
 	import { displayUnit, shortUnit } from '$lib/units';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import SupplementEditSheet from '$lib/components/supplements/SupplementEditSheet.svelte';
+	import SupplementActiveToggle from '$lib/components/supplements/SupplementActiveToggle.svelte';
 	import SupplementReminderSheet from '$lib/components/supplements/SupplementReminderSheet.svelte';
 	import SupplementAddToListDialog from '$lib/components/supplements/SupplementAddToListDialog.svelte';
 	import WaterTrackerEditSheet from '$lib/components/supplements/WaterTrackerEditSheet.svelte';
@@ -20,6 +21,7 @@
 	import type { CaffeineDrink } from '$lib/db/schema';
 
 	let { data } = $props();
+	const MANAGE_ACCENT = '#2DD4BF';
 
 	type Nutrient = { id?: string; name: string; amountPerUnit: number | string; unit: string; sortOrder: number };
 	type Supplement = {
@@ -364,7 +366,7 @@
 	onMount(load);
 </script>
 
-<div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
+<div class="h-[100dvh] flex flex-col overflow-hidden" style="--manage-page-accent: {MANAGE_ACCENT}; background-color: var(--color-bg)">
 	<AppHeader
 		title={t.supplement_manage}
 		onMenuOpen={() => menuOpen = true}
@@ -383,22 +385,6 @@
 		{/snippet}
 	</AppHeader>
 	<div class="flex-shrink-0" style="height: calc(env(safe-area-inset-top) + 5.25rem)"></div>
-
-	<!-- Back chip -->
-	<div class="flex-shrink-0 px-4 mb-3">
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-			<button
-				onclick={() => goto('/tracker')}
-				class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold active:opacity-70 transition-opacity"
-				style="color: #D97706"
-			>
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<polyline points="15 18 9 12 15 6"/>
-				</svg>
-				{t.supplement_title}
-			</button>
-		</div>
-	</div>
 
 	<!-- Reminders deactivated toast (bottom snackbar) -->
 	{#if remindersDeactivatedToastName !== null}
@@ -434,14 +420,14 @@
 						<button
 							onclick={() => supplementView = 'list'}
 							class="px-3 py-1 rounded-lg text-xs font-semibold transition-colors active:opacity-70"
-							style="background-color: {supplementView === 'list' ? 'var(--color-surface-elevated)' : 'transparent'}; color: {supplementView === 'list' ? '#D97706' : 'var(--color-on-surface-variant)'}"
+							style="background-color: {supplementView === 'list' ? 'var(--color-surface-elevated)' : 'transparent'}; color: {supplementView === 'list' ? 'var(--manage-page-accent)' : 'var(--color-on-surface-variant)'}"
 						>
 							{t.supplement_view_list}
 						</button>
 						<button
 							onclick={() => supplementView = 'weekplan'}
 							class="px-3 py-1 rounded-lg text-xs font-semibold transition-colors active:opacity-70"
-							style="background-color: {supplementView === 'weekplan' ? 'var(--color-surface-elevated)' : 'transparent'}; color: {supplementView === 'weekplan' ? '#D97706' : 'var(--color-on-surface-variant)'}"
+							style="background-color: {supplementView === 'weekplan' ? 'var(--color-surface-elevated)' : 'transparent'}; color: {supplementView === 'weekplan' ? 'var(--manage-page-accent)' : 'var(--color-on-surface-variant)'}"
 						>
 							{t.supplement_view_weekplan}
 						</button>
@@ -452,25 +438,33 @@
 					{#if allSchedules.length === 0}
 						<p class="text-sm text-center px-4 py-8" style="color: var(--color-on-surface-variant)">{t.supplement_weekplan_empty}</p>
 					{:else}
-						<div class="px-2.5 py-1.5">
+						<div>
 							{#each weekPlan as row (row.day)}
-								<div class="flex items-center gap-3 py-2.5 px-2 rounded-xl"
-								     style={row.day === todayDow ? 'background-color: color-mix(in srgb, #D97706 9%, transparent)' : ''}>
-									<div class="shrink-0 w-11 flex justify-center">
-										<span class="text-[11px] font-bold uppercase tracking-wide"
-										      style="color: {row.day === todayDow ? '#D97706' : 'var(--color-on-surface-variant)'}">{row.label}</span>
+								<div
+									class="grid grid-cols-[3.25rem_minmax(0,1fr)] items-start gap-2 border-t px-3 py-2 first:border-t-0"
+									style="border-color: var(--color-outline-variant); background-color: {row.day === todayDow ? 'color-mix(in srgb, var(--manage-page-accent) 7%, transparent)' : 'transparent'}"
+								>
+									<div class="flex items-center gap-1.5 pt-1">
+										<span
+											class="h-1.5 w-1.5 shrink-0 rounded-full"
+											style="background-color: {row.day === todayDow ? 'var(--manage-page-accent)' : 'transparent'}"
+										></span>
+										<span
+											class="text-[11px] font-bold uppercase tracking-wide"
+											style="color: {row.day === todayDow ? 'var(--manage-page-accent)' : 'var(--color-on-surface-variant)'}"
+										>{row.label}</span>
 									</div>
-									<div class="flex-1 min-w-0 flex flex-wrap gap-x-5 gap-y-0.5">
+									<div class="min-w-0">
 										{#if row.entries.length === 0}
-											<span class="text-sm leading-snug" style="color: var(--color-on-surface-variant); opacity: 0.35">—</span>
+											<span class="block py-0.5 text-sm leading-5" style="color: var(--color-on-surface-variant); opacity: 0.35">—</span>
 										{:else}
 											{#each row.entries as e}
 												<button
 													onclick={() => openRemindersById(e.supplementId)}
-													class="flex items-center gap-2 active:opacity-50 transition-opacity"
+													class="grid w-full grid-cols-[3.25rem_minmax(0,1fr)] items-start py-0.5 text-left transition-opacity active:opacity-50"
 												>
-													<span class="text-sm font-semibold leading-snug truncate" style="color: var(--color-on-surface); max-width: 150px">{e.name}</span>
-													<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">{e.time}</span>
+													<span class="shrink-0 text-xs leading-5 tabular-nums" style="color: var(--color-on-surface-variant)">{e.time}</span>
+													<span class="min-w-0 break-words text-sm font-semibold leading-5" style="color: var(--color-on-surface)">{e.name}</span>
 												</button>
 											{/each}
 										{/if}
@@ -483,17 +477,7 @@
 					{#each supplements as supplement, i (supplement.id)}
 						<div class="px-3 py-2 flex items-center gap-3{!supplement.active ? ' opacity-50' : ''}"
 						     style="border-color: var(--color-outline-variant)">
-							<button
-								onclick={() => toggleActive(supplement)}
-								class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors"
-								style="background-color: {supplement.active ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-								aria-label={t.supplement_active_label}
-							>
-								{#if supplement.active}
-									<span class="absolute top-0.5 h-4 w-4 rounded-full"
-									      style="background-color: white; transform: translateX(1.25rem)"></span>
-								{/if}
-							</button>
+							<SupplementActiveToggle active={supplement.active} label={t.supplement_active_label} onclick={() => toggleActive(supplement)} />
 							<div class="flex-1 min-w-0" onclick={() => openEdit(supplement)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && openEdit(supplement)}>
 								<p class="font-semibold text-sm leading-snug" style="color: var(--color-on-surface)">{supplement.name}</p>
 								<p class="text-xs leading-snug flex items-center gap-1 min-w-0" style="color: var(--color-on-surface-variant)">
@@ -736,9 +720,10 @@
 
 <AppBottomNav
 	activeTab="tracker"
+	trackerBack
 	onFabTap={openNew}
 	fabLabel={t.supplement_add}
-	fabColor="#D97706"
+	fabColor={MANAGE_ACCENT}
 />
 
 <SupplementEditSheet

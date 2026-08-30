@@ -121,6 +121,14 @@
 		customAmount = '';
 		if (showCustomInput && tileMode) expanded = true;
 	}
+
+	function toggleTodayDetails() {
+		if (focusMode) {
+			oncollapse?.();
+			return;
+		}
+		if (logs.length > 0) expanded = !expanded;
+	}
 </script>
 
 {#if tileMode}
@@ -131,29 +139,32 @@
 		expandable={!focusMode && logs.length > 0}
 		expanded={focusMode || expanded}
 		ontoggle={(value) => expanded = value}
+		onactivate={focusMode || logs.length > 0 ? toggleTodayDetails : undefined}
 		inlineExpansion={focusMode}
 		{oncollapse}
+		showToggle={false}
 		expandLabel={t.water_expand}
 		collapseLabel={t.water_collapse}
 	>
 		{#snippet body()}
-			{#if !focusMode}
-				<div class="h-7 flex items-center">
-					<button onclick={openLog} disabled={saving} class="w-full h-7 text-center text-xs font-semibold active:opacity-70 disabled:opacity-50 transition-opacity touch-manipulation" style="color: #60A5FA">{t.tracker_log_action}</button>
-				</div>
-			{/if}
-			<div class="h-8 pt-1 flex flex-col justify-end">
-				<div class="h-[18px] flex items-center gap-1.5 text-[11px] leading-none tabular-nums" style="color: #60A5FA">
+			<div class="today-tracker-body">
+				<div class="today-tracker-status tabular-nums">
 					<span>{totalMl} / {goalMl} ml</span>
 					{#if hasReminders}
-						<button onclick={() => reminderSheetOpen = true} class="flex items-center justify-center active:opacity-60" aria-label="Erinnerungen">
+						<button onclick={() => reminderSheetOpen = true} class="flex items-center justify-center active:opacity-60" style="color: #60A5FA" aria-label="Erinnerungen">
 							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
 						</button>
 					{/if}
 				</div>
-				<div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-surface-container)">
+				<div class="today-tracker-progress">
 					<div class="h-full rounded-full" style="width: {animatedPercent}%; background: linear-gradient(90deg, rgba(96,165,250,0.35), rgba(96,165,250,0.75)); transition: width {isMounted ? '0.3s ease' : '0.9s cubic-bezier(0.25,0.46,0.45,0.94)'}"></div>
 				</div>
+				{#if !focusMode}
+					<button type="button" onclick={openLog} disabled={saving} class="today-tracker-footer touch-manipulation disabled:opacity-50">
+						<span class="truncate text-left tabular-nums">{logs.length}×</span>
+						<span class="today-tracker-footer-action">{t.tracker_log_action}</span>
+					</button>
+				{/if}
 			</div>
 		{/snippet}
 		{#snippet details()}

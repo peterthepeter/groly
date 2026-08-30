@@ -7,8 +7,11 @@
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import MealEditSheet from '$lib/components/supplements/MealEditSheet.svelte';
 	import NutritionGoalSheet from '$lib/components/supplements/NutritionGoalSheet.svelte';
+	import NutritionMacroStrip from '$lib/components/supplements/NutritionMacroStrip.svelte';
+	import TrackerSectionNav from '$lib/components/supplements/TrackerSectionNav.svelte';
 	import { toLocalDateKey } from '$lib/dates';
-	import { t, currentLang } from '$lib/i18n.svelte';
+	import { userSettings } from '$lib/userSettings.svelte';
+	import { t, currentLang, nutrition_kcal_over, nutrition_kcal_remaining, nutrition_of_goal } from '$lib/i18n.svelte';
 
 	type Component = {
 		id: string;
@@ -102,7 +105,6 @@
 	}
 
 	onMount(() => {
-		void load();
 		const params = new URLSearchParams(window.location.search);
 		if (params.get('new') === '1') {
 			openNewMeal();
@@ -167,15 +169,29 @@
 	}
 
 	async function deleteMeal(id: string) {
-		if (!confirm(t.nutrition_confirm_delete)) return;
+		if (!confirm(t.nutrition_confirm_delete)) return false;
 		const res = await fetch(`/api/nutrition/meals/${id}`, { method: 'DELETE' });
 		if (res.ok) await load();
+		return res.ok;
 	}
 
 	function percentKcal(): number {
 		if (!goalKcal) return 0;
 		return Math.min(100, (totals.kcal / goalKcal) * 100);
 	}
+
+	const macroItems = $derived([
+		{ label: t.nutrition_protein, value: totals.protein, goal: goalProtein, goalType: 'min' as const },
+		{ label: t.nutrition_fat, value: totals.fat, goal: goalFat, goalType: 'max' as const },
+		{ label: t.nutrition_carbs, value: totals.carbs, goal: goalCarbs, goalType: 'max' as const },
+		{ label: t.nutrition_fiber, value: totals.fiber, goal: goalFiber, goalType: 'min' as const }
+	]);
+
+	const kcalStatus = $derived.by(() => {
+		if (!goalKcal) return null;
+		const delta = Math.round(Math.abs(goalKcal - totals.kcal)).toLocaleString(currentLang());
+		return totals.kcal > goalKcal ? nutrition_kcal_over(delta) : nutrition_kcal_remaining(delta);
+	});
 
 	function fabClick() {
 		openNewMeal();
@@ -186,18 +202,21 @@
 	{#snippet actions()}
 		<button
 			onclick={() => goto('/tracker/nutrition/favorites')}
-			class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
+			class="min-h-10 flex-shrink-0 px-2 flex items-center justify-center text-xs font-semibold active:opacity-60 transition-opacity"
+			style="color: var(--color-on-surface-variant)"
 			aria-label={t.nutrition_favorites_manage}
 		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="#FB923C" stroke="#FB923C" stroke-width="2" stroke-linejoin="round">
-				<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-			</svg>
+			{t.nutrition_favorites_label}
 		</button>
 	{/snippet}
 </AppHeader>
 <HamburgerMenu bind:open={menuOpen} user={data?.user ?? null} />
 
-<main class="px-4 pb-32" style="padding-top: 5.25rem">
+<div class="px-4 pb-3" style="padding-top: 5.25rem">
+	<TrackerSectionNav activeSection="nutrition" nutritionEnabled={userSettings.nutritionTrackerEnabled} />
+</div>
+
+<main class="px-4 pb-32">
 	<!-- Datums-Navigation -->
 	<div class="flex items-center justify-between mb-4">
 		<button onclick={() => shiftDate(-1)} class="w-9 h-9 flex items-center justify-center active:opacity-50"
@@ -228,74 +247,38 @@
 		</button>
 	</div>
 
-	<!-- Tages-Summary -->
-	<div class="rounded-2xl p-4 mb-4"
-	     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-		<div class="flex items-baseline justify-between mb-2">
-			<div>
-				<div class="text-2xl font-semibold tabular-nums" style="color: var(--color-on-surface)">
-					{fmtKcal(totals.kcal)}
-					<span class="text-base font-normal" style="color: var(--color-on-surface-variant)">kcal</span>
-					{#if goalKcal}
-						<span class="text-xs font-normal" style="color: var(--color-on-surface-variant)">/ {fmtKcal(goalKcal)} kcal</span>
-					{/if}
+	<!-- Tagesbilanz -->
+	<section class="nutrition-summary">
+		<div class="nutrition-summary-head">
+			<div class="min-w-0">
+				<div class="nutrition-kcal-value">
+					{fmtKcal(totals.kcal)} <span>kcal</span>
 				</div>
+				{#if goalKcal}
+					<p class="nutrition-goal-copy">{nutrition_of_goal(`${fmtKcal(goalKcal)} kcal`)}</p>
+				{:else}
+					<p class="nutrition-goal-copy">{t.nutrition_no_goal_set}</p>
+				{/if}
 			</div>
-			<button onclick={() => (goalSheetOpen = true)}
-			        class="text-xs px-2 py-1 active:opacity-60"
-			        style="color: #FB923C">
-				{t.nutrition_goal_button}
-			</button>
+			<div class="nutrition-summary-actions">
+				{#if kcalStatus}<span class="nutrition-kcal-status" data-over={totals.kcal > (goalKcal ?? 0)}>{kcalStatus}</span>{/if}
+				<button onclick={() => (goalSheetOpen = true)}>{t.nutrition_goals_button}</button>
+			</div>
 		</div>
 		{#if goalKcal}
-			<div class="rounded-full h-2 overflow-hidden mb-3"
-			     style="background-color: color-mix(in srgb, var(--color-on-surface) 8%, transparent)">
-				<div class="h-full transition-all" style="width: {percentKcal()}%; background-color: {totals.kcal > goalKcal ? '#EF4444' : '#FB923C'}"></div>
+			<div class="nutrition-kcal-track">
+				<div style="width: {percentKcal()}%; background-color: {totals.kcal > goalKcal ? 'var(--color-error)' : '#FB923C'}"></div>
 			</div>
 		{/if}
 		{#if !goalKcal && !goalProtein && !goalFat && !goalCarbs && !goalFiber}
 			<button onclick={() => (goalSheetOpen = true)}
-			        class="w-full py-2 rounded-full text-sm font-medium active:opacity-70"
-			        style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: #FB923C">
+			        class="nutrition-empty-goal-action">
 				+ {t.nutrition_set_goal_cta}
 			</button>
 		{:else}
-		<div class="grid grid-cols-4 gap-2">
-			{#each [
-				{ label: t.nutrition_protein, value: totals.protein, goal: goalProtein, goalType: 'min' as const, tint: '#9F7AEA' },
-				{ label: t.nutrition_fat, value: totals.fat, goal: goalFat, goalType: 'max' as const, tint: '#FB923C' },
-				{ label: t.nutrition_carbs, value: totals.carbs, goal: goalCarbs, goalType: 'max' as const, tint: '#60A5FA' },
-				{ label: t.nutrition_fiber, value: totals.fiber, goal: goalFiber, goalType: 'min' as const, tint: 'var(--color-primary)' }
-			] as macro}
-				{@const ratio = macro.goal && macro.goal > 0 ? macro.value / macro.goal : 0}
-				{@const pct = Math.min(100, ratio * 100)}
-				{@const over = macro.goal && ratio > 1}
-				{@const color = macro.goalType === 'max' && over ? '#EF4444' : macro.tint}
-				{@const r = 22}
-				{@const c = 2 * Math.PI * r}
-				<div class="flex flex-col items-center">
-					<div class="relative" style="width: 56px; height: 56px">
-						<svg width="56" height="56" viewBox="0 0 56 56" style="transform: rotate(-90deg)">
-							<circle cx="28" cy="28" r={r} fill="none" stroke="color-mix(in srgb, var(--color-on-surface) 10%, transparent)" stroke-width="4"/>
-							{#if macro.goal}
-								<circle cx="28" cy="28" r={r} fill="none"
-								        stroke={color} stroke-width="4"
-								        stroke-linecap="round"
-								        stroke-dasharray={c}
-								        stroke-dashoffset={c - (c * pct) / 100}
-								        style="transition: stroke-dashoffset 0.3s"/>
-							{/if}
-						</svg>
-						<div class="absolute inset-0 flex items-center justify-center">
-							<span class="text-xs font-semibold tabular-nums" style="color: var(--color-on-surface)">{fmtG(macro.value)}<span class="text-[9px] font-normal" style="color: var(--color-on-surface-variant)">g</span></span>
-						</div>
-					</div>
-					<div class="text-[10px] mt-1" style="color: var(--color-on-surface-variant)">{macro.label}{#if macro.goal}<span class="opacity-60"> / {macro.goal}g</span>{/if}</div>
-				</div>
-			{/each}
-		</div>
+			<NutritionMacroStrip items={macroItems} />
 		{/if}
-	</div>
+	</section>
 
 	<!-- Mahlzeiten -->
 	{#if loading}
@@ -310,79 +293,148 @@
 			</p>
 		</div>
 	{:else}
-		<div class="flex flex-col gap-2">
+		<section class="nutrition-day-log" aria-label={t.nutrition_meals_section}>
 			{#each meals as m (m.id)}
 				{@const mealKcal = m.components.reduce((s, c) => s + (c.kcal ?? 0), 0)}
 				{@const mealP = m.components.reduce((s, c) => s + (c.protein ?? 0), 0)}
 				{@const mealF = m.components.reduce((s, c) => s + (c.fat ?? 0), 0)}
 				{@const mealC = m.components.reduce((s, c) => s + (c.carbs ?? 0), 0)}
 				{@const singleImg = !m.favoriteName && m.components.length === 1 ? m.components[0].imageUrl : null}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div class="rounded-2xl p-3 active:opacity-80 cursor-pointer"
-				     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
-				     onclick={() => openEditMeal(m)}>
-					<div class="flex items-center gap-2">
-						<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant); min-width: 38px">{m.time}</span>
-						<span class="font-semibold flex-1 truncate" style="color: var(--color-on-surface)">{m.name}</span>
-						<span class="text-sm font-medium tabular-nums shrink-0" style="color: #FB923C">{fmtKcal(mealKcal)} kcal</span>
-						<button onclick={(e) => { e.stopPropagation(); deleteMeal(m.id); }}
-						        class="opacity-40 active:opacity-100 text-sm w-7 h-7 flex items-center justify-center shrink-0"
-						        aria-label={t.nutrition_remove}>✕</button>
-					</div>
-					<div class="text-[11px] tabular-nums leading-none" style="color: var(--color-on-surface-variant); margin-left: 46px; margin-top: -2px">
-						{t.nutrition_protein.charAt(0)} {fmtG(mealP)}g · {t.nutrition_fat.charAt(0)} {fmtG(mealF)}g · {t.nutrition_carbs.charAt(0)} {fmtG(mealC)}g
-					</div>
+				<button type="button" class="nutrition-meal-entry" onclick={() => openEditMeal(m)}>
+					<span class="nutrition-meal-time">{m.time}</span>
+					<span class="nutrition-meal-content">
+						<span class="nutrition-meal-heading">
+							<span>{m.name}</span>
+							<strong>{fmtKcal(mealKcal)} kcal</strong>
+						</span>
+						<span class="nutrition-meal-macros">
+							{t.nutrition_protein.charAt(0)} {fmtG(mealP)} g · {t.nutrition_fat.charAt(0)} {fmtG(mealF)} g · {t.nutrition_carbs.charAt(0)} {fmtG(mealC)} g
+						</span>
 					{#if m.favoriteName}
-						<div class="flex items-center gap-[14px]" style="margin-top: -3px">
+						<span class="nutrition-meal-favorite">
 							{#if m.imageUrl}
-								<img src={m.imageUrl} alt="" class="w-8 h-8 rounded-lg object-cover bg-black/5 shrink-0" />
-							{:else}
-								<div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0"
-								     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-									{m.favoriteName.slice(0, 1).toUpperCase()}
-								</div>
+								<img src={m.imageUrl} alt="" />
 							{/if}
-							<span class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{m.favoriteName}</span>
-						</div>
+							<span>{m.favoriteName}</span>
+						</span>
 					{/if}
-						{#if singleImg}
-						<div class="flex items-center gap-[14px] mt-2">
-							<img src={singleImg} alt="" class="w-8 h-8 rounded-lg object-cover bg-black/5 shrink-0" />
-							<span class="flex-1 truncate text-xs" style="color: var(--color-on-surface-variant)">
+					{#if singleImg}
+						<span class="nutrition-component-row nutrition-component-row-image">
+							<img src={singleImg} alt="" />
+							<span>
 								{m.components[0].displayName}
-								<span class="opacity-60">· {m.components[0].amount}{m.components[0].unit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : m.components[0].unit}</span>
+								<small>· {m.components[0].amount}{m.components[0].unit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : m.components[0].unit}</small>
 							</span>
-							<span class="tabular-nums shrink-0 text-xs" style="color: var(--color-on-surface-variant)">{fmtKcal(m.components[0].kcal)} kcal</span>
-						</div>
+							<strong>{fmtKcal(m.components[0].kcal)} kcal</strong>
+						</span>
 					{:else if m.components.length > 0}
-						<div class="flex flex-col gap-0.5" style="margin-left: 46px; margin-top: {m.favoriteName ? '-2px' : '0.375rem'}">
+						<span class="nutrition-component-list">
 							{#each m.components as c (c.id)}
-								<div class="flex items-center gap-2 text-xs">
-									<span class="flex-1 truncate" style="color: var(--color-on-surface-variant)">
+								<span class="nutrition-component-row">
+									<span>
 										{c.displayName}
-										<span class="opacity-60">· {c.amount}{c.unit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : c.unit}</span>
+										<small>· {c.amount}{c.unit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : c.unit}</small>
 									</span>
-									<span class="tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">{fmtKcal(c.kcal)} kcal</span>
-								</div>
+									<strong>{fmtKcal(c.kcal)} kcal</strong>
+								</span>
 							{/each}
-						</div>
+						</span>
 					{/if}
-				</div>
+					</span>
+				</button>
 			{/each}
-		</div>
+		</section>
 	{/if}
 </main>
 
-<AppBottomNav activeTab="tracker" onFabTap={fabClick} fabLabel={t.nutrition_add_meal} fabColor="#FB923C" />
+<AppBottomNav activeTab="tracker" trackerBack onFabTap={fabClick} fabLabel={t.nutrition_add_meal} fabColor="#FB923C" />
 
 {#if editSheetOpen && editingMeal}
 	<MealEditSheet
 		meal={editingMeal}
+		ondelete={editingMeal.id ? async () => { if (editingMeal && await deleteMeal(editingMeal.id)) { editSheetOpen = false; editingMeal = null; } } : null}
 		onclose={() => { editSheetOpen = false; editingMeal = null; }}
 		onsaved={() => { editSheetOpen = false; editingMeal = null; void load(); }}
 	/>
 {/if}
+
+<style>
+	.nutrition-summary,
+	.nutrition-day-log {
+		overflow: hidden;
+		border: 1px solid var(--bubble-container-border);
+		border-radius: 20px;
+		background: var(--bubble-container-bg);
+	}
+
+	.nutrition-summary { margin-bottom: 14px; padding: 14px 15px 15px; }
+
+	.nutrition-summary-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 11px;
+	}
+
+	.nutrition-kcal-value {
+		color: var(--color-on-surface);
+		font-size: 26px;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.025em;
+		line-height: 1;
+	}
+
+	.nutrition-kcal-value span { color: var(--color-on-surface-variant); font-size: 14px; font-weight: 500; letter-spacing: 0; }
+	.nutrition-goal-copy { margin-top: 5px; color: var(--color-on-surface-variant); font-size: 11px; line-height: 1.2; }
+
+	.nutrition-summary-actions { display: grid; justify-items: end; gap: 5px; }
+	.nutrition-summary-actions button { min-height: 32px; padding-inline: 10px; border-radius: 10px; color: #FB923C; font-size: 12px; font-weight: 650; }
+	.nutrition-summary-actions button:active { background: color-mix(in srgb, #FB923C 9%, transparent); }
+	.nutrition-kcal-status { max-width: 145px; overflow: hidden; color: #FB923C; font-size: 10px; font-weight: 600; line-height: 1.15; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+	.nutrition-kcal-status[data-over='true'] { color: var(--color-error); }
+
+	.nutrition-kcal-track { height: 3px; margin-bottom: 13px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--color-on-surface) 9%, transparent); }
+	.nutrition-kcal-track div { height: 100%; border-radius: inherit; transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+	.nutrition-empty-goal-action { width: 100%; min-height: 40px; border-radius: 10px; background: var(--bubble-interactive-bg); color: #FB923C; font-size: 13px; font-weight: 650; }
+
+	.nutrition-day-log { display: flex; flex-direction: column; }
+	.nutrition-meal-entry { display: grid; grid-template-columns: 48px minmax(0, 1fr); min-height: 64px; padding: 12px 12px 12px 11px; text-align: left; touch-action: manipulation; }
+	.nutrition-meal-entry + .nutrition-meal-entry { border-top: 1px solid var(--bubble-container-border); }
+	.nutrition-meal-entry:active { background: color-mix(in srgb, #FB923C 5%, transparent); }
+
+	.nutrition-meal-time { padding-top: 2px; color: var(--color-on-surface-variant); font-size: 11px; font-variant-numeric: tabular-nums; }
+	.nutrition-meal-content { display: grid; min-width: 0; gap: 4px; }
+	.nutrition-meal-heading { display: flex; min-width: 0; align-items: baseline; gap: 8px; }
+	.nutrition-meal-heading > span { overflow: hidden; min-width: 0; flex: 1; color: var(--color-on-surface); font-size: 14px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+	.nutrition-meal-heading strong { flex: none; color: #FB923C; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+	.nutrition-meal-macros { color: var(--color-on-surface-variant); font-size: 10px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+
+	.nutrition-meal-favorite { display: flex; min-width: 0; align-items: center; gap: 7px; margin-top: 3px; color: var(--color-on-surface); font-size: 12px; font-weight: 600; }
+	.nutrition-meal-favorite img { width: 24px; height: 24px; flex: none; border-radius: 7px; object-fit: cover; }
+	.nutrition-meal-favorite span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+	.nutrition-component-list { display: grid; gap: 3px; margin-top: 3px; }
+	.nutrition-component-row { display: flex; min-width: 0; align-items: baseline; gap: 8px; color: var(--color-on-surface-variant); font-size: 11px; line-height: 1.2; }
+	.nutrition-component-row > span { overflow: hidden; min-width: 0; flex: 1; text-overflow: ellipsis; white-space: nowrap; }
+	.nutrition-component-row small { opacity: 0.62; font-size: inherit; }
+	.nutrition-component-row strong { flex: none; font-weight: 500; font-variant-numeric: tabular-nums; }
+	.nutrition-component-row-image { align-items: center; margin-top: 4px; }
+	.nutrition-component-row-image img { width: 26px; height: 26px; flex: none; border-radius: 7px; object-fit: cover; }
+
+	@media (max-width: 360px) {
+		.nutrition-summary { padding-inline: 13px; }
+		.nutrition-kcal-value { font-size: 24px; }
+		.nutrition-kcal-status { max-width: 116px; }
+		.nutrition-meal-entry { grid-template-columns: 43px minmax(0, 1fr); padding-inline: 10px; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.nutrition-kcal-track div { transition: none; }
+	}
+</style>
 
 {#if goalSheetOpen}
 	<NutritionGoalSheet

@@ -103,10 +103,10 @@
 
 				<div class="manage-stack">
 					{#each reminderEntries as entry}
-						<div class="manage-reminder-card">
+						<div class="manage-reminder-card reminder-flat-card">
 							<!-- Day chips -->
-							<div>
-								<p class="manage-label">{t.supplement_reminders_days_label}</p>
+							<div class="reminder-days">
+								<p class="manage-settings-label mb-1.5 px-0.5">{t.supplement_reminders_days_label}</p>
 								<div class="manage-chip-grid">
 									{#each DAY_ORDER as day, i}
 										<button
@@ -121,44 +121,41 @@
 							</div>
 
 							<!-- Time + actions -->
-							<div>
-								<p class="manage-label">{t.supplement_reminders_time_label}</p>
-								<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_40px] gap-2">
-									<input
-										type="time"
-										bind:value={entry.time}
-										class="manage-input"
-									/>
-									<button
-										onclick={() => saveReminderEntry(entry)}
-										disabled={entry.saving || entry.days.length === 0}
-										class="manage-primary active:opacity-70 disabled:opacity-40"
-									>
-										{#if entry.saving}
-											…
-										{:else if entry.saved}
-											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline">
-												<polyline points="20 6 9 17 4 12"/>
-											</svg>
-										{:else}
-											{t.supplement_reminders_save}
-										{/if}
-									</button>
-									<button
-										onclick={() => deleteReminderEntry(entry)}
-										disabled={entry.deleting}
-										class="manage-icon-button active:opacity-60 disabled:opacity-40"
-										aria-label={t.supplement_reminders_delete}
-									>
-										{#if entry.deleting}
-											<div class="w-5 h-5 rounded-full border-2 animate-spin" style="border-color: var(--color-error); border-top-color: transparent"></div>
-										{:else}
-											<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-											</svg>
-										{/if}
-									</button>
-								</div>
+							<div class="single-time-reminder-row">
+								<label class="reminder-time-cell">
+									<span class="manage-settings-label">{t.supplement_reminders_time_label}</span>
+									<span class="reminder-time-field">
+										<input type="time" bind:value={entry.time} class="reminder-time-picker" />
+										<span class="reminder-time-value">{entry.time}</span>
+									</span>
+								</label>
+								<button
+									onclick={() => deleteReminderEntry(entry)}
+									disabled={entry.deleting}
+									class="reminder-delete active:opacity-60 disabled:opacity-40"
+									aria-label={t.supplement_reminders_delete}
+								>
+									{#if entry.deleting}
+										<div class="h-4 w-4 animate-spin rounded-full border-2" style="border-color: var(--color-error); border-top-color: transparent"></div>
+									{:else}
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+										</svg>
+									{/if}
+								</button>
+								<button
+									onclick={() => saveReminderEntry(entry)}
+									disabled={entry.saving || entry.days.length === 0}
+									class="reminder-save active:opacity-70 disabled:opacity-40"
+								>
+									{#if entry.saving}
+										…
+									{:else if entry.saved}
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+									{:else}
+										{t.supplement_reminders_save}
+									{/if}
+								</button>
 							</div>
 						</div>
 					{/each}

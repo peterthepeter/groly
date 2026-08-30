@@ -11,13 +11,33 @@ export const GET: RequestHandler = async (event) => {
 	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
 
 	// Kategorie des verknüpften generischen Lebensmittels mitliefern (für das Listen-Icon).
-	const rows = db.select({ fav: nutritionFavorites, category: genericFoods.category })
+	const rows = db.select({
+		fav: nutritionFavorites,
+		category: genericFoods.category,
+		genericKcal: genericFoods.kcalPer100,
+		genericProtein: genericFoods.proteinPer100,
+		genericFat: genericFoods.fatPer100,
+		genericCarbs: genericFoods.carbsPer100,
+		genericSugar: genericFoods.sugarPer100,
+		genericFiber: genericFoods.fiberPer100,
+		genericSalt: genericFoods.saltPer100
+	})
 		.from(nutritionFavorites)
 		.leftJoin(genericFoods, eq(nutritionFavorites.genericFoodId, genericFoods.id))
 		.where(eq(nutritionFavorites.userId, user.id))
 		.orderBy(desc(nutritionFavorites.useCount), desc(nutritionFavorites.lastUsedAt))
 		.all();
-	const favs = rows.map((r) => ({ ...r.fav, category: r.category }));
+	const favs = rows.map((r) => ({
+		...r.fav,
+		category: r.category,
+		customKcalPer100: r.fav.customKcalPer100 ?? r.genericKcal,
+		customProteinPer100: r.fav.customProteinPer100 ?? r.genericProtein,
+		customFatPer100: r.fav.customFatPer100 ?? r.genericFat,
+		customCarbsPer100: r.fav.customCarbsPer100 ?? r.genericCarbs,
+		customSugarPer100: r.fav.customSugarPer100 ?? r.genericSugar,
+		customFiberPer100: r.fav.customFiberPer100 ?? r.genericFiber,
+		customSaltPer100: r.fav.customSaltPer100 ?? r.genericSalt
+	}));
 	return json({ favorites: favs });
 };
 

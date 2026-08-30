@@ -4,6 +4,7 @@
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { displayUnit, SUPPLEMENT_UNITS } from '$lib/units';
 	import ManageSheetShell from './ManageSheetShell.svelte';
+	import SupplementActiveToggle from './SupplementActiveToggle.svelte';
 
 	type Nutrient = { id?: string; name: string; amountPerUnit: number | string; unit: string; sortOrder: number };
 	type EditSheetType = {
@@ -119,7 +120,27 @@
 </script>
 
 {#if editSheet}
-	<ManageSheetShell accent="var(--color-primary)" title={editSheet.id ? editSheet.name || t.supplement_edit_title : t.supplement_new_title} subtitle={editSheet.id ? t.supplement_edit_title : null} {onclose} showFooter={editSheet.id !== null || newMode === 'form'}>
+	<ManageSheetShell accent="var(--color-primary)" title={editSheet.id ? t.supplement_edit_title : t.supplement_new_title} {onclose} showFooter={editSheet.id !== null || newMode === 'form'}>
+		{#snippet headerActions()}
+			{#if editSheet.id || newMode === 'form'}
+				<div class="supplement-header-actions">
+					<span class="supplement-header-active">
+						<span>{t.supplement_active_label}</span>
+						<SupplementActiveToggle active={editSheet.active} label={t.supplement_active_label} onclick={() => { if (editSheet) editSheet.active = !editSheet.active; }} />
+					</span>
+					{#if editSheet.id}
+						<button type="button" onclick={() => { if (editSheet?.id) onopenreminders(editSheet.id); }} class="supplement-header-reminder" aria-label={t.supplement_reminders_edit}>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+						</button>
+					{:else}
+						<button type="button" onclick={() => { reminderAfterCreate = !reminderAfterCreate; }} class="supplement-header-reminder" data-active={reminderAfterCreate} aria-label={t.supplement_reminders_after_create} aria-pressed={reminderAfterCreate}>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+						</button>
+					{/if}
+				</div>
+			{/if}
+		{/snippet}
+
 		{#snippet body()}
 			{#if !editSheet.id && newMode === 'search'}
 				<div class="manage-stack min-h-[230px]">
@@ -155,37 +176,37 @@
 						</div>
 					{/if}
 
-					<section class="manage-section">
-						<div class="grid grid-cols-[minmax(0,3fr)_minmax(92px,1fr)] gap-2">
-							<label><span class="manage-label">{t.supplement_name_label}<span style="color: var(--color-error)"> *</span></span><input id="supp-edit-name" type="text" bind:value={editSheet.name} placeholder={t.supplement_name_placeholder} class="manage-input" /></label>
-							<div>
-								<span class="manage-label">{t.supplement_unit_label}<span style="color: var(--color-error)"> *</span></span>
-								<button type="button" onclick={() => openPicker({ type: 'supplement' })} class="manage-control flex w-full items-center justify-between gap-1 px-3 text-left"><span class="truncate">{editSheet.unit ? displayUnit(editSheet.unit, currentLang()) : '–'}</span><span aria-hidden="true">⌄</span></button>
-							</div>
+					<section class="manage-settings-surface">
+						<div class="supplement-field-row supplement-field-row-name">
+							<label class="supplement-field-cell" for="supp-edit-name">
+								<span class="manage-settings-label">{t.supplement_name_label}<span style="color: var(--color-error)"> *</span></span>
+								<input id="supp-edit-name" type="text" bind:value={editSheet.name} placeholder={t.supplement_name_placeholder} class="manage-settings-input supplement-field-input" />
+							</label>
+							<button type="button" onclick={() => openPicker({ type: 'supplement' })} class="supplement-field-cell supplement-unit-cell">
+								<span class="manage-settings-label">{t.supplement_unit_label}<span style="color: var(--color-error)"> *</span></span>
+								<span class="manage-settings-input supplement-field-control truncate">{editSheet.unit ? displayUnit(editSheet.unit, currentLang()) : '–'}</span>
+							</button>
 						</div>
-						<div class="mt-3 grid grid-cols-2 gap-2">
-							<label><span class="manage-label">{t.supplement_brand_label}</span><input id="supp-edit-brand" type="text" bind:value={editSheet.brand} placeholder={t.supplement_brand_placeholder} class="manage-input" /></label>
-							<label><span class="manage-label">{t.supplement_info_label}</span><input id="supp-edit-info" type="text" bind:value={editSheet.info} placeholder={t.supplement_info_placeholder} class="manage-input" /></label>
+						<div class="supplement-field-row">
+							<label class="supplement-field-cell" for="supp-edit-brand">
+								<span class="manage-settings-label">{t.supplement_brand_label}</span>
+								<input id="supp-edit-brand" type="text" bind:value={editSheet.brand} placeholder={t.supplement_brand_placeholder} class="manage-settings-input supplement-field-input" />
+							</label>
+							<label class="supplement-field-cell" for="supp-edit-info">
+								<span class="manage-settings-label">{t.supplement_info_label}</span>
+								<input id="supp-edit-info" type="text" bind:value={editSheet.info} placeholder={t.supplement_info_placeholder} class="manage-settings-input supplement-field-input" />
+							</label>
 						</div>
-						<div class="mt-3 grid grid-cols-2 gap-2">
-							<label><span class="manage-label">{t.supplement_stock_label}</span><input id="supp-edit-stock" type="number" inputmode="decimal" bind:value={editSheet.stockQuantity} placeholder={t.supplement_stock_placeholder} class="manage-input" /></label>
-							<label><span class="manage-label">{t.supplement_default_amount_label}</span><input id="supp-edit-default" type="number" inputmode="decimal" bind:value={editSheet.defaultAmount} placeholder="1" class="manage-input" /></label>
+						<div class="supplement-field-row">
+							<label class="supplement-field-cell" for="supp-edit-stock">
+								<span class="manage-settings-label">{t.supplement_stock_label}</span>
+								<input id="supp-edit-stock" type="number" inputmode="decimal" bind:value={editSheet.stockQuantity} placeholder={t.supplement_stock_placeholder} class="manage-settings-input supplement-field-input" />
+							</label>
+							<label class="supplement-field-cell" for="supp-edit-default">
+								<span class="manage-settings-label">{t.supplement_default_amount_label}</span>
+								<input id="supp-edit-default" type="number" inputmode="decimal" bind:value={editSheet.defaultAmount} placeholder="1" class="manage-settings-input supplement-field-input" />
+							</label>
 						</div>
-					</section>
-
-					<section class="manage-section grid grid-cols-2 gap-2 !py-1.5">
-						<div class="manage-row justify-between px-1">
-							<span class="text-sm font-semibold" style="color: var(--color-on-surface)">{t.supplement_active_label}</span>
-							<button type="button" onclick={() => { if (editSheet) editSheet.active = !editSheet.active; }} class="manage-toggle" data-active={editSheet.active} aria-label={t.supplement_active_label}><span></span></button>
-						</div>
-						{#if editSheet.id}
-							<button type="button" onclick={() => { if (editSheet?.id) onopenreminders(editSheet.id); }} class="manage-row justify-center text-sm font-semibold" style="color: var(--color-primary)">{t.supplement_reminders_edit}</button>
-						{:else}
-							<div class="manage-row justify-between px-1">
-								<span class="text-xs font-semibold leading-tight" style="color: var(--color-on-surface)">{t.supplement_reminders_after_create}</span>
-								<button type="button" onclick={() => { reminderAfterCreate = !reminderAfterCreate; }} class="manage-toggle" data-active={reminderAfterCreate} aria-label={t.supplement_reminders_after_create}><span></span></button>
-							</div>
-						{/if}
 					</section>
 
 					<section class="manage-section !px-2">
@@ -193,7 +214,7 @@
 						<div class="grid grid-cols-[minmax(0,1fr)_58px_52px_32px] items-end gap-1 px-1 pb-1 text-[10px]" style="color: var(--color-on-surface-variant)">
 							<span>{t.supplement_nutrient_name}</span><span class="text-center">{t.supplement_nutrient_amount}</span><span class="text-center">{t.supplement_nutrient_unit}</span><span></span>
 						</div>
-						<div class="overflow-hidden rounded-xl border" style="border-color: var(--bubble-container-border); background: var(--color-surface-container)">
+						<div class="overflow-hidden rounded-xl border" style="border-color: var(--bubble-container-border); background: var(--bubble-container-bg)">
 							{#each editSheet.nutrients as nutrient, i}
 								<div class="grid min-h-10 grid-cols-[minmax(0,1fr)_58px_52px_32px] items-center gap-1 border-b px-1 last:border-b-0" style="border-color: var(--bubble-container-border)">
 									<input type="text" bind:value={nutrient.name} placeholder={t.supplement_nutrient_name_placeholder} class="min-w-0 outline-none" style="height: 40px; border: 0; background: transparent; color: var(--color-on-surface); font-size: 16px" />
@@ -221,6 +242,88 @@
 {/if}
 
 <style>
+	.supplement-header-actions,
+	.supplement-header-active {
+		display: flex;
+		align-items: center;
+	}
+
+	.supplement-header-actions {
+		gap: 6px;
+	}
+
+	.supplement-header-active {
+		gap: 6px;
+		color: var(--color-on-surface-variant);
+		font-size: 11px;
+		font-weight: 600;
+	}
+
+	.supplement-header-reminder {
+		display: flex;
+		width: 32px;
+		height: 32px;
+		flex: none;
+		align-items: center;
+		justify-content: center;
+		color: var(--color-primary);
+		border-radius: 10px;
+	}
+
+	.supplement-header-reminder[data-active='false'] {
+		color: var(--color-on-surface-variant);
+	}
+
+	.supplement-header-reminder:active {
+		background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+	}
+
+	.supplement-field-row {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		border-top: 1px solid var(--bubble-container-border);
+	}
+
+	.supplement-field-row:first-child {
+		border-top: 0;
+	}
+
+	.supplement-field-row-name {
+		grid-template-columns: minmax(0, 3fr) minmax(92px, 1fr);
+	}
+
+	.supplement-field-cell {
+		display: block;
+		min-width: 0;
+		padding: 5px 12px 3px;
+		transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1);
+	}
+
+	.supplement-unit-cell {
+		width: 100%;
+		text-align: left;
+	}
+
+	.supplement-field-cell:focus-within {
+		background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+	}
+
+	.supplement-field-control {
+		display: flex;
+		align-items: center;
+		text-align: left;
+	}
+
+	.supplement-field-input[type='number'] {
+		appearance: textfield;
+	}
+
+	.supplement-field-input[type='number']::-webkit-inner-spin-button,
+	.supplement-field-input[type='number']::-webkit-outer-spin-button {
+		margin: 0;
+		appearance: none;
+	}
+
 	.nutrient-amount::-webkit-inner-spin-button,
 	.nutrient-amount::-webkit-outer-spin-button {
 		margin: 0;

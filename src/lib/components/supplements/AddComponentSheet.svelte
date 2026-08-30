@@ -2,8 +2,12 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import BarcodeScanner from '$lib/components/BarcodeScanner.svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
+	import { t, currentLang, nutrition_nutrients_per_100 } from '$lib/i18n.svelte';
 	import { getNutritionCategoryIcon } from '$lib/nutritionCategoryIcons';
+	import { nextNutritionUseCount, nutritionBasisSuffix, parseOptionalNutritionNumber } from '$lib/nutritionUtils';
+	import ManageSheetShell from './ManageSheetShell.svelte';
+	import NutritionFoodRow from './NutritionFoodRow.svelte';
+	import NutritionMacroStrip from './NutritionMacroStrip.svelte';
 
 	type Component = {
 		productBarcode: string | null;
@@ -104,11 +108,12 @@
 		components: MealFavoriteComponent[];
 	};
 
-	let { initial = null, suggestedAmount = null, suggestedUnit = null, onclose, onadd, onpickmeal }: {
+	let { initial = null, suggestedAmount = null, suggestedUnit = null, favoriteMode = false, onclose, onadd, onpickmeal }: {
 		initial?: Component | null;
 		// Beim Zuordnen einer Rezept-Zutat: Menge/Einheit aus dem Zutatentext vorbefüllen.
 		suggestedAmount?: number | null;
 		suggestedUnit?: 'g' | 'ml' | 'piece' | null;
+		favoriteMode?: boolean;
 		onclose: () => void;
 		onadd: (c: Component) => void;
 		onpickmeal?: (payload: { components: Component[]; defaultMealName: string | null; favoriteName: string; imageUrl: string | null; caffeineDrinkId: string | null }) => void;
@@ -191,6 +196,16 @@
 	let customProtein = $state('');
 	let customFat = $state('');
 	let customCarbs = $state('');
+	let customSugar = $state('');
+	let customFiber = $state('');
+	let customSalt = $state('');
+	// svelte-ignore state_referenced_locally
+	let customAmount = $state(String(suggestedAmount ?? 100));
+	// svelte-ignore state_referenced_locally
+	let customUnit = $state<'g' | 'ml' | 'piece'>(suggestedUnit ?? 'g');
+	let customGramsPerPiece = $state('');
+	// svelte-ignore state_referenced_locally
+	let customSaveFavorite = $state(favoriteMode);
 
 	// Sheet folgt dem visualViewport, damit es bei iOS-Tastatur und iOS-Auto-Scroll
 	// immer korrekt am unteren Rand des sichtbaren Bereichs sitzt:
@@ -202,7 +217,6 @@
 	// Tastatur offen = ein Eingabefeld im Sheet hat Fokus. Zuverlässiger als Viewport-Mathematik.
 	// Offen → kein Safe-Area-Polster unten (Sheet sitzt direkt über der Tastatur).
 	// Zu   → Safe-Area-Polster für den Home-Indicator.
-	let inputFocused = $state(false);
 
 	onMount(() => {
 		void loadFavorites();
@@ -437,7 +451,7 @@
 		// useCount erhöhen
 		void fetch(`/api/nutrition/favorites/${f.id}`, {
 			method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ useCount: (favorites.find(x => x.id === f.id)?.['defaultAmount'] != null ? 1 : 1) })
+			body: JSON.stringify({ useCount: nextNutritionUseCount(f.useCount) })
 		});
 	}
 
@@ -517,27 +531,32 @@
 		}
 	}
 
-	function submitCustom() {
-		const kcal = parseFloat(customKcal.replace(',', '.'));
-		if (!customName.trim() || !Number.isFinite(kcal) || kcal < 0) return;
-		selected = {
+	async function submitCustom() {
+		const kcal = parseOptionalNutritionNumber(customKcal);
+		const amount = parseOptionalNutritionNumber(customAmount);
+		const gramsPerPiece = parseOptionalNutritionNumber(customGramsPerPiece);
+		if (!customName.trim() || kcal == null || amount == null || amount <= 0) return;
+		if (customUnit === 'piece' && (!gramsPerPiece || gramsPerPiece <= 0)) return;
+		const component: Component = {
 			productBarcode: null,
 			genericFoodId: null,
 			customName: customName.trim(),
 			displayName: customName.trim(),
 			imageUrl: null,
-			amount: suggestedAmount ?? 100,
-			unit: suggestedUnit ?? 'g',
-			gramsPerPiece: null,
+			amount: suggestedAmount ?? amount,
+			unit: suggestedUnit ?? customUnit,
+			gramsPerPiece: customUnit === 'piece' ? gramsPerPiece : null,
 			kcalPer100: kcal,
-			proteinPer100: parseFloat(customProtein.replace(',', '.')) || null,
-			fatPer100: parseFloat(customFat.replace(',', '.')) || null,
-			carbsPer100: parseFloat(customCarbs.replace(',', '.')) || null,
-			sugarPer100: null,
-			fiberPer100: null,
-			saltPer100: null
+			proteinPer100: parseOptionalNutritionNumber(customProtein),
+			fatPer100: parseOptionalNutritionNumber(customFat),
+			carbsPer100: parseOptionalNutritionNumber(customCarbs),
+			sugarPer100: parseOptionalNutritionNumber(customSugar),
+			fiberPer100: parseOptionalNutritionNumber(customFiber),
+			saltPer100: parseOptionalNutritionNumber(customSalt)
 		};
-		view = 'amount';
+		selected = component;
+		if ((customSaveFavorite || favoriteMode) && !(await saveAsFavorite())) return;
+		onadd(component);
 	}
 
 	function effectiveGrams(c: Component): number {
@@ -547,9 +566,13 @@
 	function compKcal(c: Component): number {
 		return ((c.kcalPer100 ?? 0) * effectiveGrams(c)) / 100;
 	}
+	function compMacro(c: Component, per100: number | null): number {
+		return ((per100 ?? 0) * effectiveGrams(c)) / 100;
+	}
 
-	function confirm() {
+	async function confirm() {
 		if (!selected) return;
+		if (favoriteMode && !(await saveAsFavorite())) return;
 		onadd(selected);
 	}
 
@@ -564,9 +587,11 @@
 		return favorites.some((f) => f.displayName === selected!.displayName);
 	}
 
-	async function saveAsFavorite() {
-		if (!selected || savingFavorite || alreadyFavorite()) return;
+	async function saveAsFavorite(): Promise<boolean> {
+		if (!selected || savingFavorite) return false;
+		if (alreadyFavorite()) return true;
 		savingFavorite = true;
+		let saved = false;
 		try {
 			const res = await fetch('/api/nutrition/favorites', {
 				method: 'POST',
@@ -589,6 +614,7 @@
 				})
 			});
 			if (res.ok) {
+				saved = true;
 				const d = await res.json();
 				savedFavoriteId = d.id ?? null;
 				await loadFavorites();
@@ -596,6 +622,7 @@
 		} finally {
 			savingFavorite = false;
 		}
+		return saved;
 	}
 </script>
 
@@ -608,331 +635,248 @@
 	</svg>
 {/snippet}
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-[62]" style="background: rgba(0,0,0,0.5)" onclick={onclose}></div>
-
-<div class="fixed left-0 right-0 z-[65] rounded-t-3xl flex flex-col max-w-[430px] mx-auto"
-     style="background-color: var(--modal-bg); bottom: {bottomOffset}px; max-height: calc({maxHeight}px - env(safe-area-inset-top, 0px) - 1.5rem)"
-     onfocusin={() => (inputFocused = true)} onfocusout={() => (inputFocused = false)}>
-	<!-- Handle -->
-	<div class="flex justify-center pt-3 pb-1 shrink-0">
-		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-outline-variant)"></div>
-	</div>
-
-	<!-- Title -->
-	<div class="px-5 pb-2 shrink-0 flex items-center justify-between">
-		<p class="font-bold text-lg" style="color: #FB923C">
-			{view === 'amount' ? t.nutrition_amount : view === 'custom' ? t.nutrition_custom_entry : t.nutrition_add_title}
-		</p>
-		{#if view === 'picker' && (favorites.length > 0 || mealFavorites.length > 0)}
-			<button onclick={() => { onclose(); goto('/tracker/nutrition/favorites'); }}
-			        class="w-9 h-9 rounded-lg flex items-center justify-center active:opacity-60"
-			        style="color: var(--color-on-surface-variant)" aria-label={t.nutrition_edit}>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-					<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-				</svg>
+<ManageSheetShell
+	accent="#FB923C"
+	title={favoriteMode ? t.nutrition_new_ingredient : view === 'amount' ? t.nutrition_amount : view === 'custom' ? t.nutrition_custom_entry : t.nutrition_add_title}
+	subtitle={view === 'picker' ? t.nutrition_picker_subtitle : null}
+	{onclose}
+	zIndex={65}
+	bottom={`${bottomOffset}px`}
+	maxHeight={`calc(${maxHeight}px - env(safe-area-inset-top, 0px) - 1.5rem)`}
+>
+	{#snippet headerActions()}
+		{#if !favoriteMode && view === 'picker' && (favorites.length > 0 || mealFavorites.length > 0)}
+			<button type="button" onclick={() => { onclose(); goto('/tracker/nutrition/favorites'); }} class="nutrition-picker-header-action" aria-label={t.nutrition_favorites_manage}>
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+				<span>{t.nutrition_favorites_label}</span>
 			</button>
 		{/if}
-	</div>
-
-	<!-- Scrollable content -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="overflow-y-auto px-5 py-2 flex-1"
-	     style="min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch"
-	     onscroll={dismissKeyboard}
-	     ontouchmove={dismissKeyboard}>
-		{#if view === 'picker'}
-			{#if loadingBarcode}
-				<div class="text-center text-xs py-2" style="color: var(--color-on-surface-variant)">{t.nutrition_loading_product}</div>
-			{:else if searching}
-				<div class="text-center text-xs py-2" style="color: var(--color-on-surface-variant)">{t.nutrition_searching}</div>
-			{/if}
-
-			{@const rows = !query.trim()
-				? [
-					...matchingMealFavorites.map((f) => ({ kind: 'meal' as const, id: f.id, data: f })),
-					...visibleFavorites.map((f) => ({ kind: 'fav' as const, id: f.id, data: f }))
-				]
-				: [
-					...matchingMealFavorites.map((f) => ({ kind: 'meal' as const, id: f.id, data: f })),
-					...matchingFavorites.map((f) => ({ kind: 'fav' as const, id: f.id, data: f })),
-					...genericResults.map((g) => ({ kind: 'gen' as const, id: g.id, data: g })),
-					...productResults.map((p) => ({ kind: 'prod' as const, id: p.barcode, data: p }))
-				]}
-
-			{#if rows.length > 0}
-				<div class="rounded-2xl overflow-hidden"
-				     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-					{#each rows as row, i (row.kind + '_' + row.id)}
-						{#if row.kind === 'meal'}
-							{@const f = row.data}
-							<button onclick={() => pickMeal(f)}
-							        class="w-full text-left px-3 py-2 flex items-center gap-2 active:opacity-60 min-w-0">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="#FB923C" stroke="#FB923C" stroke-width="2" stroke-linejoin="round" class="shrink-0">
-									<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-								</svg>
-								{#if f.imageUrl}
-									<img src={f.imageUrl} alt="" class="w-6 h-6 rounded object-cover bg-black/5 shrink-0" />
-								{:else}
-									<div class="w-6 h-6 rounded shrink-0 flex items-center justify-center text-[10px] font-semibold"
-									     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-										{f.displayName.slice(0, 1).toUpperCase()}
-									</div>
-								{/if}
-								<span class="flex-1 truncate text-sm" style="color: var(--color-on-surface)">{f.displayName}</span>
-								<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">
-									{f.components.length} {t.nutrition_ingredients} · {mealKcal(f)} kcal
-								</span>
-							</button>
-						{:else if row.kind === 'fav'}
-							{@const f = row.data}
-							<button onclick={() => selectFavorite(f)}
-							        class="w-full text-left px-3 py-2 flex items-center gap-2 active:opacity-60 min-w-0">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="#FB923C" stroke="#FB923C" stroke-width="2" stroke-linejoin="round" class="shrink-0">
-									<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-								</svg>
-								{#if f.imageUrl}
-									<img src={f.imageUrl} alt="" class="w-6 h-6 rounded object-cover bg-black/5 shrink-0" />
-								{:else if f.genericFoodId && f.category}
-									<div class="w-6 h-6 shrink-0 flex items-center justify-center">
-										{@render catIcon(f.category, 24)}
-									</div>
-								{:else}
-									<div class="w-6 h-6 rounded shrink-0 flex items-center justify-center text-[10px] font-semibold"
-									     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-										{f.displayName.slice(0, 1).toUpperCase()}
-									</div>
-								{/if}
-								<span class="flex-1 truncate text-sm" style="color: var(--color-on-surface)">{f.displayName}</span>
-								<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">
-									{f.defaultAmount}{f.defaultUnit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : f.defaultUnit}
-								</span>
-							</button>
-						{:else if row.kind === 'gen'}
-							{@const g = row.data}
-							<button onclick={() => selectGeneric(g)}
-							        class="w-full text-left px-3 py-2 flex items-center gap-2 active:opacity-60 min-w-0">
-								<div class="w-[14px] shrink-0"></div>
-								<div class="w-6 h-6 shrink-0 flex items-center justify-center">
-									{@render catIcon(g.category, 24)}
-								</div>
-								<span class="flex-1 truncate text-sm" style="color: var(--color-on-surface)">{g.name}</span>
-								<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">
-									{Math.round(g.kcalPer100)} kcal/100{g.defaultUnit === 'ml' ? 'ml' : 'g'}
-								</span>
-							</button>
-						{:else if row.kind === 'prod'}
-							{@const p = row.data}
-							{@const startsWithBrand = !!p.brand && p.name.toLowerCase().startsWith(p.brand.toLowerCase())}
-							{@const kcalText = p.kcalPer100 != null ? `${Math.round(p.kcalPer100)} kcal/100g` : null}
-							<button onclick={() => selectProduct(p)}
-							        class="w-full text-left px-3 py-2 flex items-center gap-2 active:opacity-60 min-w-0">
-								<div class="w-[14px] shrink-0"></div>
-								{#if p.imageUrl}
-									<img src={p.imageUrl} alt="" class="w-6 h-6 rounded object-cover bg-black/5 shrink-0" />
-								{:else}
-									<div class="w-6 h-6 rounded shrink-0 flex items-center justify-center text-[10px] font-semibold"
-									     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-										{p.name.slice(0, 1).toUpperCase()}
-									</div>
-								{/if}
-								<div class="flex-1 min-w-0">
-									<div class="text-sm truncate" style="color: var(--color-on-surface)">
-										{#if startsWithBrand && p.brand}<span style="color: var(--color-on-surface-variant)">{p.name.slice(0, p.brand.length)}</span>{p.name.slice(p.brand.length)}{:else if p.brand}<span style="color: var(--color-on-surface-variant)">{p.brand} </span>{p.name}{:else}{p.name}{/if}
-									</div>
-									{#if p.nutriscoreGrade || kcalText}
-										<div class="text-[10px] tabular-nums truncate" style="color: var(--color-on-surface-variant)">
-											{#if p.nutriscoreGrade}Nutri-Score {p.nutriscoreGrade.toUpperCase()}{/if}{#if p.nutriscoreGrade && kcalText} · {/if}{#if kcalText}{kcalText}{/if}
-										</div>
-									{/if}
-								</div>
-							</button>
-						{/if}
-						{#if i < rows.length - 1}
-							<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
-						{/if}
-					{/each}
-				</div>
-
-				{#if !query.trim() && sortedFavorites.length > 6}
-					<button onclick={() => (showAllFavorites = !showAllFavorites)}
-					        class="w-full text-center text-xs underline mt-3 active:opacity-60"
-					        style="color: #FB923C">
-						{showAllFavorites ? t.nutrition_show_less : t.nutrition_show_all_favorites}
-					</button>
+	{/snippet}
+	{#snippet body()}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="manage-stack nutrition-picker-workspace" onscroll={dismissKeyboard} ontouchmove={dismissKeyboard}>
+			{#if view === 'picker'}
+				{#if loadingBarcode || searching}
+					<div class="nutrition-search-status">
+						<span></span>{loadingBarcode ? t.nutrition_loading_product : t.nutrition_searching}
+					</div>
 				{/if}
-			{:else if !query.trim() && favorites.length === 0}
-				<div class="text-center text-xs py-4" style="color: var(--color-on-surface-variant)">
-					{t.nutrition_favorites_tip}
-				</div>
-			{:else if query.trim() && !searching}
-				<div class="text-center text-xs py-4" style="color: var(--color-on-surface-variant)">
-					{t.nutrition_nothing_found}
-				</div>
-			{/if}
 
-		{:else if view === 'custom'}
-			<div class="flex flex-col gap-3">
-				<label class="block">
-					<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_name}</span>
-					<input type="text" bind:value={customName} placeholder={t.nutrition_custom_name_placeholder}
-					       class="w-full mt-1 px-4 py-3 rounded-xl bg-transparent outline-none"
-					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
-				</label>
-				<label class="block">
-					<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_kcal_per_100_label}</span>
-					<input type="text" inputmode="decimal" bind:value={customKcal} placeholder="120"
-					       class="w-full mt-1 px-4 py-3 rounded-xl bg-transparent outline-none"
-					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
-				</label>
-				<div class="grid grid-cols-3 gap-2">
-					<label class="block">
-						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_protein_per_100}</span>
-						<input type="text" inputmode="decimal" bind:value={customProtein}
-						       class="w-full mt-1 px-3 py-2.5 rounded-xl bg-transparent outline-none"
-						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
-					</label>
-					<label class="block">
-						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_fat_per_100}</span>
-						<input type="text" inputmode="decimal" bind:value={customFat}
-						       class="w-full mt-1 px-3 py-2.5 rounded-xl bg-transparent outline-none"
-						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
-					</label>
-					<label class="block">
-						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_carbs_per_100}</span>
-						<input type="text" inputmode="decimal" bind:value={customCarbs}
-						       class="w-full mt-1 px-3 py-2.5 rounded-xl bg-transparent outline-none"
-						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px" />
-					</label>
-				</div>
-				<button onclick={submitCustom}
-				        disabled={!customName.trim() || !customKcal}
-				        class="mt-2 w-full py-3 rounded-xl font-medium active:opacity-70 disabled:opacity-30"
-				        style="background: #FB923C; color: #fff">
-					{t.nutrition_next}
-				</button>
-			</div>
+				{#if matchingMealFavorites.length > 0}
+					<div>
+						<span class="manage-section-title">{t.nutrition_meal_favorites_section}</span>
+						<section class="manage-settings-surface nutrition-result-list">
+							{#each matchingMealFavorites as f (f.id)}
+								<NutritionFoodRow title={f.displayName} meta={`${f.components.length} ${t.nutrition_ingredients}`} trailing={`${mealKcal(f)} kcal`} imageUrl={f.imageUrl} onactivate={() => pickMeal(f)} />
+							{/each}
+						</section>
+					</div>
+				{/if}
 
-		{:else if view === 'amount' && selected}
-			{@const isFav = alreadyFavorite()}
-			<div class="rounded-2xl"
-			     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-				<!-- Kopf: Bild + Name + kcal/100 + Stern -->
-				<div class="px-3 py-2.5 flex gap-2.5 items-center">
-					{#if selected.imageUrl}
-						<img src={selected.imageUrl} alt="" class="w-10 h-10 rounded-lg object-cover bg-black/5 shrink-0" />
-					{:else if selectedCategory}
-						<div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-							{@render catIcon(selectedCategory, 32)}
+				{@const listedFavorites = query.trim() ? matchingFavorites : visibleFavorites}
+				{#if listedFavorites.length > 0}
+					<div>
+						<span class="manage-section-title">{query.trim() ? t.nutrition_favorites_label : t.nutrition_recently_used}</span>
+						<section class="manage-settings-surface nutrition-result-list">
+							{#each listedFavorites as f (f.id)}
+								{#if f.genericFoodId && f.category && !f.imageUrl}
+									<NutritionFoodRow title={f.displayName} meta={t.nutrition_favorite_label} trailing={`${f.defaultAmount}${f.defaultUnit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : f.defaultUnit}`} onactivate={() => selectFavorite(f)}>
+										{#snippet leading()}{@render catIcon(f.category, 27)}{/snippet}
+									</NutritionFoodRow>
+								{:else}
+									<NutritionFoodRow title={f.displayName} meta={t.nutrition_favorite_label} trailing={`${f.defaultAmount}${f.defaultUnit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : f.defaultUnit}`} imageUrl={f.imageUrl} onactivate={() => selectFavorite(f)} />
+								{/if}
+							{/each}
+						</section>
+						{#if !query.trim() && sortedFavorites.length > 6}
+							<button type="button" onclick={() => (showAllFavorites = !showAllFavorites)} class="nutrition-show-all">{showAllFavorites ? t.nutrition_show_less : t.nutrition_show_all_favorites}</button>
+						{/if}
+					</div>
+				{/if}
+
+				{#if query.trim() && genericResults.length > 0}
+					<div>
+						<span class="manage-section-title">{t.nutrition_basic_foods}</span>
+						<section class="manage-settings-surface nutrition-result-list">
+							{#each genericResults as g (g.id)}
+								<NutritionFoodRow title={g.name} trailing={`${Math.round(g.kcalPer100)} kcal / 100 ${g.defaultUnit === 'ml' ? 'ml' : 'g'}`} onactivate={() => selectGeneric(g)}>
+									{#snippet leading()}{@render catIcon(g.category, 27)}{/snippet}
+								</NutritionFoodRow>
+							{/each}
+						</section>
+					</div>
+				{/if}
+
+				{#if query.trim() && productResults.length > 0}
+					<div>
+						<span class="manage-section-title">{t.nutrition_products_section}</span>
+						<section class="manage-settings-surface nutrition-result-list">
+							{#each productResults as p (p.barcode)}
+								<NutritionFoodRow
+									title={p.brand && !p.name.toLowerCase().includes(p.brand.toLowerCase()) ? `${p.brand} ${p.name}` : p.name}
+									meta={p.nutriscoreGrade ? `Nutri-Score ${p.nutriscoreGrade.toUpperCase()}` : null}
+									trailing={p.kcalPer100 != null ? `${Math.round(p.kcalPer100)} kcal / 100 g` : t.nutrition_no_kcal_data}
+									imageUrl={p.imageUrl}
+									onactivate={() => selectProduct(p)}
+								/>
+							{/each}
+						</section>
+					</div>
+				{/if}
+
+				{#if !query.trim() && favorites.length === 0 && mealFavorites.length === 0}
+					<p class="nutrition-empty-state">{t.nutrition_favorites_tip}</p>
+				{:else if query.trim() && !searching && matchingMealFavorites.length === 0 && matchingFavorites.length === 0 && genericResults.length === 0 && productResults.length === 0}
+					<p class="nutrition-empty-state">{t.nutrition_nothing_found}</p>
+				{/if}
+
+			{:else if view === 'custom'}
+				<div>
+					<span class="manage-section-title">{t.nutrition_product_section}</span>
+					<section class="manage-settings-surface">
+						<label class="manage-settings-row nutrition-custom-row">
+							<span class="manage-settings-label">{t.nutrition_name}</span>
+							<input type="text" bind:value={customName} placeholder={t.nutrition_custom_name_placeholder} class="manage-settings-input" />
+						</label>
+						<label class="manage-settings-row nutrition-custom-row">
+							<span class="manage-settings-label">{t.nutrition_basis}</span>
+							<select bind:value={customUnit} class="nutrition-custom-select">
+								<option value="g">100 g</option><option value="ml">100 ml</option><option value="piece">{t.nutrition_unit_piece}</option>
+							</select>
+						</label>
+						<label class="manage-settings-row nutrition-custom-row">
+							<span class="manage-settings-label">{t.nutrition_energy}</span>
+							<span class="nutrition-number-with-unit"><input type="text" inputmode="decimal" bind:value={customKcal} placeholder="120" /><small>kcal</small></span>
+						</label>
+					</section>
+				</div>
+
+				<div>
+					<span class="manage-section-title">{nutrition_nutrients_per_100(nutritionBasisSuffix(customUnit))}</span>
+					<section class="manage-settings-surface">
+						<div class="manage-settings-row nutrition-custom-grid">
+							<label><span>{t.nutrition_protein}</span><input type="text" inputmode="decimal" bind:value={customProtein} placeholder="0" /></label>
+							<label><span>{t.nutrition_fat}</span><input type="text" inputmode="decimal" bind:value={customFat} placeholder="0" /></label>
+							<label><span>{t.nutrition_carbs}</span><input type="text" inputmode="decimal" bind:value={customCarbs} placeholder="0" /></label>
 						</div>
-					{:else}
-						<div class="w-10 h-10 rounded-lg flex items-center justify-center text-base shrink-0"
-						     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-							{selected.displayName.slice(0, 1).toUpperCase()}
+						<div class="manage-settings-row nutrition-custom-grid">
+							<label><span>{t.nutrition_fiber}</span><input type="text" inputmode="decimal" bind:value={customFiber} placeholder="0" /></label>
+							<label><span>{t.nutrition_sugar}</span><input type="text" inputmode="decimal" bind:value={customSugar} placeholder="0" /></label>
+							<label><span>{t.nutrition_salt}</span><input type="text" inputmode="decimal" bind:value={customSalt} placeholder="0" /></label>
+						</div>
+					</section>
+				</div>
+
+				<div>
+					<span class="manage-section-title">{t.nutrition_portion_section}</span>
+					<section class="manage-settings-surface">
+						<label class="manage-settings-row nutrition-custom-row">
+							<span class="manage-settings-label">{t.nutrition_amount}</span>
+							<span class="nutrition-number-with-unit"><input type="text" inputmode="decimal" bind:value={customAmount} /><small>{customUnit === 'piece' ? t.nutrition_unit_short_piece : customUnit}</small></span>
+						</label>
+						{#if customUnit === 'piece'}
+							<label class="manage-settings-row nutrition-custom-row"><span class="manage-settings-label">{t.nutrition_grams_per_piece}</span><span class="nutrition-number-with-unit"><input type="text" inputmode="decimal" bind:value={customGramsPerPiece} /><small>g</small></span></label>
+						{/if}
+						{#if !favoriteMode}<button type="button" class="manage-settings-row nutrition-favorite-toggle" aria-pressed={customSaveFavorite} onclick={() => (customSaveFavorite = !customSaveFavorite)}>
+							<span class="manage-settings-label">{t.nutrition_save_as_favorite_short}</span>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill={customSaveFavorite ? '#FB923C' : 'none'} stroke={customSaveFavorite ? '#FB923C' : 'var(--color-on-surface-variant)'} stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+						</button>{/if}
+					</section>
+				</div>
+
+			{:else if view === 'amount' && selected}
+				{@const isFav = alreadyFavorite()}
+				<section class="manage-settings-surface nutrition-amount-surface">
+					<div class="nutrition-selected-head">
+						{#if selected.imageUrl}<img src={selected.imageUrl} alt="" />{:else if selectedCategory}<span>{@render catIcon(selectedCategory, 31)}</span>{:else}<span>{selected.displayName.slice(0, 1).toUpperCase()}</span>{/if}
+						<div><strong>{selected.displayName}</strong><small>{selected.kcalPer100 != null ? `${Math.round(selected.kcalPer100)} kcal / 100 ${nutritionBasisSuffix(selected.unit)}` : t.nutrition_no_kcal_data}</small></div>
+						<button type="button" onclick={saveAsFavorite} disabled={savingFavorite || isFav} aria-label={isFav ? t.nutrition_favorite_saved : t.nutrition_save_as_favorite}>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill={isFav ? '#FB923C' : 'none'} stroke={isFav ? '#FB923C' : 'var(--color-on-surface-variant)'} stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+						</button>
+					</div>
+					<div class="manage-settings-row nutrition-amount-row">
+						<span class="manage-settings-label">{t.nutrition_amount}</span>
+						<input type="number" inputmode="decimal" bind:value={selected.amount} min="0" step="any" />
+						<select bind:value={selected.unit}><option value="g">g</option><option value="ml">ml</option><option value="piece">{t.nutrition_unit_piece}</option></select>
+						<strong>= {Math.round(compKcal(selected))} kcal</strong>
+					</div>
+					{#if selected.unit === 'piece'}
+						<label class="manage-settings-row nutrition-custom-row"><span class="manage-settings-label">{t.nutrition_grams_per_piece}</span><span class="nutrition-number-with-unit"><input type="number" inputmode="decimal" bind:value={selected.gramsPerPiece} min="0" step="any" /><small>g</small></span></label>
+					{/if}
+					{#if selected.kcalPer100 != null}
+						<div class="nutrition-amount-macros">
+							<NutritionMacroStrip items={[
+								{ label: t.nutrition_protein, value: compMacro(selected, selected.proteinPer100) },
+								{ label: t.nutrition_fat, value: compMacro(selected, selected.fatPer100) },
+								{ label: t.nutrition_carbs, value: compMacro(selected, selected.carbsPer100) },
+								{ label: t.nutrition_fiber, value: compMacro(selected, selected.fiberPer100) }
+							]} />
 						</div>
 					{/if}
-					<div class="flex-1 min-w-0">
-						<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{selected.displayName}</div>
-						<div class="text-xs" style="color: var(--color-on-surface-variant)">
-							{selected.kcalPer100 != null ? `${Math.round(selected.kcalPer100)} kcal/100g` : t.nutrition_no_kcal_data}
-						</div>
-					</div>
-					<button onclick={saveAsFavorite} disabled={savingFavorite || isFav}
-					        class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:active:opacity-100"
-					        style="color: {isFav ? '#FB923C' : 'var(--color-on-surface-variant)'}"
-					        aria-label={isFav ? t.nutrition_favorite_saved : t.nutrition_save_as_favorite}
-					        title={isFav ? t.nutrition_favorite_saved : t.nutrition_save_as_favorite}>
-						{#if savingFavorite}
-							<div class="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style="border-color: #FB923C; border-top-color: transparent"></div>
-						{:else}
-							<svg width="20" height="20" viewBox="0 0 24 24" fill={isFav ? '#FB923C' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-							</svg>
-						{/if}
-					</button>
-				</div>
-
-				<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
-
-				<!-- Menge + Einheit + Kcal-Ergebnis -->
-				<div class="px-3 py-2.5 flex items-center gap-2">
-					<span class="text-[11px] uppercase tracking-wide shrink-0" style="color: var(--color-on-surface-variant)">{t.nutrition_amount}</span>
-					<input type="number" inputmode="decimal" bind:value={selected.amount} min="0" step="any"
-					       class="flex-1 min-w-0 px-2.5 rounded-xl bg-transparent outline-none tabular-nums"
-					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px" />
-					<select bind:value={selected.unit}
-					        class="px-2 rounded-xl bg-transparent outline-none appearance-none shrink-0"
-					        style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px">
-						<option value="g">g</option>
-						<option value="ml">ml</option>
-						<option value="piece">{t.nutrition_unit_piece}</option>
-					</select>
-					<span class="text-base font-semibold tabular-nums shrink-0" style="color: #FB923C">
-						= {Math.round(compKcal(selected))} kcal
-					</span>
-				</div>
-
-				{#if selected.unit === 'piece'}
-					<div class="px-3 pb-2 -mt-1 flex items-center gap-2">
-						<span class="text-[11px] uppercase tracking-wide shrink-0" style="color: var(--color-on-surface-variant)">{t.nutrition_grams_per_piece}</span>
-						<input type="number" inputmode="decimal" bind:value={selected.gramsPerPiece} min="0" step="any"
-						       class="flex-1 min-w-0 px-2.5 rounded-xl bg-transparent outline-none tabular-nums"
-						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px" />
-					</div>
-				{/if}
-
-				{#if selected.kcalPer100 != null}
-					<div class="px-3 pb-2.5 text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-						{t.nutrition_protein} {((selected.proteinPer100 ?? 0) * effectiveGrams(selected) / 100).toFixed(1)}g
-						· {t.nutrition_fat} {((selected.fatPer100 ?? 0) * effectiveGrams(selected) / 100).toFixed(1)}g
-						· {t.nutrition_carbs} {((selected.carbsPer100 ?? 0) * effectiveGrams(selected) / 100).toFixed(1)}g
-					</div>
-				{/if}
-			</div>
-
-		{/if}
-	</div>
-
-	<!-- Suchleiste – unten, direkt über den Buttons (bottom-up wie die Einkaufsliste) -->
-	{#if view === 'picker'}
-		<div class="px-5 pt-2 shrink-0">
-			<input type="text" bind:value={query} placeholder={t.nutrition_search_placeholder}
-			       enterkeyhint="search"
-			       class="w-full px-3 rounded-xl bg-transparent outline-none"
-			       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 40px" />
+				</section>
+			{/if}
 		</div>
-	{/if}
-
-	<!-- Bottom buttons -->
-	<div class="px-5 pt-2 shrink-0 flex gap-2" style="padding-bottom: {inputFocused ? '0.75rem' : 'calc(env(safe-area-inset-bottom) + 0.75rem)'}">
-		<button onclick={() => { if (view === 'amount' && !initial) { view = 'picker'; selected = null; } else if (view === 'custom') { view = 'picker'; } else { onclose(); } }}
-		        class="flex-1 py-3 rounded-full text-sm font-semibold active:opacity-70"
-		        style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)">
-			{view === 'amount' && !initial ? t.nutrition_back : view === 'custom' ? t.nutrition_back : t.nutrition_cancel}
-		</button>
+	{/snippet}
+	{#snippet footer()}
 		{#if view === 'picker'}
-			<button onclick={() => (view = 'custom')}
-			        class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-70"
-			        style="background-color: transparent; border: 1px solid #FB923C; color: #FB923C">
-				{t.nutrition_custom}
-			</button>
-			<button onclick={() => (scannerOpen = true)}
-			        class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80"
-			        style="background: #FB923C; color: #fff">
-				{t.nutrition_scan}
-			</button>
-		{:else if view === 'amount' && selected}
-			<button onclick={confirm}
-			        class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80"
-			        style="background: #FB923C; color: #fff">
-				{t.nutrition_apply}
-			</button>
+			<div class="nutrition-picker-footer">
+				<button type="button" class="nutrition-custom-entry-action" onclick={() => (view = 'custom')}>+ {t.nutrition_custom_entry}</button>
+				<input type="text" bind:value={query} placeholder={t.nutrition_search_placeholder} enterkeyhint="search" class="manage-input" />
+				<div class="nutrition-picker-footer-buttons">
+					<button type="button" onclick={onclose} class="manage-secondary">{t.nutrition_cancel}</button>
+					<button type="button" onclick={() => (scannerOpen = true)} class="manage-primary">{t.nutrition_scan}</button>
+				</div>
+			</div>
+		{:else if view === 'custom'}
+			<button type="button" onclick={() => (view = 'picker')} class="manage-secondary">{t.nutrition_back}</button>
+			<button type="button" onclick={() => void submitCustom()} disabled={!customName.trim() || parseOptionalNutritionNumber(customKcal) == null || !parseOptionalNutritionNumber(customAmount)} class="manage-primary disabled:opacity-40">{favoriteMode ? t.nutrition_save : t.nutrition_apply}</button>
+		{:else}
+			<button type="button" onclick={() => { if (!initial) { view = 'picker'; selected = null; } else onclose(); }} class="manage-secondary">{t.nutrition_back}</button>
+			<button type="button" onclick={() => void confirm()} class="manage-primary">{favoriteMode ? t.nutrition_save : t.nutrition_apply}</button>
 		{/if}
-	</div>
-</div>
+	{/snippet}
+</ManageSheetShell>
 
 {#if scannerOpen}
 	<BarcodeScanner rawMode onFound={onScan} onClose={() => (scannerOpen = false)} />
 {/if}
+
+<style>
+	.nutrition-picker-header-action { display: flex; min-height: 40px; align-items: center; justify-content: center; gap: 5px; padding-inline: 8px; border-radius: 12px; color: var(--color-on-surface-variant); font-size: 11px; font-weight: 650; }
+	.nutrition-picker-workspace { overscroll-behavior: contain; }
+	.nutrition-search-status { display: flex; min-height: 34px; align-items: center; justify-content: center; gap: 7px; color: var(--color-on-surface-variant); font-size: 11px; }
+	.nutrition-search-status span { width: 13px; height: 13px; border: 2px solid color-mix(in srgb, #FB923C 35%, transparent); border-top-color: #FB923C; border-radius: 999px; animation: nutrition-spin .8s linear infinite; }
+	.nutrition-result-list :global(.nutrition-food-row + .nutrition-food-row) { border-top: 1px solid var(--bubble-container-border); }
+	.nutrition-show-all { width: 100%; min-height: 38px; margin-top: 3px; color: #FB923C; font-size: 11px; font-weight: 650; }
+	.nutrition-empty-state { padding: 24px 12px; color: var(--color-on-surface-variant); font-size: 12px; line-height: 1.45; text-align: center; }
+	.nutrition-picker-footer { display: grid; grid-column: 1 / -1; gap: 7px; }
+	.nutrition-custom-entry-action { min-height: 34px; border-radius: 10px; color: #FB923C; font-size: 12px; font-weight: 650; }
+	.nutrition-custom-entry-action:active { background: color-mix(in srgb, #FB923C 8%, transparent); }
+	.nutrition-picker-footer-buttons { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 8px; }
+	.nutrition-custom-row { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: center; gap: 12px; }
+	.nutrition-custom-select { width: 100%; height: 36px; border: 0; outline: 0; appearance: none; background: transparent; color: #FB923C; font-size: 16px; font-weight: 650; text-align: right; text-align-last: right; }
+	.nutrition-number-with-unit { display: flex; min-width: 0; align-items: center; justify-content: flex-end; gap: 5px; }
+	.nutrition-number-with-unit input { width: 100%; min-width: 0; height: 36px; border: 0; outline: 0; background: transparent; color: #FB923C; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; }
+	.nutrition-number-with-unit input::placeholder, .nutrition-custom-grid input::placeholder { color: var(--color-on-surface-variant); opacity: .55; }
+	.nutrition-number-with-unit small { flex: none; color: #FB923C; font-size: 12px; font-weight: 600; }
+	.nutrition-custom-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-block: 7px; }
+	.nutrition-custom-grid label { display: grid; min-width: 0; gap: 2px; }
+	.nutrition-custom-grid span { overflow: hidden; color: var(--color-on-surface-variant); font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+	.nutrition-custom-grid input { width: 100%; min-width: 0; height: 28px; border: 0; outline: 0; background: transparent; color: #FB923C; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+	.nutrition-favorite-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; text-align: left; }
+	.nutrition-selected-head { display: flex; min-height: 58px; align-items: center; gap: 10px; padding: 8px 10px; }
+	.nutrition-selected-head > img, .nutrition-selected-head > span { display: flex; width: 40px; height: 40px; flex: none; align-items: center; justify-content: center; border-radius: 10px; object-fit: cover; background: color-mix(in srgb, #FB923C 8%, transparent); color: #FB923C; font-size: 13px; font-weight: 700; }
+	.nutrition-selected-head > div { display: grid; min-width: 0; flex: 1; gap: 2px; }
+	.nutrition-selected-head strong, .nutrition-selected-head small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.nutrition-selected-head strong { color: var(--color-on-surface); font-size: 14px; }
+	.nutrition-selected-head small { color: var(--color-on-surface-variant); font-size: 11px; font-weight: 500; }
+	.nutrition-selected-head button { display: flex; width: 40px; height: 40px; flex: none; align-items: center; justify-content: center; }
+	.nutrition-amount-row { display: grid; grid-template-columns: auto minmax(48px, 1fr) auto minmax(82px, auto); align-items: center; gap: 7px; }
+	.nutrition-amount-row input, .nutrition-amount-row select { min-width: 0; height: 36px; border: 0; outline: 0; background: transparent; color: var(--color-on-surface); font-size: 16px; font-variant-numeric: tabular-nums; }
+	.nutrition-amount-row input { width: 100%; text-align: right; }
+	.nutrition-amount-row select { color: #FB923C; font-weight: 650; }
+	.nutrition-amount-row strong { color: #FB923C; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; }
+	.nutrition-amount-macros { padding: 10px; border-top: 1px solid var(--bubble-container-border); }
+	@keyframes nutrition-spin { to { transform: rotate(360deg); } }
+	@media (prefers-reduced-motion: reduce) { .nutrition-search-status span { animation: none; } }
+</style>

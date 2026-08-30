@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.6',
+		de: [
+			'Nutrition-Tracker, Favoriten und Tracker-Navigation umfassend überarbeitet',
+			'Manage-, Reminder- und Quick-Log-Ansichten weiter vereinheitlicht'
+		],
+		en: [
+			'Redesigned the nutrition tracker, favorites, and tracker navigation',
+			'Further streamlined Manage, reminder, and Quick Log views'
+		]
+	},
+	{
 		version: '0.9.5-beta.5',
 		de: [
 			'Supplement-Bestand und Mood-Entwürfe korrigiert'

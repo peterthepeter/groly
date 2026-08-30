@@ -5,6 +5,12 @@ import { db } from '$lib/db';
 import { meditationReminderSchedules } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
+function validDays(value: unknown): value is number[] {
+	return Array.isArray(value)
+		&& value.length > 0
+		&& value.every((day) => Number.isInteger(day) && day >= 0 && day <= 6);
+}
+
 export const PUT: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error) return error;
@@ -15,11 +21,13 @@ export const PUT: RequestHandler = async (event) => {
 
 	try {
 		const body = await event.request.json();
-		const { time, onlyIfNotMeditated, active } = body;
+		const { days, time, onlyIfNotMeditated, active } = body;
 
 		if (time !== undefined && !/^\d{2}:\d{2}$/.test(time)) return json({ error: 'Zeit ungültig (HH:MM)' }, { status: 400 });
+		if (days !== undefined && !validDays(days)) return json({ error: 'Tage erforderlich' }, { status: 400 });
 
 		db.update(meditationReminderSchedules).set({
+			...(days !== undefined && { days: JSON.stringify([...new Set(days)]) }),
 			...(time !== undefined && { time }),
 			...(onlyIfNotMeditated !== undefined && { onlyIfNotMeditated }),
 			...(active !== undefined && { active })

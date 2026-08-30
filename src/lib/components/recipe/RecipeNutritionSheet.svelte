@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import AddComponentSheet from '$lib/components/supplements/AddComponentSheet.svelte';
+	import ManageSheetShell from '$lib/components/supplements/ManageSheetShell.svelte';
 	import { t } from '$lib/i18n.svelte';
 
 	type Comp = {
@@ -265,32 +266,13 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-[60]" style="background: rgba(0,0,0,0.5)" onclick={onclose}></div>
-
-<div class="fixed left-0 right-0 bottom-0 z-[61] rounded-t-3xl flex flex-col max-w-[430px] mx-auto"
-     style="background-color: var(--modal-bg); max-height: 88dvh">
-	<div class="flex justify-center pt-3 pb-1 shrink-0">
-		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-outline-variant)"></div>
-	</div>
-
-	<div class="px-5 pb-1 shrink-0">
-		<p class="font-bold text-lg" style="color: {ACCENT}">{t.recipe_nutrition_title}</p>
-		<p class="text-xs mt-0.5" style="color: var(--color-on-surface-variant)">{t.recipe_nutrition_assign_hint}</p>
-	</div>
-
-	{#if draftRestored}
-		<div class="mx-5 mb-1 px-3 py-2 rounded-xl flex items-center justify-between gap-2 shrink-0"
-		     style="background-color: color-mix(in srgb, {ACCENT} 12%, transparent); border: 1px solid {ACCENT}">
-			<span class="text-xs" style="color: {ACCENT}">{t.nutrition_draft_restored}</span>
-			<button onclick={discardDraft} class="text-xs font-semibold underline active:opacity-60" style="color: {ACCENT}">
-				{t.nutrition_discard_draft}
-			</button>
-		</div>
-	{/if}
-
-	<div class="overflow-y-auto px-5 py-2 flex-1" style="min-height: 0; overscroll-behavior: contain">
+<ManageSheetShell accent={ACCENT} title={t.recipe_nutrition_title} subtitle={t.recipe_nutrition_assign_hint} {onclose} zIndex={61} maxHeight="92dvh">
+	{#snippet body()}
+		<div class="manage-stack">
+		{#if draftRestored}
+			<div class="recipe-draft-row"><span>{t.nutrition_draft_restored}</span><button type="button" onclick={discardDraft}>{t.nutrition_discard_draft}</button></div>
+		{/if}
+		<div>
 		{#if loading}
 			<div class="flex justify-center py-10">
 				<div class="w-5 h-5 rounded-full border-2 animate-spin" style="border-color: {ACCENT}; border-top-color: transparent"></div>
@@ -355,43 +337,19 @@
 				{/each}
 			</div>
 		{/if}
-	</div>
-
-	<!-- Footer: per-portion summary + save -->
-	<div class="px-5 pt-2 shrink-0" style="padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)">
-		<div class="flex items-baseline justify-between mb-2">
-			<span class="text-xs" style="color: var(--color-on-surface-variant)">
-				{#if openCount > 0}{openCount} {t.recipe_nutrition_open_remaining}{:else}{t.recipe_nutrition_complete}{/if}
-			</span>
-			<div class="text-right min-w-0">
-				<div class="text-sm font-semibold tabular-nums" style="color: {ACCENT}">
-					{perPortionKcal} kcal · {perPortionProtein.toFixed(1)} g {t.nutrition_protein} {t.recipe_nutrition_per_portion}
-				</div>
-				<div class="text-[11px] tabular-nums" style="color: var(--color-on-surface-variant)">
-					{t.recipe_nutrition_total} {Math.round(totalKcal)} kcal · {t.recipe_nutrition_for} {servings} {t.recipe_nutrition_portions}
-				</div>
-			</div>
 		</div>
-		<div class="flex gap-2">
-			<button onclick={cancelAndClose}
-			        class="flex-1 py-3 rounded-full text-sm font-semibold active:opacity-70"
-			        style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)">
-				{t.nutrition_cancel}
-			</button>
-			<button onclick={save} disabled={saving}
-			        class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50 flex items-center justify-center gap-1.5"
-			        style="background: {ACCENT}; color: #fff">
-				{#if saved}
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-				{:else if saving}
-					<div class="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
-				{:else}
-					{t.nutrition_save}
-				{/if}
-			</button>
+		<section class="manage-section recipe-nutrition-summary">
+			<span>{#if openCount > 0}{openCount} {t.recipe_nutrition_open_remaining}{:else}{t.recipe_nutrition_complete}{/if}</span>
+			<strong>{perPortionKcal} kcal · {perPortionProtein.toFixed(1)} g {t.nutrition_protein}</strong>
+			<small>{t.recipe_nutrition_total} {Math.round(totalKcal)} kcal · {t.recipe_nutrition_for} {servings} {t.recipe_nutrition_portions}</small>
+		</section>
 		</div>
-	</div>
-</div>
+	{/snippet}
+	{#snippet footer()}
+		<button type="button" class="manage-secondary" onclick={cancelAndClose}>{t.nutrition_cancel}</button>
+		<button type="button" class="manage-primary disabled:opacity-40" onclick={save} disabled={saving}>{saved ? '✓' : saving ? '…' : t.nutrition_save}</button>
+	{/snippet}
+</ManageSheetShell>
 
 {#if assignIndex != null}
 	<AddComponentSheet
@@ -402,3 +360,11 @@
 		onadd={onAssigned}
 	/>
 {/if}
+
+<style>
+	.recipe-draft-row { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 1px solid color-mix(in srgb, #FB923C 28%, transparent); border-radius: 12px; background: color-mix(in srgb, #FB923C 7%, transparent); color: var(--color-on-surface-variant); font-size: 11px; }
+	.recipe-draft-row button { min-height: 32px; color: #FB923C; font-weight: 650; }
+	.recipe-nutrition-summary { display: grid; gap: 2px; padding: 10px 12px; text-align: right; }
+	.recipe-nutrition-summary span, .recipe-nutrition-summary small { color: var(--color-on-surface-variant); font-size: 11px; }
+	.recipe-nutrition-summary strong { color: #FB923C; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
+</style>

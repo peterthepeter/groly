@@ -5,6 +5,10 @@
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import MealFavoriteEditSheet from '$lib/components/supplements/MealFavoriteEditSheet.svelte';
+	import AddComponentSheet from '$lib/components/supplements/AddComponentSheet.svelte';
+	import ManageSheetShell from '$lib/components/supplements/ManageSheetShell.svelte';
+	import NutritionFoodRow from '$lib/components/supplements/NutritionFoodRow.svelte';
+	import NutritionMacroStrip from '$lib/components/supplements/NutritionMacroStrip.svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { getNutritionCategoryIcon } from '$lib/nutritionCategoryIcons';
 
@@ -19,6 +23,9 @@
 		customProteinPer100: number | null;
 		customFatPer100: number | null;
 		customCarbsPer100: number | null;
+		customSugarPer100: number | null;
+		customFiberPer100: number | null;
+		customSaltPer100: number | null;
 		defaultAmount: number;
 		defaultUnit: 'g' | 'ml' | 'piece';
 		defaultGramsPerPiece: number | null;
@@ -68,6 +75,7 @@
 	let mealFavorites = $state<MealFavorite[]>([]);
 	let editingMeal = $state<MealFavorite | null>(null);
 	let newMealOpen = $state(false);
+	let newIngredientOpen = $state(false);
 
 	async function loadMealFavorites() {
 		try {
@@ -84,12 +92,13 @@
 	}
 
 	async function deleteMealFav(id: string) {
-		if (!confirm(t.nutrition_confirm_delete_meal_favorite)) return;
+		if (!confirm(t.nutrition_confirm_delete_meal_favorite)) return false;
 		const res = await fetch(`/api/nutrition/meal-favorites/${id}`, { method: 'DELETE' });
 		if (res.ok) {
 			if (editingMeal?.id === id) editingMeal = null;
 			await loadMealFavorites();
 		}
+		return res.ok;
 	}
 
 	async function load() {
@@ -123,7 +132,7 @@
 
 	async function hydrateNutrition(f: Favorite) {
 		try {
-			let n: { kcalPer100: number | null; proteinPer100: number | null; fatPer100: number | null; carbsPer100: number | null } | null = null;
+			let n: { kcalPer100: number | null; proteinPer100: number | null; fatPer100: number | null; carbsPer100: number | null; sugarPer100?: number | null; fiberPer100?: number | null; saltPer100?: number | null } | null = null;
 			if (f.productBarcode) {
 				const res = await fetch(`/api/nutrition/product/${encodeURIComponent(f.productBarcode)}`);
 				if (res.ok) n = (await res.json()).product ?? null;
@@ -138,7 +147,10 @@
 				customKcalPer100: editing.customKcalPer100 ?? n.kcalPer100,
 				customProteinPer100: editing.customProteinPer100 ?? n.proteinPer100,
 				customFatPer100: editing.customFatPer100 ?? n.fatPer100,
-				customCarbsPer100: editing.customCarbsPer100 ?? n.carbsPer100
+				customCarbsPer100: editing.customCarbsPer100 ?? n.carbsPer100,
+				customSugarPer100: editing.customSugarPer100 ?? n.sugarPer100 ?? null,
+				customFiberPer100: editing.customFiberPer100 ?? n.fiberPer100 ?? null,
+				customSaltPer100: editing.customSaltPer100 ?? n.saltPer100 ?? null
 			};
 		} catch { /* noop */ }
 	}
@@ -179,13 +191,21 @@
 	}
 
 	async function deleteFav(id: string) {
-		if (!confirm(t.nutrition_confirm_delete_favorite)) return;
+		if (!confirm(t.nutrition_confirm_delete_favorite)) return false;
 		const res = await fetch(`/api/nutrition/favorites/${id}`, { method: 'DELETE' });
 		if (res.ok) {
 			if (editing?.id === id) editing = null;
 			await load();
 		}
+		return res.ok;
 	}
+
+	const editMacroItems = $derived(editing ? [
+		{ label: t.nutrition_protein, value: (editing.customProteinPer100 ?? 0) * editEffectiveGrams() / 100 },
+		{ label: t.nutrition_fat, value: (editing.customFatPer100 ?? 0) * editEffectiveGrams() / 100 },
+		{ label: t.nutrition_carbs, value: (editing.customCarbsPer100 ?? 0) * editEffectiveGrams() / 100 },
+		{ label: t.nutrition_fiber, value: (editing.customFiberPer100 ?? 0) * editEffectiveGrams() / 100 }
+	] : []);
 </script>
 
 <!-- Kategorie-Icon für generische Lebensmittel (gleicher Stroke-Stil wie die Listen-Icons). -->
@@ -207,101 +227,53 @@
 			     style="border-color: #FB923C; border-top-color: transparent"></div>
 		</div>
 	{:else}
-		<h2 class="text-[11px] uppercase tracking-wide mb-2 mt-1" style="color: var(--color-on-surface-variant)">{t.nutrition_ingredients}</h2>
+		<div class="nutrition-section-heading">
+			<h2 class="nutrition-section-title">{t.nutrition_ingredients}</h2>
+			<button onclick={() => (newIngredientOpen = true)} class="nutrition-new-template">+ {t.nutrition_new_ingredient}</button>
+		</div>
 		{#if favorites.length === 0}
-			<p class="text-sm mb-7" style="color: var(--color-on-surface-variant)">{t.nutrition_no_favorites_yet}</p>
+			<p class="nutrition-empty-copy">{t.nutrition_no_favorites_yet}</p>
 		{:else}
-		<div class="rounded-2xl overflow-hidden mb-8"
-		     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-			{#each favorites as f, i (f.id)}
-				{#if i > 0}
-					<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
+		<div class="nutrition-list-surface">
+			{#each favorites as f (f.id)}
+				{#if !f.imageUrl && f.genericFoodId && f.category}
+					{#snippet favoriteIcon()}{@render catIcon(f.category, 27)}{/snippet}
+					<NutritionFoodRow title={f.displayName} meta={`${f.defaultAmount}${f.defaultUnit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : f.defaultUnit}`} trailing={`${f.useCount}× ${t.nutrition_used}`} leading={favoriteIcon} onactivate={() => startEdit(f)} />
+				{:else}
+					<NutritionFoodRow title={f.displayName} meta={`${f.defaultAmount}${f.defaultUnit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : f.defaultUnit}`} trailing={`${f.useCount}× ${t.nutrition_used}`} imageUrl={f.imageUrl} onactivate={() => startEdit(f)} />
 				{/if}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div class="px-3 py-2.5 flex items-center gap-3 cursor-pointer active:opacity-80" onclick={() => startEdit(f)}>
-					{#if f.imageUrl}
-						<img src={f.imageUrl} alt="" class="w-9 h-9 rounded-lg object-cover bg-black/5 shrink-0" />
-					{:else if f.genericFoodId && f.category}
-						<div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0">
-							{@render catIcon(f.category, 28)}
-						</div>
-					{:else}
-						<div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0"
-						     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-							{f.displayName.slice(0, 1).toUpperCase()}
-						</div>
-					{/if}
-					<div class="flex-1 min-w-0">
-						<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{f.displayName}</div>
-						<div class="text-xs" style="color: var(--color-on-surface-variant)">
-							{f.defaultAmount}{f.defaultUnit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : f.defaultUnit}
-							· {f.useCount}× {t.nutrition_used}
-						</div>
-					</div>
-					<button onclick={(e) => { e.stopPropagation(); deleteFav(f.id); }}
-					        class="w-8 h-8 rounded-lg flex items-center justify-center active:opacity-60 shrink-0"
-					        style="color: var(--color-on-surface-variant)" aria-label={t.nutrition_remove}>
-						<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<polyline points="3 6 5 6 21 6"/>
-							<path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
-						</svg>
-					</button>
-				</div>
 			{/each}
 		</div>
 		{/if}
 
-		<div class="flex items-center justify-between mb-2 mt-2">
-			<h2 class="text-[11px] uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.nutrition_meal_favorites_section}</h2>
+		<div class="nutrition-section-heading">
+			<h2 class="nutrition-section-title">{t.nutrition_meal_favorites_section}</h2>
 			<button onclick={() => (newMealOpen = true)}
-			        class="text-xs font-medium px-2.5 py-1 rounded-full active:opacity-70"
-			        style="border: 1px solid var(--bubble-interactive-border); color: #FB923C">
+			        class="nutrition-new-template">
 				+ {t.nutrition_new_meal_favorite}
 			</button>
 		</div>
 		{#if mealFavorites.length === 0}
-			<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.nutrition_no_meal_favorites}</p>
+			<p class="nutrition-empty-copy">{t.nutrition_no_meal_favorites}</p>
 		{:else}
-			<div class="rounded-2xl overflow-hidden"
-			     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-				{#each mealFavorites as f, i (f.id)}
-					{#if i > 0}
-						<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
-					{/if}
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div class="px-3 py-2.5 flex items-center gap-3 cursor-pointer active:opacity-80" onclick={() => startEditMeal(f)}>
-						{#if f.imageUrl}
-							<img src={f.imageUrl} alt="" class="w-9 h-9 rounded-lg object-cover bg-black/5 shrink-0" />
-						{:else}
-							<div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0"
-							     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-								{f.displayName.slice(0, 1).toUpperCase()}
-							</div>
-						{/if}
-						<div class="flex-1 min-w-0">
-							<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{f.displayName}</div>
-							<div class="text-xs" style="color: var(--color-on-surface-variant)">
-								{f.components.length} {t.nutrition_ingredients} · {f.useCount}× {t.nutrition_used}
-							</div>
-						</div>
-						<button onclick={(e) => { e.stopPropagation(); deleteMealFav(f.id); }}
-						        class="w-8 h-8 rounded-lg flex items-center justify-center active:opacity-60 shrink-0"
-						        style="color: var(--color-on-surface-variant)" aria-label={t.nutrition_remove}>
-							<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<polyline points="3 6 5 6 21 6"/>
-								<path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
-							</svg>
-						</button>
-					</div>
+			<div class="nutrition-list-surface">
+				{#each mealFavorites as f (f.id)}
+					<NutritionFoodRow title={f.displayName} meta={`${f.components.length} ${t.nutrition_ingredients}`} trailing={`${f.useCount}× ${t.nutrition_used}`} imageUrl={f.imageUrl} onactivate={() => startEditMeal(f)} />
 				{/each}
 			</div>
 		{/if}
 	{/if}
 </main>
 
-<AppBottomNav activeTab="tracker" showFab={false} />
+<AppBottomNav activeTab="tracker" trackerBack showFab={false} />
+
+{#if newIngredientOpen}
+	<AddComponentSheet
+		favoriteMode
+		onclose={() => (newIngredientOpen = false)}
+		onadd={() => { newIngredientOpen = false; void load(); }}
+	/>
+{/if}
 
 {#if newMealOpen}
 	<MealFavoriteEditSheet
@@ -315,111 +287,59 @@
 		existing={editingMeal}
 		onclose={() => (editingMeal = null)}
 		onsaved={() => { editingMeal = null; void loadMealFavorites(); }}
+		ondelete={async () => { if (editingMeal && await deleteMealFav(editingMeal.id)) editingMeal = null; }}
 	/>
 {/if}
 
 {#if editing}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[55]" style="background: rgba(0,0,0,0.5)" onclick={() => (editing = null)}></div>
-	<div class="fixed bottom-0 left-0 right-0 z-[60] rounded-t-3xl flex flex-col max-w-[430px] mx-auto"
-	     style="background-color: var(--modal-bg); max-height: 92dvh">
-		<div class="flex justify-center pt-3 pb-1 shrink-0">
-			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-outline-variant)"></div>
-		</div>
-		<div class="px-5 pb-2 shrink-0">
-			<p class="font-bold text-lg" style="color: #FB923C">{t.nutrition_edit}</p>
-		</div>
-		<div class="overflow-y-auto px-5 py-2" style="min-height: 0">
-			<div class="rounded-2xl mb-3"
-			     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-				<!-- Kopf: Bild/Icon + Name + kcal/100 -->
-				<div class="px-3 py-2.5 flex gap-2.5 items-center">
-					{#if editing.imageUrl}
-						<img src={editing.imageUrl} alt="" class="w-10 h-10 rounded-lg object-cover bg-black/5 shrink-0" />
-					{:else if editing.genericFoodId && editing.category}
-						<div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-							{@render catIcon(editing.category, 32)}
+	{@const currentFavorite = editing}
+	<ManageSheetShell accent="#FB923C" title={t.nutrition_edit} subtitle={currentFavorite.customKcalPer100 != null ? `${Math.round(currentFavorite.customKcalPer100)} kcal/100g` : t.nutrition_no_kcal_data} onclose={() => (editing = null)} zIndex={60} maxHeight="92dvh">
+		{#snippet body()}
+			<div class="manage-stack">
+				<section class="nutrition-favorite-identity">
+					{#if currentFavorite.imageUrl}<img src={currentFavorite.imageUrl} alt="" />{:else if currentFavorite.genericFoodId && currentFavorite.category}<span class="nutrition-category-icon">{@render catIcon(currentFavorite.category, 31)}</span>{:else}<span>{currentFavorite.displayName.slice(0, 1).toUpperCase()}</span>{/if}
+					<strong>{currentFavorite.displayName}</strong>
+				</section>
+				<div>
+					<span class="manage-section-title">{t.nutrition_portion_section}</span>
+					<section class="manage-settings-surface">
+						<label class="manage-settings-row nutrition-edit-row"><span class="manage-settings-label">{t.nutrition_name}</span><input type="text" bind:value={editName} class="manage-settings-input" /></label>
+						<div class="manage-settings-row nutrition-amount-row">
+							<span class="manage-settings-label">{t.nutrition_amount}</span>
+							<input type="number" inputmode="decimal" bind:value={editAmount} min="0" step="any" class="manage-settings-input" />
+							<select bind:value={editUnit} class="nutrition-unit-select"><option value="g">g</option><option value="ml">ml</option><option value="piece">{t.nutrition_unit_piece}</option></select>
 						</div>
-					{:else}
-						<div class="w-10 h-10 rounded-lg flex items-center justify-center text-base shrink-0"
-						     style="background: color-mix(in srgb, #FB923C 8%, transparent); color: var(--color-on-surface-variant)">
-							{editing.displayName.slice(0, 1).toUpperCase()}
-						</div>
-					{/if}
-					<div class="flex-1 min-w-0">
-						<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{editing.displayName}</div>
-						<div class="text-xs" style="color: var(--color-on-surface-variant)">
-							{editing.customKcalPer100 != null ? `${Math.round(editing.customKcalPer100)} kcal/100g` : t.nutrition_no_kcal_data}
-						</div>
-					</div>
+						{#if editUnit === 'piece'}<label class="manage-settings-row nutrition-edit-row"><span class="manage-settings-label">{t.nutrition_grams_per_piece}</span><input type="number" inputmode="decimal" bind:value={editGpp} min="0" step="any" class="manage-settings-input" /></label>{/if}
+					</section>
 				</div>
-
-				<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
-
-				<!-- Name -->
-				<div class="px-3 py-2.5 flex items-center gap-2">
-					<span class="text-[11px] uppercase tracking-wide shrink-0" style="color: var(--color-on-surface-variant)">{t.nutrition_name}</span>
-					<input type="text" bind:value={editName}
-					       class="flex-1 min-w-0 px-2.5 rounded-xl bg-transparent outline-none"
-					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px" />
-				</div>
-
-				<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
-
-				<!-- Menge + Einheit + kcal-Ergebnis -->
-				<div class="px-3 py-2.5 flex items-center gap-2">
-					<span class="text-[11px] uppercase tracking-wide shrink-0" style="color: var(--color-on-surface-variant)">{t.nutrition_amount}</span>
-					<input type="number" inputmode="decimal" bind:value={editAmount} min="0" step="any"
-					       class="flex-1 min-w-0 px-2.5 rounded-xl bg-transparent outline-none tabular-nums"
-					       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px" />
-					<select bind:value={editUnit}
-					        class="px-2 rounded-xl bg-transparent outline-none appearance-none shrink-0"
-					        style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px">
-						<option value="g">g</option>
-						<option value="ml">ml</option>
-						<option value="piece">{t.nutrition_unit_piece}</option>
-					</select>
-					{#if editing.customKcalPer100 != null}
-						<span class="text-base font-semibold tabular-nums shrink-0" style="color: #FB923C">
-							= {Math.round((editing.customKcalPer100 ?? 0) * editEffectiveGrams() / 100)} kcal
-						</span>
-					{/if}
-				</div>
-
-				{#if editUnit === 'piece'}
-					<div class="px-3 pb-2 -mt-1 flex items-center gap-2">
-						<span class="text-[11px] uppercase tracking-wide shrink-0" style="color: var(--color-on-surface-variant)">{t.nutrition_grams_per_piece}</span>
-						<input type="number" inputmode="decimal" bind:value={editGpp} min="0" step="any"
-						       class="flex-1 min-w-0 px-2.5 rounded-xl bg-transparent outline-none tabular-nums"
-						       style="border: 1px solid var(--bubble-interactive-border); font-size: 16px; height: 36px" />
-					</div>
+				{#if currentFavorite.customKcalPer100 != null}
+					<section class="manage-section nutrition-favorite-summary"><strong>{Math.round(currentFavorite.customKcalPer100 * editEffectiveGrams() / 100)} kcal</strong><NutritionMacroStrip items={editMacroItems} /></section>
 				{/if}
-
-				{#if editing.customKcalPer100 != null}
-					<div class="px-3 pb-2.5 text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-						{t.nutrition_protein} {((editing.customProteinPer100 ?? 0) * editEffectiveGrams() / 100).toFixed(1)}g
-						· {t.nutrition_fat} {((editing.customFatPer100 ?? 0) * editEffectiveGrams() / 100).toFixed(1)}g
-						· {t.nutrition_carbs} {((editing.customCarbsPer100 ?? 0) * editEffectiveGrams() / 100).toFixed(1)}g
-					</div>
-				{/if}
+				<button type="button" class="manage-danger nutrition-delete-action" onclick={async () => { if (await deleteFav(editing!.id)) editing = null; }}>{t.nutrition_delete_favorite}</button>
 			</div>
-		</div>
-		<div class="px-5 pt-2 shrink-0 flex gap-2" style="padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)">
-			<button onclick={() => (editing = null)}
-			        class="flex-1 py-3 rounded-full text-sm font-semibold active:opacity-70"
-			        style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)">
-				{t.nutrition_cancel}
-			</button>
-			<button onclick={saveEdit} disabled={favSaving || favSaved}
-			        class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-100 flex items-center justify-center gap-1.5"
-			        style="background: {favSaved ? '#22C55E' : '#FB923C'}; color: #fff; transition: background-color 0.2s">
-				{#if favSaved}
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-				{:else}
-					{favSaving ? '…' : t.nutrition_save}
-				{/if}
-			</button>
-		</div>
-	</div>
+		{/snippet}
+		{#snippet footer()}
+			<button type="button" class="manage-secondary" onclick={() => (editing = null)}>{t.nutrition_cancel}</button>
+			<button type="button" class="manage-primary disabled:opacity-40" onclick={saveEdit} disabled={favSaving || favSaved || !editName.trim()}>{favSaving ? '…' : t.nutrition_save}</button>
+		{/snippet}
+	</ManageSheetShell>
 {/if}
+
+<style>
+	.nutrition-section-title { margin: 4px 2px 7px; color: var(--color-on-surface-variant); font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+	.nutrition-empty-copy { margin: 0 2px 28px; color: var(--color-on-surface-variant); font-size: 13px; }
+	.nutrition-list-surface { margin-bottom: 28px; overflow: hidden; border: 1px solid var(--bubble-container-border); border-radius: 16px; background: var(--bubble-container-bg); }
+	.nutrition-list-surface :global(.nutrition-food-row + .nutrition-food-row) { border-top: 1px solid var(--bubble-container-border); }
+	.nutrition-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+	.nutrition-new-template { min-height: 36px; padding-inline: 10px; border-radius: 999px; color: #FB923C; font-size: 12px; font-weight: 650; }
+	.nutrition-favorite-identity { display: flex; min-height: 54px; align-items: center; gap: 11px; padding: 8px 10px; border: 1px solid var(--bubble-container-border); border-radius: 14px; background: var(--bubble-container-bg); }
+	.nutrition-favorite-identity img, .nutrition-favorite-identity > span { display: flex; width: 38px; height: 38px; flex: none; align-items: center; justify-content: center; border-radius: 10px; object-fit: cover; background: color-mix(in srgb, #FB923C 8%, transparent); color: #FB923C; font-size: 13px; font-weight: 700; }
+	.nutrition-favorite-identity .nutrition-category-icon { background: transparent; }
+	.nutrition-favorite-identity strong { overflow: hidden; color: var(--color-on-surface); font-size: 14px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+	.nutrition-edit-row { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr); align-items: center; gap: 12px; }
+	.nutrition-amount-row { display: grid; grid-template-columns: minmax(0, .65fr) minmax(64px, 1fr) auto; align-items: center; gap: 10px; }
+	.nutrition-unit-select { height: 36px; max-width: 78px; border: 0; outline: 0; background: transparent; color: #FB923C; font-size: 16px; font-weight: 650; }
+	.nutrition-favorite-summary { display: grid; gap: 9px; padding: 10px; }
+	.nutrition-favorite-summary > strong { color: #FB923C; font-size: 19px; font-weight: 720; font-variant-numeric: tabular-nums; }
+	.nutrition-delete-action { width: 100%; min-height: 40px; }
+</style>

@@ -39,28 +39,31 @@
 	function getTagIcon(key: string): string {
 		return findTag(key)?.icon ?? '';
 	}
+
+	function toggleTodayDetails() {
+		if (hasDetails) expanded = !expanded;
+		else entrySheetOpen = true;
+	}
 </script>
 
 {#if todayEntry && moodLevel}
 {#if tileMode}
-	<TrackerTileShell accent="#F472B6" title={t.mood_tracker_label} expandable={hasDetails} bind:expanded onactivate={() => entrySheetOpen = true}>
+	<TrackerTileShell accent="#F472B6" title={t.mood_tracker_label} expandable={hasDetails} bind:expanded onactivate={toggleTodayDetails} showToggle={false}>
 		{#snippet body()}
-			<div class="h-6 pl-3.5 flex items-center gap-1.5 text-[11px] font-semibold" style="color: {moodLevel.color}">
-				<MoodIcon value={moodLevel.value} size={16}/>
-				<span class="max-w-28 truncate">{(t[moodLevel.labelKey as keyof typeof t] as string) ?? ''}</span>
-			</div>
-			<div class="h-9 pl-3.5 min-w-0 flex flex-col justify-end gap-0.5">
-				{#if todayEntry.activities.length > 0}
-					<div class="h-[18px] flex items-center gap-1 min-w-0 overflow-hidden">
-						{#each todayEntry.activities.slice(0, 2) as key}
-							<span class="inline-flex items-center gap-0.5 min-w-0 max-w-[42%] text-[9px] leading-none px-1.5 py-1 rounded-full font-medium" style="background-color: color-mix(in srgb, #F472B6 12%, transparent); color: var(--color-on-surface)">
-								<ActivityIcon icon={getTagIcon(key)} size={9} color="#F472B6" /><span class="truncate">{getTagLabel(key)}</span>
-							</span>
-						{/each}
-						{#if todayEntry.activities.length > 2}<span class="text-[9px] font-semibold shrink-0" style="color: var(--color-on-surface-variant)">+{todayEntry.activities.length - 2}</span>{/if}
-					</div>
-				{/if}
-				{#if previewText}<p class="h-[15px] text-[10px] leading-[15px] italic text-left truncate" style="color: var(--color-on-surface-variant)">{previewText}</p>{/if}
+			<div class="today-tracker-body">
+				<div class="today-tracker-status font-semibold" style="color: {moodLevel.color}">
+					<MoodIcon value={moodLevel.value} size={16}/>
+					<span class="truncate">{(t[moodLevel.labelKey as keyof typeof t] as string) ?? ''}</span>
+				</div>
+				<button type="button" onclick={() => entrySheetOpen = true} class="today-tracker-footer !grid-cols-1 !gap-0 !py-1 min-w-0" aria-label={t.mood_tracker_label}>
+					{#if todayEntry.activities.length > 0}
+						<p class="truncate text-[10px] leading-3">
+							{#each todayEntry.activities.slice(0, 2) as key, index}{index > 0 ? ' · ' : ''}{getTagLabel(key)}{/each}{#if todayEntry.activities.length > 2} · +{todayEntry.activities.length - 2}{/if}
+						</p>
+					{/if}
+					{#if previewText}<p class="truncate text-[10px] leading-3 italic">{previewText}</p>{/if}
+					{#if todayEntry.activities.length === 0 && !previewText}<p class="truncate text-[10px] leading-3">{(t[moodLevel.labelKey as keyof typeof t] as string) ?? ''}</p>{/if}
+				</button>
 			</div>
 		{/snippet}
 		{#snippet details()}

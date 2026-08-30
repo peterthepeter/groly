@@ -28,7 +28,7 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between px-6 py-3 flex-shrink-0">
 		<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">
-			{lang === 'en' ? 'About' : 'Über Groly'}
+			{lang === 'en' ? 'About / Support' : 'Über Groly / Support'}
 		</h2>
 		<button
 			onclick={onClose}

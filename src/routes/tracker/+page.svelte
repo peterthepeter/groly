@@ -4,7 +4,7 @@
 	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import { t, currentLang, today_reminders_label } from '$lib/i18n.svelte';
+	import { t, currentLang } from '$lib/i18n.svelte';
 	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { formatTime } from '$lib/dates';
@@ -21,6 +21,7 @@
 	import MoodTrackerCard from '$lib/components/supplements/MoodTrackerCard.svelte';
 	import MoodEntrySheet from '$lib/components/supplements/MoodEntrySheet.svelte';
 	import EatTrackerCard from '$lib/components/supplements/EatTrackerCard.svelte';
+	import TrackerSectionNav from '$lib/components/supplements/TrackerSectionNav.svelte';
 	import HistoryTab from '$lib/components/supplements/HistoryTab.svelte';
 	import ExportSheet from '$lib/components/supplements/ExportSheet.svelte';
 	import { exportReport, type ReportSections } from '$lib/pdfExport';
@@ -194,83 +195,7 @@
 		expandedIds = next;
 	}
 
-	// Today's reminders (for header row)
-	type TodayReminder = { time: string; names: string[] };
-	let todayReminders = $state<TodayReminder[]>([]);
-	let remindersExpanded = $state(false);
-	// Server-persisted overrides: reminderTime → done (true/false)
-	let reminderOverrides = $state<Record<string, boolean>>({});
 	let now = $state(new Date());
-
-	const REMINDER_PRE_WINDOW_MS = 30 * 60 * 1000; // 30 Minuten
-
-	function todayAtTime(timeStr: string): number {
-		const [h, m] = timeStr.split(':').map(Number);
-		const d = new Date();
-		d.setHours(h, m, 0, 0);
-		return d.getTime();
-	}
-
-	// Explizit $derived damit todayLogs + supplements als Dependencies getrackt werden
-	const reminderDoneMap = $derived.by(() => {
-		const map = new Map<string, boolean>();
-		for (const reminder of todayReminders) {
-			// Server-Override hat Vorrang
-			if (reminder.time in reminderOverrides) {
-				map.set(reminder.time, reminderOverrides[reminder.time]);
-				continue;
-			}
-			// Auto-Erkennung: Log im 30-Minuten-Fenster vor der Erinnerungszeit
-			const reminderTs = todayAtTime(reminder.time);
-			const windowStart = reminderTs - REMINDER_PRE_WINDOW_MS;
-			const autoDone = reminder.names.every(name => {
-				const supp = supplements.find(s => s.name === name);
-				if (!supp) return false;
-				return todayLogs.some(l => l.supplementId === supp.id && l.loggedAt >= windowStart);
-			});
-			map.set(reminder.time, autoDone);
-		}
-		return map;
-	});
-
-	function reminderIsDone(reminder: TodayReminder): boolean {
-		return reminderDoneMap.get(reminder.time) ?? false;
-	}
-
-	async function toggleReminderDone(reminder: TodayReminder) {
-		const current = reminderIsDone(reminder);
-		const newDone = !current;
-		const date = toLocalDateStr(new Date());
-
-		// Optimistic update
-		reminderOverrides = { ...reminderOverrides, [reminder.time]: newDone };
-
-		try {
-			await fetch('/api/supplement-reminder-overrides', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ date, reminderTime: reminder.time, done: newDone })
-			});
-		} catch {
-			// Bei Fehler: Rollback
-			const restored = { ...reminderOverrides };
-			delete restored[reminder.time];
-			reminderOverrides = restored;
-		}
-	}
-
-	const pendingReminders = $derived(todayReminders.filter(r => !reminderDoneMap.get(r.time)));
-
-	async function loadTodayReminders() {
-		try {
-			const res = await fetch('/api/supplement-reminders?today=1');
-			if (res.ok) {
-				const data = await res.json();
-				todayReminders = data.todayReminders ?? [];
-				reminderOverrides = data.overrides ?? {};
-			}
-		} catch { /* offline — reminders bleiben leer */ }
-	}
 
 	// Quick-log sheet (opened from FAB)
 	let quickLogOpen = $state(false);
@@ -901,12 +826,36 @@
 		}
 	}
 
-	function handleSupplementCardClick(id: string) {
+	function keepExpandedSupplementVisible(id: string) {
+		if (!scrollContainer || !bubbleContainerEl) return;
+		requestAnimationFrame(() => {
+			if (!scrollContainer || !bubbleContainerEl || !expandedIds.has(id)) return;
+			const card = Array.from(bubbleContainerEl.querySelectorAll<HTMLElement>('[data-today-supplement-id]'))
+				.find(element => element.dataset.todaySupplementId === id);
+			if (!card) return;
+
+			const containerRect = scrollContainer.getBoundingClientRect();
+			const cardRect = card.getBoundingClientRect();
+			const reservedBottom = Math.max(88, Number.parseFloat(getComputedStyle(scrollContainer).paddingBottom) || 0);
+			const visibleBottom = containerRect.bottom - reservedBottom;
+			const overflow = cardRect.bottom - visibleBottom;
+			if (overflow > 0) {
+				scrollContainer.scrollBy({ top: overflow + 12, behavior: 'smooth' });
+			}
+		});
+	}
+
+	async function handleSupplementCardClick(id: string) {
 		if (suppressSupplementClick) {
 			suppressSupplementClick = false;
 			return;
 		}
+		const willExpand = !expandedIds.has(id);
 		toggleExpand(id);
+		if (willExpand) {
+			await tick();
+			keepExpandedSupplementVisible(id);
+		}
 	}
 
 	$effect(() => {
@@ -1034,14 +983,14 @@
 	});
 
 	onMount(() => {
-		Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadTodayNutrition()]).then(() => { loading = false; });
+		Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadTodayNutrition()]).then(() => { loading = false; });
 		handleActionParam();
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
 
 		function onVisibilityChange() {
 			if (document.visibilityState === 'visible') {
 				now = new Date();
-				Promise.all([loadSupplements(), loadTodayLogs(), loadTodayReminders(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]);
+				Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]);
 			}
 		}
 		document.addEventListener('visibilitychange', onVisibilityChange);
@@ -1156,6 +1105,20 @@
 		</button>
 	{/snippet}
 
+	{#snippet trackerHistoryControls()}
+		<div class="flex gap-1 p-1">
+			{#each (['day', 'week', 'month'] as const) as period}
+				<button
+					onclick={() => { historyPeriod = period; if (period !== 'day') scrollContainer?.scrollTo({ top: 0 }); }}
+					class="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all"
+					style="background-color: {historyPeriod === period ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {historyPeriod === period ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+				>
+					{period === 'day' ? t.supplement_stats_day : period === 'week' ? t.supplement_stats_week : t.supplement_stats_month}
+				</button>
+			{/each}
+		</div>
+	{/snippet}
+
 	<!-- Sticky overlay: tab bar + date row, with backdrop blur so scrolling content shows through -->
 	<div bind:clientHeight={overlayHeight}
 	     class="absolute left-0 right-0 z-30 pb-3"
@@ -1163,97 +1126,13 @@
 
 	<!-- Tab Bar + Manage row — unified card -->
 	<div class="px-4 pt-1">
-		<div class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-			<!-- Tab switcher -->
-			<div class="flex gap-1 p-1">
-				<button
-					onclick={() => goto($page.url.pathname, { noScroll: true, keepFocus: true, replaceState: true })}
-					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
-					style="background-color: {activeTab === 'today' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'today' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
-				>
-					{t.supplement_tab_today}
-				</button>
-				<button
-					onclick={() => goto(`${$page.url.pathname}?tab=history`, { noScroll: true, keepFocus: true, replaceState: true })}
-					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
-					style="background-color: {activeTab === 'history' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'history' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
-				>
-					{t.supplement_tab_history}
-				</button>
-			</div>
-			<!-- Manage + Reminder row — only on Today tab -->
-			{#if activeTab === 'today'}
-				<div class="flex items-center">
-					<button
-						onclick={() => goto('/tracker/verwalten')}
-						class="flex items-center justify-center gap-2 py-2.5 text-sm font-semibold active:opacity-70 transition-opacity {todayReminders.length > 0 ? 'flex-1' : 'w-full'}"
-						style="color: var(--color-primary)"
-					>
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-							<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-						</svg>
-						{t.supplement_manage}
-					</button>
-					{#if todayReminders.length > 0}
-						<button
-							onclick={() => remindersExpanded = !remindersExpanded}
-							class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium active:opacity-70 transition-opacity"
-							style="color: var(--color-on-surface)"
-						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-							</svg>
-							{today_reminders_label(pendingReminders.length)}
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-							     style="transform: rotate({remindersExpanded ? 90 : 0}deg); transition: transform 0.2s; color: var(--color-on-surface-variant)">
-								<polyline points="9 18 15 12 9 6"/>
-							</svg>
-						</button>
-					{/if}
-				</div>
-				<!-- Expanded reminder list -->
-				{#if remindersExpanded && todayReminders.length > 0}
-					<div class="px-5 pt-3 pb-3 space-y-1.5" style="border-top: 1px solid var(--color-outline-variant)">
-						{#each todayReminders as reminder}
-							{@const isDone = reminderIsDone(reminder)}
-							<!-- svelte-ignore a11y_click_events_have_key_events -->
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div class="flex items-center gap-3 active:opacity-60 cursor-pointer select-none"
-							     onclick={() => toggleReminderDone(reminder)}
-							     style={isDone ? 'opacity: 0.5' : ''}>
-								<div class="w-4 h-4 rounded-full shrink-0 flex items-center justify-center"
-								     style="border: 1.5px solid {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}; background: {isDone ? 'var(--color-on-surface-variant)' : 'transparent'}">
-									{#if isDone}
-										<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--color-surface-low)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-											<polyline points="20 6 9 17 4 12"/>
-										</svg>
-									{/if}
-								</div>
-								<span class="text-sm font-semibold tabular-nums shrink-0"
-								      style="color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}; {isDone ? 'text-decoration: line-through' : ''}"
-								>{reminder.time}</span>
-								<span class="text-sm" style="color: {isDone ? 'var(--color-on-surface-variant)' : 'var(--color-on-surface)'}; {isDone ? 'text-decoration: line-through' : ''}">{reminder.names.join(' · ')}</span>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			{/if}
-			<!-- Period selector — only on History tab -->
-			{#if activeTab === 'history'}
-				<div class="flex gap-1 p-1">
-					{#each (['day', 'week', 'month'] as const) as period}
-						<button
-							onclick={() => { historyPeriod = period; if (period !== 'day') scrollContainer?.scrollTo({ top: 0 }); }}
-							class="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all"
-							style="background-color: {historyPeriod === period ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {historyPeriod === period ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
-						>
-							{period === 'day' ? t.supplement_stats_day : period === 'week' ? t.supplement_stats_week : t.supplement_stats_month}
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
+		<TrackerSectionNav
+			activeSection={activeTab}
+			nutritionEnabled={userSettings.nutritionTrackerEnabled}
+			{supplements}
+			todayLogs={todayLogs}
+			historyControls={trackerHistoryControls}
+		/>
 	</div>
 
 	<!-- Date navigation — only on History tab -->
@@ -1430,7 +1309,8 @@
 								{@const logTimes = allLogTimes(supplement.id)}
 								{@const latestLog = logs.reduce((a, b) => a.loggedAt > b.loggedAt ? a : b)}
 								<article
-									class="{expanded ? 'col-span-3' : 'aspect-square'} rounded-3xl px-2.5 py-2.5 flex flex-col overflow-hidden transition-[border-color,background-color] duration-150"
+									data-today-supplement-id={supplement.id}
+									class="{expanded ? 'col-span-3' : 'aspect-square'} rounded-[20px] px-2.5 py-2.5 flex flex-col overflow-hidden transition-[border-color,background-color] duration-150"
 									style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)"
 								>
 									<!-- Tap expands; long press keeps editing the newest log. -->
@@ -1446,7 +1326,7 @@
 										aria-expanded={expanded}
 									>
 										<div class="{expanded ? 'flex items-baseline gap-1 flex-wrap' : 'flex flex-col items-center justify-center gap-0.5 flex-1 min-h-0'}">
-											<p class="font-semibold text-sm leading-tight {expanded ? '' : 'line-clamp-2'}" style="color: var(--color-on-surface)">{supplement.name}</p>
+											<p class="font-semibold text-sm leading-tight {expanded ? '' : 'line-clamp-2'}" style="color: var(--color-primary)">{supplement.name}</p>
 											{#if supplement.stockQuantity != null}
 												<span class="text-[10px] font-medium {expanded ? '' : 'line-clamp-1'}" style="color: {supplement.stockQuantity <= 5 ? 'var(--color-error)' : 'var(--color-on-surface-variant)'}">({supplement.stockQuantity} {t.supplement_stock_left})</span>
 											{/if}
@@ -1459,9 +1339,9 @@
 												{total} {displayUnit(supplement.unit, currentLang())} {t.supplement_taken_today}{logTimes ? ` ${logTimes}` : ''}
 											</p>
 										{:else}
-											<div class="mt-auto pt-1.5 w-full grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-1 text-[11px] leading-tight tabular-nums" style="color: var(--color-primary)">
-												<span class="truncate text-left">{total} {displayUnit(supplement.unit, currentLang())}</span>
-												<span class="shrink-0 text-right">{logs.length > 1 ? `${logs.length}× · ` : ''}{formatTime(latestLog.loggedAt)}</span>
+											<div class="mt-auto w-full h-7 grid grid-cols-2 items-stretch rounded-[9px] overflow-hidden text-[10px] font-medium leading-none tabular-nums" style="background-color: color-mix(in srgb, var(--color-on-surface) 4%, transparent); color: var(--color-on-surface-variant)">
+												<span class="min-w-0 px-1 flex items-center justify-center truncate">{total} {displayUnit(supplement.unit, currentLang())}</span>
+												<span class="min-w-0 px-1 flex items-center justify-center truncate border-l" style="border-color: var(--bubble-container-border)">{logs.length > 1 ? `${logs.length}× · ` : ''}{formatTime(latestLog.loggedAt)}</span>
 											</div>
 										{/if}
 									</button>

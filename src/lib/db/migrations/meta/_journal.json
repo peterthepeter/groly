@@ -337,6 +337,13 @@
       "when": 1787861509541,
       "tag": "0047_short_micromacro",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1787990630601,
+      "tag": "0048_wise_hellcat",
+      "breakpoints": true
     }
   ]
 }

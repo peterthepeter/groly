@@ -150,11 +150,11 @@
 
 				<div class="manage-stack">
 					{#each entries as entry}
-						<div class="manage-reminder-card">
+						<div class="manage-reminder-card reminder-flat-card">
 
 							<!-- Weekdays -->
-							<div>
-								<p class="manage-label">{t.supplement_reminders_days_label}</p>
+							<div class="reminder-days">
+								<p class="manage-settings-label mb-1.5 px-0.5">{t.supplement_reminders_days_label}</p>
 								<div class="manage-chip-grid">
 									{#each DAY_ORDER as day, i}
 										<button
@@ -166,48 +166,52 @@
 								</div>
 							</div>
 
-							<!-- Time range -->
-							<div>
-								<div class="flex gap-2 items-end">
-									<div class="flex-1">
-										<p class="manage-label">{t.water_reminder_from}</p>
-										<input
-											type="time"
-											bind:value={entry.startTime}
-											class="manage-input"
-										/>
-									</div>
-									<div class="flex-1">
-										<p class="manage-label">{t.water_reminder_until}</p>
-										<input
-											type="time"
-											bind:value={entry.endTime}
-											class="manage-input"
-										/>
-									</div>
-								</div>
-							</div>
-
-							<!-- Interval chips -->
-							<div>
-								<p class="manage-label">{t.water_reminder_interval}</p>
-								<div class="manage-chip-grid">
-									{#each INTERVALS as opt}
-										<button
-											onclick={() => entry.intervalMinutes = opt.value}
-										class="manage-chip active:opacity-70"
-										data-selected={entry.intervalMinutes === opt.value}
-										>{opt.label}</button>
-									{/each}
-								</div>
+							<!-- Schedule -->
+							<div class="reminder-schedule-row">
+								<label class="reminder-time-cell">
+									<span class="manage-settings-label">{t.water_reminder_from}</span>
+									<span class="reminder-time-field">
+										<input type="time" bind:value={entry.startTime} class="reminder-time-picker" />
+										<span class="reminder-time-value">{entry.startTime}</span>
+									</span>
+								</label>
+								<label class="reminder-time-cell">
+									<span class="manage-settings-label">{t.water_reminder_until}</span>
+									<span class="reminder-time-field">
+										<input type="time" bind:value={entry.endTime} class="reminder-time-picker" />
+										<span class="reminder-time-value">{entry.endTime}</span>
+									</span>
+								</label>
+								<label class="reminder-interval-cell">
+									<span class="manage-settings-label">{t.water_reminder_interval}</span>
+									<select bind:value={entry.intervalMinutes} class="reminder-interval-select">
+										{#each INTERVALS as opt}
+											<option value={opt.value}>{opt.label}</option>
+										{/each}
+									</select>
+								</label>
 							</div>
 
 							<!-- Save + Delete -->
-							<div class="manage-reminder-actions">
+							<div class="reminder-entry-actions">
+								<button
+									onclick={() => deleteEntry(entry)}
+									disabled={entry.deleting}
+									class="reminder-delete active:opacity-60 disabled:opacity-40"
+									aria-label={t.supplement_reminders_delete}
+								>
+									{#if entry.deleting}
+										<div class="h-4 w-4 animate-spin rounded-full border-2" style="border-color: var(--color-error); border-top-color: transparent"></div>
+									{:else}
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+										</svg>
+									{/if}
+								</button>
 								<button
 									onclick={() => saveEntry(entry)}
 									disabled={entry.saving || entry.days.length === 0}
-									class="manage-primary active:opacity-70 disabled:opacity-40"
+									class="reminder-save active:opacity-70 disabled:opacity-40"
 								>
 									{#if entry.saving}
 										…
@@ -215,20 +219,6 @@
 										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 									{:else}
 										{t.supplement_reminders_save}
-									{/if}
-								</button>
-								<button
-									onclick={() => deleteEntry(entry)}
-									disabled={entry.deleting}
-									class="manage-icon-button active:opacity-60 disabled:opacity-40"
-									aria-label={t.supplement_reminders_delete}
-								>
-									{#if entry.deleting}
-										<div class="w-5 h-5 rounded-full border-2 animate-spin" style="border-color: var(--color-error); border-top-color: transparent"></div>
-									{:else}
-										<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-											<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-										</svg>
 									{/if}
 								</button>
 							</div>

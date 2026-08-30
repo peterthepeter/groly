@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import { t } from '$lib/i18n.svelte';
+	import ManageSheetShell from '$lib/components/supplements/ManageSheetShell.svelte';
 
 	type Comp = {
 		productBarcode: string | null;
@@ -127,119 +128,49 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-[60]" style="background: rgba(0,0,0,0.5)" onclick={onclose}></div>
-
-<div class="fixed left-0 right-0 bottom-0 z-[61] rounded-t-3xl flex flex-col max-w-[430px] mx-auto"
-     style="background-color: var(--modal-bg)">
-	<div class="flex justify-center pt-3 pb-1 shrink-0">
-		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-outline-variant)"></div>
-	</div>
-
-	<div class="px-5 pb-3">
-		<p class="font-bold text-lg" style="color: {ACCENT}">{t.recipe_track_title}</p>
-
-		<!-- Gericht-Kopf -->
-		<div class="flex items-center gap-3 mt-3">
-			{#if recipeImageUrl}
-				<img src={recipeImageUrl} alt="" class="w-10 h-10 rounded-xl object-cover bg-black/5 shrink-0" />
-			{:else}
-				<div class="w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold shrink-0"
-				     style="background: color-mix(in srgb, {ACCENT} 10%, transparent); color: {ACCENT}">
-					{recipeTitle.slice(0, 1).toUpperCase()}
+<ManageSheetShell accent={ACCENT} title={t.recipe_track_title} {onclose} zIndex={61} maxHeight="92dvh">
+	{#snippet body()}
+		<div class="manage-stack">
+			<section class="recipe-track-identity">
+				{#if recipeImageUrl}<img src={recipeImageUrl} alt="" />{:else}<span>{recipeTitle.slice(0, 1).toUpperCase()}</span>{/if}
+				<div><strong>{recipeTitle}</strong><small>{components.length} {t.nutrition_ingredients} · {basePerPortionKcal} kcal/{t.recipe_nutrition_per_portion_short}</small></div>
+			</section>
+			<section class="manage-settings-surface">
+				<div class="manage-settings-row recipe-name-row">
+					{#if customMode}<input type="text" bind:value={name} placeholder={t.nutrition_name_placeholder} class="manage-settings-input" />{:else}<select bind:value={name} onchange={(event) => { const value = event.currentTarget.value; if (value === '__custom__') { customMode = true; name = ''; } }} class="recipe-flat-select">{#each MEAL_NAMES as mealName}<option value={mealName}>{mealName}</option>{/each}<option value="__custom__">{t.nutrition_custom_name_option}</option></select>{/if}
 				</div>
-			{/if}
-			<div class="min-w-0 flex-1">
-				<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{recipeTitle}</div>
-				<div class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-					{components.length} {t.nutrition_ingredients} · {basePerPortionKcal} kcal/{t.recipe_nutrition_per_portion_short}
+				<div class="manage-settings-row recipe-portions-row">
+					<span class="manage-settings-label">{t.recipe_nutrition_portions}</span>
+					<div><button type="button" onclick={() => changePortions(-0.5)} disabled={portions <= 0.5} aria-label="−">−</button><strong>{portions}</strong><button type="button" onclick={() => changePortions(0.5)} aria-label="+">+</button></div>
 				</div>
-			</div>
+				<div class="manage-settings-row recipe-date-row"><input type="date" bind:value={date} /><span></span><input type="time" bind:value={time} /></div>
+			</section>
+			<section class="manage-section recipe-track-total"><strong>{totalKcal}</strong><span>kcal{#if portions !== 1} · {basePerPortionKcal}/{t.recipe_nutrition_per_portion_short}{/if}</span></section>
 		</div>
+	{/snippet}
+	{#snippet footer()}
+		<button type="button" class="manage-secondary" onclick={onclose}>{t.nutrition_cancel}</button>
+		<button type="button" class="manage-primary disabled:opacity-40" onclick={save} disabled={saving || components.length === 0}>{saving ? '…' : t.nutrition_log_meal}</button>
+	{/snippet}
+</ManageSheetShell>
 
-		<!-- Eingaben: Portionen + Datum + Zeit in einer Bubble -->
-		<div class="rounded-2xl overflow-hidden mt-3"
-		     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-			<!-- Name (wie New meal) -->
-			<div class="flex items-center px-2" style="height: 46px">
-				{#if customMode}
-					<input type="text" bind:value={name} placeholder={t.nutrition_name_placeholder}
-					       class="flex-1 min-w-0 px-1.5 bg-transparent outline-none"
-					       style="font-size: 16px; color: var(--color-on-surface)" />
-					<button onclick={() => { customMode = false; name = MEAL_NAMES[0]; }}
-					        class="shrink-0 w-7 h-7 flex items-center justify-center opacity-50 active:opacity-100 text-sm"
-					        style="color: var(--color-on-surface-variant)" aria-label={t.nutrition_cancel}>✕</button>
-				{:else}
-					<div class="relative flex-1 min-w-0">
-						<select
-							value={customMode ? '__custom__' : name}
-							onchange={(e) => {
-								const v = (e.currentTarget as HTMLSelectElement).value;
-								if (v === '__custom__') { customMode = true; name = ''; }
-								else { customMode = false; name = v; }
-							}}
-							class="w-full pl-1.5 pr-8 bg-transparent outline-none appearance-none"
-							style="font-size: 16px; height: 46px; color: var(--color-on-surface)">
-							{#each MEAL_NAMES as n}
-								<option value={n}>{n}</option>
-							{/each}
-							<option value="__custom__">{t.nutrition_custom_name_option}</option>
-						</select>
-						<svg class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-					</div>
-				{/if}
-			</div>
-			<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
-			<div class="flex items-center justify-between px-3.5" style="height: 46px">
-				<span class="text-sm" style="color: var(--color-on-surface)">{t.recipe_nutrition_portions}</span>
-				<div class="flex items-center gap-2.5">
-					<button onclick={() => changePortions(-0.5)} disabled={portions <= 0.5}
-					        class="w-7 h-7 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
-					        style="border: 1px solid var(--bubble-interactive-border)" aria-label="-">
-						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-					</button>
-					<span class="text-sm font-bold tabular-nums w-7 text-center" style="color: var(--color-on-surface)">{portions}</span>
-					<button onclick={() => changePortions(0.5)}
-					        class="w-7 h-7 rounded-full flex items-center justify-center active:opacity-60"
-					        style="border: 1px solid var(--bubble-interactive-border)" aria-label="+">
-						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-					</button>
-				</div>
-			</div>
-			<div class="h-px mx-3" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
-			<div class="flex items-center px-2" style="height: 46px">
-				<input type="date" bind:value={date}
-				       class="flex-1 min-w-0 px-1.5 bg-transparent outline-none tabular-nums"
-				       style="font-size: 16px; color: var(--color-on-surface)" />
-				<div class="w-px h-5 mx-1" style="background-color: var(--bubble-interactive-border); opacity: 0.5"></div>
-				<input type="time" bind:value={time}
-				       class="px-1.5 bg-transparent outline-none tabular-nums shrink-0"
-				       style="font-size: 16px; color: var(--color-on-surface)" />
-			</div>
-		</div>
-
-		<!-- kcal-Vorschau -->
-		<div class="flex items-baseline justify-center gap-1.5 mt-3">
-			<span class="text-xl font-bold tabular-nums" style="color: {ACCENT}">{totalKcal}</span>
-			<span class="text-xs" style="color: var(--color-on-surface-variant)">kcal{#if portions !== 1} · {basePerPortionKcal}/{t.recipe_nutrition_per_portion_short}{/if}</span>
-		</div>
-	</div>
-
-	<div class="px-5 pt-1 shrink-0 flex gap-2" style="padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)">
-		<button onclick={onclose}
-		        class="flex-1 py-3 rounded-full text-sm font-semibold active:opacity-70"
-		        style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)">
-			{t.nutrition_cancel}
-		</button>
-		<button onclick={save} disabled={saving || components.length === 0}
-		        class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-50 flex items-center justify-center"
-		        style="background: {ACCENT}; color: #fff">
-			{#if saving}
-				<div class="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
-			{:else}
-				{t.nutrition_log_meal}
-			{/if}
-		</button>
-	</div>
-</div>
+<style>
+	.recipe-track-identity { display: flex; min-height: 58px; align-items: center; gap: 11px; padding: 8px 10px; border: 1px solid var(--bubble-container-border); border-radius: 14px; background: var(--bubble-container-bg); }
+	.recipe-track-identity img, .recipe-track-identity > span { display: flex; width: 40px; height: 40px; flex: none; align-items: center; justify-content: center; border-radius: 10px; object-fit: cover; background: color-mix(in srgb, #FB923C 9%, transparent); color: #FB923C; font-weight: 700; }
+	.recipe-track-identity div { display: grid; min-width: 0; gap: 2px; }
+	.recipe-track-identity strong, .recipe-track-identity small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.recipe-track-identity strong { color: var(--color-on-surface); font-size: 14px; font-weight: 650; }
+	.recipe-track-identity small { color: var(--color-on-surface-variant); font-size: 11px; }
+	.recipe-name-row { display: flex; align-items: center; }
+	.recipe-flat-select { width: 100%; height: 40px; border: 0; outline: 0; background: transparent; color: var(--color-on-surface); font-size: 16px; }
+	.recipe-portions-row { display: flex; align-items: center; justify-content: space-between; }
+	.recipe-portions-row > div { display: flex; align-items: center; gap: 10px; }
+	.recipe-portions-row button { width: 36px; height: 36px; border: 1px solid var(--bubble-container-border); border-radius: 999px; color: #FB923C; font-size: 18px; }
+	.recipe-portions-row strong { min-width: 30px; text-align: center; color: var(--color-on-surface); font-size: 14px; font-variant-numeric: tabular-nums; }
+	.recipe-date-row { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(105px, .7fr); align-items: center; gap: 8px; }
+	.recipe-date-row input { width: 100%; min-width: 0; height: 38px; border: 0; outline: 0; background: transparent; color: #FB923C; font-size: 16px; font-weight: 600; }
+	.recipe-date-row span { height: 22px; background: var(--bubble-container-border); }
+	.recipe-track-total { display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 11px; }
+	.recipe-track-total strong { color: #FB923C; font-size: 22px; font-weight: 740; font-variant-numeric: tabular-nums; }
+	.recipe-track-total span { color: var(--color-on-surface-variant); font-size: 11px; }
+</style>

@@ -110,7 +110,34 @@
 	}
 
 	.tile:has(> .tile-hit:active) {
-		transform: scale(0.95);
+		transform: scale(0.985);
+	}
+
+	.tile {
+		border-radius: 20px;
+	}
+
+	.tile-edit-row {
+		background-color: var(--bubble-interactive-bg);
+		border-radius: 10px;
+		overflow: hidden;
+	}
+
+	.tile-edit-control {
+		background: transparent;
+		color: var(--color-on-surface-variant);
+		transition: background-color 0.14s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+
+	.tile-edit-control + .tile-edit-control {
+		border-left: 1px solid var(--bubble-container-border);
+	}
+
+	.tile-edit-control:active,
+	.tile-edit-control:focus,
+	.tile-edit-control:focus-within {
+		background-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
+		color: var(--color-primary);
 	}
 
 	.status-overlay {
@@ -124,7 +151,7 @@
 
 <div
 	bind:this={tileEl}
-	class="tile aspect-square rounded-3xl relative overflow-hidden select-none transition-all duration-150"
+	class="tile aspect-square relative overflow-hidden select-none transition-all duration-150"
 	style="background-color: var(--bubble-container-bg); border: 1px solid {done ? 'var(--color-primary)' : 'var(--bubble-container-border)'}"
 >
 	<button
@@ -138,7 +165,7 @@
 		onpointerleave={cancelPress}
 		onpointercancel={cancelPress}
 		oncontextmenu={handleContextMenu}
-		class="tile-hit absolute inset-0 z-0 w-full h-full rounded-3xl outline-none focus-visible:ring-2"
+		class="tile-hit absolute inset-0 z-0 w-full h-full rounded-[20px] outline-none focus-visible:ring-2"
 		style="touch-action: pan-y; --tw-ring-color: var(--color-primary)"
 	></button>
 
@@ -151,13 +178,13 @@
 	{/if}
 
 	<div
-		class="absolute z-10 inset-0 px-2.5 pt-3 pb-2.5 flex flex-col pointer-events-none transition-opacity duration-150"
+		class="absolute z-10 inset-0 px-2.5 pt-3 pb-2 flex flex-col pointer-events-none transition-opacity duration-150"
 		class:opacity-0={saving || done}
 	>
 		<div class="flex-1 min-h-0 flex flex-col items-center justify-start pt-1">
 			<p
 				class="text-xs font-bold leading-snug line-clamp-3 max-[374px]:line-clamp-2 text-center w-full"
-				style="color: var(--color-on-surface)"
+				style="color: var(--color-primary)"
 			>{supplement.name}</p>
 			{#if supplement.brand}
 				<p
@@ -167,19 +194,17 @@
 			{/if}
 		</div>
 
-		<div class="grid grid-cols-2 shrink-0 pointer-events-auto">
+		<div class="tile-edit-row grid grid-cols-2 shrink-0 pointer-events-auto">
 			<button
 				type="button"
 				onclick={() => editingAmount = true}
-				class="h-8 min-w-0 px-1 text-[10px] font-semibold truncate active:opacity-60"
-				style="background: transparent; color: var(--color-primary)"
+				class="tile-edit-control h-8 min-w-0 px-1 text-[10px] font-semibold truncate active:opacity-60"
 				aria-expanded={editingAmount}
 				aria-label={`${supplement.name}: ${amount} ${unitLabel}`}
 			>{amount} {unitLabel}</button>
 
 			<label
-				class="relative h-8 min-w-0 px-1 flex items-center justify-center text-[10px] font-semibold tabular-nums overflow-hidden"
-				style="background: transparent; color: var(--color-primary)"
+				class="tile-edit-control relative h-8 min-w-0 px-1 flex items-center justify-center text-[10px] font-semibold tabular-nums overflow-hidden"
 			>
 				<span>{time || '--:--'}</span>
 				<input

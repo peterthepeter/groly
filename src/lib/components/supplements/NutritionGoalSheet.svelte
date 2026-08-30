@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n.svelte';
+	import { calculateNutritionTargets, type NutritionActivity, type NutritionSex } from '$lib/nutritionUtils';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	let {
@@ -33,11 +34,11 @@
 	let fiber = $state(initialFiber != null ? String(initialFiber) : '30');
 
 	// Rechner – Werte werden in localStorage gemerkt
-	let sex = $state<'female' | 'male'>('male');
+	let sex = $state<NutritionSex>('male');
 	let age = $state('30');
 	let height = $state('175');
 	let weight = $state('70');
-	let activity = $state<'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'>('light');
+	let activity = $state<NutritionActivity>('light');
 
 	// Sheet folgt visualViewport (Tastatur + iOS-Auto-Scroll)
 	let maxHeight = $state(typeof window !== 'undefined' ? window.innerHeight : 800);
@@ -87,60 +88,24 @@
 		}
 	});
 
-	const ACTIVITY_FACTORS = {
-		sedentary: 1.2,
-		light: 1.375,
-		moderate: 1.55,
-		active: 1.725,
-		'very-active': 1.9
-	};
-
 	const calculated = $derived.by(() => {
-		const a = parseInt(age, 10);
-		const h = parseFloat(height);
-		const w = parseFloat(weight);
-		if (!Number.isFinite(a) || a < 10 || a > 120) return null;
-		if (!Number.isFinite(h) || h < 100 || h > 250) return null;
-		if (!Number.isFinite(w) || w < 30 || w > 300) return null;
-		// Mifflin-St Jeor
-		const bmr = sex === 'male'
-			? 10 * w + 6.25 * h - 5 * a + 5
-			: 10 * w + 6.25 * h - 5 * a - 161;
-		const tdee = Math.round(bmr * ACTIVITY_FACTORS[activity]);
-		return { bmr: Math.round(bmr), tdee };
+		return calculateNutritionTargets({
+			sex,
+			age: parseInt(age, 10),
+			heightCm: parseFloat(height),
+			weightKg: parseFloat(weight),
+			activity
+		});
 	});
-
-	// Protein g/kg je nach Aktivitätslevel (DGE / ISSN angelehnt).
-	const PROTEIN_PER_KG = {
-		sedentary: 0.8,
-		light: 1.2,
-		moderate: 1.4,
-		active: 1.6,
-		'very-active': 1.8
-	};
 
 	function applyCalculatedToFields() {
 		if (!calculated) return;
-		const k = calculated.tdee;
-		const w = parseFloat(weight);
-		kcal = String(k);
-		if (Number.isFinite(w) && w >= 30 && w <= 300) {
-			const proteinG = Math.round(w * PROTEIN_PER_KG[activity]);
-			const fatG = Math.round((k * 0.3) / 9);
-			const carbsG = Math.max(0, Math.round((k - proteinG * 4 - fatG * 9) / 4));
-			protein = String(proteinG);
-			fat = String(fatG);
-			carbs = String(carbsG);
-		}
-		if (!fiber.trim()) fiber = '30';
+		kcal = String(calculated.tdee);
+		protein = String(calculated.protein);
+		fat = String(calculated.fat);
+		carbs = String(calculated.carbs);
+		fiber = String(calculated.fiber);
 	}
-
-	// Live-Update: Änderungen an Sex / Age / Height / Weight / Activity
-	// übernehmen kcal + Makros automatisch in die Felder.
-	$effect(() => {
-		void sex; void age; void height; void weight; void activity;
-		applyCalculatedToFields();
-	});
 
 	// Input-Sanitizer
 	function digitsOnly(v: string): string {
@@ -152,6 +117,10 @@
 		const firstSep = cleaned.search(/[.,]/);
 		if (firstSep === -1) return cleaned;
 		return cleaned.slice(0, firstSep + 1) + cleaned.slice(firstSep + 1).replace(/[.,]/g, '');
+	}
+
+	function selectValue(event: FocusEvent) {
+		(event.currentTarget as HTMLInputElement).select();
 	}
 
 	let saving = $state(false);
@@ -181,107 +150,113 @@
 <ManageSheetShell accent="#FB923C" title={t.nutrition_daily_goal} {onclose} zIndex={60} bottom={`${bottomOffset}px`} maxHeight={`${maxHeight}px`}>
 	{#snippet body()}
 		<div class="manage-stack">
-			<section class="manage-section">
-				<!-- Rechner: zuerst Daten eingeben, dann wird berechnet -->
-				<p class="text-xs mb-3" style="color: var(--color-on-surface-variant)">
-					{t.nutrition_calc_intro}
-				</p>
+			<div>
+				<span class="manage-section-title">{t.nutrition_calculator_section}</span>
+				<section class="manage-settings-surface">
+			<p class="nutrition-intro">{t.nutrition_calc_intro}</p>
 
-				<!-- Geschlecht -->
-				<div class="manage-chip-grid mb-3 !grid-cols-2">
-					<button type="button" onclick={() => (sex = 'female')}
-					        class="manage-chip" data-selected={sex === 'female'}>
-						{t.nutrition_female}
-					</button>
-					<button type="button" onclick={() => (sex = 'male')}
-					        class="manage-chip" data-selected={sex === 'male'}>
-						{t.nutrition_male}
-					</button>
-				</div>
+			<label class="manage-settings-row nutrition-choice-row">
+				<span class="manage-settings-label">{t.nutrition_sex}</span>
+				<select bind:value={sex} class="nutrition-select">
+					<option value="female">{t.nutrition_female}</option>
+					<option value="male">{t.nutrition_male}</option>
+				</select>
+			</label>
 
-				<div class="grid grid-cols-3 gap-2 mb-3">
-					<label class="block">
-						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_age}</span>
-						<input type="text" inputmode="numeric" value={age}
-						       oninput={(e) => (age = digitsOnly((e.target as HTMLInputElement).value))}
-						       class="manage-input mt-1" />
-					</label>
-					<label class="block">
-						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_height_cm}</span>
-						<input type="text" inputmode="numeric" value={height}
-						       oninput={(e) => (height = digitsOnly((e.target as HTMLInputElement).value))}
-						       class="manage-input mt-1" />
-					</label>
-					<label class="block">
-						<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_weight_kg}</span>
-						<input type="text" inputmode="decimal" value={weight}
-						       oninput={(e) => (weight = decimalOnly((e.target as HTMLInputElement).value))}
-						       class="manage-input mt-1" />
-					</label>
-				</div>
-
-				<label class="block mb-3">
-					<span class="text-xs" style="color: var(--color-on-surface-variant)">{t.nutrition_activity}</span>
-					<select bind:value={activity}
-					        class="manage-select mt-1 appearance-none">
-						<option value="sedentary">{t.nutrition_activity_sedentary}</option>
-						<option value="light">{t.nutrition_activity_light}</option>
-						<option value="moderate">{t.nutrition_activity_moderate}</option>
-						<option value="active">{t.nutrition_activity_active}</option>
-						<option value="very-active">{t.nutrition_activity_very_active}</option>
-					</select>
+			<div class="manage-settings-row nutrition-number-grid nutrition-number-grid-three">
+				<label class="nutrition-number-field">
+					<span class="manage-settings-label">{t.nutrition_age}</span>
+					<input type="text" inputmode="numeric" value={age} onfocus={selectValue}
+						oninput={(event) => (age = digitsOnly(event.currentTarget.value))}
+						class="nutrition-number-input" />
 				</label>
+				<label class="nutrition-number-field">
+					<span class="manage-settings-label">{t.nutrition_height_cm}</span>
+					<input type="text" inputmode="numeric" value={height} onfocus={selectValue}
+						oninput={(event) => (height = digitsOnly(event.currentTarget.value))}
+						class="nutrition-number-input" />
+				</label>
+				<label class="nutrition-number-field">
+					<span class="manage-settings-label">{t.nutrition_weight_kg}</span>
+					<input type="text" inputmode="decimal" value={weight} onfocus={selectValue}
+						oninput={(event) => (weight = decimalOnly(event.currentTarget.value))}
+						class="nutrition-number-input" />
+				</label>
+			</div>
 
-				<div class="text-xs mb-3" style="color: var(--color-on-surface-variant); min-height: 1.25rem">
-					{#if calculated}
-						{t.nutrition_estimated_tdee}: <span class="font-semibold tabular-nums" style="color: #FB923C">{calculated.tdee} kcal</span> · BMR {calculated.bmr} kcal
-					{:else}
-						{t.nutrition_calc_need_inputs}
-					{/if}
+			<label class="manage-settings-row nutrition-choice-row">
+				<span class="manage-settings-label">{t.nutrition_activity}</span>
+				<select bind:value={activity} class="nutrition-select nutrition-activity-select">
+					<option value="sedentary">{t.nutrition_activity_sedentary}</option>
+					<option value="light">{t.nutrition_activity_light}</option>
+					<option value="moderate">{t.nutrition_activity_moderate}</option>
+					<option value="active">{t.nutrition_activity_active}</option>
+					<option value="very-active">{t.nutrition_activity_very_active}</option>
+				</select>
+			</label>
+
+			<div class="manage-settings-row nutrition-estimate-row">
+				<span class="manage-settings-label">{t.nutrition_estimated_tdee}</span>
+				{#if calculated}
+					<span class="nutrition-estimate-values">
+						<strong>{calculated.tdee} kcal</strong>
+						<small>BMR {calculated.bmr} kcal</small>
+					</span>
+				{:else}
+					<span class="nutrition-estimate-empty">{t.nutrition_calc_need_inputs}</span>
+				{/if}
+			</div>
+			{#if calculated}
+				<div class="nutrition-apply-row">
+					<button type="button" onclick={applyCalculatedToFields} class="nutrition-apply-estimate">
+						{t.nutrition_apply_estimate}
+					</button>
 				</div>
+			{/if}
+				</section>
+			</div>
 
-		<div class="h-px mb-3" style="background-color: var(--bubble-interactive-border)"></div>
+			<div>
+				<span class="manage-section-title">{t.nutrition_targets_section}</span>
+				<section class="manage-settings-surface">
+			<label class="manage-settings-row nutrition-choice-row">
+				<span class="manage-settings-label">{t.nutrition_daily_kcal}</span>
+				<input type="text" inputmode="numeric" value={kcal} placeholder="2000" onfocus={selectValue}
+					oninput={(event) => (kcal = digitsOnly(event.currentTarget.value))}
+					class="nutrition-inline-input" />
+			</label>
 
-		<!-- Tagesziel: kcal + Makros (werden vom Rechner befüllt, manuell überschreibbar) -->
-		<label class="block mb-3">
-			<span class="text-xs uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.nutrition_daily_kcal}</span>
-			<input type="text" inputmode="numeric" value={kcal}
-			       oninput={(e) => (kcal = digitsOnly((e.target as HTMLInputElement).value))}
-			       placeholder="2000"
-		       class="manage-input mt-1" />
-		</label>
+			<div class="manage-settings-row nutrition-number-grid">
+				<label class="nutrition-number-field">
+					<span class="manage-settings-label">{t.nutrition_protein_g}</span>
+					<input type="text" inputmode="numeric" value={protein} onfocus={selectValue}
+						oninput={(event) => (protein = digitsOnly(event.currentTarget.value))}
+						class="nutrition-number-input" />
+				</label>
+				<label class="nutrition-number-field">
+					<span class="manage-settings-label">{t.nutrition_fat_g}</span>
+					<input type="text" inputmode="numeric" value={fat} onfocus={selectValue}
+						oninput={(event) => (fat = digitsOnly(event.currentTarget.value))}
+						class="nutrition-number-input" />
+				</label>
+			</div>
 
-		<!-- Makros (optional) -->
-		<div class="text-xs uppercase tracking-wide mb-2" style="color: var(--color-on-surface-variant)">
-			{t.nutrition_protein} · {t.nutrition_fat} · {t.nutrition_carbs} · {t.nutrition_fiber}
-		</div>
-		<div class="grid grid-cols-4 gap-2">
-			<label class="block">
-				<span class="text-[11px]" style="color: var(--color-on-surface-variant)">{t.nutrition_protein_g}</span>
-				<input type="text" inputmode="numeric" value={protein}
-				       oninput={(e) => (protein = digitsOnly((e.target as HTMLInputElement).value))}
-				       class="manage-input mt-1 !px-2" />
-			</label>
-			<label class="block">
-				<span class="text-[11px]" style="color: var(--color-on-surface-variant)">{t.nutrition_fat_g}</span>
-				<input type="text" inputmode="numeric" value={fat}
-				       oninput={(e) => (fat = digitsOnly((e.target as HTMLInputElement).value))}
-				       class="manage-input mt-1 !px-2" />
-			</label>
-			<label class="block">
-				<span class="text-[11px]" style="color: var(--color-on-surface-variant)">{t.nutrition_carbs_g}</span>
-				<input type="text" inputmode="numeric" value={carbs}
-				       oninput={(e) => (carbs = digitsOnly((e.target as HTMLInputElement).value))}
-				       class="manage-input mt-1 !px-2" />
-			</label>
-			<label class="block">
-				<span class="text-[11px]" style="color: var(--color-on-surface-variant)">{t.nutrition_fiber_g}</span>
-				<input type="text" inputmode="numeric" value={fiber}
-				       oninput={(e) => (fiber = digitsOnly((e.target as HTMLInputElement).value))}
-				       class="manage-input mt-1 !px-2" />
-			</label>
-		</div>
-			</section>
+			<div class="manage-settings-row nutrition-number-grid">
+				<label class="nutrition-number-field">
+					<span class="manage-settings-label">{t.nutrition_carbs_g}</span>
+					<input type="text" inputmode="numeric" value={carbs} onfocus={selectValue}
+						oninput={(event) => (carbs = digitsOnly(event.currentTarget.value))}
+						class="nutrition-number-input" />
+				</label>
+				<label class="nutrition-number-field">
+					<span class="manage-settings-label">{t.nutrition_fiber_g}</span>
+					<input type="text" inputmode="numeric" value={fiber} onfocus={selectValue}
+						oninput={(event) => (fiber = digitsOnly(event.currentTarget.value))}
+						class="nutrition-number-input" />
+				</label>
+			</div>
+				</section>
+			</div>
 		</div>
 	{/snippet}
 	{#snippet footer()}
@@ -289,3 +264,120 @@
 		<button type="button" onclick={save} disabled={saving} class="manage-primary disabled:opacity-40">{saving ? '…' : t.nutrition_save}</button>
 	{/snippet}
 </ManageSheetShell>
+
+<style>
+	.nutrition-intro {
+		min-height: 38px;
+		padding: 9px 12px;
+		color: var(--color-on-surface-variant);
+		font-size: 12px;
+		font-weight: 550;
+		line-height: 1.35;
+	}
+
+	.nutrition-choice-row,
+	.nutrition-estimate-row {
+		display: grid;
+		grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+		align-items: center;
+		gap: 12px;
+	}
+
+	.nutrition-select,
+	.nutrition-inline-input,
+	.nutrition-number-input {
+		min-width: 0;
+		height: 36px;
+		padding: 0;
+		border: 0;
+		outline: 0;
+		background: transparent;
+		color: #FB923C;
+		font-size: 16px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.nutrition-select {
+		max-width: 100%;
+		appearance: none;
+		text-align: right;
+		text-align-last: right;
+	}
+
+	.nutrition-activity-select {
+		width: 100%;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.nutrition-inline-input {
+		width: 100%;
+		text-align: right;
+	}
+
+	.nutrition-number-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		align-items: center;
+		gap: 20px;
+		padding-block: 6px;
+	}
+
+	.nutrition-number-grid-three {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.nutrition-number-field {
+		display: grid;
+		min-width: 0;
+		gap: 1px;
+	}
+
+	.nutrition-number-input {
+		width: 100%;
+	}
+
+	.nutrition-estimate-values {
+		display: grid;
+		justify-items: end;
+		line-height: 1.15;
+	}
+
+	.nutrition-estimate-values strong {
+		color: #FB923C;
+		font-size: 16px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.nutrition-estimate-values small,
+	.nutrition-estimate-empty {
+		color: var(--color-on-surface-variant);
+		font-size: 11px;
+		font-weight: 550;
+	}
+
+	.nutrition-estimate-empty {
+		text-align: right;
+	}
+
+	.nutrition-apply-row {
+		display: flex;
+		justify-content: flex-end;
+		padding: 7px 9px 9px;
+		border-top: 1px solid var(--bubble-container-border);
+	}
+
+	.nutrition-apply-estimate {
+		min-height: 36px;
+		padding-inline: 14px;
+		border: 1px solid color-mix(in srgb, #FB923C 52%, transparent);
+		border-radius: 12px;
+		color: #FB923C;
+		font-size: 12px;
+		font-weight: 650;
+		touch-action: manipulation;
+	}
+</style>

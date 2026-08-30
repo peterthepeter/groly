@@ -373,6 +373,7 @@ export const meditationLogs = sqliteTable('meditation_logs', {
 export const meditationReminderSchedules = sqliteTable('meditation_reminder_schedules', {
 	id: text('id').primaryKey(),
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	days: text('days').notNull().default('[0,1,2,3,4,5,6]'), // JSON-Array (0=So,1=Mo,...,6=Sa)
 	time: text('time').notNull(), // "HH:MM"
 	onlyIfNotMeditated: integer('only_if_not_meditated', { mode: 'boolean' }).notNull().default(true),
 	active: integer('active', { mode: 'boolean' }).notNull().default(true),

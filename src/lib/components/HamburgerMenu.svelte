@@ -2,7 +2,6 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { t, currentLang } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
 	import InfoModal from '$lib/components/InfoModal.svelte';
 	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
@@ -75,50 +74,7 @@
 	<nav class="px-4 pb-4 space-y-3">
 		<!-- Main nav group -->
 		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-			<button
-				onclick={() => navigate('/')}
-				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
-				style="height: 44px; background-color: {$page.url.pathname === '/' ? 'rgba(255,255,255,0.06)' : 'transparent'}"
-			>
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-					<line x1="3" y1="6" x2="21" y2="6"/>
-					<path d="M16 10a4 4 0 0 1-8 0"/>
-				</svg>
-				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_lists}</span>
-			</button>
-
-			{#if userSettings.showSupplementTracker}
-				<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
-				<button
-					onclick={() => navigate('/tracker')}
-					class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
-					style="height: 44px; background-color: {$page.url.pathname.startsWith('/tracker') ? 'rgba(255,255,255,0.06)' : 'transparent'}"
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
-						<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
-					</svg>
-					<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_supplements}</span>
-				</button>
-			{/if}
-
-			{#if userSettings.showRecipes}
-				<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
-				<button
-					onclick={() => navigate('/rezepte')}
-					class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
-					style="height: 44px; background-color: {$page.url.pathname.startsWith('/rezepte') ? 'rgba(255,255,255,0.06)' : 'transparent'}"
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
-					</svg>
-					<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.nav_recipes}</span>
-				</button>
-			{/if}
-
 			{#if user?.role === 'admin'}
-				<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
 				<button
 					onclick={() => navigate('/einstellungen/admin')}
 					class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
@@ -132,9 +88,9 @@
 					</svg>
 					<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.admin_nav_label}</span>
 				</button>
+				<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
 			{/if}
 
-			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
 			<button
 				onclick={() => navigate('/einstellungen')}
 				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
@@ -206,7 +162,7 @@
 					<line x1="12" y1="8" x2="12" y2="8"/>
 					<path d="M11 12h1v4h1"/>
 				</svg>
-				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'About' : 'Über Groly'}</span>
+				<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'About / Support' : 'Über Groly / Support'}</span>
 			</button>
 		</div>
 

@@ -1,0 +1,1 @@
+ALTER TABLE `meditation_reminder_schedules` ADD `days` text DEFAULT '[0,1,2,3,4,5,6]' NOT NULL;

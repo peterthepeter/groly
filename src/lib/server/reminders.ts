@@ -173,10 +173,12 @@ async function checkWaterReminders() {
 async function checkMeditationReminders() {
 	const now = new Date();
 	const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+	const todayDow = now.getDay(); // 0=So,1=Mo,...,6=Sa
 
 	const activeSchedules = db
 		.select({
 			time: meditationReminderSchedules.time,
+			days: meditationReminderSchedules.days,
 			onlyIfNotMeditated: meditationReminderSchedules.onlyIfNotMeditated,
 			userId: meditationReminderSchedules.userId,
 			userSettings: users.settings
@@ -192,6 +194,8 @@ async function checkMeditationReminders() {
 		activeSchedules.map(async (s) => {
 			try {
 				if (s.time !== currentTime) return;
+				const days: number[] = JSON.parse(s.days);
+				if (!days.includes(todayDow)) return;
 				const settings = s.userSettings ? JSON.parse(s.userSettings) : {};
 				if (!settings?.meditationTrackerEnabled) return;
 
