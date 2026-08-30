@@ -50,7 +50,7 @@
 	}: {
 		open: boolean;
 		supplements: Supplement[];
-		onlogged: (supplementLog?: { supplementId: string; amount: number }) => void;
+		onlogged: (supplementLog?: { id: string; clientLogId: string; supplementId: string; amount: number; loggedAt: number; note: string | null }) => void;
 		waterEnabled?: boolean;
 		waterGoalMl?: number;
 		waterTotalMl?: number;
@@ -335,15 +335,18 @@
 		const note = notes[supplementId]?.trim() || null;
 		const clientLogId = generateClientId();
 
-		// Erst dauerhaft in den Ausgangskorb (überlebt App-Kill/iOS-Suspend), dann
-		// stößt logSupplementOffline den Server-Sync an (idempotent über clientLogId).
-		await logSupplementOffline({ supplementId, amount, loggedAt, note, clientLogId });
+		try {
+			// Erst dauerhaft in den Ausgangskorb (überlebt App-Kill/iOS-Suspend), dann
+			// stößt logSupplementOffline den Server-Sync an (idempotent über clientLogId).
+			await logSupplementOffline({ supplementId, amount, loggedAt, note, clientLogId });
 
-		logCounts = { ...logCounts, [supplementId]: (logCounts[supplementId] ?? 0) + 1 };
-		done = { ...done, [supplementId]: true };
-		setTimeout(() => { done = { ...done, [supplementId]: false }; }, 2500);
-		onlogged({ supplementId, amount });
-		saving = { ...saving, [supplementId]: false };
+			logCounts = { ...logCounts, [supplementId]: (logCounts[supplementId] ?? 0) + 1 };
+			done = { ...done, [supplementId]: true };
+			setTimeout(() => { done = { ...done, [supplementId]: false }; }, 2500);
+			onlogged({ id: clientLogId, clientLogId, supplementId, amount, loggedAt, note });
+		} finally {
+			saving = { ...saving, [supplementId]: false };
+		}
 	}
 
 	function abbreviateUnit(unit: string): string {

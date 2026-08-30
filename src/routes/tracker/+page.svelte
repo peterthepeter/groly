@@ -5,7 +5,7 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import { t, currentLang } from '$lib/i18n.svelte';
-	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs } from '$lib/sync/manager';
+	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs, onSupplementLogSynced } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { formatTime } from '$lib/dates';
 	import { userSettings } from '$lib/userSettings.svelte';
@@ -40,7 +40,7 @@
 		stockQuantity: number | null; defaultAmount: number;
 		nutrients: Nutrient[];
 	};
-	type Log = { id: string; supplementId: string; amount: number; loggedAt: number; note?: string | null };
+	type Log = { id: string; supplementId: string; amount: number; loggedAt: number; note?: string | null; clientLogId?: string | null };
 	type NutrientStat = { total: number; unit: string; name: string };
 	type SupplementStat = { name: string; unit: string; total: number };
 
@@ -94,6 +94,8 @@
 	);
 	let historyCaffeineLogs = $state<CaffeineLog[]>([]);
 	let loading = $state(true);
+	let supplementsRequestId = 0;
+	let todayLogsRequestId = 0;
 	const activeTab = $derived($page.url.searchParams.get('tab') === 'history' ? 'history' : 'today');
 
 	const toLocalDateStr = toLocalDateKey;
@@ -272,7 +274,9 @@
 	}
 
 	function todayEnd(): number {
-		return todayStart() + 86_400_000 - 1;
+		const next = new Date(todayStart());
+		next.setDate(next.getDate() + 1);
+		return next.getTime() - 1;
 	}
 
 	function logsForSupplement(supplementId: string): Log[] {
@@ -290,14 +294,19 @@
 	}
 
 	async function loadSupplements() {
+		const requestId = ++supplementsRequestId;
+		const requestStartedAt = Date.now();
 		try {
 			const res = await fetch('/api/supplements');
 			if (!res.ok) throw new Error();
 			const data = await res.json() as { supplements: Supplement[] };
-			const merged = await mergePendingSupplementStock(data.supplements);
+			const merged = await mergePendingSupplementStock(data.supplements, requestStartedAt);
+			if (requestId !== supplementsRequestId) return;
+			await cacheSupplements(merged);
+			if (requestId !== supplementsRequestId) return;
 			supplements = merged;
-			cacheSupplements(merged).catch(() => {});
 		} catch {
+			if (requestId !== supplementsRequestId) return;
 			supplements = (await getOfflineSupplements()) as Supplement[];
 		}
 	}
@@ -311,6 +320,8 @@
 	}
 
 	async function loadTodayLogs() {
+		const requestId = ++todayLogsRequestId;
+		const requestStartedAt = Date.now();
 		const from = todayStart();
 		const to = todayEnd();
 		try {
@@ -318,23 +329,12 @@
 			if (!res.ok) throw new Error();
 			const data = await res.json();
 			const serverLogs = data.logs as Log[];
-			cacheTodayLogs(serverLogs).catch(() => {});
-			// Noch-nicht-synchronisierte optimistische Einträge mergen (Queue-Drain
-			// kann nach onlogged() noch einige Sekunden laufen — ohne Merge würde
-			// das frisch geloggte Item kurz aus der UI verschwinden).
-			const pending = await getPendingLogs('create_supplement_log', from, to);
-			const seen = new Set(serverLogs.map(l => (l as { clientLogId?: string }).clientLogId).filter(Boolean));
-			const extra: Log[] = pending
-				.filter(p => !seen.has(p.clientLogId as string))
-				.map(p => ({
-					id: p.clientLogId as string,
-					supplementId: p.supplementId as string,
-					amount: p.amount as number,
-					loggedAt: p.loggedAt as number,
-					note: (p.note as string | null) ?? null
-				}));
-			todayLogs = [...serverLogs, ...extra];
+			if (requestId !== todayLogsRequestId) return;
+			const merged = await cacheTodayLogs(serverLogs, requestStartedAt);
+			if (requestId !== todayLogsRequestId) return;
+			todayLogs = merged;
 		} catch {
+			if (requestId !== todayLogsRequestId) return;
 			todayLogs = await getOfflineTodayLogs();
 		}
 	}
@@ -983,6 +983,18 @@
 	});
 
 	onMount(() => {
+		const unsubscribeSupplementSync = onSupplementLogSynced(({ log, stockQuantity }) => {
+			supplements = supplements.map(supplement =>
+				supplement.id === log.supplementId ? { ...supplement, stockQuantity } : supplement
+			);
+			const clientLogId = log.clientLogId;
+			const belongsToToday = log.loggedAt >= todayStart() && log.loggedAt <= todayEnd();
+			const withoutLocal = todayLogs.filter(entry =>
+				entry.id !== log.id && (!clientLogId || (entry.id !== clientLogId && entry.clientLogId !== clientLogId))
+			);
+			if (belongsToToday) todayLogs = [...withoutLocal, log].sort((a, b) => a.loggedAt - b.loggedAt);
+			if (activeTab === 'history') void loadHistory();
+		});
 		Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadTodayNutrition()]).then(() => { loading = false; });
 		handleActionParam();
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
@@ -999,6 +1011,7 @@
 		window.addEventListener('resize', onResize);
 
 		return () => {
+			unsubscribeSupplementSync();
 			clearInterval(clockInterval);
 			document.removeEventListener('visibilitychange', onVisibilityChange);
 			window.removeEventListener('resize', onResize);
@@ -1459,8 +1472,17 @@
 	onstartmeditation={startMeditation}
 	onrateMood={() => { quickLogOpen = false; moodEntryOpen = true; }}
 	onlogged={(supplementLog) => {
-		if (supplementLog) applySupplementLogToStock(supplementLog.supplementId, supplementLog.amount);
-		Promise.all([loadTodayLogs(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]);
+		if (supplementLog) {
+			applySupplementLogToStock(supplementLog.supplementId, supplementLog.amount);
+			if (supplementLog.loggedAt >= todayStart() && supplementLog.loggedAt <= todayEnd()) {
+				const withoutSameLog = todayLogs.filter(log =>
+					log.id !== supplementLog.id && log.clientLogId !== supplementLog.clientLogId
+				);
+				todayLogs = [...withoutSameLog, supplementLog].sort((a, b) => a.loggedAt - b.loggedAt);
+			}
+		} else {
+			Promise.all([loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs()]);
+		}
 		if (activeTab === 'history') loadHistory();
 	}}
 	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}

@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.6.2',
+		de: [
+			'Zuverlässigere Tracker-Verarbeitung für Supplement-Logs und Bestände'
+		],
+		en: [
+			'More reliable tracker processing for supplement logs and stock'
+		]
+	},
+	{
 		version: '0.9.5-beta.6.1',
 		de: [
 			'Tracker: Reminder-Zuordnung und 45-Minuten-Fenster korrigiert'

@@ -42,11 +42,23 @@ export const POST: RequestHandler = async (event) => {
 		// Idempotenz: gleicher clientLogId vom selben User → vorhandenen Log zurückgeben
 		if (typeof clientLogId === 'string' && clientLogId.length > 0) {
 			const existing = db
-				.select({ id: supplementLogs.id })
+				.select()
 				.from(supplementLogs)
 				.where(and(eq(supplementLogs.userId, user!.id), eq(supplementLogs.clientLogId, clientLogId)))
 				.get();
-			if (existing) return json({ id: existing.id, deduped: true }, { status: 200 });
+			if (existing) {
+				const existingSupplement = db
+					.select({ stockQuantity: supplements.stockQuantity })
+					.from(supplements)
+					.where(and(eq(supplements.id, existing.supplementId), eq(supplements.userId, user!.id)))
+					.get();
+				return json({
+					id: existing.id,
+					log: existing,
+					stockQuantity: existingSupplement?.stockQuantity ?? null,
+					deduped: true
+				}, { status: 200 });
+			}
 		}
 
 		// Verify supplement belongs to current user
@@ -82,7 +94,21 @@ export const POST: RequestHandler = async (event) => {
 				.run();
 		});
 
-		return json({ id }, { status: 201 });
+		return json({
+			id,
+			log: {
+				id,
+				userId: user!.id,
+				supplementId,
+				amount,
+				loggedAt: loggedAt ?? now,
+				note: (typeof note === 'string' && note.trim()) ? note.trim() : null,
+				clientLogId: (typeof clientLogId === 'string' && clientLogId.length > 0) ? clientLogId : null,
+				stockDeducted: stock.stockDeducted,
+				createdAt: now
+			},
+			stockQuantity: stock.stockQuantity
+		}, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/supplement-logs error:', e);
 		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });

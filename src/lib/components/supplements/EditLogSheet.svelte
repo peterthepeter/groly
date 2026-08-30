@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { t, currentLang } from '$lib/i18n.svelte';
 	import { displayUnit } from '$lib/units';
+	import { generateClientId, logSupplementOffline } from '$lib/sync/manager';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	type EditLogSheetType = {
@@ -96,15 +97,12 @@
 			const [hours, minutes] = createTime.split(':').map(Number);
 			const date = new Date(createDate + 'T00:00:00');
 			date.setHours(hours, minutes, 0, 0);
-			await fetch('/api/supplement-logs', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					supplementId: createSupplement.id,
-					amount: createAmount,
-					loggedAt: date.getTime(),
-					note: createNote.trim() || null
-				})
+			await logSupplementOffline({
+				supplementId: createSupplement.id,
+				amount: createAmount,
+				loggedAt: date.getTime(),
+				note: createNote.trim() || null,
+				clientLogId: generateClientId()
 			});
 			createSheet = null;
 			onreload();

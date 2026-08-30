@@ -18,6 +18,91 @@ let drainPromise: Promise<void> | null = null;
 let drainingUserId: string | null = null;
 let drainAgain = false;
 
+type SupplementLogSyncResult = {
+	log: OfflineSupplementLog;
+	stockQuantity: number | null;
+};
+
+type SupplementLogSyncHandler = (result: SupplementLogSyncResult) => void;
+const supplementLogSyncHandlers = new Set<SupplementLogSyncHandler>();
+
+export function onSupplementLogSynced(handler: SupplementLogSyncHandler): () => void {
+	supplementLogSyncHandlers.add(handler);
+	return () => supplementLogSyncHandlers.delete(handler);
+}
+
+function readSupplementLogSyncResult(value: unknown): SupplementLogSyncResult | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const body = value as Record<string, unknown>;
+	if (typeof body.log !== 'object' || body.log === null) return null;
+	const log = body.log as Record<string, unknown>;
+	if (
+		typeof log.id !== 'string' ||
+		typeof log.supplementId !== 'string' ||
+		typeof log.amount !== 'number' ||
+		typeof log.loggedAt !== 'number' ||
+		(body.stockQuantity !== null && typeof body.stockQuantity !== 'number')
+	) return null;
+	return {
+		log: {
+			id: log.id,
+			userId: typeof log.userId === 'string' ? log.userId : activeUserId ?? undefined,
+			supplementId: log.supplementId,
+			amount: log.amount,
+			loggedAt: log.loggedAt,
+			note: typeof log.note === 'string' ? log.note : null,
+			clientLogId: typeof log.clientLogId === 'string' ? log.clientLogId : null,
+			stockDeducted: typeof log.stockDeducted === 'number' ? log.stockDeducted : null,
+			createdAt: typeof log.createdAt === 'number' ? log.createdAt : undefined
+		},
+		stockQuantity: body.stockQuantity as number | null
+	};
+}
+
+async function confirmSupplementLogMutation(
+	mutation: PendingMutation,
+	result: SupplementLogSyncResult,
+	userId: string
+): Promise<SupplementLogSyncResult> {
+	const clientLogId = typeof mutation.payload.clientLogId === 'string'
+		? mutation.payload.clientLogId
+		: null;
+	let effectiveStock = result.stockQuantity;
+	await offlineDb.transaction(
+		'rw',
+		offlineDb.pendingMutations,
+		offlineDb.supplementLogs,
+		offlineDb.supplements,
+		async () => {
+			const laterPendingAmount = (await offlineDb.pendingMutations
+				.where('type')
+				.equals('create_supplement_log')
+				.toArray())
+				.filter(entry =>
+					entry.id !== mutation.id &&
+					(entry.userId === undefined || entry.userId === userId) &&
+					entry.payload.supplementId === result.log.supplementId
+				)
+				.reduce((sum, entry) => sum + (typeof entry.payload.amount === 'number' ? entry.payload.amount : 0), 0);
+			effectiveStock = result.stockQuantity == null
+				? null
+				: Math.max(0, result.stockQuantity - laterPendingAmount);
+			if (clientLogId && clientLogId !== result.log.id) {
+				await offlineDb.supplementLogs.delete(clientLogId);
+			}
+			await offlineDb.supplementLogs.put({ ...result.log, userId, localConfirmedAt: Date.now() });
+			await offlineDb.supplements.update(result.log.supplementId, {
+				stockQuantity: effectiveStock,
+				localStockUpdatedAt: Date.now()
+			});
+			if (mutation.id !== undefined) await offlineDb.pendingMutations.delete(mutation.id);
+		}
+	);
+	const effectiveResult = { ...result, stockQuantity: effectiveStock };
+	for (const handler of supplementLogSyncHandlers) handler(effectiveResult);
+	return effectiveResult;
+}
+
 export function generateClientId(): string {
 	const bytes = new Uint8Array(12);
 	crypto.getRandomValues(bytes);
@@ -234,7 +319,14 @@ async function runPendingMutations(userId: string) {
 					await apiFetch(`/api/items/${mutation.payload.id}`, { method: 'DELETE' });
 					break;
 				case 'create_supplement_log':
-					await apiFetch('/api/supplement-logs', { method: 'POST', body: JSON.stringify(mutation.payload) });
+					{
+						const response = await apiFetch('/api/supplement-logs', { method: 'POST', body: JSON.stringify(mutation.payload) });
+						const result = readSupplementLogSyncResult(response);
+						if (result) {
+							mutationManagesItsOwnQueueEntry = true;
+							await confirmSupplementLogMutation(mutation, result, userId);
+						}
+					}
 					break;
 				case 'delete_supplement_log':
 					await apiFetch(`/api/supplement-logs/${mutation.payload.id}`, { method: 'DELETE' });
@@ -415,6 +507,7 @@ export async function logSupplementOffline(args: { supplementId: string; amount:
 		async () => {
 			await offlineDb.supplementLogs.put({
 				id: args.clientLogId,
+				...(activeUserId ? { userId: activeUserId } : {}),
 				supplementId: args.supplementId,
 				amount: args.amount,
 				loggedAt: args.loggedAt,
@@ -423,8 +516,11 @@ export async function logSupplementOffline(args: { supplementId: string; amount:
 			});
 			const supplement = await offlineDb.supplements.get(args.supplementId);
 			if (supplement?.stockQuantity != null) {
+				const stockDeducted = Math.min(Math.max(0, supplement.stockQuantity), args.amount);
+				await offlineDb.supplementLogs.update(args.clientLogId, { stockDeducted });
 				await offlineDb.supplements.update(args.supplementId, {
-					stockQuantity: Math.max(0, supplement.stockQuantity - args.amount)
+					stockQuantity: Math.max(0, supplement.stockQuantity - args.amount),
+					localStockUpdatedAt: Date.now()
 				});
 			}
 			await offlineDb.pendingMutations.add({
@@ -754,14 +850,19 @@ export async function deleteOfflineList(id: string) {
 // ── Supplement-Cache ───────────────────────────────────────────────────────────
 
 export async function cacheSupplements(supplements: OfflineSupplement[]) {
-	await offlineDb.supplements.bulkPut(supplements);
+	const rows = supplements.map(supplement => ({
+		...supplement,
+		...(activeUserId ? { userId: activeUserId } : {})
+	}));
+	await offlineDb.supplements.bulkPut(rows);
 }
 
-// A server read can race with an unsynced local log and still return the old
-// stock. For supplements with pending logs, the IndexedDB value is the
-// authoritative optimistic value until the queue has been drained.
+// A server read can race with a local log and still return the old stock. The
+// IndexedDB value wins while a log is pending and also when the local stock was
+// confirmed after this particular GET had already started.
 export async function mergePendingSupplementStock<T extends { id: string; stockQuantity: number | null }>(
-	serverSupplements: T[]
+	serverSupplements: T[],
+	requestStartedAt = 0
 ): Promise<T[]> {
 	const pending = (await offlineDb.pendingMutations
 		.where('type')
@@ -773,36 +874,53 @@ export async function mergePendingSupplementStock<T extends { id: string; stockQ
 			.map(mutation => mutation.payload.supplementId)
 			.filter((id): id is string => typeof id === 'string')
 	);
-	if (pendingIds.size === 0) return serverSupplements;
-
-	const cachedRows = await offlineDb.supplements.bulkGet([...pendingIds]);
+	const cachedRows = await offlineDb.supplements.bulkGet(serverSupplements.map(supplement => supplement.id));
 	const cachedById = new Map(
 		cachedRows
-			.filter((row): row is OfflineSupplement => row !== undefined)
+			.filter((row): row is OfflineSupplement =>
+				row !== undefined && (!activeUserId || row.userId === undefined || row.userId === activeUserId)
+			)
 			.map(row => [row.id, row])
 	);
 	return serverSupplements.map(supplement => {
 		const cached = cachedById.get(supplement.id);
-		return cached ? { ...supplement, stockQuantity: cached.stockQuantity } : supplement;
+		const localStockUpdatedAt = cached?.localStockUpdatedAt ?? 0;
+		const localWriteWonRace = localStockUpdatedAt > 0 && localStockUpdatedAt >= requestStartedAt;
+		return cached && (pendingIds.has(supplement.id) || localWriteWonRace)
+			? { ...supplement, stockQuantity: cached.stockQuantity }
+			: supplement;
 	});
 }
 
 export async function getOfflineSupplements(): Promise<OfflineSupplement[]> {
-	return offlineDb.supplements.toArray();
+	const rows = await offlineDb.supplements.toArray();
+	return activeUserId ? rows.filter(row => row.userId === activeUserId) : [];
 }
 
-export async function cacheTodayLogs(logs: OfflineSupplementLog[]) {
-	// Skip clear() if there are unsynced supplement logs in the queue —
-	// clearing would drop optimistic entries that aren't on the server yet.
-	// They'll be flushed by processPendingMutations(); afterwards clear() is safe again.
-	const pendingCount = await offlineDb.pendingMutations
-		.where('type')
-		.equals('create_supplement_log')
-		.count();
-	if (pendingCount === 0) {
-		await offlineDb.supplementLogs.clear();
-	}
-	if (logs.length > 0) await offlineDb.supplementLogs.bulkPut(logs);
+export async function cacheTodayLogs(logs: OfflineSupplementLog[], requestStartedAt = 0): Promise<OfflineSupplementLog[]> {
+	if (!activeUserId) return logs;
+	const userId = activeUserId;
+	const d = new Date();
+	d.setHours(0, 0, 0, 0);
+	const from = d.getTime();
+	const next = new Date(d);
+	next.setDate(next.getDate() + 1);
+	const to = next.getTime() - 1;
+	return offlineDb.transaction('rw', offlineDb.supplementLogs, async () => {
+		const localRows = (await offlineDb.supplementLogs.where('loggedAt').between(from, to, true, true).toArray())
+			.filter(row => row.userId === userId);
+		const serverClientIds = new Set(logs.map(log => log.clientLogId).filter((id): id is string => typeof id === 'string'));
+		const preserved = localRows.filter(row => {
+			if (!row.clientLogId || serverClientIds.has(row.clientLogId)) return false;
+			const localConfirmedAt = row.localConfirmedAt ?? 0;
+			return row.id === row.clientLogId || (localConfirmedAt > 0 && localConfirmedAt >= requestStartedAt);
+		});
+		if (localRows.length > 0) await offlineDb.supplementLogs.bulkDelete(localRows.map(row => row.id));
+		const serverRows = logs.map(log => ({ ...log, userId }));
+		const merged = [...serverRows, ...preserved];
+		if (merged.length > 0) await offlineDb.supplementLogs.bulkPut(merged);
+		return merged.sort((a, b) => a.loggedAt - b.loggedAt);
+	});
 }
 
 export async function addOfflineLog(log: OfflineSupplementLog) {
@@ -813,8 +931,11 @@ export async function getOfflineTodayLogs(): Promise<OfflineSupplementLog[]> {
 	const d = new Date();
 	d.setHours(0, 0, 0, 0);
 	const start = d.getTime();
-	const end = start + 86_400_000 - 1;
-	return offlineDb.supplementLogs.where('loggedAt').between(start, end, true, true).toArray();
+	const next = new Date(d);
+	next.setDate(next.getDate() + 1);
+	const end = next.getTime() - 1;
+	const rows = await offlineDb.supplementLogs.where('loggedAt').between(start, end, true, true).toArray();
+	return activeUserId ? rows.filter(row => row.userId === activeUserId) : [];
 }
 
 // ── Rezept-Cache ───────────────────────────────────────────────────────────────
@@ -907,6 +1028,15 @@ export function initSync(userId: string | null = null) {
 			if (c > 0) drainPendingMutations();
 		});
 	});
+	// Wenn nur der Server kurz nicht erreichbar war, feuert der Browser kein neues
+	// `online`-Event. Solange die App sichtbar ist, werden liegengebliebene Writes
+	// deshalb regelmäßig erneut versucht.
+	setInterval(() => {
+		if (document.visibilityState !== 'visible' || !networkStore.online) return;
+		countActivePendingMutations().then((count) => {
+			if (count > 0) void drainPendingMutations();
+		});
+	}, 30_000);
 	// Initial prüfen und ggf. sofort abarbeiten
 	countActivePendingMutations().then((c) => {
 		networkStore.setPending(c);

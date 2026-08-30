@@ -61,6 +61,7 @@ interface OfflineUserSettings {
 
 interface OfflineSupplement {
 	id: string;
+	userId?: string;
 	name: string;
 	unit: string;
 	brand: string | null;
@@ -71,15 +72,20 @@ interface OfflineSupplement {
 	nutrients: unknown[];
 	sortOrder: number;
 	updatedAt: number;
+	localStockUpdatedAt?: number;
 }
 
 interface OfflineSupplementLog {
 	id: string;
+	userId?: string;
 	supplementId: string;
 	amount: number;
 	loggedAt: number;
 	note?: string | null;
 	clientLogId?: string | null;
+	stockDeducted?: number | null;
+	createdAt?: number;
+	localConfirmedAt?: number;
 }
 
 interface OfflineRecipe {
