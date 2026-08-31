@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.6.3',
+		de: [
+			'Einkaufslisten-Eingabe auf iOS korrigiert'
+		],
+		en: [
+			'Fixed shopping list input on iOS'
+		]
+	},
+	{
 		version: '0.9.5-beta.6.2',
 		de: [
 			'Zuverlässigere Tracker-Verarbeitung für Supplement-Logs und Bestände'

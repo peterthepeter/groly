@@ -187,8 +187,8 @@
 	.reminder-action span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.reminder-action svg:last-child { flex: none; color: var(--color-on-surface-variant); transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 	.tracker-section-history { border-top: 1px solid var(--bubble-container-border); }
-	.tracker-reminder-list { display: flex; flex-direction: column; gap: 2px; padding: 8px 16px 10px; border-top: 1px solid var(--bubble-container-border); }
-	.tracker-reminder-list button { display: grid; grid-template-columns: 16px auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 30px; text-align: left; }
+	.tracker-reminder-list { display: flex; flex-direction: column; gap: 0; padding: 8px 16px 10px; border-top: 1px solid var(--bubble-container-border); }
+	.tracker-reminder-list button { display: grid; grid-template-columns: 16px auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 27px; text-align: left; }
 	.tracker-reminder-list button.done { opacity: .5; }
 	.tracker-reminder-check { display: flex; width: 16px; height: 16px; align-items: center; justify-content: center; border: 1.5px solid var(--color-primary); border-radius: 999px; }
 	.done .tracker-reminder-check { border-color: var(--color-on-surface-variant); background: var(--color-on-surface-variant); }
