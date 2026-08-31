@@ -183,10 +183,8 @@
 	id="ios-keyboard-bridge"
 	type="text"
 	aria-hidden="true"
+	readonly
 	tabindex="-1"
-	autocomplete="off"
-	autocapitalize="none"
-	spellcheck="false"
 	style="position:fixed; left:-9999px; top:0; opacity:0; pointer-events:none; width:1px; height:1px;"
 />
 

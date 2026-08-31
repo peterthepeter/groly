@@ -22,13 +22,11 @@
 	}
 
 	// ── Touch handlers (iOS) ─────────────────────────────────────────────────
-	// e.preventDefault() on touchstart is the ONLY reliable way to stop iOS
-	// from showing the magnifying-glass loupe. It also prevents the browser
-	// from synthesising a click event afterwards, so we fire onTap() manually
-	// from touchend when it was a short press.
+	// Let short taps complete as native clicks. iOS only opens the software
+	// keyboard reliably when the input focus still belongs to that click.
+	// Long presses keep using touchend so releasing over a shortcut can select it.
 
-	function handleTouchStart(e: TouchEvent) {
-		e.preventDefault();
+	function handleTouchStart() {
 		startPress();
 	}
 
@@ -37,14 +35,12 @@
 	}
 
 	function handleTouchEnd(e: TouchEvent) {
-		// Prevent the browser from firing a synthesized pointer-path click after touchend.
-		// With touch-action: manipulation, this click fires immediately (no 300ms delay)
-		// and can land on sheet buttons that appear synchronously inside onTap().
-		e.preventDefault();
 		cancelPress();
 		if (longFired) {
+			e.preventDefault();
 			longFired = false;
 			suppressNextClick = true; // some browsers still synthesize a click after touchend
+			setTimeout(() => { suppressNextClick = false; }, 700);
 			// touchstart was on the FAB, so touchend always fires here — even when
 			// the finger moved to a shortcut button. Use elementFromPoint to find
 			// which element is under the finger, then navigate directly.
@@ -80,7 +76,6 @@
 			shortcutMenu.hide();
 			return;
 		}
-		onTap();
 	}
 
 	function handleTouchCancel() {
@@ -108,8 +103,8 @@
 		longFired = false;
 	}
 
-	// click only fires for mouse (not after touchstart.preventDefault on iOS/Android),
-	// but some browsers synthesize it anyway — suppressNextClick guards against that.
+	// Native click handles both mouse and short touch taps. Long-press touchend may
+	// still be followed by a synthesized click on some browsers, so suppress it.
 	function handleClick() {
 		if (suppressNextClick) { suppressNextClick = false; return; }
 		if (longFired) { longFired = false; return; }

@@ -121,10 +121,7 @@
 		editItem = null;
 		autoScannerOnOpen = false;
 		autoFavoritesOnOpen = false;
-		// Preserve the iOS keyboard gesture before mounting the real input. WebKit can
-		// otherwise ignore focus on an input that did not exist when the tap began,
-		// especially after a cold PWA start.
-		(document.getElementById('ios-keyboard-bridge') as HTMLInputElement | null)?.focus();
+		// Mount and focus the real input while the native click is still active.
 		flushSync(() => { addModalOpen = true; });
 		document.querySelector<HTMLInputElement>('[data-add-item-name]')?.focus({ preventScroll: true });
 	}

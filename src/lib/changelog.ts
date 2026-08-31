@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.5-beta.6.4',
+		de: [
+			'Eingabefeld der Einkaufsliste öffnet sich auf iOS jetzt zuverlässig'
+		],
+		en: [
+			'The shopping list input now opens reliably on iOS'
+		]
+	},
+	{
 		version: '0.9.5-beta.6.3',
 		de: [
 			'Einkaufslisten-Eingabe auf iOS korrigiert'
