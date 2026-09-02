@@ -2,20 +2,27 @@
 	import { t } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import ManageSheetShell from './ManageSheetShell.svelte';
+	import SupplementActiveToggle from './SupplementActiveToggle.svelte';
 	let { open = $bindable(false) }: { open: boolean } = $props();
 </script>
 
 {#if open}
-	<ManageSheetShell accent="#F472B6" title={t.mood_settings_title} onclose={() => open = false} showFooter={false}>
+	<ManageSheetShell accent="#F472B6" title={t.mood_settings_title} onclose={() => open = false}>
 		{#snippet body()}
 			<section class="manage-settings-surface">
-				<div class="manage-settings-row flex items-center gap-3">
-					<div class="flex-1 min-w-0"><p class="manage-settings-label">{t.mood_weekly_setting}</p><p class="manage-settings-hint">{t.mood_weekly_setting_desc}</p></div>
-					<button onclick={() => userSettings.moodWeeklyReviewEnabled = !userSettings.moodWeeklyReviewEnabled} class="shrink-0 w-10 h-5 rounded-full relative overflow-hidden transition-colors" style="background-color:{userSettings.moodWeeklyReviewEnabled ? '#F472B6' : 'var(--color-surface-container)'}" role="switch" aria-checked={userSettings.moodWeeklyReviewEnabled} aria-label={t.mood_weekly_setting}>
-						<span class="absolute top-0.5 left-0 h-4 w-4 rounded-full transition-transform" style="background:white;transform:translateX({userSettings.moodWeeklyReviewEnabled ? '1.25rem' : '0.125rem'})"></span>
-					</button>
+				<div class="manage-settings-row mood-toggle-row">
+					<div><strong>{t.mood_weekly_setting}</strong><span>{t.mood_weekly_setting_desc}</span></div>
+					<SupplementActiveToggle active={userSettings.moodWeeklyReviewEnabled} label={t.mood_weekly_setting} onclick={() => userSettings.moodWeeklyReviewEnabled = !userSettings.moodWeeklyReviewEnabled} accent="#F472B6" />
 				</div>
 			</section>
 		{/snippet}
+		{#snippet footer()}<button onclick={() => open = false} class="manage-primary col-span-2 active:opacity-70">{t.close}</button>{/snippet}
 	</ManageSheetShell>
 {/if}
+
+<style>
+	.mood-toggle-row { display: flex; align-items: center; gap: 12px; }
+	.mood-toggle-row > div { display: grid; min-width: 0; flex: 1; gap: 2px; }
+	.mood-toggle-row strong { color: var(--color-on-surface); font-size: 13px; font-weight: 600; line-height: 1.25; }
+	.mood-toggle-row span { color: var(--color-on-surface-variant); font-size: 11px; line-height: 1.35; }
+</style>
