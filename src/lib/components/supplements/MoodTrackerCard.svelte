@@ -54,6 +54,10 @@
 				<div class="today-tracker-status font-semibold" style="color: {moodLevel.color}">
 					<MoodIcon value={moodLevel.value} size={16}/>
 					<span class="truncate">{(t[moodLevel.labelKey as keyof typeof t] as string) ?? ''}</span>
+					{#if todayEntry.energy !== null}
+						<span aria-hidden="true" style="color:var(--color-on-surface-variant);opacity:.5">·</span>
+						<span class="truncate text-[11px]" style="color:var(--color-on-surface-variant)">{t.mood_energy_short} {todayEntry.energy}/5</span>
+					{/if}
 				</div>
 				<button type="button" onclick={() => entrySheetOpen = true} class="today-tracker-footer !grid-cols-1 !gap-0 !py-1 min-w-0" aria-label={t.mood_tracker_label}>
 					{#if todayEntry.activities.length > 0}
