@@ -7,14 +7,14 @@
 	import TrackerTileShell from './TrackerTileShell.svelte';
 
 	let {
-		todayEntry = null as { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null,
+		todayEntry = null as { date: string; mood: number; energy: number | null; activities: string[]; note: string | null; gratitude: string | null } | null,
 		todayDate,
 		onreload,
 		embedded = false,
 		tileMode = false,
 		expanded = $bindable(false)
 	}: {
-		todayEntry: { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null;
+		todayEntry: { date: string; mood: number; energy: number | null; activities: string[]; note: string | null; gratitude: string | null } | null;
 		todayDate: string;
 		onreload: () => void;
 		embedded?: boolean;
@@ -62,12 +62,13 @@
 						</p>
 					{/if}
 					{#if previewText}<p class="truncate text-[10px] leading-3 italic">{previewText}</p>{/if}
-					{#if todayEntry.activities.length === 0 && !previewText}<p class="truncate text-[10px] leading-3">{(t[moodLevel.labelKey as keyof typeof t] as string) ?? ''}</p>{/if}
+					{#if todayEntry.activities.length === 0 && !previewText}<p class="truncate text-[10px] leading-3">{t.mood_energy_short}: {todayEntry.energy ?? '–'}/5</p>{/if}
 				</button>
 			</div>
 		{/snippet}
 		{#snippet details()}
 			<div class="flex flex-col gap-2">
+				<p class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">{t.mood_energy_short}: {todayEntry.energy ?? '–'}/5</p>
 				{#if todayEntry.activities.length > 0}
 					<div class="flex flex-wrap gap-1">
 						{#each todayEntry.activities as key}<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium" style="background-color: color-mix(in srgb, #F472B6 12%, transparent); color: var(--color-on-surface)"><ActivityIcon icon={getTagIcon(key)} size={11} color="#F472B6" />{getTagLabel(key)}</span>{/each}
@@ -113,6 +114,7 @@
 
 	{#if expanded && hasDetails}
 		<div class="px-4 pb-3 flex flex-col gap-2">
+			<p class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">{t.mood_energy_short}: {todayEntry.energy ?? '–'}/5</p>
 			{#if todayEntry.activities.length > 0}
 				<div class="flex flex-wrap gap-1">
 					{#each todayEntry.activities as key}
@@ -138,6 +140,7 @@
 	bind:open={entrySheetOpen}
 	date={todayDate}
 	initialMood={todayEntry?.mood ?? null}
+	initialEnergy={todayEntry?.energy ?? null}
 	initialActivities={todayEntry?.activities ?? []}
 	initialNote={todayEntry?.note ?? ''}
 	initialGratitude={todayEntry?.gratitude ?? ''}

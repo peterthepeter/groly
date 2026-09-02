@@ -48,6 +48,8 @@ export type UserSettings = {
 	meditationEndSound?: string;
 	meditationVolume?: number;
 	moodTrackerEnabled?: boolean;
+	moodWeeklyReviewEnabled?: boolean;
+	dismissedMoodWeeklyReviewWeek?: string;
 	nutritionTrackerEnabled?: boolean;
 	hiddenMoodTags?: string[];
 	greetingEnabled?: boolean;

@@ -113,7 +113,7 @@
 				},
 				{
 					title: 'Mood journal',
-					text: 'Record your mood with activities, gratitude, and an optional note. Use History to view or add past days, hide unused tags, and optionally include gratitude entries in a PDF export.'
+					text: 'Record mood and daily energy on a 1–5 scale, then optionally add feelings, activities, contexts, gratitude, or a note. The completed previous week appears as a factual review from four entries and remains available in weekly History. Its Today card can be hidden directly or disabled under Manage.'
 				},
 				{
 					title: 'Nutrition',
@@ -246,7 +246,7 @@
 				},
 				{
 					title: 'Stimmungstagebuch',
-					text: 'Halte deine Stimmung mit Aktivitäten, Dankbarkeit und optionaler Notiz fest. Im Verlauf kannst du frühere Tage ansehen oder nachtragen, ungenutzte Tags ausblenden und Dankbarkeitseinträge optional als PDF exportieren.'
+					text: 'Erfasse Stimmung und Tagesenergie auf einer Skala von 1 bis 5 und ergänze optional Gefühle, Aktivitäten, Kontexte, Dankbarkeit oder eine Notiz. Die abgeschlossene Vorwoche erscheint ab vier Einträgen als sachlicher Rückblick und bleibt im Wochenverlauf verfügbar. Die Karte auf „Heute“ kannst du direkt ausblenden oder unter „Verwalten“ abschalten.'
 				},
 				{
 					title: 'Ernährung',

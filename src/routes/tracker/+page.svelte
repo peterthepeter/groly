@@ -20,6 +20,7 @@
 	import MeditationTimerSheet from '$lib/components/supplements/MeditationTimerSheet.svelte';
 	import MoodTrackerCard from '$lib/components/supplements/MoodTrackerCard.svelte';
 	import MoodEntrySheet from '$lib/components/supplements/MoodEntrySheet.svelte';
+	import MoodWeeklyReview from '$lib/components/supplements/MoodWeeklyReview.svelte';
 	import EatTrackerCard from '$lib/components/supplements/EatTrackerCard.svelte';
 	import TrackerSectionNav from '$lib/components/supplements/TrackerSectionNav.svelte';
 	import HistoryTab from '$lib/components/supplements/HistoryTab.svelte';
@@ -53,8 +54,12 @@
 	let meditationLogsToday = $state<MeditationLog[]>([]);
 	let meditationTimerOpen = $state(false);
 	let meditationTimerDuration = $state(10);
-	type MoodEntry = { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null };
+	type MoodEntry = { date: string; mood: number; energy: number | null; activities: string[]; note: string | null; gratitude: string | null };
 	let todayMoodEntry = $state<MoodEntry | null>(null);
+	type MoodReviewLog = { date: string; mood: number; energy: number | null; activities: string | null };
+	let previousWeekMoodLogs = $state<MoodReviewLog[]>([]);
+	let previousWeekRange = $state({ from: '', to: '' });
+	const showMoodWeeklyReview = $derived(userSettings.moodTrackerEnabled && userSettings.moodWeeklyReviewEnabled && previousWeekMoodLogs.length >= 4 && userSettings.dismissedMoodWeeklyReviewWeek !== previousWeekRange.from);
 	let moodEntryOpen = $state(false);
 	type MealSummary = { id: string; name: string; time: string; components: { kcal: number; protein?: number; fat?: number; carbs?: number; fiber?: number }[] };
 	type RangeMeal = { id: string; date: string; time: string; name: string; totalKcal: number };
@@ -416,13 +421,14 @@
 		historyLoading = false;
 	}
 
-	async function readMoodLogs(res: Response | null): Promise<{ date: string; mood: number; activities?: string[]; note?: string | null; gratitude?: string | null }[]> {
+	async function readMoodLogs(res: Response | null): Promise<{ date: string; mood: number; energy?: number | null; activities?: string[]; note?: string | null; gratitude?: string | null }[]> {
 		if (!res || !res.ok) return [];
 		try {
 			const data = await res.json();
-			return (data.logs ?? []).map((l: { date: string; mood: number; activities?: string; note?: string | null; gratitude?: string | null }) => ({
+			return (data.logs ?? []).map((l: { date: string; mood: number; energy?: number | null; activities?: string; note?: string | null; gratitude?: string | null }) => ({
 				date: l.date,
 				mood: l.mood,
+				energy: l.energy ?? null,
 				activities: l.activities ? (() => { try { return JSON.parse(l.activities) as string[]; } catch { return []; } })() : [],
 				note: l.note ?? null,
 				gratitude: l.gratitude ?? null
@@ -444,7 +450,7 @@
 			let medLogs = historyMeditationLogs;
 			let nutrients = historyNutrients;
 			// Kick off mood-logs fetch in parallel with the others (independent endpoint)
-			let moodLogs: { date: string; mood: number; activities?: string[]; note?: string | null; gratitude?: string | null }[] = [];
+			let moodLogs: { date: string; mood: number; energy?: number | null; activities?: string[]; note?: string | null; gratitude?: string | null }[] = [];
 			const moodFetch = (userSettings.moodTrackerEnabled && sections.mood)
 				? fetch(`/api/mood-logs?from=${toLocalDateStr(new Date(from))}&to=${toLocalDateStr(new Date(to))}`).catch(() => null)
 				: Promise.resolve(null);
@@ -707,12 +713,26 @@
 				if (log) {
 					let acts: string[] = [];
 					try { acts = log.activities ? JSON.parse(log.activities) : []; } catch {}
-					todayMoodEntry = { date: log.date, mood: log.mood, activities: acts, note: log.note, gratitude: log.gratitude ?? null };
+					todayMoodEntry = { date: log.date, mood: log.mood, energy: log.energy ?? null, activities: acts, note: log.note, gratitude: log.gratitude ?? null };
 				} else {
 					todayMoodEntry = null;
 				}
 			}
 		} catch { todayMoodEntry = null; }
+	}
+
+	async function loadMoodWeeklyReview() {
+		if (!userSettings.moodTrackerEnabled) { previousWeekMoodLogs = []; return; }
+		const now = new Date();
+		const day = now.getDay() || 7;
+		const thisMonday = new Date(now); thisMonday.setHours(12, 0, 0, 0); thisMonday.setDate(now.getDate() - day + 1);
+		const fromDate = new Date(thisMonday); fromDate.setDate(thisMonday.getDate() - 7);
+		const toDate = new Date(thisMonday); toDate.setDate(thisMonday.getDate() - 1);
+		previousWeekRange = { from: toLocalDateStr(fromDate), to: toLocalDateStr(toDate) };
+		try {
+			const res = await fetch(`/api/mood-logs?from=${previousWeekRange.from}&to=${previousWeekRange.to}`);
+			if (res.ok) previousWeekMoodLogs = (await res.json()).logs ?? [];
+		} catch { previousWeekMoodLogs = []; }
 	}
 
 	async function loadHistoryMeditation() {
@@ -995,14 +1015,14 @@
 			if (belongsToToday) todayLogs = [...withoutLocal, log].sort((a, b) => a.loggedAt - b.loggedAt);
 			if (activeTab === 'history') void loadHistory();
 		});
-		Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadTodayNutrition()]).then(() => { loading = false; });
+		Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadMoodWeeklyReview(), loadTodayNutrition()]).then(() => { loading = false; });
 		handleActionParam();
 		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
 
 		function onVisibilityChange() {
 			if (document.visibilityState === 'visible') {
 				now = new Date();
-				Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry()]);
+				Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadMoodWeeklyReview()]);
 			}
 		}
 		document.addEventListener('visibilitychange', onVisibilityChange);
@@ -1214,7 +1234,7 @@
 	{:else if activeTab === 'today'}
 		<!-- TODAY TAB — bottom-anchor via min-h-full + justify-end (gleiches Pattern wie Einkaufsliste) -->
 		<div class="min-h-full flex flex-col justify-end">
-		{#if loggedTodaySupplements.length === 0 && !hasVisibleTrackerCards}
+		{#if loggedTodaySupplements.length === 0 && !hasVisibleTrackerCards && !showMoodWeeklyReview}
 			<div class="px-4 py-8 text-center">
 				<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_today_empty}</p>
 			</div>
@@ -1304,6 +1324,9 @@
 						{/each}
 					</div>
 				</section>
+			{/if}
+			{#if showMoodWeeklyReview}
+				<MoodWeeklyReview logs={previousWeekMoodLogs} from={previousWeekRange.from} to={previousWeekRange.to} compact={true} dismissible={true} ondismiss={() => userSettings.dismissedMoodWeeklyReviewWeek = previousWeekRange.from} />
 			{/if}
 			{#if loggedTodaySupplements.length > 0}
 				<section class="select-none">
@@ -1493,6 +1516,7 @@
 	bind:open={moodEntryOpen}
 	date={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
 	initialMood={todayMoodEntry?.mood ?? null}
+	initialEnergy={todayMoodEntry?.energy ?? null}
 	initialActivities={todayMoodEntry ? todayMoodEntry.activities : [
 		...(meditationLogsToday.length > 0 ? ['meditation'] : []),
 		...(caffeineLogsToday.length > 0 ? ['caffeine'] : []),
@@ -1500,7 +1524,7 @@
 	]}
 	initialNote={todayMoodEntry?.note ?? ''}
 	initialGratitude={todayMoodEntry?.gratitude ?? ''}
-	onsaved={() => { moodEntryOpen = false; loadTodayMoodEntry(); if (activeTab === 'history') loadHistory(); }}
+	onsaved={() => { moodEntryOpen = false; loadTodayMoodEntry(); loadMoodWeeklyReview(); if (activeTab === 'history') loadHistory(); }}
 />
 
 <MeditationTimerSheet

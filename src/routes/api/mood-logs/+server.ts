@@ -33,13 +33,16 @@ export const POST: RequestHandler = async (event) => {
 
 	try {
 		const body = await event.request.json();
-		const { date, mood, activities, note, gratitude } = body;
+		const { date, mood, energy, activities, note, gratitude } = body;
 
 		if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
 			return json({ error: 'Ungültiges Datum' }, { status: 400 });
 		}
-		if (typeof mood !== 'number' || mood < 1 || mood > 5) {
+		if (!Number.isInteger(mood) || mood < 1 || mood > 5) {
 			return json({ error: 'Stimmung muss 1–5 sein' }, { status: 400 });
+		}
+		if (!Number.isInteger(energy) || energy < 1 || energy > 5) {
+			return json({ error: 'Energie muss 1–5 sein' }, { status: 400 });
 		}
 
 		const now = Date.now();
@@ -53,7 +56,7 @@ export const POST: RequestHandler = async (event) => {
 
 		if (existing) {
 			db.update(moodLogs)
-				.set({ mood, activities: activitiesJson, note: note ?? null, gratitude: gratitude ?? null, updatedAt: now })
+				.set({ mood, energy, activities: activitiesJson, note: note ?? null, gratitude: gratitude ?? null, updatedAt: now })
 				.where(eq(moodLogs.id, existing.id))
 				.run();
 			return json({ id: existing.id });
@@ -65,6 +68,7 @@ export const POST: RequestHandler = async (event) => {
 			userId: user!.id,
 			date,
 			mood,
+			energy,
 			activities: activitiesJson,
 			note: note ?? null,
 			gratitude: gratitude ?? null,

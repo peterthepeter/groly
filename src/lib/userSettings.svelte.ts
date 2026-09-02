@@ -131,6 +131,8 @@ let _meditationStartSound = $state<string>(cache.meditationStartSound ?? 'zen-to
 let _meditationEndSound = $state<string>(cache.meditationEndSound ?? 'auk-zen-gong.mp3');
 let _meditationVolume = $state<number>(cache.meditationVolume ?? 70);
 let _moodTrackerEnabled = $state<boolean>(cache.moodTrackerEnabled ?? true);
+let _moodWeeklyReviewEnabled = $state<boolean>(cache.moodWeeklyReviewEnabled ?? true);
+let _dismissedMoodWeeklyReviewWeek = $state<string>(cache.dismissedMoodWeeklyReviewWeek ?? '');
 let _nutritionTrackerEnabled = $state<boolean>(cache.nutritionTrackerEnabled ?? true);
 let _hiddenMoodTags = $state<string[]>(cache.hiddenMoodTags ?? []);
 let _greetingEnabled = $state<boolean>(cache.greetingEnabled ?? true);
@@ -185,6 +187,8 @@ function currentSettings(): UserSettings {
 		meditationEndSound: _meditationEndSound,
 		meditationVolume: _meditationVolume,
 		moodTrackerEnabled: _moodTrackerEnabled,
+		moodWeeklyReviewEnabled: _moodWeeklyReviewEnabled,
+		dismissedMoodWeeklyReviewWeek: _dismissedMoodWeeklyReviewWeek,
 		nutritionTrackerEnabled: _nutritionTrackerEnabled,
 		hiddenMoodTags: _hiddenMoodTags,
 		greetingEnabled: _greetingEnabled,
@@ -351,6 +355,10 @@ export const userSettings = {
 	// Mood tracker
 	get moodTrackerEnabled() { return _moodTrackerEnabled; },
 	set moodTrackerEnabled(v: boolean) { _moodTrackerEnabled = v; scheduleSave({ moodTrackerEnabled: v }); },
+	get moodWeeklyReviewEnabled() { return _moodWeeklyReviewEnabled; },
+	set moodWeeklyReviewEnabled(v: boolean) { _moodWeeklyReviewEnabled = v; scheduleSave({ moodWeeklyReviewEnabled: v }); },
+	get dismissedMoodWeeklyReviewWeek() { return _dismissedMoodWeeklyReviewWeek; },
+	set dismissedMoodWeeklyReviewWeek(v: string) { _dismissedMoodWeeklyReviewWeek = v; scheduleSave({ dismissedMoodWeeklyReviewWeek: v }); },
 	get nutritionTrackerEnabled() { return _nutritionTrackerEnabled; },
 	set nutritionTrackerEnabled(v: boolean) { _nutritionTrackerEnabled = v; scheduleSave({ nutritionTrackerEnabled: v }); },
 	get hiddenMoodTags() { return _hiddenMoodTags; },
@@ -414,6 +422,8 @@ function applySettings(settings: UserSettings) {
 	_meditationEndSound = settings.meditationEndSound ?? 'auk-zen-gong.mp3';
 	_meditationVolume = settings.meditationVolume ?? 70;
 	_moodTrackerEnabled = settings.moodTrackerEnabled ?? true;
+	_moodWeeklyReviewEnabled = settings.moodWeeklyReviewEnabled ?? true;
+	_dismissedMoodWeeklyReviewWeek = settings.dismissedMoodWeeklyReviewWeek ?? '';
 	_nutritionTrackerEnabled = settings.nutritionTrackerEnabled ?? true;
 	_hiddenMoodTags = settings.hiddenMoodTags ?? [];
 	_greetingEnabled = settings.greetingEnabled ?? true;

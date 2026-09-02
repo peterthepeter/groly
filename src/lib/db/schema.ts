@@ -399,6 +399,7 @@ export const moodLogs = sqliteTable('mood_logs', {
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 	date: text('date').notNull(), // YYYY-MM-DD
 	mood: integer('mood').notNull(), // 1–5
+	energy: integer('energy'), // 1–5; null only for entries created before energy tracking
 	activities: text('activities'), // JSON array of tag keys
 	note: text('note'),
 	gratitude: text('gratitude'),

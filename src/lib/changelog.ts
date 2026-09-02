@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.6-beta.1',
+		de: [
+			'Mood Tracker überarbeitet',
+			'Tagesenergie und Wochenrückblick ergänzt'
+		],
+		en: [
+			'Improved Mood Tracker',
+			'Added daily energy and weekly review'
+		]
+	},
+	{
 		version: '0.9.5-beta.6.4',
 		de: [
 			'Eingabefeld der Einkaufsliste öffnet sich auf iOS jetzt zuverlässig'

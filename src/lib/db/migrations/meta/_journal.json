@@ -344,6 +344,13 @@
       "when": 1787990630601,
       "tag": "0048_wise_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "6",
+      "when": 1788355618464,
+      "tag": "0049_public_blazing_skull",
+      "breakpoints": true
     }
   ]
 }

@@ -7,12 +7,12 @@
 
 	let {
 		open = $bindable(false),
-		entry = null as { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null,
+		entry = null as { date: string; mood: number; energy: number | null; activities: string[]; note: string | null; gratitude: string | null } | null,
 		onsaved,
 		ondeleted
 	}: {
 		open: boolean;
-		entry: { date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null;
+		entry: { date: string; mood: number; energy: number | null; activities: string[]; note: string | null; gratitude: string | null } | null;
 		onsaved: () => void;
 		ondeleted?: () => void;
 	} = $props();
@@ -87,6 +87,7 @@
 				</div>
 				<div class="flex-1"></div>
 			</div>
+			<p class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">{t.mood_energy_short}: {entry.energy === null ? t.mood_not_recorded : `${entry.energy}/5`}</p>
 
 			<!-- Activities -->
 			{#if entry.activities.length > 0}
@@ -160,6 +161,7 @@
 	bind:open={editOpen}
 	date={entry?.date ?? ''}
 	initialMood={entry?.mood ?? null}
+	initialEnergy={entry?.energy ?? null}
 	initialActivities={entry?.activities ?? []}
 	initialNote={entry?.note ?? ''}
 	initialGratitude={entry?.gratitude ?? ''}

@@ -1,0 +1,1 @@
+ALTER TABLE `mood_logs` ADD `energy` integer;

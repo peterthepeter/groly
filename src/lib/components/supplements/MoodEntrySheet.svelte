@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t, currentLang } from '$lib/i18n.svelte';
-	import { MOOD_LEVELS, ACTIVITY_CATEGORIES, type ActivityTag } from '$lib/mood';
+	import { MOOD_LEVELS, ENERGY_LEVELS, ACTIVITY_CATEGORIES, type ActivityTag } from '$lib/mood';
 	import { clearMoodDraft, loadMoodDraft, saveMoodDraft } from '$lib/moodDraft';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { page } from '$app/stores';
@@ -9,17 +9,18 @@
 	import ActivityIcon from './ActivityIcon.svelte';
 
 	let {
-		open = $bindable(false), date = '', initialMood = null as number | null,
+		open = $bindable(false), date = '', initialMood = null as number | null, initialEnergy = null as number | null,
 		initialActivities = [] as string[], initialNote = '' as string,
 		initialGratitude = '' as string, onsaved
 	}: {
-		open: boolean; date: string; initialMood?: number | null;
+		open: boolean; date: string; initialMood?: number | null; initialEnergy?: number | null;
 		initialActivities?: string[]; initialNote?: string;
 		initialGratitude?: string; onsaved: () => void;
 	} = $props();
 
 	type MoodValue = 1 | 2 | 3 | 4 | 5;
 	let selectedMood = $state<MoodValue | null>(null);
+	let selectedEnergy = $state<MoodValue | null>(null);
 	let selectedActivities = $state<Set<string>>(new Set());
 	let note = $state('');
 	let gratitude = $state('');
@@ -33,7 +34,7 @@
 	let baselineSignature = $state('');
 	const draftUserId = $derived($page.data.user?.id ?? 'anonymous');
 
-	type DraftValues = { mood: MoodValue | null; activities: string[]; note: string; gratitude: string };
+	type DraftValues = { mood: MoodValue | null; energy: MoodValue | null; activities: string[]; note: string; gratitude: string };
 
 	const activityCategories = $derived(
 		ACTIVITY_CATEGORIES.map(category => ({
@@ -47,11 +48,11 @@
 	}
 
 	function draftSignature(draft: DraftValues): string {
-		return JSON.stringify([draft.mood, [...draft.activities].sort(), draft.note, draft.gratitude]);
+		return JSON.stringify([draft.mood, draft.energy, [...draft.activities].sort(), draft.note, draft.gratitude]);
 	}
 
 	function currentDraft(): DraftValues {
-		return { mood: selectedMood, activities: [...selectedActivities], note, gratitude };
+		return { mood: selectedMood, energy: selectedEnergy, activities: [...selectedActivities], note, gratitude };
 	}
 
 	$effect(() => {
@@ -67,6 +68,7 @@
 		draftReady = false;
 		const initial = untrack((): DraftValues => ({
 			mood: (initialMood as MoodValue | null) ?? null,
+			energy: (initialEnergy as MoodValue | null) ?? null,
 			activities: [...initialActivities],
 			note: initialNote ?? '',
 			gratitude: initialGratitude ?? ''
@@ -75,17 +77,19 @@
 		const storage = getDraftStorage();
 		const values = (storage ? loadMoodDraft(storage, draftUserId, date) : null) ?? initial;
 		selectedMood = values.mood as MoodValue | null;
+		selectedEnergy = values.energy as MoodValue | null;
 		selectedActivities = new Set(values.activities);
 		note = values.note;
 		gratitude = values.gratitude;
 
 		const initialVisited = new Set<string>();
 		if (values.mood) initialVisited.add('mood');
+		if (values.energy) initialVisited.add('energy');
 		for (const category of activityCategories) {
 			if (category.tags.some(tag => values.activities.includes(tag.key))) initialVisited.add(category.key);
 		}
 		if (values.note.trim() || values.gratitude.trim()) initialVisited.add('journal');
-		activeStepKey = values.mood ? (activityCategories[0]?.key ?? 'journal') : 'mood';
+		activeStepKey = !values.mood ? 'mood' : !values.energy ? 'energy' : (activityCategories[0]?.key ?? 'journal');
 		initialVisited.add(activeStepKey);
 		visitedSteps = initialVisited;
 		draftReady = true;
@@ -141,7 +145,15 @@
 		selectedMood = value;
 		markStepVisited('mood');
 		window.setTimeout(() => {
-			if (open && activeStepKey === 'mood') void activateStep(activityCategories[0]?.key ?? 'journal');
+			if (open && activeStepKey === 'mood') void activateStep('energy');
+		}, 180);
+	}
+
+	function selectEnergy(value: MoodValue) {
+		selectedEnergy = value;
+		markStepVisited('energy');
+		window.setTimeout(() => {
+			if (open && activeStepKey === 'energy') void activateStep(activityCategories[0]?.key ?? 'journal');
 		}, 180);
 	}
 
@@ -162,13 +174,13 @@
 	}
 
 	async function save() {
-		if (!selectedMood || saving) return;
+		if (!selectedMood || !selectedEnergy || saving) return;
 		saving = true;
 		try {
 			const response = await fetch('/api/mood-logs', {
 				method: 'POST', headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					date, mood: selectedMood, activities: [...selectedActivities],
+					date, mood: selectedMood, energy: selectedEnergy, activities: [...selectedActivities],
 					note: note.trim() || null, gratitude: gratitude.trim() || null
 				})
 			});
@@ -264,6 +276,19 @@
 						{/each}
 					</div>
 				</section>
+			{:else if activeStepKey === 'energy'}
+				<section class="mood-panel">
+					<p class="text-xs font-semibold uppercase tracking-widest mb-3" style="color: var(--mood-accent)">{t.mood_energy_label}</p>
+					<div class="grid grid-cols-5 rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); box-shadow: {!selectedEnergy ? '0 0 0 1.5px rgba(244,114,182,0.4)' : 'none'}">
+						{#each ENERGY_LEVELS as level}
+							{@const active = selectedEnergy === level.value}
+							<button onclick={() => selectEnergy(level.value)} aria-label={(t[level.labelKey as keyof typeof t] as string) ?? ''} class="flex flex-col items-center justify-end gap-2 py-3 min-h-24 active:scale-95" style="background-color: {active ? 'rgba(244,114,182,0.16)' : 'transparent'}; color: {active ? 'var(--mood-accent)' : 'var(--color-on-surface-variant)'}">
+								<span class="flex items-end gap-0.5 h-8" aria-hidden="true">{#each Array(level.value) as _}<span class="w-1 rounded-full" style="height: {8 + level.value * 4}px; background-color: currentColor"></span>{/each}</span>
+								<span class="text-[9px] font-semibold leading-tight text-center px-0.5">{(t[level.labelKey as keyof typeof t] as string) ?? ''}</span>
+							</button>
+						{/each}
+					</div>
+				</section>
 			{:else if activeStepKey === 'journal'}
 				<section class="mood-panel space-y-4">
 					<div>
@@ -305,6 +330,9 @@
 					<span>{t.mood_tracker_label}</span>
 					{#if visitedSteps.has('mood') && !selectedMood}<span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--mood-accent)"></span>{/if}
 				</button>
+				<button data-mood-step="energy" onclick={() => void activateStep('energy')} class="mood-step shrink-0 min-h-10 px-3 flex items-center gap-1.5 text-xs font-semibold" style="background-color: {activeStepKey === 'energy' ? 'color-mix(in srgb, var(--mood-accent) 16%, transparent)' : 'transparent'}; border: 1px solid {activeStepKey === 'energy' ? 'color-mix(in srgb, var(--mood-accent) 55%, transparent)' : 'transparent'}; color: {activeStepKey === 'energy' ? 'var(--mood-accent)' : 'var(--color-on-surface-variant)'}" role="tab" aria-selected={activeStepKey === 'energy'}>
+					<span>{t.mood_energy_short}</span>{#if selectedEnergy}<span class="font-bold">{selectedEnergy}/5</span>{:else if visitedSteps.has('energy')}<span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--mood-accent)"></span>{/if}
+				</button>
 				{#each activityCategories as category}
 					{@const active = activeStepKey === category.key}
 					{@const count = stepCount(category.key)}
@@ -322,7 +350,7 @@
 
 		<div class="px-5 pt-2 shrink-0 flex gap-2">
 			<button onclick={() => open = false} class="flex-1 py-3 rounded-full text-sm font-semibold active:opacity-70" style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)">{t.close}</button>
-			<button onclick={save} disabled={!selectedMood || saving} class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-40 transition-opacity" style="background: linear-gradient(135deg, #F472B6, #EC4899); color: #fff">{saving ? '…' : t.mood_save}</button>
+			<button onclick={save} disabled={!selectedMood || !selectedEnergy || saving} class="flex-1 py-3 rounded-2xl text-sm font-semibold active:opacity-80 disabled:opacity-40 transition-opacity" style="background: linear-gradient(135deg, #F472B6, #EC4899); color: #fff">{saving ? '…' : t.mood_save}</button>
 		</div>
 	</div>
 {/if}

@@ -41,7 +41,7 @@ export type ReportOptions = {
 	supplementLogs: SupplementLogLite[];
 	caffeineLogs: { caffeineMg: number; loggedAt: number }[];
 	meditationLogs: { durationSeconds: number; loggedAt: number }[];
-	moodLogs: { date: string; mood: number; activities?: string[]; note?: string | null; gratitude?: string | null }[];
+	moodLogs: { date: string; mood: number; energy?: number | null; activities?: string[]; note?: string | null; gratitude?: string | null }[];
 	moodLabels?: Record<number, string>; // 1→"Very bad", 5→"Great" (i18n strings from caller)
 	moodActivityLabels?: Record<string, string>; // tag-key → translated label
 	nutrientTotals: { name: string; total: number; unit: string }[];
@@ -399,7 +399,7 @@ function buildMoodSection(opts: ReportOptions, includeDetails: boolean, includeG
 	const avg = sum / moodLogs.length;
 	const sorted = moodLogs.slice().sort((a, b) => a.date.localeCompare(b.date));
 	let trend: 'up' | 'down' | 'flat' = 'flat';
-	if (sorted.length >= 2) {
+	if (sorted.length >= 6) {
 		const mid = Math.floor(sorted.length / 2);
 		const a = sorted.slice(0, mid);
 		const b = sorted.slice(mid);
@@ -411,6 +411,8 @@ function buildMoodSection(opts: ReportOptions, includeDetails: boolean, includeG
 	}
 
 	const result: any[] = [{ text: tx(lang, 'Stimmung', 'Mood'), style: 'h2' }];
+	const energies = moodLogs.map(log => log.energy).filter((value): value is number => typeof value === 'number');
+	if (energies.length > 0) result.push({ text: `${tx(lang, 'Energie', 'Energy')}: Ø ${(energies.reduce((sum, value) => sum + value, 0) / energies.length).toFixed(1)}/5`, fontSize: 9, color: COLORS.muted, margin: [0, 0, 0, 4] });
 
 	// Build day-keyed lookup of mood entries
 	const moodByDate = new Map<string, number>();
@@ -499,7 +501,7 @@ function buildMoodSection(opts: ReportOptions, includeDetails: boolean, includeG
 		const tagLabels = opts.moodActivityLabels ?? {};
 		const rows = sorted.map((l) => {
 			const dateLabel = formatAxisLabel(l.date, lang);
-			const moodLabel = labels[l.mood] ?? `${l.mood}/5`;
+			const moodLabel = `${labels[l.mood] ?? `${l.mood}/5`} · ${tx(lang, 'Energie', 'Energy')} ${l.energy ?? '–'}/5`;
 			const tagText = (l.activities ?? []).map(k => tagLabels[k] ?? k).join(' · ');
 			const noteText = l.note ? `"${l.note}"` : '';
 			const right: any[] = [];

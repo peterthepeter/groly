@@ -17,6 +17,7 @@
 	import MeditationTrackerEditSheet from '$lib/components/supplements/MeditationTrackerEditSheet.svelte';
 	import MeditationReminderSheet from '$lib/components/supplements/MeditationReminderSheet.svelte';
 	import MoodReminderSheet from '$lib/components/supplements/MoodReminderSheet.svelte';
+	import MoodTrackerEditSheet from '$lib/components/supplements/MoodTrackerEditSheet.svelte';
 	import NutritionGoalSheet from '$lib/components/supplements/NutritionGoalSheet.svelte';
 	import type { CaffeineDrink } from '$lib/db/schema';
 
@@ -107,6 +108,7 @@
 	let meditationEditOpen = $state(false);
 	let meditationReminderOpen = $state(false);
 	let moodReminderOpen = $state(false);
+	let moodEditOpen = $state(false);
 	let waterHasReminders = $state(false);
 	let moodHasReminders = $state(false);
 	let caffeineDrinks = $state<CaffeineDrink[]>([]);
@@ -643,6 +645,9 @@
 								<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
 							</svg>
 						</button>
+						<button onclick={() => moodEditOpen = true} class="shrink-0 p-2 rounded-xl active:opacity-60" aria-label={t.mood_settings_title} style="color:var(--color-on-surface-variant)">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+						</button>
 					{/if}
 				</div>
 				<!-- Caffeine -->
@@ -775,6 +780,7 @@
 <MeditationTrackerEditSheet bind:open={meditationEditOpen} />
 <MeditationReminderSheet bind:open={meditationReminderOpen} />
 <MoodReminderSheet bind:open={moodReminderOpen} />
+<MoodTrackerEditSheet bind:open={moodEditOpen} />
 
 {#if nutritionGoalOpen}
 	<NutritionGoalSheet

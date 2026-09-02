@@ -1,5 +1,6 @@
 export type MoodDraft = {
 	mood: number | null;
+	energy: number | null;
 	activities: string[];
 	note: string;
 	gratitude: string;
@@ -20,6 +21,7 @@ function isMoodDraft(value: unknown): value is MoodDraft {
 	const draft = value as Record<string, unknown>;
 	return (
 		(draft.mood === null || (typeof draft.mood === 'number' && draft.mood >= 1 && draft.mood <= 5)) &&
+		(draft.energy === undefined || draft.energy === null || (typeof draft.energy === 'number' && draft.energy >= 1 && draft.energy <= 5)) &&
 		Array.isArray(draft.activities) &&
 		draft.activities.every(activity => typeof activity === 'string') &&
 		typeof draft.note === 'string' &&
@@ -43,7 +45,7 @@ export function loadMoodDraft(
 			storage.removeItem(storageKey);
 			return null;
 		}
-		return parsed;
+		return { ...parsed, energy: parsed.energy ?? null };
 	} catch {
 		try { storage.removeItem(storageKey); } catch {}
 		return null;

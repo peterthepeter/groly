@@ -6,11 +6,13 @@
 	import MoodEntrySheet from './MoodEntrySheet.svelte';
 	import MoodIcon from './MoodIcon.svelte';
 	import ActivityIcon from './ActivityIcon.svelte';
+	import MoodWeeklyReview from './MoodWeeklyReview.svelte';
 
 	type MoodLogEntry = {
 		id: string;
 		date: string;
 		mood: number;
+		energy: number | null;
 		activities: string | null;
 		note: string | null;
 		gratitude: string | null;
@@ -33,7 +35,7 @@
 	let referenceDate = $state(todayKey());
 	let logs = $state<MoodLogEntry[]>([]);
 	let loading = $state(false);
-	let detailEntry = $state<{ date: string; mood: number; activities: string[]; note: string | null; gratitude: string | null } | null>(null);
+	let detailEntry = $state<{ date: string; mood: number; energy: number | null; activities: string[]; note: string | null; gratitude: string | null } | null>(null);
 	let detailOpen = $state(false);
 	// History-view: inline preview of tap-selected day (avoids sheet for every tap)
 	let previewedDate = $state<string | null>(null);
@@ -77,12 +79,12 @@
 
 	const todayStr = todayKey;
 
-	function parseLogs(raw: MoodLogEntry[]): Map<string, { mood: number; activities: string[]; note: string | null; gratitude: string | null }> {
-		const map = new Map<string, { mood: number; activities: string[]; note: string | null; gratitude: string | null }>();
+	function parseLogs(raw: MoodLogEntry[]): Map<string, { mood: number; energy: number | null; activities: string[]; note: string | null; gratitude: string | null }> {
+		const map = new Map<string, { mood: number; energy: number | null; activities: string[]; note: string | null; gratitude: string | null }>();
 		for (const l of raw) {
 			let acts: string[] = [];
 			try { acts = l.activities ? JSON.parse(l.activities) : []; } catch {}
-			map.set(l.date, { mood: l.mood, activities: acts, note: l.note, gratitude: l.gratitude });
+			map.set(l.date, { mood: l.mood, energy: l.energy ?? null, activities: acts, note: l.note, gratitude: l.gratitude });
 		}
 		return map;
 	}
@@ -236,7 +238,7 @@
 		// Trend: sort by date, split in half
 		const sorted = logs.slice().sort((a, b) => a.date.localeCompare(b.date));
 		let trend: 'up' | 'down' | 'flat' = 'flat';
-		if (sorted.length >= 2) {
+		if (sorted.length >= 6) {
 			const mid = Math.floor(sorted.length / 2);
 			const a = sorted.slice(0, mid);
 			const b = sorted.slice(mid);
@@ -300,6 +302,7 @@
 					<MoodIcon value={level.value} size={15}/>
 					<span>{(t[level.labelKey as keyof typeof t] as string) ?? ''}</span>
 				</span>
+				<span class="text-[11px] font-semibold shrink-0" style="color:var(--color-on-surface-variant)">{t.mood_energy_short} {dayEntry.energy ?? '–'}/5</span>
 				<button
 					onclick={() => { previewedDate = viewedDate; previewEditOpen = true; }}
 					class="shrink-0 p-1 rounded active:opacity-50"
@@ -387,6 +390,10 @@
 	{#if expanded}
 		<div class="px-4 pb-4 pt-3">
 			{@render calendarContent()}
+			{#if fixedView === 'week'}
+				{@const range = getDateRange()}
+				<MoodWeeklyReview {logs} from={range.from} to={range.to} />
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -442,7 +449,8 @@
 						<div class="text-[11px] font-medium tabular-nums" style="color: var(--color-on-surface-variant)">
 							{new Date(previewedDate + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
 						</div>
-						<div class="text-sm font-bold truncate" style="color: {pLevel.color}">{pLabel}</div>
+					<div class="text-sm font-bold truncate" style="color: {pLevel.color}">{pLabel}</div>
+					<div class="text-[11px] font-semibold" style="color:var(--color-on-surface-variant)">{t.mood_energy_short}: {pEntry.energy ?? '–'}/5</div>
 					</div>
 					{#if previewConfirmDelete}
 						<div class="shrink-0 flex items-center gap-1">
@@ -595,6 +603,7 @@
 		bind:open={previewEditOpen}
 		date={previewedDate}
 		initialMood={pEntry?.mood ?? null}
+		initialEnergy={pEntry?.energy ?? null}
 		initialActivities={pEntry?.activities ?? []}
 		initialNote={pEntry?.note ?? ''}
 		initialGratitude={pEntry?.gratitude ?? ''}
