@@ -8,7 +8,7 @@
 	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs, onSupplementLogSynced } from '$lib/sync/manager';
 	import { displayUnit } from '$lib/units';
 	import { formatTime } from '$lib/dates';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { flushUserSettings, userSettings } from '$lib/userSettings.svelte';
 	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
 	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
 	import EditLogSheet from '$lib/components/supplements/EditLogSheet.svelte';
@@ -59,7 +59,16 @@
 	type MoodReviewLog = { date: string; mood: number; energy: number | null; activities: string | null };
 	let previousWeekMoodLogs = $state<MoodReviewLog[]>([]);
 	let previousWeekRange = $state({ from: '', to: '' });
-	const showMoodWeeklyReview = $derived(userSettings.moodTrackerEnabled && userSettings.moodWeeklyReviewEnabled && previousWeekMoodLogs.length >= 4 && userSettings.dismissedMoodWeeklyReviewWeek !== previousWeekRange.from);
+	let locallyDismissedMoodWeeklyReviewWeek = $state('');
+	const showMoodWeeklyReview = $derived(userSettings.moodTrackerEnabled && userSettings.moodWeeklyReviewEnabled && previousWeekMoodLogs.length >= 4 && userSettings.dismissedMoodWeeklyReviewWeek !== previousWeekRange.from && locallyDismissedMoodWeeklyReviewWeek !== previousWeekRange.from);
+	const moodWeeklyReviewDismissKey = $derived(`groly_mood_weekly_review_dismissed:${data.user?.id ?? 'anonymous'}`);
+	async function dismissMoodWeeklyReview() {
+		const week = previousWeekRange.from;
+		locallyDismissedMoodWeeklyReviewWeek = week;
+		try { localStorage.setItem(moodWeeklyReviewDismissKey, week); } catch {}
+		userSettings.dismissedMoodWeeklyReviewWeek = week;
+		await flushUserSettings();
+	}
 	let moodEntryOpen = $state(false);
 	type MealSummary = { id: string; name: string; time: string; components: { kcal: number; protein?: number; fat?: number; carbs?: number; fiber?: number }[] };
 	type RangeMeal = { id: string; date: string; time: string; name: string; totalKcal: number };
@@ -1003,6 +1012,7 @@
 	});
 
 	onMount(() => {
+		try { locallyDismissedMoodWeeklyReviewWeek = localStorage.getItem(moodWeeklyReviewDismissKey) ?? ''; } catch {}
 		const unsubscribeSupplementSync = onSupplementLogSynced(({ log, stockQuantity }) => {
 			supplements = supplements.map(supplement =>
 				supplement.id === log.supplementId ? { ...supplement, stockQuantity } : supplement
@@ -1326,7 +1336,7 @@
 				</section>
 			{/if}
 			{#if showMoodWeeklyReview}
-				<MoodWeeklyReview logs={previousWeekMoodLogs} from={previousWeekRange.from} to={previousWeekRange.to} compact={true} dismissible={true} ondismiss={() => userSettings.dismissedMoodWeeklyReviewWeek = previousWeekRange.from} />
+				<MoodWeeklyReview logs={previousWeekMoodLogs} from={previousWeekRange.from} to={previousWeekRange.to} compact={true} dismissible={true} ondismiss={dismissMoodWeeklyReview} />
 			{/if}
 			{#if loggedTodaySupplements.length > 0}
 				<section class="select-none">

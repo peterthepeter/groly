@@ -214,6 +214,14 @@ function scheduleSave(patch: UserSettingsPatch) {
 	}, 500);
 }
 
+// For UI actions whose persistence must survive an immediate suspend: wait until
+// the durable mutation exists, then attempt the server sync right away.
+export async function flushUserSettings(): Promise<void> {
+	const userId = activeSettingsUserId;
+	await _persistPromise.catch(() => {});
+	if (userId && activeSettingsUserId === userId) await drainPendingMutations();
+}
+
 export const userSettings = {
 	get lang() { return _lang; },
 	set lang(v: AvailableLanguageTag) { _lang = v; scheduleSave({ lang: v }); },

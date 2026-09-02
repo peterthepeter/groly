@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.6-beta.3',
+		de: [
+			'Ausblenden des Mood-Wochenrückblicks dauerhaft gespeichert'
+		],
+		en: [
+			'Persisted dismissal of the Mood weekly review'
+		]
+	},
+	{
 		version: '0.9.6-beta.2',
 		de: [
 			'Mood-Tracker-Anzeige und Einstellungen optisch vereinheitlicht'
