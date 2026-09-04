@@ -2,119 +2,18 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
-		version: '0.9.6-beta.3',
+		version: '0.9.6',
 		de: [
-			'Ausblenden des Mood-Wochenrückblicks dauerhaft gespeichert'
+			'Tracker-, Nutrition- und Verwalten-Ansichten umfassend überarbeitet und vereinheitlicht',
+			'Quick Log und Erinnerungen übersichtlicher und einfacher bedienbar gestaltet',
+			'Mood-Tracker um Tagesenergie und Wochenrückblick erweitert',
+			'Zuverlässigkeit bei Supplement-Einträgen, Beständen und der Einkaufslisten-Eingabe auf iOS verbessert'
 		],
 		en: [
-			'Persisted dismissal of the Mood weekly review'
-		]
-	},
-	{
-		version: '0.9.6-beta.2',
-		de: [
-			'Mood-Tracker-Anzeige und Einstellungen optisch vereinheitlicht'
-		],
-		en: [
-			'Refined the Mood Tracker display and settings'
-		]
-	},
-	{
-		version: '0.9.6-beta.1',
-		de: [
-			'Mood Tracker überarbeitet',
-			'Tagesenergie und Wochenrückblick ergänzt'
-		],
-		en: [
-			'Improved Mood Tracker',
-			'Added daily energy and weekly review'
-		]
-	},
-	{
-		version: '0.9.5-beta.6.4',
-		de: [
-			'Eingabefeld der Einkaufsliste öffnet sich auf iOS jetzt zuverlässig'
-		],
-		en: [
-			'The shopping list input now opens reliably on iOS'
-		]
-	},
-	{
-		version: '0.9.5-beta.6.3',
-		de: [
-			'Einkaufslisten-Eingabe auf iOS korrigiert'
-		],
-		en: [
-			'Fixed shopping list input on iOS'
-		]
-	},
-	{
-		version: '0.9.5-beta.6.2',
-		de: [
-			'Zuverlässigere Tracker-Verarbeitung für Supplement-Logs und Bestände'
-		],
-		en: [
-			'More reliable tracker processing for supplement logs and stock'
-		]
-	},
-	{
-		version: '0.9.5-beta.6.1',
-		de: [
-			'Tracker: Reminder-Zuordnung und 45-Minuten-Fenster korrigiert'
-		],
-		en: [
-			'Tracker: fixed reminder matching and the 45-minute window'
-		]
-	},
-	{
-		version: '0.9.5-beta.6',
-		de: [
-			'Nutrition-Tracker, Favoriten und Tracker-Navigation umfassend überarbeitet',
-			'Manage-, Reminder- und Quick-Log-Ansichten weiter vereinheitlicht'
-		],
-		en: [
-			'Redesigned the nutrition tracker, favorites, and tracker navigation',
-			'Further streamlined Manage, reminder, and Quick Log views'
-		]
-	},
-	{
-		version: '0.9.5-beta.5',
-		de: [
-			'Supplement-Bestand und Mood-Entwürfe korrigiert'
-		],
-		en: [
-			'Fixed supplement stock and mood drafts'
-		]
-	},
-	{
-		version: '0.9.5-beta.3',
-		de: [
-			'Darstellung des Supplement-Log-Editors auf iPhones korrigiert'
-		],
-		en: [
-			'Fixed the supplement log editor layout on iPhones'
-		]
-	},
-	{
-		version: '0.9.5-beta.2',
-		de: [
-			'Tracker- und Quick-Log-Ansichten kompakter, einheitlicher und leichter bedienbar gestaltet',
-			'Verwalten- und Reminder-Ansichten modernisiert und platzsparend vereinheitlicht'
-		],
-		en: [
-			'Redesigned tracker and Quick Log views for a more compact, consistent, and accessible experience',
-			'Modernized and streamlined Manage and reminder views'
-		]
-	},
-	{
-		version: '0.9.5-beta.1',
-		de: [
-			'Neues kompaktes Quick-Log mit Supplement-Kacheln und optimierter Sortierung',
-			'Mengen per Plus/Minus, Uhrzeiten direkt und Notizen per langem Druck bearbeiten'
-		],
-		en: [
-			'New compact quick log with supplement tiles and optimized sorting',
-			'Edit amounts with plus/minus, times directly, and notes with a long press'
+			'Redesigned and unified Tracker, Nutrition, and Manage views',
+			'Made Quick Log and reminders clearer and easier to use',
+			'Added daily energy and a weekly review to the Mood Tracker',
+			'Improved reliability of supplement logging, stock tracking, and shopping list input on iOS'
 		]
 	},
 	{
