@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.7',
+		de: [
+			'Behoben: Sprachwahl und ausgeblendete Bereiche bleiben nach Neuladen und erneutem Anmelden gespeichert',
+			'Behoben: Die Standardsprache richtet sich bei neuen Konten korrekt nach der Browsersprache'
+		],
+		en: [
+			'Fixed: Language selection and hidden sections now persist after refreshing or signing in again',
+			'Fixed: New accounts now correctly use the browser language as their default'
+		]
+	},
+	{
 		version: '0.9.6',
 		de: [
 			'Tracker-, Nutrition- und Verwalten-Ansichten umfassend überarbeitet und vereinheitlicht',

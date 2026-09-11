@@ -3,6 +3,7 @@ import { setLanguageTag, type AvailableLanguageTag } from '$lib/paraglide/runtim
 import { browser } from '$app/environment';
 import { userSettings, initUserSettings, onUserSettingsApplied } from '$lib/userSettings.svelte';
 import type { UserSettings } from '$lib/userSettingsTypes';
+import { hasExplicitUserLanguage } from '$lib/userSettingsSync';
 
 let _lang = $state<AvailableLanguageTag>('de');
 let initializedUserId: string | null | undefined;
@@ -35,6 +36,9 @@ export async function initLanguage(
 	if (initializedUserId === userId) return;
 	initializedUserId = userId;
 	const token = ++initializationToken;
+	// The layout supplies the raw stored JSON. Capture this before the settings
+	// sync fills in defaults, otherwise the default `de` looks like a saved choice.
+	const hasSavedLanguage = hasExplicitUserLanguage(serverSettings);
 	// Load the user-scoped offline cache first, then reconcile with the server.
 	const effectiveSettings = await initUserSettings(userId, serverSettings, settingsRevision);
 	if (token !== initializationToken) return;
@@ -46,7 +50,7 @@ export async function initLanguage(
 	setLanguageTag(lang);
 	_lang = lang;
 	// If no explicit language preference was saved, detect from browser
-	if (userId && !effectiveSettings?.lang) {
+	if (userId && !hasSavedLanguage) {
 		const browserLang = navigator.language.slice(0, 2);
 		setLang(browserLang === 'en' ? 'en' : 'de');
 	}

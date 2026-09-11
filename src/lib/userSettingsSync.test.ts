@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	applyUserSettingsPatch,
 	combineUserSettingsPatches,
+	hasExplicitUserLanguage,
 	sanitizeUserSettingsPatch,
 	userSettingsPatchMatches
 } from '$lib/userSettingsSync';
@@ -65,5 +66,21 @@ describe('user settings patches', () => {
 		expect(sanitizeUserSettingsPatch(null)).toBeNull();
 		expect(sanitizeUserSettingsPatch([])).toBeNull();
 		expect(sanitizeUserSettingsPatch({ listCategorySettings: [] })).toBeNull();
+	});
+
+	it('turns reactive-style proxies into structured-cloneable settings', () => {
+		const categoryOrder = new Proxy(['snacks', 'obst'], {});
+		const settings = new Proxy({ lang: 'en', categoryOrder }, {});
+		expect(() => structuredClone(settings)).toThrow();
+
+		const sanitized = sanitizeUserSettingsPatch(settings);
+		expect(sanitized).toEqual({ lang: 'en', categoryOrder: ['snacks', 'obst'] });
+		expect(() => structuredClone(sanitized)).not.toThrow();
+	});
+
+	it('distinguishes a saved language from the implicit default', () => {
+		expect(hasExplicitUserLanguage({})).toBe(false);
+		expect(hasExplicitUserLanguage({ lang: 'de' })).toBe(true);
+		expect(hasExplicitUserLanguage({ lang: 'en' })).toBe(true);
 	});
 });

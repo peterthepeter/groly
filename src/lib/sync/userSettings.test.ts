@@ -49,6 +49,25 @@ describe('offline user settings', () => {
 		expect(await getOfflineUserSettings('user-b')).toBeUndefined();
 	});
 
+	it('stores reactive-style proxy settings as plain IndexedDB data', async () => {
+		initSync('user-a');
+		const categoryOrder = new Proxy(['snacks', 'obst'], {});
+		const effectiveSettings = new Proxy({
+			lang: 'en' as const,
+			categoryOrder
+		}, {});
+
+		await queueUserSettingsPatch('user-a', { lang: 'en' }, effectiveSettings);
+
+		const pending = await offlineDb.pendingMutations.toArray();
+		expect(pending).toHaveLength(1);
+		expect(pending[0].payload.settings).toEqual({ lang: 'en' });
+		expect((await getOfflineUserSettings('user-a'))?.settings).toEqual({
+			lang: 'en',
+			categoryOrder: ['snacks', 'obst']
+		});
+	});
+
 	it('coalesces repeated and per-list changes into one durable mutation', async () => {
 		initSync('user-a');
 		await queueUserSettingsPatch('user-a', {

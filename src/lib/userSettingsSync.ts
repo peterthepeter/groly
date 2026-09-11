@@ -10,9 +10,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function sanitizeUserSettingsPatch(value: unknown): UserSettingsPatch | null {
 	if (!isRecord(value)) return null;
-	const patch = { ...value } as UserSettingsPatch;
-	if (value.listCategorySettings !== undefined && !isRecord(value.listCategorySettings)) return null;
+	let plainValue: unknown;
+	try {
+		// Settings can originate from Svelte 5's deeply proxied $state values. IndexedDB
+		// uses the structured-clone algorithm and rejects those proxies, while a JSON
+		// round-trip produces the plain data shape that the API and cache expect.
+		plainValue = JSON.parse(JSON.stringify(value));
+	} catch {
+		return null;
+	}
+	if (!isRecord(plainValue)) return null;
+	const patch = plainValue as UserSettingsPatch;
+	if (plainValue.listCategorySettings !== undefined && !isRecord(plainValue.listCategorySettings)) return null;
 	return patch;
+}
+
+export function hasExplicitUserLanguage(settings: UserSettings): boolean {
+	return settings.lang === 'de' || settings.lang === 'en';
 }
 
 export function applyUserSettingsPatch(base: UserSettings, patch: UserSettingsPatch): UserSettings {

@@ -696,18 +696,23 @@ export async function queueUserSettingsPatch(
 	patch: UserSettingsPatch,
 	effectiveSettings: UserSettings
 ): Promise<void> {
+	const plainPatch = sanitizeUserSettingsPatch(patch);
+	const plainEffectiveSettings = sanitizeUserSettingsPatch(effectiveSettings);
+	if (!plainPatch || !plainEffectiveSettings) {
+		throw new TypeError('User settings must be JSON-serializable');
+	}
 	await offlineDb.transaction('rw', offlineDb.pendingMutations, offlineDb.userSettings, async () => {
 		const existingMutations = await getPendingSettingsMutations(userId);
 		const primary = existingMutations[0];
 		const cached = await offlineDb.userSettings.get(userId);
-		let combined = patch;
+		let combined = plainPatch;
 		let settingsRevision = cached?.revision ?? 0;
 		let generation = 1;
 
 		if (primary) {
 			const payload = readSettingsMutationPayload(primary);
 			if (payload) {
-				combined = combineUserSettingsPatches(payload.settings, patch);
+				combined = combineUserSettingsPatches(payload.settings, plainPatch);
 				settingsRevision = payload.settingsRevision;
 				generation = payload.generation + 1;
 			}
@@ -734,7 +739,7 @@ export async function queueUserSettingsPatch(
 
 		await offlineDb.userSettings.put({
 			userId,
-			settings: effectiveSettings as Record<string, unknown>,
+			settings: plainEffectiveSettings as Record<string, unknown>,
 			revision: settingsRevision,
 			updatedAt: Date.now()
 		});
