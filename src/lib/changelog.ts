@@ -2,6 +2,15 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.8-hotfix.1',
+		de: [
+			'Behoben: Öffentliche Rezept-URLs mit normalen Domainnamen werden wieder korrekt importiert'
+		],
+		en: [
+			'Fixed: Public recipe URLs using regular domain names can be imported again'
+		]
+	},
+	{
 		version: '0.9.8',
 		de: [
 			'Rezeptimport repariert und an aktuelle Chefkoch-Rezeptdaten angepasst',

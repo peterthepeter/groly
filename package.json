@@ -1,7 +1,7 @@
 {
 	"name": "groly",
 	"private": true,
-	"version": "0.9.8",
+	"version": "0.9.8-hotfix.1",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
