@@ -1,239 +1,149 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
+import { parseRecipeHtml } from '$lib/server/recipeImport';
 import { lookup } from 'dns/promises';
+import { isIP } from 'net';
 
-interface SchemaRecipe {
-	'@type': string;
-	name?: string;
-	description?: string;
-	image?: string | { url?: string } | Array<string | { url?: string }>;
-	recipeYield?: string | number;
-	prepTime?: string;
-	cookTime?: string;
-	recipeIngredient?: string[];
-	recipeInstructions?: string | string[] | Array<{ '@type'?: string; text?: string }>;
-}
+const MAX_REDIRECTS = 5;
+const MAX_PAGE_BYTES = 3 * 1024 * 1024;
 
-function parseIso8601Duration(duration: string): number | null {
-	const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
-	if (!match) return null;
-	const hours = parseInt(match[1] ?? '0');
-	const minutes = parseInt(match[2] ?? '0');
-	return hours * 60 + minutes;
-}
-
-function extractImageUrl(image: SchemaRecipe['image']): string | null {
-	if (!image) return null;
-	if (typeof image === 'string') return image;
-	if (Array.isArray(image)) {
-		const first = image[0];
-		if (typeof first === 'string') return first;
-		if (first && typeof first === 'object') return first.url ?? null;
-		return null;
+function isPrivateIp(rawAddress: string): boolean {
+	const address = rawAddress.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0];
+	const mappedIpv4 = address.match(/^(?:::ffff:)?(\d+\.\d+\.\d+\.\d+)$/)?.[1];
+	if (mappedIpv4) {
+		const parts = mappedIpv4.split('.').map(Number);
+		if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
+		const [a, b, c] = parts;
+		return a === 0
+			|| a === 10
+			|| a === 127
+			|| (a === 100 && b >= 64 && b <= 127)
+			|| (a === 169 && b === 254)
+			|| (a === 172 && b >= 16 && b <= 31)
+			|| (a === 192 && (b === 0 || b === 168))
+			|| (a === 198 && (b === 18 || b === 19))
+			|| (a === 198 && b === 51 && c === 100)
+			|| (a === 203 && b === 0 && c === 113)
+			|| a >= 224;
 	}
-	if (typeof image === 'object') return image.url ?? null;
-	return null;
-}
-
-// Cleans German recipe plural markers: "Zehe/n" → "Zehe", "Paprikaschote(n)" → "Paprikaschote"
-function cleanGermanPlural(str: string): string {
-	return str
-		// "Word/n", "Word/en", "Word/e", "Word/s" → "Word"
-		.replace(/\/(?:nen|nen|en|n|e|s)\b/g, '')
-		// "Word(n)", "Word(en)", "Word(e)", "Word(s)" → "Word"
-		.replace(/\((?:nen|en|n|e|s)\)/g, '')
-		.trim();
-}
-
-// Strips trailing parenthetical qualifiers that are editorial notes, not part of the name
-// e.g. "(oder halb und halb)" → removed, but keeps "(frisch)" if it's short and useful
-function stripEditorialParens(str: string): string {
-	// Remove long parenthetical notes (>12 chars) that start with "oder", "ca.", "z.B.", "nach"
-	return str.replace(/\s*\((?:oder|ca\.|z\.B\.|nach\s|wahlweise|alternativ)[^)]*\)/gi, '').trim();
-}
-
-function cleanText(str: string): string {
-	return stripEditorialParens(cleanGermanPlural(str)).trim();
-}
-
-function parseIngredient(raw: string): { amount: string | null; unit: string | null; name: string } {
-	const str = raw.trim();
-	// Match: optional number/fraction at start, optional unit, rest is name
-	const match = str.match(/^(\d+(?:[.,]\d+)?(?:\s*\/\s*\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?)\s*([a-zA-ZäöüÄÖÜ]+(?:\.|))?\s+(.+)$/);
-	if (match) {
-		return {
-			amount: match[1]?.trim() || null,
-			unit: cleanText(match[2]?.replace('.', '').trim() ?? '') || null,
-			name: cleanText(match[3]?.trim() ?? str) || str.trim()
-		};
+	if (isIP(address) === 6) {
+		return address === '::'
+			|| address === '::1'
+			|| address.startsWith('::ffff:')
+			|| /^f[cd]/.test(address)
+			|| /^fe[89ab]/.test(address)
+			|| /^ff/.test(address);
 	}
-	return { amount: null, unit: null, name: cleanText(str) || str.trim() };
+	return isIP(address) !== 4;
 }
 
-function parseInstructions(instructions: SchemaRecipe['recipeInstructions']): string[] {
-	if (!instructions) return [];
-	if (typeof instructions === 'string') {
-		return instructions.split(/\n+/).map(s => s.trim()).filter(Boolean);
-	}
-	if (Array.isArray(instructions)) {
-		const steps: string[] = [];
-		for (const item of instructions) {
-			if (typeof item === 'string') {
-				steps.push(item.trim());
-			} else if (item && typeof item === 'object') {
-				const obj = item as Record<string, unknown>;
-				if (obj.text) {
-					steps.push(String(obj.text).trim());
-				} else if (Array.isArray(obj['itemListElement'])) {
-					// HowToSection with nested steps
-					for (const sub of obj['itemListElement'] as unknown[]) {
-						if (typeof sub === 'string') steps.push(sub.trim());
-						else if (sub && typeof sub === 'object') {
-							const subObj = sub as Record<string, unknown>;
-							if (subObj.text) steps.push(String(subObj.text).trim());
-						}
-					}
-				}
-			}
-		}
-		return steps.filter(Boolean);
-	}
-	return [];
-}
-
-function cleanDescription(desc: string | null | undefined): string | null {
-	if (!desc) return null;
-	const clean = desc
-		// "Über 496 Bewertungen und für köstlich befunden."
-		.replace(/\s*Über\s+\d[\d.,]*\s+Bewertungen[^.!?]*[.!?]?/gi, '')
-		// "Mit ► Portionsrechner ► ..." and everything that follows
-		.replace(/\s*Mit\s+►[\s\S]*/i, '')
-		// Any remaining sentence containing a ► symbol
-		.replace(/[^.!?]*►[^.!?]*[.!?]?/g, '')
-		.trim();
-	return clean || null;
-}
-
-function parseServings(yieldValue: string | number | undefined): number {
-	if (!yieldValue) return 4;
-	if (typeof yieldValue === 'number') return yieldValue;
-	const match = yieldValue.match(/\d+/);
-	return match ? parseInt(match[0]) : 4;
-}
-
-function findRecipeInLd(data: unknown): SchemaRecipe | null {
-	if (!data || typeof data !== 'object') return null;
-	const obj = data as Record<string, unknown>;
-
-	if (obj['@type'] === 'Recipe') return obj as unknown as SchemaRecipe;
-
-	// Handle @graph array
-	if (Array.isArray(obj['@graph'])) {
-		for (const node of obj['@graph']) {
-			const found = findRecipeInLd(node);
-			if (found) return found;
-		}
-	}
-
-	// Handle array at top level
-	if (Array.isArray(data)) {
-		for (const item of data) {
-			const found = findRecipeInLd(item);
-			if (found) return found;
-		}
-	}
-
-	return null;
-}
-
-function isPrivateIp(ip: string): boolean {
-	return (
-		ip === 'localhost' ||
-		ip === '0.0.0.0' ||
-		ip === '::1' ||
-		/^127\./.test(ip) ||
-		/^10\./.test(ip) ||
-		/^172\.(1[6-9]|2\d|3[01])\./.test(ip) ||
-		/^192\.168\./.test(ip) ||
-		/^169\.254\./.test(ip) ||
-		/^0\./.test(ip) ||
-		/^[Ff][CcDd][0-9a-fA-F]{2}:/.test(ip) // fc00::/7 + fd00::/8 (IPv6 unique local)
-	);
-}
-
-async function validateRecipeUrl(raw: string): Promise<boolean> {
+function parsePublicRecipeUrl(raw: string): URL | null {
 	let parsed: URL;
 	try {
 		parsed = new URL(raw);
 	} catch {
-		return false;
+		return null;
 	}
-	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+	const host = parsed.hostname.toLowerCase();
+	if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || isPrivateIp(host)) return null;
+	return parsed;
+}
+
+async function validateRecipeUrl(raw: string): Promise<URL | null> {
+	const parsed = parsePublicRecipeUrl(raw);
+	if (!parsed) return null;
 	const host = parsed.hostname.toLowerCase();
 
-	// Block obviously private hostnames before DNS lookup
-	if (isPrivateIp(host)) return false;
-
-	// Resolve DNS and verify the actual IP is not private (prevents DNS rebinding)
 	try {
-		const { address } = await lookup(host);
-		if (isPrivateIp(address)) return false;
+		const addresses = await lookup(host, { all: true, verbatim: true });
+		if (addresses.length === 0 || addresses.some(({ address }) => isPrivateIp(address))) return null;
 	} catch {
-		return false;
+		return null;
 	}
+	return parsed;
+}
 
-	return true;
+async function readLimitedHtml(response: Response): Promise<string> {
+	const declaredLength = Number(response.headers.get('content-length'));
+	if (Number.isFinite(declaredLength) && declaredLength > MAX_PAGE_BYTES) throw new Error('PAGE_TOO_LARGE');
+	if (!response.body) return '';
+
+	const reader = response.body.getReader();
+	const decoder = new TextDecoder();
+	let received = 0;
+	let html = '';
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		received += value.byteLength;
+		if (received > MAX_PAGE_BYTES) {
+			await reader.cancel();
+			throw new Error('PAGE_TOO_LARGE');
+		}
+		html += decoder.decode(value, { stream: true });
+	}
+	return html + decoder.decode();
+}
+
+async function fetchRecipePage(rawUrl: string): Promise<string> {
+	let currentUrl = rawUrl;
+	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
+		const validatedUrl = await validateRecipeUrl(currentUrl);
+		if (!validatedUrl) throw new Error(redirectCount === 0 ? 'INVALID_URL' : 'INVALID_REDIRECT');
+
+		const response = await fetch(validatedUrl, {
+			redirect: 'manual',
+			headers: {
+				'User-Agent': 'Mozilla/5.0 (compatible; Groly/1.0)',
+				Accept: 'text/html,application/xhtml+xml'
+			},
+			signal: AbortSignal.timeout(10000)
+		});
+
+		if ([301, 302, 303, 307, 308].includes(response.status)) {
+			const location = response.headers.get('location');
+			if (!location) throw new Error('INVALID_REDIRECT');
+			currentUrl = new URL(location, validatedUrl).href;
+			continue;
+		}
+		if (!response.ok) throw new Error(`HTTP_${response.status}`);
+		const contentType = response.headers.get('content-type')?.toLowerCase();
+		if (contentType && !contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) {
+			throw new Error('UNSUPPORTED_CONTENT_TYPE');
+		}
+		return readLimitedHtml(response);
+	}
+	throw new Error('TOO_MANY_REDIRECTS');
 }
 
 export const POST: RequestHandler = async (event) => {
 	const { error } = authGuard(event);
 	if (error) return error;
 
-	const { url } = await event.request.json();
-	if (!url?.trim()) return json({ error: 'URL fehlt' }, { status: 400 });
-	if (!await validateRecipeUrl(url.trim())) return json({ error: 'Ungültige URL' }, { status: 400 });
+	let rawUrl: unknown;
+	try {
+		rawUrl = (await event.request.json() as { url?: unknown }).url;
+	} catch {
+		return json({ error: 'INVALID_URL' }, { status: 400 });
+	}
+	if (typeof rawUrl !== 'string' || !rawUrl.trim()) return json({ error: 'INVALID_URL' }, { status: 400 });
+	const sourceUrl = rawUrl.trim();
+	if (!parsePublicRecipeUrl(sourceUrl)) return json({ error: 'INVALID_URL' }, { status: 400 });
 
 	let html: string;
 	try {
-		const res = await fetch(url, {
-			headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Groly/1.0)' },
-			signal: AbortSignal.timeout(10000)
+		html = await fetchRecipePage(sourceUrl);
+	} catch (cause) {
+		console.warn('[recipe-import] Page fetch failed', {
+			host: new URL(sourceUrl).hostname,
+			reason: cause instanceof Error ? cause.message : 'UNKNOWN'
 		});
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		html = await res.text();
-	} catch (e) {
 		return json({ error: 'PAGE_LOAD_FAILED' }, { status: 422 });
 	}
 
-	// Extract all JSON-LD blocks
-	const ldBlocks = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
-	let schemaRecipe: SchemaRecipe | null = null;
-
-	for (const block of ldBlocks) {
-		try {
-			const parsed = JSON.parse(block[1]);
-			const found = findRecipeInLd(parsed);
-			if (found) { schemaRecipe = found; break; }
-		} catch { /* skip invalid JSON */ }
-	}
-
-	if (!schemaRecipe) {
-		return json({ error: 'NO_RECIPE_FOUND' }, { status: 422 });
-	}
-
-	const ingredients = (schemaRecipe.recipeIngredient ?? []).map(parseIngredient);
-	const steps = parseInstructions(schemaRecipe.recipeInstructions).map((text, i) => ({ stepNumber: i + 1, text }));
-
-	return json({
-		title: schemaRecipe.name ?? '',
-		description: cleanDescription(schemaRecipe.description),
-		imageUrl: extractImageUrl(schemaRecipe.image),
-		sourceUrl: url,
-		servings: parseServings(schemaRecipe.recipeYield),
-		prepTime: schemaRecipe.prepTime ? parseIso8601Duration(schemaRecipe.prepTime) : null,
-		cookTime: schemaRecipe.cookTime ? parseIso8601Duration(schemaRecipe.cookTime) : null,
-		ingredients,
-		steps
-	});
+	const recipe = parseRecipeHtml(html);
+	if (!recipe) return json({ error: 'NO_RECIPE_FOUND' }, { status: 422 });
+	return json({ ...recipe, sourceUrl });
 };

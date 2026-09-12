@@ -26,6 +26,7 @@
 		const map: Record<string, () => string> = {
 			NO_RECIPE_FOUND: () => t.recipe_import_no_recipe,
 			PAGE_LOAD_FAILED: () => t.recipe_import_page_load_failed,
+			INVALID_URL: () => t.recipe_import_invalid_url,
 		};
 		return map[code]?.() ?? t.recipe_import_failed;
 	}
@@ -42,7 +43,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ url: trimmed })
 			});
-			const data = await res.json();
+			const data = await res.json().catch(() => ({ error: 'IMPORT_FAILED' }));
 			if (!res.ok) {
 				error = translateImportError(data.error);
 			} else {
@@ -169,7 +170,6 @@
 							{ label: 'Chefkoch', href: 'https://www.chefkoch.de/rs/s0/Rezepte.html' },
 							{ label: 'BBC Good Food', href: 'https://www.bbcgoodfood.com/recipes' },
 							{ label: 'Kitchen Stories', href: 'https://www.kitchenstories.com/de/rezepte' },
-							{ label: 'Allrecipes', href: 'https://www.allrecipes.com' },
 							{ label: 'Lecker.de', href: 'https://www.lecker.de/rezepte' }
 						] as site}
 							<a href={site.href} target="_blank" rel="noopener noreferrer"

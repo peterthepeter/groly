@@ -127,7 +127,7 @@
 			items: [
 				{
 					title: 'Create or import',
-					text: 'Use + to create a recipe manually or import one from a supported website. Paste several ingredient lines at once and Groly separates amount, unit, and name for you.'
+					text: 'Use + to create a recipe manually or import one from any public recipe page that provides compatible structured recipe data. If a page cannot be imported, Groly shows a message. Paste several ingredient lines at once and Groly separates amount, unit, and name for you.'
 				},
 				{
 					title: 'Cook & shop',
@@ -260,7 +260,7 @@
 			items: [
 				{
 					title: 'Anlegen oder importieren',
-					text: 'Über + legst du ein Rezept selbst an oder importierst es von einer unterstützten Website. Füge mehrere Zutatenzeilen auf einmal ein und Groly trennt Menge, Einheit und Name für dich.'
+					text: 'Über + legst du ein Rezept selbst an oder importierst es von jeder öffentlichen Rezeptseite mit kompatiblen strukturierten Rezeptdaten. Lässt sich eine Seite nicht importieren, zeigt Groly einen Hinweis. Füge mehrere Zutatenzeilen auf einmal ein und Groly trennt Menge, Einheit und Name für dich.'
 				},
 				{
 					title: 'Kochen & einkaufen',

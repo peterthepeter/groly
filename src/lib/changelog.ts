@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.8',
+		de: [
+			'Rezeptimport repariert und an aktuelle Chefkoch-Rezeptdaten angepasst',
+			'Import von weiteren Rezeptseiten robuster gemacht',
+			'Verständlichere Fehlermeldungen bei nicht unterstützten Seiten'
+		],
+		en: [
+			'Fixed recipe imports and added compatibility with Chefkoch’s current recipe data',
+			'Improved import reliability for additional recipe websites',
+			'Added clearer error messages for unsupported pages'
+		]
+	},
+	{
 		version: '0.9.7',
 		de: [
 			'Behoben: Sprachwahl und ausgeblendete Bereiche bleiben nach Neuladen und erneutem Anmelden gespeichert',
