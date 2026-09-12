@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.8-hotfix.2',
+		de: [
+			'Behoben: Rezeptbilder werden auch importiert, wenn eine Website sie über separate Rezeptdaten referenziert',
+			'Rezeptimport mit Chefkoch, BBC Good Food, Kitchen Stories und Lecker erneut geprüft'
+		],
+		en: [
+			'Fixed: Recipe images are now imported when a website references them through separate recipe data',
+			'Rechecked recipe imports with Chefkoch, BBC Good Food, Kitchen Stories, and Lecker'
+		]
+	},
+	{
 		version: '0.9.8-hotfix.1',
 		de: [
 			'Behoben: Öffentliche Rezept-URLs mit normalen Domainnamen werden wieder korrekt importiert'

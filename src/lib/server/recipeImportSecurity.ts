@@ -39,6 +39,7 @@ export function parsePublicRecipeUrl(raw: string): URL | null {
 		return null;
 	}
 	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+	if (parsed.username || parsed.password) return null;
 	const host = parsed.hostname.toLowerCase();
 	if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return null;
 	// Domain names are resolved below. Only pass literal IP addresses to the IP-range check.

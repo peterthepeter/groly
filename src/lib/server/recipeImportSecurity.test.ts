@@ -16,6 +16,7 @@ describe('recipe import URL security', () => {
 
 	it('rejects unsupported protocols and local hostnames', () => {
 		expect(parsePublicRecipeUrl('file:///etc/passwd')).toBeNull();
+		expect(parsePublicRecipeUrl('https://user:password@example.com/recipe')).toBeNull();
 		expect(parsePublicRecipeUrl('http://localhost/recipe')).toBeNull();
 		expect(parsePublicRecipeUrl('http://groly.local/recipe')).toBeNull();
 	});

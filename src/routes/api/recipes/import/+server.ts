@@ -29,7 +29,7 @@ async function readLimitedHtml(response: Response): Promise<string> {
 	return html + decoder.decode();
 }
 
-async function fetchRecipePage(rawUrl: string): Promise<string> {
+async function fetchRecipePage(rawUrl: string): Promise<{ html: string; finalUrl: string }> {
 	let currentUrl = rawUrl;
 	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
 		const validatedUrl = await validateResolvedRecipeUrl(currentUrl);
@@ -47,6 +47,7 @@ async function fetchRecipePage(rawUrl: string): Promise<string> {
 		if ([301, 302, 303, 307, 308].includes(response.status)) {
 			const location = response.headers.get('location');
 			if (!location) throw new Error('INVALID_REDIRECT');
+			await response.body?.cancel();
 			currentUrl = new URL(location, validatedUrl).href;
 			continue;
 		}
@@ -55,7 +56,7 @@ async function fetchRecipePage(rawUrl: string): Promise<string> {
 		if (contentType && !contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) {
 			throw new Error('UNSUPPORTED_CONTENT_TYPE');
 		}
-		return readLimitedHtml(response);
+		return { html: await readLimitedHtml(response), finalUrl: validatedUrl.href };
 	}
 	throw new Error('TOO_MANY_REDIRECTS');
 }
@@ -74,9 +75,9 @@ export const POST: RequestHandler = async (event) => {
 	const sourceUrl = rawUrl.trim();
 	if (!parsePublicRecipeUrl(sourceUrl)) return json({ error: 'INVALID_URL' }, { status: 400 });
 
-	let html: string;
+	let page: { html: string; finalUrl: string };
 	try {
-		html = await fetchRecipePage(sourceUrl);
+		page = await fetchRecipePage(sourceUrl);
 	} catch (cause) {
 		console.warn('[recipe-import] Page fetch failed', {
 			host: new URL(sourceUrl).hostname,
@@ -85,7 +86,7 @@ export const POST: RequestHandler = async (event) => {
 		return json({ error: 'PAGE_LOAD_FAILED' }, { status: 422 });
 	}
 
-	const recipe = parseRecipeHtml(html);
+	const recipe = parseRecipeHtml(page.html, page.finalUrl);
 	if (!recipe) return json({ error: 'NO_RECIPE_FOUND' }, { status: 422 });
 	return json({ ...recipe, sourceUrl });
 };
