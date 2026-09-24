@@ -14,9 +14,22 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 
 ### Shopping Lists
 
-| Overview | Shopping list | Favourites |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/Shopping List overview.png" width="180" alt="Overview of all shared shopping lists" /> | <img src="docs/screenshots/Shopping List.png" width="180" alt="Shopping list with categorized items" /> | <img src="docs/screenshots/Shopping List Favorites.png" width="180" alt="Favourite items ready to add to a shopping list" /> |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Overview</th>
+      <th align="center">Shopping list</th>
+      <th align="center">Favourites</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="docs/screenshots/Shopping List overview.png" width="180" alt="Overview of all shared shopping lists" /></td>
+      <td align="center"><img src="docs/screenshots/Shopping List.png" width="180" alt="Shopping list with categorized items" /></td>
+      <td align="center"><img src="docs/screenshots/Shopping List Favorites.png" width="180" alt="Favourite items ready to add to a shopping list" /></td>
+    </tr>
+  </tbody>
+</table>
 
 Shared, offline-first shopping lists with real-time sync, smart suggestions, barcode scanning, and automatic categorization.
 
@@ -38,9 +51,22 @@ Shared, offline-first shopping lists with real-time sync, smart suggestions, bar
 
 ### Tracker
 
-| Today | Quick log | Weekly history |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/Supplement Today.png" width="180" alt="Today's supplement and health tracker overview" /> | <img src="docs/screenshots/Log Supplement.png" width="180" alt="Quick-log view for a supplement" /> | <img src="docs/screenshots/Supplement History_1.png" width="180" alt="Weekly supplement history and adherence overview" /> |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Today</th>
+      <th align="center">Quick log</th>
+      <th align="center">Weekly history</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="docs/screenshots/Supplement Today.png" width="180" alt="Today's supplement and health tracker overview" /></td>
+      <td align="center"><img src="docs/screenshots/Log Supplement.png" width="180" alt="Quick-log view for a supplement" /></td>
+      <td align="center"><img src="docs/screenshots/Supplement History_1.png" width="180" alt="Weekly supplement history and adherence overview" /></td>
+    </tr>
+  </tbody>
+</table>
 
 A unified health & lifestyle tracker — supplements, water, caffeine, meditation, and mood — each with a quick-log sheet and day/week/month history.
 
@@ -49,13 +75,39 @@ A unified health & lifestyle tracker — supplements, water, caffeine, meditatio
 
 #### More screenshots
 
-| Tracker log | Mood | Daily history |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/Log Tracker.png" width="180" alt="Quick-log view for health and lifestyle trackers" /> | <img src="docs/screenshots/mood_tracker.png" width="180" alt="Daily mood tracking view with gratitude note" /> | <img src="docs/screenshots/Supplement History_0.png" width="180" alt="Daily supplement history and adherence view" /> |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Tracker log</th>
+      <th align="center">Mood</th>
+      <th align="center">Daily history</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="docs/screenshots/Log Tracker.png" width="180" alt="Quick-log view for health and lifestyle trackers" /></td>
+      <td align="center"><img src="docs/screenshots/mood_tracker.png" width="180" alt="Daily mood tracking view with gratitude note" /></td>
+      <td align="center"><img src="docs/screenshots/Supplement History_0.png" width="180" alt="Daily supplement history and adherence view" /></td>
+    </tr>
+  </tbody>
+</table>
 
-| Monthly history | Manage | Edit |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/Supplement History_2.png" width="180" alt="Monthly supplement history and adherence overview" /> | <img src="docs/screenshots/Manage Supplement.png" width="180" alt="Supplement management overview" /> | <img src="docs/screenshots/Edit Supplement.png" width="180" alt="Supplement editing and configuration view" /> |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Monthly history</th>
+      <th align="center">Manage</th>
+      <th align="center">Edit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="docs/screenshots/Supplement History_2.png" width="180" alt="Monthly supplement history and adherence overview" /></td>
+      <td align="center"><img src="docs/screenshots/Manage Supplement.png" width="180" alt="Supplement management overview" /></td>
+      <td align="center"><img src="docs/screenshots/Edit Supplement.png" width="180" alt="Supplement editing and configuration view" /></td>
+    </tr>
+  </tbody>
+</table>
 
 #### Features
 
@@ -71,9 +123,22 @@ A unified health & lifestyle tracker — supplements, water, caffeine, meditatio
 
 ### Nutrition Tracker
 
-| Food diary | Log meal | Nutrition goals |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/Nutrition Today.png" width="180" alt="Daily food diary with calories and macronutrients" /> | <img src="docs/screenshots/Nutrition Log Meal.png" width="180" alt="Meal logging view with food and amount selection" /> | <img src="docs/screenshots/Nutrition Goal.png" width="180" alt="Daily calorie and macronutrient goal settings" /> |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Food diary</th>
+      <th align="center">Log meal</th>
+      <th align="center">Nutrition goals</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="docs/screenshots/Nutrition Today.png" width="180" alt="Daily food diary with calories and macronutrients" /></td>
+      <td align="center"><img src="docs/screenshots/Nutrition Log Meal.png" width="180" alt="Meal logging view with food and amount selection" /></td>
+      <td align="center"><img src="docs/screenshots/Nutrition Goal.png" width="180" alt="Daily calorie and macronutrient goal settings" /></td>
+    </tr>
+  </tbody>
+</table>
 
 A full food diary with calorie and macro tracking, built on the same [Open Food Facts](https://world.openfoodfacts.org/) integration as the barcode scanner.
 
@@ -82,9 +147,22 @@ A full food diary with calorie and macro tracking, built on the same [Open Food 
 
 #### More screenshots
 
-| Favourites | Recipe setup | Track recipe |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/Nutrition Favorites.png" width="180" alt="Saved food and meal favourites" /> | <img src="docs/screenshots/Recipe Nutrition.png" width="180" alt="Recipe ingredients mapped to nutrition data" /> | <img src="docs/screenshots/Recipe Track Meal.png" width="180" alt="Recipe servings ready to track as a meal" /> |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Favourites</th>
+      <th align="center">Recipe setup</th>
+      <th align="center">Track recipe</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="docs/screenshots/Nutrition Favorites.png" width="180" alt="Saved food and meal favourites" /></td>
+      <td align="center"><img src="docs/screenshots/Recipe Nutrition.png" width="180" alt="Recipe ingredients mapped to nutrition data" /></td>
+      <td align="center"><img src="docs/screenshots/Recipe Track Meal.png" width="180" alt="Recipe servings ready to track as a meal" /></td>
+    </tr>
+  </tbody>
+</table>
 
 #### Features
 
@@ -99,9 +177,22 @@ A full food diary with calorie and macro tracking, built on the same [Open Food 
 
 ### Recipes & Meal Planning
 
-| Recipes | Recipe details | Meal planner |
-| :---: | :---: | :---: |
-| <img src="docs/screenshots/Recipes.png" width="180" alt="Overview of saved recipes" /> | <img src="docs/screenshots/Recipes_detail.png" width="180" alt="Recipe details with ingredients and serving controls" /> | <img src="docs/screenshots/Meal Planner.png" width="180" alt="Weekly meal planner with scheduled recipes" /> |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Recipes</th>
+      <th align="center">Recipe details</th>
+      <th align="center">Meal planner</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="docs/screenshots/Recipes.png" width="180" alt="Overview of saved recipes" /></td>
+      <td align="center"><img src="docs/screenshots/Recipes_detail.png" width="180" alt="Recipe details with ingredients and serving controls" /></td>
+      <td align="center"><img src="docs/screenshots/Meal Planner.png" width="180" alt="Weekly meal planner with scheduled recipes" /></td>
+    </tr>
+  </tbody>
+</table>
 
 Create and organize recipes, scale servings, plan the week, and send ingredients directly to a shopping list.
 
@@ -117,9 +208,20 @@ Create and organize recipes, scale servings, plan the week, and send ingredients
 
 ### Settings & App
 
-| Settings | Navigation menu |
-| :---: | :---: |
-| <img src="docs/screenshots/Settings Page.png" width="180" alt="Groly settings and customization options" /> | <img src="docs/screenshots/Options Menu.png" width="180" alt="Navigation menu with Groly app sections" /> |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Settings</th>
+      <th align="center">Navigation menu</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="docs/screenshots/Settings Page.png" width="180" alt="Groly settings and customization options" /></td>
+      <td align="center"><img src="docs/screenshots/Options Menu.png" width="180" alt="Navigation menu with Groly app sections" /></td>
+    </tr>
+  </tbody>
+</table>
 
 Customize Groly for each user, install it as a PWA, and access frequently used lists and actions in fewer taps.
 
