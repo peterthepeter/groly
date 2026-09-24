@@ -14,11 +14,16 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 
 ### Shopping Lists
 
-<p align="center">
-  <img src="docs/screenshots/Shopping List overview.png" width="180" alt="Lists overview" />
-  <img src="docs/screenshots/Shopping List.png" width="180" alt="Shopping list" />
-  <img src="docs/screenshots/Shopping List Favorites.png" width="180" alt="Favourites panel" />
-</p>
+| Overview | Shopping list | Favourites |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/Shopping List overview.png" width="180" alt="Overview of all shared shopping lists" /> | <img src="docs/screenshots/Shopping List.png" width="180" alt="Shopping list with categorized items" /> | <img src="docs/screenshots/Shopping List Favorites.png" width="180" alt="Favourite items ready to add to a shopping list" /> |
+
+Shared, offline-first shopping lists with real-time sync, smart suggestions, barcode scanning, and automatic categorization.
+
+<details>
+<summary><strong>Show all shopping-list features</strong></summary>
+
+#### Features
 
 - **Shared lists** – Share lists with other users; changes sync in real time via Server-Sent Events.
 - **Offline-first** – Add, check off, edit, and delete items without internet. Changes sync automatically when back online.
@@ -29,25 +34,30 @@ Self-hosted, runs as a lightweight Docker container. Ready for **Unraid** and an
 - **Swipe to peek** – Swipe left or right on any item tile whose name is truncated to reveal the full name in an overlay, without accidentally checking it off.
 - **Favourites** – Long-press an item and tap the star next to the quantity field to save it as a favourite. Favourited items are marked with a small green dot on their tile (can be turned off in Settings → Display). Open the favourites panel via + → Favourites to quickly re-add them to any list, sorted by category. Long-press a favourite card to remove it.
 
+</details>
+
 ### Tracker
 
-<p align="center">
-  <img src="docs/screenshots/Supplement Today.png" width="140" alt="Supplement tracker – today" />
-  <img src="docs/screenshots/Log Supplement.png" width="140" alt="Log supplement" />
-  <img src="docs/screenshots/Log Tracker.png" width="140" alt="Add tracker entry" />
-  <img src="docs/screenshots/mood_tracker.png" width="140" alt="Mood tracker" />
-</p>
-<p align="center">
-  <img src="docs/screenshots/Supplement History_0.png" width="180" alt="History – day view" />
-  <img src="docs/screenshots/Supplement History_1.png" width="180" alt="History – week view" />
-  <img src="docs/screenshots/Supplement History_2.png" width="180" alt="History – month view" />
-</p>
-<p align="center">
-  <img src="docs/screenshots/Manage Supplement.png" width="160" alt="Manage supplements" />
-  <img src="docs/screenshots/Edit Supplement.png" width="160" alt="Edit supplement" />
-</p>
+| Today | Quick log | Weekly history |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/Supplement Today.png" width="180" alt="Today's supplement and health tracker overview" /> | <img src="docs/screenshots/Log Supplement.png" width="180" alt="Quick-log view for a supplement" /> | <img src="docs/screenshots/Supplement History_1.png" width="180" alt="Weekly supplement history and adherence overview" /> |
 
 A unified health & lifestyle tracker — supplements, water, caffeine, meditation, and mood — each with a quick-log sheet and day/week/month history.
+
+<details>
+<summary><strong>Show all tracker features</strong></summary>
+
+#### More screenshots
+
+| Tracker log | Mood | Daily history |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/Log Tracker.png" width="180" alt="Quick-log view for health and lifestyle trackers" /> | <img src="docs/screenshots/mood_tracker.png" width="180" alt="Daily mood tracking view with gratitude note" /> | <img src="docs/screenshots/Supplement History_0.png" width="180" alt="Daily supplement history and adherence view" /> |
+
+| Monthly history | Manage | Edit |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/Supplement History_2.png" width="180" alt="Monthly supplement history and adherence overview" /> | <img src="docs/screenshots/Manage Supplement.png" width="180" alt="Supplement management overview" /> | <img src="docs/screenshots/Edit Supplement.png" width="180" alt="Supplement editing and configuration view" /> |
+
+#### Features
 
 - **Supplements** – Quick-log intake (amount + time, one tap). Define nutrients per unit (e.g. 500 µg B12 per capsule) and Groly sums your total daily intake. Track stock and reorder to any list via the cart button. Per-supplement push reminders, active/inactive toggle, optional brand & info.
 - **Water** – Log with quick-add presets or a custom amount, set a daily goal (ml) with a fill bar, and schedule interval reminders within a time window.
@@ -57,20 +67,26 @@ A unified health & lifestyle tracker — supplements, water, caffeine, meditatio
 - **History & adherence** – Day, week, and month views for every tracker, with per-supplement adherence rates and heatmaps (scheduled vs. actually taken).
 - **PDF export** – Export selected sections (supplements, trackers, mood, nutrients) for any period as a PDF to share with a doctor or trainer. [Example report](docs/pdf/example-report.pdf).
 
+</details>
+
 ### Nutrition Tracker
 
-<p align="center">
-  <img src="docs/screenshots/Nutrition Today.png" width="140" alt="Nutrition – daily food diary" />
-  <img src="docs/screenshots/Nutrition Goal.png" width="140" alt="Daily calorie & macro goal" />
-  <img src="docs/screenshots/Nutrition Log Meal.png" width="140" alt="Add a food with amount" />
-  <img src="docs/screenshots/Nutrition Favorites.png" width="140" alt="Food & meal favorites" />
-</p>
-<p align="center">
-  <img src="docs/screenshots/Recipe Nutrition.png" width="180" alt="Map recipe ingredients to nutrition" />
-  <img src="docs/screenshots/Recipe Track Meal.png" width="180" alt="Track a recipe as a meal" />
-</p>
+| Food diary | Log meal | Nutrition goals |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/Nutrition Today.png" width="180" alt="Daily food diary with calories and macronutrients" /> | <img src="docs/screenshots/Nutrition Log Meal.png" width="180" alt="Meal logging view with food and amount selection" /> | <img src="docs/screenshots/Nutrition Goal.png" width="180" alt="Daily calorie and macronutrient goal settings" /> |
 
 A full food diary with calorie and macro tracking, built on the same [Open Food Facts](https://world.openfoodfacts.org/) integration as the barcode scanner.
+
+<details>
+<summary><strong>Show all nutrition features</strong></summary>
+
+#### More screenshots
+
+| Favourites | Recipe setup | Track recipe |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/Nutrition Favorites.png" width="180" alt="Saved food and meal favourites" /> | <img src="docs/screenshots/Recipe Nutrition.png" width="180" alt="Recipe ingredients mapped to nutrition data" /> | <img src="docs/screenshots/Recipe Track Meal.png" width="180" alt="Recipe servings ready to track as a meal" /> |
+
+#### Features
 
 - **Daily food diary** – Log meals across the day and see total calories plus protein, fat, carbs, and fiber as progress rings against your goal, with a per-meal and per-component breakdown.
 - **Two food sources** – Search 160+ built-in generic foods (fruit, veg, grains, dairy, meat, …, bilingual), or look up any branded product by name or barcode via Open Food Facts — with image, nutrition values, and Nutri-Score. Lookups are cached in SQLite.
@@ -79,48 +95,52 @@ A full food diary with calorie and macro tracking, built on the same [Open Food 
 - **From recipes** – Map a recipe's ingredients to nutrition data once; Groly then shows per-serving calories on the recipe and lets you track any number of servings straight into your food diary.
 - **Units & thumbnails** – Track in grams, millilitres, or pieces (with per-piece weight); products and meals carry thumbnails for quick recognition.
 
+</details>
+
 ### Recipes & Meal Planning
 
-<p align="center">
-  <img src="docs/screenshots/Recipes.png" width="180" alt="Recipes" />
-  <img src="docs/screenshots/Recipes_detail.png" width="180" alt="Recipe detail" />
-  <img src="docs/screenshots/Meal Planner.png" width="180" alt="Weekly meal planner" />
-</p>
+| Recipes | Recipe details | Meal planner |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/Recipes.png" width="180" alt="Overview of saved recipes" /> | <img src="docs/screenshots/Recipes_detail.png" width="180" alt="Recipe details with ingredients and serving controls" /> | <img src="docs/screenshots/Meal Planner.png" width="180" alt="Weekly meal planner with scheduled recipes" /> |
+
+Create and organize recipes, scale servings, plan the week, and send ingredients directly to a shopping list.
+
+<details>
+<summary><strong>Show all recipe and meal-planning features</strong></summary>
+
+#### Features
 
 - **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list. Import recipes from popular recipe websites by URL.
 - **Weekly meal planner** – Plan meals for every day of the week. Assign recipes or free-text entries per day, adjust servings, and add ingredients from individual days or the entire week directly to a shopping list. Navigate forwards and backwards by week. Configurable as a quick access shortcut.
 
-### Settings & Customization
+</details>
 
-<p align="center">
-  <img src="docs/screenshots/Settings Page.png" width="180" alt="Settings" />
-</p>
+### Settings & App
+
+| Settings | Navigation menu |
+| :---: | :---: |
+| <img src="docs/screenshots/Settings Page.png" width="180" alt="Groly settings and customization options" /> | <img src="docs/screenshots/Options Menu.png" width="180" alt="Navigation menu with Groly app sections" /> |
+
+Customize Groly for each user, install it as a PWA, and access frequently used lists and actions in fewer taps.
+
+<details>
+<summary><strong>Show all settings and app features</strong></summary>
+
+#### Features
 
 - **Feature flags** – Supplements, Trackers, and Recipes can be independently enabled or disabled per user in Settings → Display. Hide sections you don't use — they disappear from the navigation entirely.
 - **Category sorting** – Customize the display order of categories globally or per list, to match your supermarket layout.
-- **Quick access shortcuts** – Configure up to 4 shortcuts accessible by long-pressing the + button.
+- **Quick access shortcuts** – Long-press the + button to reveal up to 4 configurable shortcuts. Slide your finger to the desired shortcut and release to navigate — or release over empty space to cancel. Each shortcut can open a list, open a list with the add-item dialog, or jump straight into the barcode scanner. Configurable per user in Settings and synced across devices.
 - **Favourite indicator** – The green dot on favourited items can be turned off per user.
-
-### Notifications & Location
-
 - **Push notifications** – Get notified when someone adds an item to a shared list, when a new app version is available, and for supplement reminders. Works on iOS (16.4+) and Android.
 - **Location-based list opening** – Assign a location to any list (e.g. your supermarket). When you arrive within 100 meters, Groly automatically opens that list — no tapping required. Opt-in per user in Settings.
-
-### Quick Access
-
-- **Quick access shortcuts** – Long-press the + button to reveal up to 4 configurable shortcuts. Slide your finger to the desired shortcut and release to navigate — or release over empty space to cancel. Each shortcut can open a list, open a list with the add-item dialog, or jump straight into the barcode scanner. Configurable per user in Settings and synced across devices.
-
-### App & Platform
-
-<p align="center">
-  <img src="docs/screenshots/Options Menu.png" width="180" alt="Navigation menu" />
-</p>
-
 - **PWA** – Installable on iOS and Android, works like a native app.
 - **Light & Dark mode** – Follows system preference automatically.
 - **Multi-user** – Admin invites users via one-time link, resets passwords through the same mechanism, and manages list sharing invitations.
 - **In-app changelog** – A "What's New" modal appears after each update and is always accessible from the menu.
 - **i18n** – German and English.
+
+</details>
 
 ## User Management
 
