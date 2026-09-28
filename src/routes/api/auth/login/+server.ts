@@ -2,21 +2,24 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { login } from '$lib/auth';
 import { checkRateLimit } from '$lib/server/loginRateLimit';
+import { languageFromAcceptLanguage } from '$lib/language';
+import * as m from '$lib/paraglide/messages';
 
 export const POST: RequestHandler = async (event) => {
+	const lang = languageFromAcceptLanguage(event.request.headers.get('accept-language'));
 	const { username, password } = await event.request.json();
 	if (!username || !password) {
-		return json({ error: 'Benutzername und Passwort erforderlich' }, { status: 400 });
+		return json({ error: m.login_missing_credentials({}, { languageTag: lang }) }, { status: 400 });
 	}
 
 	// Rate-limit per IP+username so failed attempts on one account don't block others
 	if (!checkRateLimit(`${event.getClientAddress()}:${String(username).toLowerCase()}`)) {
-		return json({ error: 'Zu viele Versuche. Bitte warte 15 Minuten.' }, { status: 429 });
+		return json({ error: m.login_rate_limited({}, { languageTag: lang }) }, { status: 429 });
 	}
 
 	const result = await login(username, password);
 	if (!result) {
-		return json({ error: 'Falscher Benutzername oder Passwort' }, { status: 401 });
+		return json({ error: m.login_error({}, { languageTag: lang }) }, { status: 401 });
 	}
 
 	event.cookies.set('session', result.sessionId, {

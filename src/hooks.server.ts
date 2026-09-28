@@ -2,6 +2,7 @@ import { type Handle, redirect } from '@sveltejs/kit';
 import { getSession } from '$lib/auth';
 import { init } from '$lib/server/startup';
 import { applySecurityHeaders } from '$lib/server/security';
+import { languageFromAcceptLanguage } from '$lib/language';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	await init();
@@ -24,7 +25,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 		redirect(302, '/');
 	}
 
-	const response = await resolve(event);
+	const anonymousLang = !user && (isAuthRoute || isInviteRoute)
+		? languageFromAcceptLanguage(event.request.headers.get('accept-language'))
+		: null;
+	const response = await resolve(event, anonymousLang ? {
+		transformPageChunk: ({ html }) => html.replace('<html lang="de">', `<html lang="${anonymousLang}">`)
+	} : {});
 	applySecurityHeaders(response);
 	// API-Antworten nie cachen: die URLs (z.B. /api/supplement-logs?from=…&to=…) sind
 	// über den Tag identisch. Ohne no-store beantwortet iOS Safari sie nach langem

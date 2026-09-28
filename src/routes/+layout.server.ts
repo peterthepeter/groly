@@ -2,9 +2,14 @@ import type { LayoutServerLoad } from './$types';
 import { db } from '$lib/db';
 import { users } from '$lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { languageFromAcceptLanguage } from '$lib/language';
 
-export const load: LayoutServerLoad = async ({ locals }) => {
-	if (!locals.user) return { user: null, settings: null };
+export const load: LayoutServerLoad = async ({ locals, request }) => {
+	if (!locals.user) return {
+		user: null,
+		settings: null,
+		anonymousLang: languageFromAcceptLanguage(request.headers.get('accept-language'))
+	};
 
 	const fullUser = db.select({
 		settings: users.settings,

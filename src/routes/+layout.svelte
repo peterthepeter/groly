@@ -28,7 +28,7 @@
 		if (!browser) return;
 		const userId = data.user?.id ?? null;
 		initSync(userId);
-		void initLanguage(userId, data.settings ?? {}, data.settingsRevision ?? 0);
+		void initLanguage(userId, data.settings ?? {}, data.settingsRevision ?? 0, data.anonymousLang);
 	});
 
 	afterNavigate(() => {

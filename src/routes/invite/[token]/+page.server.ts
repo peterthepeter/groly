@@ -1,19 +1,22 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { validateInvite, consumeInvite } from '$lib/auth/invites';
-import { validatePassword } from '$lib/password';
+import { validatePasswordRule } from '$lib/password';
+import { languageFromAcceptLanguage } from '$lib/language';
 
-export const load: PageServerLoad = ({ params }) => {
+export const load: PageServerLoad = ({ params, request }) => {
+	const lang = languageFromAcceptLanguage(request.headers.get('accept-language'));
 	const result = validateInvite(params.token);
 	if (result.status === 'valid') {
 		return {
+			lang,
 			status: 'valid' as const,
 			username: result.username,
 			type: result.type,
 			expiresAt: result.expiresAt
 		};
 	}
-	return { status: result.status };
+	return { status: result.status, lang };
 };
 
 export const actions: Actions = {
@@ -25,9 +28,9 @@ export const actions: Actions = {
 		if (password !== confirm) {
 			return fail(400, { error: 'mismatch' });
 		}
-		const pwError = validatePassword(password);
+		const pwError = validatePasswordRule(password);
 		if (pwError) {
-			return fail(400, { error: 'invalid', message: pwError });
+			return fail(400, { error: 'invalid', reason: pwError });
 		}
 
 		const result = consumeInvite(params.token, password);

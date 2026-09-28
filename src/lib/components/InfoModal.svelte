@@ -24,6 +24,10 @@
 					text: 'You can keep working without an internet connection. Changes are saved on your device and synced automatically when you are back online.'
 				},
 				{
+					title: 'Language',
+					text: 'Sign-in and invite pages use your browser language. After signing in, you can choose German or English in Settings; your choice is saved for your account.'
+				},
+				{
 					title: 'Updates',
 					text: 'When an update is ready, an arrow appears in the top bar. Tap it and reload Groly from the dialog.'
 				},
@@ -155,6 +159,10 @@
 				{
 					title: 'Offline & Synchronisation',
 					text: 'Du kannst ohne Internet weiterarbeiten. Änderungen bleiben auf deinem Gerät gespeichert und werden automatisch synchronisiert, sobald du wieder online bist.'
+				},
+				{
+					title: 'Sprache',
+					text: 'Anmeldung und Einladungsseite verwenden deine Browsersprache. Nach der Anmeldung kannst du Deutsch oder Englisch in den Einstellungen wählen; die Auswahl wird für dein Konto gespeichert.'
 				},
 				{
 					title: 'Updates',

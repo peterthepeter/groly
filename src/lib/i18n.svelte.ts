@@ -14,6 +14,7 @@ if (browser) {
 		const lang = settings.lang ?? 'de';
 		setLanguageTag(lang);
 		_lang = lang;
+		document.documentElement.lang = lang;
 	});
 }
 
@@ -24,13 +25,29 @@ export function currentLang(): AvailableLanguageTag {
 export function setLang(lang: AvailableLanguageTag) {
 	setLanguageTag(lang);
 	_lang = lang;
+	if (browser) document.documentElement.lang = lang;
 	userSettings.lang = lang;
+}
+
+// Explicit locale for pages rendered before a user has signed in. A server
+// request must not change Paraglide's process-wide language tag.
+export function localizedMessages(lang: AvailableLanguageTag): Record<NoArgMessages, string> {
+	return new Proxy({} as Record<NoArgMessages, string>, {
+		get(_target, key: string | symbol): string {
+			if (typeof key !== 'string') return '';
+			const fn = (m as Record<string, unknown>)[key];
+			return typeof fn === 'function'
+				? (fn as (params: {}, options: { languageTag: AvailableLanguageTag }) => string)({}, { languageTag: lang })
+				: '';
+		}
+	});
 }
 
 export async function initLanguage(
 	userId: string | null,
 	serverSettings: UserSettings = {},
-	settingsRevision = 0
+	settingsRevision = 0,
+	anonymousLang: AvailableLanguageTag = 'de'
 ) {
 	if (!browser) return;
 	if (initializedUserId === userId) return;
@@ -46,9 +63,10 @@ export async function initLanguage(
 		const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 		if (timeZone && effectiveSettings?.timeZone !== timeZone) userSettings.timeZone = timeZone;
 	}
-	const lang = userSettings.lang;
+	const lang = userId ? userSettings.lang : anonymousLang;
 	setLanguageTag(lang);
 	_lang = lang;
+	document.documentElement.lang = lang;
 	// If no explicit language preference was saved, detect from browser
 	if (userId && !hasSavedLanguage) {
 		const browserLang = navigator.language.slice(0, 2);

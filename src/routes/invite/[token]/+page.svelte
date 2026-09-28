@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { getPasswordHint, validatePassword } from '$lib/password';
+	import { localizedMessages } from '$lib/i18n.svelte';
+	import { getPasswordHint, validatePasswordRule } from '$lib/password';
 
 	let { data, form } = $props();
+	const t = $derived(localizedMessages(data.lang));
 
 	let password = $state('');
 	let confirm = $state('');
@@ -13,8 +14,10 @@
 		if (!password && !confirm) return '';
 		if (password && confirm && password !== confirm) return t.invite_password_mismatch;
 		if (password) {
-			const err = validatePassword(password);
-			if (err) return err;
+			const rule = validatePasswordRule(password);
+			if (rule === 'too_short') return t.password_too_short;
+			if (rule === 'missing_uppercase') return t.password_missing_uppercase;
+			if (rule === 'missing_number') return t.password_missing_number;
 		}
 		return '';
 	});
@@ -28,7 +31,7 @@
 	);
 
 	function formatExpiry(ts: number): string {
-		return new Date(ts * 1000).toLocaleString(currentLang() === 'de' ? 'de-DE' : 'en-US', {
+		return new Date(ts * 1000).toLocaleString(data.lang === 'de' ? 'de-DE' : 'en-US', {
 			day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
 		});
 	}
@@ -36,7 +39,13 @@
 	const serverErrorMessage = $derived.by(() => {
 		if (!form?.error) return '';
 		if (form.error === 'mismatch') return t.invite_password_mismatch;
-		if (form.error === 'invalid') return ('message' in form ? form.message as string : '') || t.invite_password_invalid;
+		if (form.error === 'invalid') {
+			const reason = 'reason' in form ? form.reason : null;
+			if (reason === 'too_short') return t.password_too_short;
+			if (reason === 'missing_uppercase') return t.password_missing_uppercase;
+			if (reason === 'missing_number') return t.password_missing_number;
+			return t.invite_password_invalid;
+		}
 		if (form.error === 'expired') return t.invite_expired;
 		if (form.error === 'used') return t.invite_used;
 		return t.invite_unknown_error;
@@ -138,7 +147,7 @@
 				</div>
 
 				<p class="text-xs px-1" style="color: {clientError ? 'var(--color-error)' : 'var(--color-on-surface-variant)'}">
-					{clientError || getPasswordHint(currentLang())}
+					{clientError || getPasswordHint(data.lang)}
 				</p>
 
 				<button
