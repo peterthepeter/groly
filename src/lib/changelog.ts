@@ -3,8 +3,8 @@
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
 		version: '0.9.9',
-		de: ['Login und Einladung jetzt in der Browsersprache.'],
-		en: ['Login and invite pages now use your browser language.']
+		de: ['Login und Einladung: Deutsch bei deutscher Browsersprache, sonst Englisch.'],
+		en: ['Login and invite pages: German for German browsers, English otherwise.']
 	},
 	{
 		version: '0.9.8-hotfix.2',

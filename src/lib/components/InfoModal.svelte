@@ -25,7 +25,7 @@
 				},
 				{
 					title: 'Language',
-					text: 'Sign-in and invite pages use your browser language. After signing in, you can choose German or English in Settings; your choice is saved for your account.'
+					text: 'Sign-in and invite pages appear in German for German browsers and English otherwise. After signing in, you can choose either language in Settings; your choice is saved for your account.'
 				},
 				{
 					title: 'Updates',
@@ -162,7 +162,7 @@
 				},
 				{
 					title: 'Sprache',
-					text: 'Anmeldung und Einladungsseite verwenden deine Browsersprache. Nach der Anmeldung kannst du Deutsch oder Englisch in den Einstellungen wählen; die Auswahl wird für dein Konto gespeichert.'
+					text: 'Anmeldung und Einladungsseite erscheinen bei deutscher Browsersprache auf Deutsch, sonst auf Englisch. Nach der Anmeldung kannst du die Sprache in den Einstellungen wählen; die Auswahl wird für dein Konto gespeichert.'
 				},
 				{
 					title: 'Updates',

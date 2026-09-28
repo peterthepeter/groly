@@ -4,6 +4,7 @@ import { browser } from '$app/environment';
 import { userSettings, initUserSettings, onUserSettingsApplied } from '$lib/userSettings.svelte';
 import type { UserSettings } from '$lib/userSettingsTypes';
 import { hasExplicitUserLanguage } from '$lib/userSettingsSync';
+import { languageFromBrowserLanguage } from '$lib/language';
 
 let _lang = $state<AvailableLanguageTag>('de');
 let initializedUserId: string | null | undefined;
@@ -69,8 +70,7 @@ export async function initLanguage(
 	document.documentElement.lang = lang;
 	// If no explicit language preference was saved, detect from browser
 	if (userId && !hasSavedLanguage) {
-		const browserLang = navigator.language.slice(0, 2);
-		setLang(browserLang === 'en' ? 'en' : 'de');
+		setLang(languageFromBrowserLanguage(navigator.language));
 	}
 }
 
