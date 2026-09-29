@@ -69,7 +69,7 @@
 				onclick={onDelete}
 				class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors active:scale-95"
 				style="color: #ef4444"
-				aria-label="Item löschen"
+				aria-label={t.a11y_delete_item}
 			>
 				<svg width="17" height="17" viewBox="0 0 24 24" fill="none"
 				     stroke="currentColor" stroke-width="2"

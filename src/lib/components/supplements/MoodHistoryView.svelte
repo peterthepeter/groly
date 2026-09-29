@@ -306,7 +306,7 @@
 				<button
 					onclick={() => { previewedDate = viewedDate; previewEditOpen = true; }}
 					class="shrink-0 p-1 rounded active:opacity-50"
-					aria-label="Bearbeiten"
+					aria-label={t.edit}
 					style="color: var(--color-on-surface-variant)"
 				>
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -400,13 +400,13 @@
 {/if}
 
 {#snippet navButtons()}
-	<button onclick={() => navigate(-1)} aria-label="Zurück" class="p-1 rounded active:opacity-60" style="color: var(--color-on-surface-variant)">
+	<button onclick={() => navigate(-1)} aria-label={t.a11y_back} class="p-1 rounded active:opacity-60" style="color: var(--color-on-surface-variant)">
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 			<polyline points="15 18 9 12 15 6"/>
 		</svg>
 	</button>
 	<span class="text-xs font-semibold" style="color: var(--color-on-surface)">{view === 'week' ? weekLabel() : monthLabel()}</span>
-	<button onclick={() => navigate(1)} aria-label="Vorwärts" class="p-1 rounded active:opacity-60" style="color: var(--color-on-surface-variant)">
+	<button onclick={() => navigate(1)} aria-label={t.a11y_forward} class="p-1 rounded active:opacity-60" style="color: var(--color-on-surface-variant)">
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 			<polyline points="9 18 15 12 9 6"/>
 		</svg>

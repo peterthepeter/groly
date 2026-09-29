@@ -193,7 +193,7 @@
 				onclick={onShare}
 				class="p-2 rounded-xl active:opacity-60"
 				style="color: var(--color-primary)"
-				aria-label="Liste teilen"
+				aria-label={t.a11y_share_list}
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -323,11 +323,11 @@
 												{i + 1}. {CATEGORY_LABELS[key]?.[currentLang()] ?? key}
 											</span>
 											<button type="button" onclick={() => list && userSettings.moveListCategoryUp(list.id, i)}
-												disabled={i === 0} aria-label="Nach oben" class="p-1 rounded-lg disabled:opacity-20" style="color: var(--color-on-surface-variant)">
+												disabled={i === 0} aria-label={t.a11y_move_up} class="p-1 rounded-lg disabled:opacity-20" style="color: var(--color-on-surface-variant)">
 												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
 											</button>
 											<button type="button" onclick={() => list && userSettings.moveListCategoryDown(list.id, i)}
-												disabled={i === listCatSettings.order.length - 1} aria-label="Nach unten" class="p-1 rounded-lg disabled:opacity-20" style="color: var(--color-on-surface-variant)">
+												disabled={i === listCatSettings.order.length - 1} aria-label={t.a11y_move_down} class="p-1 rounded-lg disabled:opacity-20" style="color: var(--color-on-surface-variant)">
 												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
 											</button>
 										</div>
@@ -392,7 +392,7 @@
 								</svg>
 								<span class="text-xs leading-relaxed flex-1"
 								      style="color: var(--color-primary)">{locationName}</span>
-								<button type="button" onclick={clearLocation} aria-label="Standort entfernen"
+								<button type="button" onclick={clearLocation} aria-label={t.a11y_remove_location}
 								        class="flex-shrink-0 p-0.5 rounded active:opacity-60"
 								        style="color: var(--color-outline)">
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -408,7 +408,7 @@
 								<span class="text-xs" style="color: var(--color-primary)">
 									{locationLat.toFixed(4)}, {locationLng?.toFixed(4)}
 								</span>
-								<button type="button" onclick={clearLocation} aria-label="Standort entfernen"
+								<button type="button" onclick={clearLocation} aria-label={t.a11y_remove_location}
 								        class="p-0.5 rounded active:opacity-60" style="color: var(--color-outline)">
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 									     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

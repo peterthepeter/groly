@@ -35,7 +35,7 @@
 				body: JSON.stringify({ username, password })
 			});
 			if (res.ok) {
-				void goto('/');
+				await goto('/', { invalidateAll: true });
 			} else if (res.status === 429) {
 				error = t.login_rate_limited;
 			} else if (res.status === 400) {

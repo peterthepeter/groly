@@ -488,7 +488,7 @@
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader
-		title={listName || 'Liste'}
+		title={listName || t.list_default_name}
 		subtitle={headerSubtitle}
 		onMenuOpen={() => menuOpen = true}
 		onSearch={showSearch && !searchOpen ? () => searchOpen = true : null}
@@ -509,7 +509,7 @@
 				<input
 					autofocus
 					type="text"
-					placeholder="Suchen..."
+					placeholder={t.list_search_placeholder}
 					bind:value={searchQuery}
 					onkeydown={(e) => e.key === 'Escape' && closeSearch()}
 					class="flex-1 bg-transparent outline-none text-sm"
@@ -519,7 +519,7 @@
 					onclick={closeSearch}
 					class="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
 					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-					aria-label="Suche schließen"
+					aria-label={t.a11y_close_search}
 				>×</button>
 			</div>
 		</div>
@@ -547,7 +547,7 @@
 					onclick={() => dismissListViewHint(false)}
 					class="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
 					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-					aria-label="Hinweis schließen"
+					aria-label={t.a11y_close_hint}
 				>×</button>
 			</div>
 		</div>
@@ -575,7 +575,7 @@
 					onclick={() => dismissLocationHint(false)}
 					class="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
 					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-					aria-label="Hinweis schließen"
+					aria-label={t.a11y_close_hint}
 				>×</button>
 			</div>
 		</div>

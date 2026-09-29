@@ -56,7 +56,7 @@ export const POST: RequestHandler = async (event) => {
 	try {
 		const count = db.select().from(recipes).where(eq(recipes.userId, user!.id)).all().length;
 		if (count >= RECIPE_LIMIT) {
-			return json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht` }, { status: 400 });
+			return json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht`, code: 'limit_reached', limit: RECIPE_LIMIT }, { status: 400 });
 		}
 
 		const body = await event.request.json();

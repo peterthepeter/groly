@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { authGuard } from '$lib/auth/middleware';
 import { changePassword, verifyPassword } from '$lib/auth';
-import { validatePassword } from '$lib/password';
+import { validatePassword, validatePasswordRule } from '$lib/password';
 import { db } from '$lib/db';
 import { users } from '$lib/db/schema';
 import { and, eq } from 'drizzle-orm';
@@ -97,14 +97,14 @@ export const PATCH: RequestHandler = async (event) => {
 	const { currentPassword, newPassword } = body;
 	if (!currentPassword || !newPassword) return json({ error: 'Fehlende Felder' }, { status: 400 });
 	const pwError = validatePassword(newPassword);
-	if (pwError) return json({ error: pwError }, { status: 400 });
+	if (pwError) return json({ error: pwError, code: validatePasswordRule(newPassword) }, { status: 400 });
 
 	const fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
 	if (!fullUser || !verifyPassword(currentPassword, fullUser.passwordHash)) {
-		return json({ error: 'Aktuelles Passwort falsch' }, { status: 401 });
+		return json({ error: 'Aktuelles Passwort falsch', code: 'current_password_wrong' }, { status: 401 });
 	}
 	if (newPassword === currentPassword) {
-		return json({ error: 'Neues Passwort darf nicht mit dem aktuellen übereinstimmen' }, { status: 400 });
+		return json({ error: 'Neues Passwort darf nicht mit dem aktuellen übereinstimmen', code: 'same_password' }, { status: 400 });
 	}
 
 	changePassword(user!.id, newPassword);

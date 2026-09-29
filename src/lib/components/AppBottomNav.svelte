@@ -145,7 +145,7 @@
 				onclick={onFavorites}
 				class="rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform select-none"
 				style="width: 48px; height: 48px; background-color: color-mix(in srgb, var(--color-bg) 60%, transparent); border: 1px solid var(--bubble-interactive-border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px)"
-				aria-label="Favourites"
+				aria-label={t.favorites_panel_toggle}
 			>
 				<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
 				     stroke="var(--color-primary)"

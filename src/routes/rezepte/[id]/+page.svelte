@@ -396,7 +396,7 @@
 					onclick={() => goto('/rezepte')}
 					class="absolute z-10 flex items-center justify-center w-9 h-9 rounded-xl active:opacity-70"
 					style="top: calc(env(safe-area-inset-top) + 0.75rem); left: 0.75rem; background-color: rgba(0,0,0,0.42); backdrop-filter: blur(6px)"
-					aria-label="Zurück"
+					aria-label={t.a11y_back}
 				>
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 						<polyline points="15 18 9 12 15 6"/>
@@ -508,7 +508,7 @@
 					<button
 						onclick={() => changeServings(-1)}
 						disabled={currentServings <= 1}
-						aria-label="Portionen verringern"
+						aria-label={t.a11y_decrease_servings}
 						class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
 					>
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
@@ -530,7 +530,7 @@
 					</div>
 					<button
 						onclick={() => changeServings(1)}
-						aria-label="Portionen erhöhen"
+						aria-label={t.a11y_increase_servings}
 						class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60"
 					>
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round">
@@ -572,7 +572,7 @@
 						<button
 							onclick={() => actionMenuOpen = true}
 							disabled={isOfflineFallback}
-							aria-label="Mehr"
+							aria-label={t.a11y_more}
 							class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 disabled:opacity-30"
 						>
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="var(--color-on-surface-variant)">
@@ -610,7 +610,7 @@
 							<button
 								onclick={() => listModalOpen = true}
 								disabled={selectedCount === 0}
-								aria-label="Auf Einkaufsliste"
+								aria-label={t.a11y_add_to_list}
 								class="flex items-center gap-1.5 px-2.5 h-8 rounded-full text-xs font-semibold active:opacity-70 disabled:opacity-40 active:scale-95 transition-transform"
 								style="background-color: var(--color-primary); color: var(--color-on-primary)"
 							>

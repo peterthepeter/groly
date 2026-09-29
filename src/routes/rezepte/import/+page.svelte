@@ -109,7 +109,7 @@
 					onclick={() => goto('/rezepte')}
 					class="w-8 h-8 rounded-full flex items-center justify-center active:opacity-60 transition-opacity"
 					style="background-color: var(--color-surface-container)"
-					aria-label="Schließen"
+					aria-label={t.close}
 				>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round">
 						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -209,7 +209,7 @@
 						style="color: var(--color-on-surface); font-size: 16px"
 					/>
 					{#if url}
-						<button onclick={() => url = ''} class="ml-1 active:opacity-60" aria-label="URL löschen">
+						<button onclick={() => url = ''} class="ml-1 active:opacity-60" aria-label={t.a11y_clear_url}>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round">
 								<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
 							</svg>

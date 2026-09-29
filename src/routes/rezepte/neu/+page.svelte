@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { tick } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
+	import { t, recipeLimitReached } from '$lib/i18n.svelte';
 	import { parseIngredientText } from '$lib/recipeIngredientParser';
 
 	type Ingredient = { id: string; amount: string; unit: string; name: string };
@@ -109,10 +109,12 @@
 				imageUrl = (await res.json()).url;
 			} else {
 				const body = await res.json().catch(() => ({}));
-				imageUploadError = body.error ?? 'Upload failed';
+				imageUploadError = body.code === 'no_image' ? t.recipe_image_upload_missing
+					: body.code === 'image_too_large' ? t.recipe_image_upload_too_large
+					: t.recipe_image_upload_failed;
 			}
 		} catch {
-			imageUploadError = 'Network error';
+			imageUploadError = t.recipe_image_upload_network_error;
 		}
 		imageUploading = false;
 	}
@@ -201,11 +203,13 @@
 				goto(`/rezepte/${data.id}`);
 			} else {
 				const data = await res.json();
-				error = data.error ?? 'Fehler beim Speichern';
+				error = data.code === 'limit_reached' && typeof data.limit === 'number'
+					? recipeLimitReached(data.limit)
+					: t.recipe_save_error;
 				saving = false;
 			}
 		} catch {
-			error = 'Verbindungsfehler';
+			error = t.recipe_save_network_error;
 			saving = false;
 		}
 	}
@@ -222,7 +226,7 @@
 				onclick={() => goto('/rezepte')}
 				class="w-9 h-9 rounded-xl flex items-center justify-center active:opacity-60"
 				style="background-color: var(--color-surface-high)"
-				aria-label="Zurück"
+				aria-label={t.a11y_back}
 			>
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 					<polyline points="15 18 9 12 15 6"/>
@@ -242,7 +246,7 @@
 			<button type="button" onclick={() => imageFileInput?.click()}
 			        class="w-full text-left active:opacity-75">
 				{#if imagePreview}
-					<img src={imagePreview} alt="Rezeptbild" class="w-full object-cover" style="max-height: 200px" />
+					<img src={imagePreview} alt={t.a11y_recipe_image} class="w-full object-cover" style="max-height: 200px" />
 					{#if imageUploading}
 						<div class="absolute inset-0 flex items-center justify-center" style="background: rgba(0,0,0,0.35)">
 							<div class="w-6 h-6 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
@@ -298,13 +302,13 @@
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
 						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
 					</svg>
-					<button onclick={() => { if (servings > 1) servings--; }} aria-label="Portionen verringern"
+					<button onclick={() => { if (servings > 1) servings--; }} aria-label={t.a11y_decrease_servings}
 					        style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background-color:var(--color-surface-high)"
 					        class="active:opacity-60">
 						<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
 					</button>
 					<span style="font-size:13px;font-weight:700;min-width:14px;text-align:center;color:var(--color-on-surface)">{servings}</span>
-					<button onclick={() => servings++} aria-label="Portionen erhöhen"
+					<button onclick={() => servings++} aria-label={t.a11y_increase_servings}
 					        style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background-color:var(--color-surface-high)"
 					        class="active:opacity-60">
 						<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -386,7 +390,7 @@
 					       class="bg-transparent outline-none"
 					       style="color:var(--color-on-surface);font-size:15px;height:38px;border:none;min-width:0" />
 					{#if !(i === ingredients.length - 1 && isEmptyIngredient(ing))}
-						<button onclick={() => removeIngredient(ing.id)} aria-label="Zutat entfernen"
+						<button onclick={() => removeIngredient(ing.id)} aria-label={t.a11y_remove_ingredient}
 						        class="flex items-center justify-center active:opacity-60"
 						        style="width:28px;height:38px;flex-shrink:0">
 							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2.5" stroke-linecap="round">
@@ -428,7 +432,7 @@
 							style="background-color: var(--color-surface-container); color: var(--color-on-surface); font-size: 16px; border: none; overflow: hidden"
 						></textarea>
 						{#if steps.length > 1}
-							<button onclick={() => removeStep(step.id)} aria-label="Schritt entfernen"
+							<button onclick={() => removeStep(step.id)} aria-label={t.a11y_remove_step}
 							        class="flex items-center justify-center active:opacity-60 mt-1"
 							        style="width:32px;height:32px;flex-shrink:0">
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2.5" stroke-linecap="round">

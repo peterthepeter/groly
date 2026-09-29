@@ -4,8 +4,9 @@ import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { lists, listMembers, users, items } from '$lib/db/schema';
 import { eq, and, sql, count as sqlCount } from 'drizzle-orm';
-import { sendPushToUser } from '$lib/server/pushNotifications';
+import { getUserLang, sendPushToUser } from '$lib/server/pushNotifications';
 import { emit, emitMemberCountToOwner } from '$lib/server/userEvents';
+import * as m from '$lib/paraglide/messages';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -66,9 +67,11 @@ export const POST: RequestHandler = async (event) => {
 	});
 
 	// Push-Benachrichtigung an eingeladenen User
+	const lang = getUserLang(target.settings);
+	const sender = user!.username ?? m.list_invitation_unknown_sender({}, { languageTag: lang });
 	await sendPushToUser(target.id, {
-		title: `Groly – ${user!.username ?? 'Jemand'}`,
-		body: `${user!.username ?? 'Jemand'} möchte die Einkaufsliste ${list.name} mit dir teilen`,
+		title: `Groly – ${sender}`,
+		body: m.list_invitation_push_body({ sender, list: list.name }, { languageTag: lang }),
 		url: '/'
 	});
 

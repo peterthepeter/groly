@@ -2,6 +2,11 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '0.9.10',
+		de: ['Englische Übersetzungen bei Einladungen, Meldungen und Bedienelementen ergänzt; Sprachwechsel nach dem Login korrigiert.'],
+		en: ['Completed English translations for invitations, messages, and controls; fixed language switching after login.']
+	},
+	{
 		version: '0.9.9',
 		de: ['Login und Einladung: Deutsch bei deutscher Browsersprache, sonst Englisch.'],
 		en: ['Login and invite pages: German for German browsers, English otherwise.']

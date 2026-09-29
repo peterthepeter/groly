@@ -285,7 +285,7 @@
 					style="color: var(--color-on-surface); font-size: 16px"
 				/>
 				<button onclick={closeSearch} class="w-7 h-7 flex items-center justify-center rounded-lg active:opacity-60 flex-shrink-0"
-				        style="background-color: var(--color-surface-high)" aria-label="Suche schließen">
+				        style="background-color: var(--color-surface-high)" aria-label={t.a11y_close_search}>
 					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round">
 						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
 					</svg>

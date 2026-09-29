@@ -454,7 +454,10 @@
 			const res = await fetch(`/api/supplement-catalog/parse?url=${encodeURIComponent(parseUrl.trim())}`);
 			const data = await res.json();
 			if (!res.ok) {
-				parseNote = data.error ?? t.admin_catalog_parse_error;
+				parseNote = data.code === 'invalid_url' ? t.admin_catalog_url_invalid
+					: data.code === 'url_not_allowed' ? t.admin_catalog_url_not_allowed
+					: data.code === 'page_load_failed' ? t.admin_catalog_page_load_failed
+					: t.admin_catalog_parse_error;
 				return;
 			}
 			const lines: string[] = [];
@@ -1040,7 +1043,7 @@
 											onclick={() => { caffeineEditId = drink.id; caffeineEditName = drink.name; caffeineEditMl = String(drink.defaultMl); caffeineEditMg = String(drink.caffeineMg); }}
 											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
 											style="color: var(--color-on-surface-variant)"
-											aria-label="Bearbeiten"
+											aria-label={t.edit}
 										>
 											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -1051,7 +1054,7 @@
 											onclick={() => deleteCaffeineDrink(drink.id)}
 											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
 											style="color: var(--color-error)"
-											aria-label="Löschen"
+											aria-label={t.a11y_delete}
 										>
 											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 												<polyline points="3 6 5 6 21 6"/>
@@ -1509,4 +1512,3 @@
 		{/if}
 	</div>
 {/if}
-

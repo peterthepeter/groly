@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getListIcon } from '$lib/listIcons';
-	import { list_items_open } from '$lib/i18n.svelte';
+	import { list_items_open, t } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 
 	// Fallback: konsistente Farbe aus dem Listennamen
@@ -83,7 +83,7 @@
 			role="button"
 			tabindex="-1"
 			class="flex-shrink-0 p-1.5 -mr-1 rounded-lg active:opacity-60"
-			aria-label="Liste teilen"
+			aria-label={t.a11y_share_list}
 		>
 			<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>

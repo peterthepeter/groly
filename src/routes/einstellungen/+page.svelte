@@ -8,7 +8,7 @@
 	import { t, currentLang, setLang } from '$lib/i18n.svelte';
 	import { userSettings } from '$lib/userSettings.svelte';
 	import { CATEGORY_LABELS } from '$lib/categories';
-	import { validatePassword, getPasswordHint } from '$lib/password';
+	import { validatePasswordRule, getPasswordHint } from '$lib/password';
 	import { shortcuts, type Shortcut, type ShortcutAction } from '$lib/shortcuts.svelte';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
@@ -406,36 +406,48 @@
 			error = t.settings_passwords_no_match;
 			return;
 		}
-		const pwError = validatePassword(newPassword);
-		if (pwError) {
-			error = pwError;
+		const pwRule = validatePasswordRule(newPassword);
+		if (pwRule) {
+			error = pwRule === 'too_short' ? t.password_too_short
+				: pwRule === 'missing_uppercase' ? t.password_missing_uppercase
+				: t.password_missing_number;
 			return;
 		}
 
 		loading = true;
-		const res = await fetch('/api/users/me', {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ currentPassword, newPassword })
-		});
+		try {
+			const res = await fetch('/api/users/me', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ currentPassword, newPassword })
+			});
 
-		if (res.ok) {
-			success = t.settings_password_success;
-			currentPassword = '';
-			newPassword = '';
-			confirmPassword = '';
-			if (mustChange) {
-				if (pushSupported && !pushSubscribed) {
-					showPushPrompt = true;
-				} else {
-					setTimeout(() => goto('/'), 1500);
+			if (res.ok) {
+				success = t.settings_password_success;
+				currentPassword = '';
+				newPassword = '';
+				confirmPassword = '';
+				if (mustChange) {
+					if (pushSupported && !pushSubscribed) {
+						showPushPrompt = true;
+					} else {
+						setTimeout(() => goto('/'), 1500);
+					}
 				}
+			} else {
+				const data = await res.json();
+				error = data.code === 'too_short' ? t.password_too_short
+					: data.code === 'missing_uppercase' ? t.password_missing_uppercase
+					: data.code === 'missing_number' ? t.password_missing_number
+					: data.code === 'current_password_wrong' ? t.settings_current_password_wrong
+					: data.code === 'same_password' ? t.settings_password_unchanged
+					: t.settings_password_error;
 			}
-		} else {
-			const data = await res.json();
-			error = data.error ?? t.settings_password_error;
+		} catch {
+			error = t.settings_password_error;
+		} finally {
+			loading = false;
 		}
-		loading = false;
 	}
 </script>
 
@@ -868,7 +880,7 @@
 											onclick={() => startEdit(sc)}
 											class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 active:opacity-60"
 											style="color: var(--color-on-surface-variant)"
-											aria-label="Bearbeiten"
+											aria-label={t.edit}
 										>
 											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -879,7 +891,7 @@
 											onclick={() => shortcuts.remove(sc.id)}
 											class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 active:opacity-60"
 											style="color: var(--color-error)"
-											aria-label="Löschen"
+											aria-label={t.a11y_delete}
 										>
 											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
 												<line x1="18" y1="6" x2="6" y2="18"/>
@@ -1014,7 +1026,7 @@
 									<button
 										onclick={() => userSettings.moveUp(i)}
 										disabled={i === 0}
-										aria-label="Nach oben"
+										aria-label={t.a11y_move_up}
 										class="p-1 rounded-lg disabled:opacity-20"
 										style="color: var(--color-on-surface-variant)"
 									>
@@ -1025,7 +1037,7 @@
 									<button
 										onclick={() => userSettings.moveDown(i)}
 										disabled={i === userSettings.categoryOrder.length - 1}
-										aria-label="Nach unten"
+										aria-label={t.a11y_move_down}
 										class="p-1 rounded-lg disabled:opacity-20"
 										style="color: var(--color-on-surface-variant)"
 									>

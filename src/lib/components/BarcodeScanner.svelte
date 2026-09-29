@@ -285,7 +285,7 @@
 		onclick={handleClose}
 		class="absolute bottom-6 right-4 z-10 w-12 h-12 rounded-full flex items-center justify-center"
 		style="background-color: rgba(0,0,0,0.5); color: white; margin-bottom: env(safe-area-inset-bottom)"
-		aria-label="Schließen"
+		aria-label={t.close}
 	>
 		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
 			<line x1="18" y1="6" x2="6" y2="18"/>

@@ -153,7 +153,7 @@
 				<div class="today-tracker-status tabular-nums">
 					<span>{totalMinutes} / {goalMinutes} min</span>
 					{#if hasReminders}
-						<button onclick={() => reminderSheetOpen = true} class="flex items-center justify-center active:opacity-60" style="color: #9F7AEA" aria-label="Erinnerungen"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+						<button onclick={() => reminderSheetOpen = true} class="flex items-center justify-center active:opacity-60" style="color: #9F7AEA" aria-label={t.a11y_reminders}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
 					{/if}
 				</div>
 				<div class="today-tracker-progress">
@@ -182,7 +182,7 @@
 						<div class="flex items-center justify-between text-xs">
 							<span style="color: var(--color-on-surface-variant)"><span style="color: #9F7AEA">{formatDurationShort(log.durationSeconds)}</span> {formatTime(log.loggedAt - log.durationSeconds * 1000)}–{formatTime(log.loggedAt)}</span>
 							<div class="flex items-center gap-0.5 shrink-0">
-								<button onclick={() => openEdit(log)} class="p-1 rounded active:opacity-50" aria-label="Bearbeiten" style="color: var(--color-on-surface-variant)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+								<button onclick={() => openEdit(log)} class="p-1 rounded active:opacity-50" aria-label={t.edit} style="color: var(--color-on-surface-variant)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
 								<button onclick={() => ondeleted(log.id)} class="p-1 rounded active:opacity-50" aria-label={t.meditation_log_delete} style="color: var(--color-on-surface-variant)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
 							</div>
 						</div>
@@ -242,7 +242,7 @@
 				<button
 					onclick={() => reminderSheetOpen = true}
 					class="flex items-center justify-center active:opacity-60"
-					aria-label="Erinnerungen"
+					aria-label={t.a11y_reminders}
 					style="color: #9F7AEA"
 				>
 					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -290,7 +290,7 @@
 						<button
 							onclick={() => openEdit(log)}
 							class="p-1 rounded active:opacity-50"
-							aria-label="Bearbeiten"
+							aria-label={t.edit}
 							style="color: var(--color-on-surface-variant)"
 						>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

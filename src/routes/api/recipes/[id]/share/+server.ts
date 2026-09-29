@@ -4,8 +4,9 @@ import { authGuard } from '$lib/auth/middleware';
 import { db } from '$lib/db';
 import { recipes, recipeShares, users } from '$lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { sendPushToUser } from '$lib/server/pushNotifications';
+import { getUserLang, sendPushToUser } from '$lib/server/pushNotifications';
 import { randomUUID } from 'crypto';
+import * as m from '$lib/paraglide/messages';
 
 export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -50,9 +51,10 @@ export const POST: RequestHandler = async (event) => {
 			createdAt: Date.now()
 		}).run();
 
+		const lang = getUserLang(target.settings);
 		await sendPushToUser(target.id, {
 			title: `Groly – ${user!.username}`,
-			body: `${user!.username} teilt das Rezept ${recipe.title} mit dir`,
+			body: m.recipe_share_push_body({ sender: user!.username, recipe: recipe.title }, { languageTag: lang }),
 			url: '/rezepte'
 		});
 

@@ -378,7 +378,7 @@
 				onclick={() => goto('/tracker')}
 				class="w-9 h-9 flex items-center justify-center rounded-xl active:opacity-60 transition-opacity"
 				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
-				aria-label="Zurück"
+				aria-label={t.a11y_back}
 			>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<polyline points="15 18 9 12 15 6"/>
@@ -397,7 +397,7 @@
 				<line x1="1" y1="1" x2="23" y2="23"/>
 			</svg>
 			<p class="text-sm font-medium flex-1" style="color: var(--color-on-surface)">{reminders_deactivated_for(remindersDeactivatedToastName)}</p>
-			<button onclick={() => remindersDeactivatedToastName = null} class="flex-shrink-0 active:opacity-60" aria-label="Schließen">
+			<button onclick={() => remindersDeactivatedToastName = null} class="flex-shrink-0 active:opacity-60" aria-label={t.close}>
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round">
 					<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
 				</svg>
@@ -511,7 +511,7 @@
 							</button>
 							<button
 								onclick={() => openEdit(supplement)}
-								aria-label="Supplement bearbeiten"
+								aria-label={t.a11y_edit_supplement}
 								class="shrink-0 p-1.5 rounded-xl active:opacity-60"
 								style="color: var(--color-on-surface-variant)"
 							>

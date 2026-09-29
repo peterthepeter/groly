@@ -7,7 +7,7 @@ import { env } from '$env/dynamic/private';
 type Lang = 'de' | 'en';
 type PayloadFn = (lang: Lang) => { title: string; body: string; url?: string };
 
-function getUserLang(settings: string | null): Lang {
+export function getUserLang(settings: string | null): Lang {
 	try {
 		if (settings && JSON.parse(settings)?.lang === 'en') return 'en';
 	} catch { /* use default */ }

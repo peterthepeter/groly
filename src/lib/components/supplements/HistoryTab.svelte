@@ -719,7 +719,7 @@
 									{@render timelineGuides()}
 									{#each caffeineLogs as log}
 										<button onclick={() => focusLog(log.id, caffeineHistoryCardExpanded, v => caffeineHistoryCardExpanded = v)}
-											aria-label="Eintrag"
+											aria-label={t.a11y_entry}
 											class="absolute rounded-full active:opacity-60"
 											style="left: calc({hourPos(log.loggedAt)}% - 3px); top: 1px; width: 6px; height: 12px; background-color: #C8956C; opacity: 0.95; {focusedLogId === log.id ? 'box-shadow: 0 0 0 2px var(--color-surface-card), 0 0 0 3.5px #C8956C' : ''}"
 										></button>
@@ -738,7 +738,7 @@
 													<button
 														onclick={() => onEditCaffeineLog?.(log)}
 														class="shrink-0 p-1 rounded active:opacity-50"
-														aria-label="Bearbeiten"
+														aria-label={t.edit}
 														style="color: var(--color-on-surface-variant)"
 													>
 														<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -815,7 +815,7 @@
 										{@const rp = hourPos(endTs)}
 										{@const w = Math.max(0.8, rp - lp)}
 										<button onclick={() => focusLog(log.id, meditationHistoryCardExpanded, v => meditationHistoryCardExpanded = v)}
-											aria-label="Sitzung"
+											aria-label={t.a11y_session}
 											class="absolute rounded-full active:opacity-60"
 											style="left: {lp}%; top: 1px; width: {w}%; min-width: 4px; height: 12px; background-color: #9F7AEA; opacity: 0.95; {focusedLogId === log.id ? 'box-shadow: 0 0 0 2px var(--color-surface-card), 0 0 0 3.5px #9F7AEA' : ''}"
 										></button>
@@ -892,7 +892,7 @@
 								{@render timelineGuides()}
 								{#each waterLogs as log}
 									<button onclick={() => focusLog(log.id, waterHistoryCardExpanded, v => waterHistoryCardExpanded = v)}
-										aria-label="Eintrag"
+										aria-label={t.a11y_entry}
 										class="absolute rounded-full active:opacity-60"
 										style="left: calc({hourPos(log.loggedAt)}% - 3px); top: 1px; width: 6px; height: 12px; background-color: #60A5FA; opacity: 0.95; {focusedLogId === log.id ? 'box-shadow: 0 0 0 2px var(--color-surface-card), 0 0 0 3.5px #60A5FA' : ''}"
 									></button>
@@ -909,7 +909,7 @@
 												<button
 													onclick={() => onEditWaterLog?.(log)}
 													class="shrink-0 p-1 rounded active:opacity-50"
-													aria-label="Bearbeiten"
+													aria-label={t.edit}
 													style="color: var(--color-on-surface-variant)"
 												>
 													<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1092,7 +1092,7 @@
 									{/each}
 									{#each suppLogs as log}
 										<button onclick={() => focusSupplementLog(log)}
-											aria-label="Eintrag"
+											aria-label={t.a11y_entry}
 											class="absolute rounded-full active:opacity-60"
 											style="left: calc({hourPos(log.loggedAt)}% - 3.5px); top: 1px; width: 7px; height: 14px; background-color: var(--color-primary-dim); {focusedLogId === log.id ? 'box-shadow: 0 0 0 2.5px var(--color-surface-card), 0 0 0 4.5px var(--color-primary)' : 'box-shadow: 0 0 0 2.5px var(--color-surface-card), 0 0 0 4px color-mix(in srgb, var(--color-primary-dim) 18%, transparent)'}"
 										></button>
@@ -1115,7 +1115,7 @@
 												<button
 													onclick={() => onEditLog(log, sup)}
 													class="shrink-0 p-1 rounded active:opacity-50"
-													aria-label="Bearbeiten"
+													aria-label={t.edit}
 													style="color: var(--color-on-surface-variant)"
 												>
 													<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

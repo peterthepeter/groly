@@ -185,14 +185,14 @@ export const GET: RequestHandler = async (event) => {
 	if (authError) return authError;
 
 	const rawUrl = event.url.searchParams.get('url');
-	if (!rawUrl) return json({ error: 'URL required' }, { status: 400 });
+	if (!rawUrl) return json({ error: 'URL required', code: 'invalid_url' }, { status: 400 });
 
 	let targetUrl: URL;
 	try {
 		targetUrl = new URL(rawUrl);
 		if (!['http:', 'https:'].includes(targetUrl.protocol)) throw new Error();
 	} catch {
-		return json({ error: 'Ungültige URL' }, { status: 400 });
+		return json({ error: 'Ungültige URL', code: 'invalid_url' }, { status: 400 });
 	}
 
 	// Block SSRF: reject private/internal hostnames and IP ranges
@@ -206,7 +206,7 @@ export const GET: RequestHandler = async (event) => {
 		/^192\.168\./.test(host) ||
 		/^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
 		host === '169.254.169.254'; // cloud metadata
-	if (isPrivate) return json({ error: 'URL nicht erlaubt' }, { status: 400 });
+	if (isPrivate) return json({ error: 'URL nicht erlaubt', code: 'url_not_allowed' }, { status: 400 });
 
 	try {
 		let name = '';
@@ -236,7 +236,7 @@ export const GET: RequestHandler = async (event) => {
 
 		// ── Step 2: Fetch HTML page for package size + nutrients ──────────────────
 		const htmlRes = await fetchWithTimeout(rawUrl);
-		if (!htmlRes.ok) return json({ error: `HTTP ${htmlRes.status}` }, { status: 502 });
+		if (!htmlRes.ok) return json({ error: `HTTP ${htmlRes.status}`, code: 'page_load_failed' }, { status: 502 });
 
 		const html = await htmlRes.text();
 

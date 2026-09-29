@@ -75,7 +75,7 @@
 				<button
 					onclick={onSearch}
 					class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
-					aria-label="Suchen"
+					aria-label={t.a11y_search}
 				>
 					<svg width="23" height="23" viewBox="0 0 24 24" fill="none"
 					     stroke="var(--color-on-surface)" stroke-width="2.2"

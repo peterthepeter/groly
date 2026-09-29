@@ -30,7 +30,8 @@
 		empty: lang === 'en' ? 'Not shared with anyone yet.' : 'Noch mit niemandem geteilt.',
 		notFound: lang === 'en' ? 'User not found.' : 'Benutzer nicht gefunden.',
 		selfShare: lang === 'en' ? 'Cannot share with yourself.' : 'Du kannst die Liste nicht mit dir selbst teilen.',
-		alreadyShared: lang === 'en' ? 'Already shared with this user.' : 'Bereits mit diesem Benutzer geteilt.'
+		alreadyShared: lang === 'en' ? 'Already shared with this user.' : 'Bereits mit diesem Benutzer geteilt.',
+		shareFailed: lang === 'en' ? 'Could not share the list. Please try again.' : 'Liste konnte nicht geteilt werden. Bitte versuche es erneut.'
 	});
 
 	async function loadMembers() {
@@ -55,10 +56,10 @@
 			members = [...members, member];
 			newUsername = '';
 		} else {
-			const data = await res.json();
 			if (res.status === 404) error = t.notFound;
-			else if (data.error?.includes('selbst') || data.error?.includes('yourself')) error = t.selfShare;
-			else error = data.error ?? t.notFound;
+			else if (res.status === 409) error = t.alreadyShared;
+			else if (res.status === 400) error = t.selfShare;
+			else error = t.shareFailed;
 		}
 		adding = false;
 	}

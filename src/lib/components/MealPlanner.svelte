@@ -398,7 +398,7 @@
 	<button
 		onclick={() => { if (weekOffset > MIN_WEEK_OFFSET) weekOffset--; }}
 		disabled={weekOffset <= MIN_WEEK_OFFSET}
-		aria-label="Vorherige Woche"
+		aria-label={t.a11y_previous_week}
 		class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-30 active:opacity-60 transition-opacity"
 		style="background-color: var(--color-surface-container)"
 	>
@@ -411,7 +411,7 @@
 
 	<button
 		onclick={() => weekOffset++}
-		aria-label="Nächste Woche"
+		aria-label={t.a11y_next_week}
 		class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 active:opacity-60 transition-opacity"
 		style="background-color: var(--color-surface-container)"
 	>
@@ -532,7 +532,7 @@
 									{#if editMode}
 										<button
 											onclick={() => updateServings(entry, -1)}
-											aria-label="Portionen verringern"
+											aria-label={t.a11y_decrease_servings}
 											class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60"
 											style="background-color: var(--color-surface-container)"
 										>
@@ -541,7 +541,7 @@
 										<span class="text-xs font-semibold w-4 text-center" style="color: var(--color-on-surface)">{entry.servings ?? (entry.recipeServings ?? 2)}</span>
 										<button
 											onclick={() => updateServings(entry, 1)}
-											aria-label="Portionen erhöhen"
+											aria-label={t.a11y_increase_servings}
 											class="w-7 h-7 rounded-lg flex items-center justify-center active:opacity-60"
 											style="background-color: var(--color-surface-container)"
 										>
@@ -724,14 +724,14 @@
 					<div class="flex items-center gap-2 px-3 py-2 rounded-xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.meal_plan_servings}</span>
 						<button onclick={() => pickerServings = Math.max(1, pickerServings - 1)}
-						        aria-label="Portionen verringern"
+						        aria-label={t.a11y_decrease_servings}
 						        class="w-6 h-6 rounded-lg flex items-center justify-center active:opacity-60"
 						        style="background-color: var(--color-surface-high)">
 							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
 						</button>
 						<span class="text-sm font-bold w-5 text-center" style="color: var(--color-on-surface)">{pickerServings}</span>
 						<button onclick={() => pickerServings++}
-						        aria-label="Portionen erhöhen"
+						        aria-label={t.a11y_increase_servings}
 						        class="w-6 h-6 rounded-lg flex items-center justify-center active:opacity-60"
 						        style="background-color: var(--color-surface-high)">
 							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -808,7 +808,7 @@
 								disabled={!listSheetNewName.trim() || listSheetAdding}
 								class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 disabled:opacity-40 active:opacity-70"
 								style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))"
-								aria-label="Erstellen"
+								aria-label={t.create}
 							>
 								{#if listSheetAdding}
 									<div class="w-4 h-4 rounded-full border-2 animate-spin" style="border-color: var(--color-on-primary); border-top-color: transparent"></div>
@@ -816,7 +816,7 @@
 									<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 								{/if}
 							</button>
-							<button onclick={() => listSheetNewMode = false} aria-label="Abbrechen"
+							<button onclick={() => listSheetNewMode = false} aria-label={t.list_cancel}
 							        class="w-8 h-8 flex items-center justify-center flex-shrink-0 active:opacity-70">
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round">
 									<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>

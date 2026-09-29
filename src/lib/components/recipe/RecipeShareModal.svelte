@@ -22,14 +22,18 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ username: shareUsername.trim() })
 			});
-			const data = await res.json();
 			if (!res.ok) {
-				shareError = data.error ?? 'Fehler beim Teilen';
+				shareError = res.status === 404 ? t.recipe_share_user_not_found
+					: res.status === 409 ? t.recipe_share_already_pending
+					: res.status === 400 ? t.recipe_share_self_error
+					: t.recipe_share_error;
 			} else {
 				shareSuccess = true;
 				shareUsername = '';
 				setTimeout(() => { shareSuccess = false; onClose(); }, 1500);
 			}
+		} catch {
+			shareError = t.recipe_share_error;
 		} finally {
 			shareLoading = false;
 		}

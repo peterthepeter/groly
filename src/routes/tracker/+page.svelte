@@ -1182,7 +1182,7 @@
 		<div class="px-4 mt-3 flex items-center justify-between">
 			<button
 				onclick={() => navigateHistory(-1)}
-				aria-label="Vorheriger Zeitraum"
+				aria-label={t.a11y_previous_period}
 				class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
 				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
 			>
@@ -1198,7 +1198,7 @@
 						bind:value={historyDate}
 						max={toLocalDateStr(new Date())}
 						style="position:absolute; inset:0; width:100%; height:100%; opacity:0.001; cursor:pointer; border:none; padding:0; background:transparent"
-						aria-label="Datum wählen"
+						aria-label={t.a11y_choose_date}
 					/>
 				</div>
 			{:else}
@@ -1206,7 +1206,7 @@
 			{/if}
 			<button
 				onclick={() => navigateHistory(1)}
-				aria-label="Nächster Zeitraum"
+				aria-label={t.a11y_next_period}
 				class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
 				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
 			>
@@ -1407,7 +1407,7 @@
 													<button
 														onclick={() => openEditLog(log, supplement)}
 														class="p-1 rounded active:opacity-50 shrink-0"
-														aria-label="Bearbeiten"
+														aria-label={t.edit}
 														style="color: var(--color-on-surface-variant)"
 													>
 														<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

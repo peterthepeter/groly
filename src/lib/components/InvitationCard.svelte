@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getListIcon } from '$lib/listIcons';
+	import { t } from '$lib/i18n.svelte';
 
 	const COLORS = ['#2E7D32', '#2e6771', '#4d626c', '#5a4080', '#a0522d', '#1a6b3c'];
 	function colorForName(name: string): string {
@@ -8,9 +9,8 @@
 		return COLORS[Math.abs(hash) % COLORS.length];
 	}
 
-	let { invitation, currentUserId, onAccept, onDecline }: {
+	let { invitation, onAccept, onDecline }: {
 		invitation: { id: string; name: string; description: string | null; iconId: string | null; ownerUsername: string | null };
-		currentUserId: string;
 		onAccept: (enableNotifications: boolean) => void;
 		onDecline: () => void;
 	} = $props();
@@ -42,7 +42,7 @@
 	<div class="flex-1 min-w-0">
 		<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{invitation.name}</div>
 		<div class="text-xs truncate mt-0.5" style="color: var(--color-on-surface-variant)">
-			{invitation.ownerUsername ?? 'Jemand'} möchte teilen
+			{invitation.ownerUsername ?? t.list_invitation_unknown_sender} {t.list_invitation_share_request}
 		</div>
 	</div>
 
@@ -52,7 +52,7 @@
 		<button
 			onclick={() => notificationsEnabled = !notificationsEnabled}
 			class="p-2 rounded-lg active:opacity-60"
-			aria-label={notificationsEnabled ? 'Benachrichtigungen deaktivieren' : 'Benachrichtigungen aktivieren'}
+			aria-label={notificationsEnabled ? t.list_invitation_disable_notifications : t.list_invitation_enable_notifications}
 		>
 			{#if notificationsEnabled}
 				<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)"
@@ -76,7 +76,7 @@
 			class="px-3 py-2 rounded-full text-xs font-semibold active:opacity-60"
 			style="color: var(--color-error)"
 		>
-			Nein
+			{t.list_invitation_no}
 		</button>
 
 		<!-- Annehmen -->
@@ -85,7 +85,7 @@
 			class="px-3 py-2 rounded-full text-xs font-semibold active:opacity-80"
 			style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 		>
-			Ja
+			{t.list_invitation_yes}
 		</button>
 	</div>
 </div>

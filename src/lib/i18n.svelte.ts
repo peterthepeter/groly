@@ -101,6 +101,10 @@ export function list_items_open(count: number): string {
 	if (_lang === 'en') return `${count} ${count === 1 ? 'item' : 'items'}`;
 	return `${count} ${count === 1 ? 'Artikel' : 'Artikel'}`;
 }
+export function recipeLimitReached(limit: number): string {
+	void _lang;
+	return m.recipe_limit_reached({ limit }, { languageTag: _lang });
+}
 export function items_checked_count(count: number): string {
 	void _lang;
 	if (_lang === 'en') return `${count} completed ${count === 1 ? 'item' : 'items'}`;

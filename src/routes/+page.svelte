@@ -302,6 +302,8 @@
 	}
 
 	async function acceptInvitation(listId: string, userId: string, enableNotifications: boolean) {
+		const res = await fetch(`/api/lists/${listId}/members/${userId}/accept`, { method: 'POST' });
+		if (!res.ok) return;
 		if (!enableNotifications) {
 			await fetch(`/api/lists/${listId}/notifications`, {
 				method: 'PUT',
@@ -309,8 +311,7 @@
 				body: JSON.stringify({ enabled: false })
 			});
 		}
-		const res = await fetch(`/api/lists/${listId}/members/${userId}/accept`, { method: 'POST' });
-		if (res.ok) await loadLists();
+		await loadLists();
 	}
 
 	async function leaveList(listId: string) {
@@ -465,7 +466,7 @@
 					onclick={() => showInstallModal = true}
 					class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center active:opacity-60"
 					style="background-color: var(--color-primary); color: var(--color-on-primary)"
-					aria-label="Installationsanleitung"
+					aria-label={t.a11y_install_guide}
 				>
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 						<circle cx="12" cy="12" r="10"/>
@@ -478,7 +479,7 @@
 					onclick={dismissInstallBanner}
 					class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center active:opacity-60"
 					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-					aria-label="Schließen"
+					aria-label={t.close}
 				>
 					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
 						<line x1="18" y1="6" x2="6" y2="18"/>
@@ -526,7 +527,7 @@
 									disabled={i === 0}
 									class="w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-20 active:opacity-60"
 									style="color: var(--color-on-surface-variant)"
-									aria-label="Nach oben"
+									aria-label={t.a11y_move_up}
 								>
 									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 										<polyline points="18 15 12 9 6 15"/>
@@ -537,7 +538,7 @@
 									disabled={i === displayedLists.length - 1}
 									class="w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-20 active:opacity-60"
 									style="color: var(--color-on-surface-variant)"
-									aria-label="Nach unten"
+									aria-label={t.a11y_move_down}
 								>
 									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 										<polyline points="6 9 12 15 18 9"/>
@@ -573,7 +574,7 @@
 									style="touch-action: none; cursor: grab"
 									role="button"
 									tabindex="-1"
-									aria-label="Verschieben"
+									aria-label={t.a11y_reorder}
 								>
 									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 										<line x1="3" y1="8" x2="21" y2="8"/>
@@ -602,7 +603,6 @@
 					{#each pendingInvitations as invitation (invitation.id)}
 						<InvitationCard
 							{invitation}
-							currentUserId={data.user?.id ?? ''}
 							onAccept={(enableNotif) => acceptInvitation(invitation.id, data.user?.id ?? '', enableNotif)}
 							onDecline={() => declineInvitation(invitation.id, data.user?.id ?? '')}
 						/>
