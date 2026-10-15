@@ -1,0 +1,41 @@
+{
+  "image": "sha256:5d24bc6ebfc15d87b6d7f6c665237cbb0b446829927986d410cb9ef901370950",
+  "results": [
+    {
+      "baseline": "0.9.10",
+      "realDataCopy": false,
+      "tables": 45,
+      "uploadedFiles": 1,
+      "preserved": true,
+      "restart": true,
+      "restore": true
+    },
+    {
+      "baseline": "0.9.9",
+      "realDataCopy": false,
+      "tables": 45,
+      "uploadedFiles": 1,
+      "preserved": true,
+      "restart": true,
+      "restore": true
+    },
+    {
+      "baseline": "0.9.8-hotfix.2",
+      "realDataCopy": false,
+      "tables": 45,
+      "uploadedFiles": 1,
+      "preserved": true,
+      "restart": true,
+      "restore": true
+    },
+    {
+      "baseline": "0.9.10",
+      "realDataCopy": true,
+      "tables": 45,
+      "uploadedFiles": 8,
+      "preserved": true,
+      "restart": true,
+      "restore": true
+    }
+  ]
+}

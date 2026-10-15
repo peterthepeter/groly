@@ -22,6 +22,7 @@ data
 **/*.sqlite3
 test-results
 playwright-report
+migration-check-*
 .agents
 .codex
 AGENTS.md

@@ -106,7 +106,30 @@ test('an installed 0.9.10 PWA upgrades with its session and unsynced changes int
 		}
 		await page.goto('/tracker?tab=history');
 		await settled();
+		// First PDF export is offline with a cold runtime/font cache in the page.
+		// Only the updated service worker's precache can provide these resources.
+		await context.setOffline(true);
+		const offlineRuntime = await page.evaluate(async () => {
+			const requests = (await Promise.all((await caches.keys()).map(async name => (await caches.open(name)).keys()))).flat();
+			const asset = (name: string) => {
+				const url = requests.find(request => request.url.includes(`/${name}.`))?.url;
+				if (!url) throw new Error(`Missing offline PDF asset: ${name}`);
+				const requestURL = new URL(url);
+				requestURL.searchParams.delete('__WB_REVISION__');
+				return requestURL.href;
+			};
+			await import(/* @vite-ignore */ asset('pdfmake.min'));
+			const pdf = (globalThis as typeof globalThis & { pdfMake: typeof import('pdfmake/build/pdfmake') }).pdfMake;
+			pdf.addFonts({ Roboto: { normal: asset('Roboto-Regular'), bold: asset('Roboto-Medium'), italics: asset('Roboto-Italic'), bolditalics: asset('Roboto-MediumItalic') } });
+			const bytes = await pdf.createPdf({ content: [{ text: 'Deutsch ÄÖÜ / English' }, { text: 'Bold', bold: true }, { text: 'Italic', italics: true }, { text: 'Both', bold: true, italics: true }] }).getBuffer();
+			return { magic: Array.from(bytes.subarray(0, 5)), size: bytes.length };
+		});
+		expect(offlineRuntime.magic).toEqual([37, 80, 68, 70, 45]);
+		expect(offlineRuntime.size).toBeGreaterThan(1000);
 		await page.getByRole('button', { name: 'Export PDF', exact: true }).click();
+		await page.getByRole('button', { name: de.export_button, exact: true }).click();
+		await expect(page.getByRole('alert')).toHaveText(de.export_error);
+		await context.setOffline(false);
 		const downloading = page.waitForEvent('download');
 		await page.getByRole('button', { name: de.export_button, exact: true }).click();
 		const pdf = await downloading;
@@ -124,6 +147,18 @@ test('an installed 0.9.10 PWA upgrades with its session and unsynced changes int
 		const bytes = Buffer.concat(chunks);
 		expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
 		expect(bytes.length).toBeGreaterThan(1000);
+		// Repeated exports must also work after reconnecting.
+		await context.setOffline(false);
+		await page.getByRole('button', { name: 'Export PDF', exact: true }).click();
+		const repeatedDownloading = page.waitForEvent('download');
+		await page.getByRole('button', { name: de.export_button, exact: true }).click();
+		const repeatedPdf = await repeatedDownloading;
+		expect(await repeatedPdf.failure()).toBeNull();
+		const repeatedStream = await repeatedPdf.createReadStream();
+		const repeatedChunks: Buffer[] = [];
+		for await (const chunk of repeatedStream!) repeatedChunks.push(Buffer.from(chunk));
+		expect(Buffer.concat(repeatedChunks).subarray(0, 5).toString()).toBe('%PDF-');
+		await context.setOffline(false);
 		await settled();
 		await page.goto('/rezepte?tab=mealplan');
 		await expect(page.getByText('So', { exact: true })).toBeVisible();

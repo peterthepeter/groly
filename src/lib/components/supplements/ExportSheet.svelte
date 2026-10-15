@@ -43,11 +43,13 @@
 		nutrients: true
 	});
 	let exporting = $state(false);
+	let exportError = $state(false);
 
 	// Reset when sheet opens
 	$effect(() => {
 		if (open) {
 			exporting = false;
+			exportError = false;
 			if (currentRange.from > 0) customFrom = tsToDateKey(currentRange.from);
 			if (currentRange.to > 0) customTo = tsToDateKey(currentRange.to);
 		}
@@ -75,10 +77,13 @@
 	async function handleExport() {
 		if (exporting) return;
 		exporting = true;
+		exportError = false;
 		try {
 			const { from, to } = computeRange();
 			await onConfirm({ from, to, name: name.trim(), sections });
 			open = false;
+		} catch {
+			exportError = true;
 		} finally {
 			exporting = false;
 		}
@@ -182,6 +187,9 @@
 			</div>
 
 			<!-- Actions -->
+			{#if exportError}
+				<p role="alert" class="text-sm pt-3 px-1" style="color: var(--color-error)">{t.export_error}</p>
+			{/if}
 			<div class="flex gap-2 pt-4 flex-shrink-0">
 				<button
 					onclick={() => { if (!exporting) open = false; }}

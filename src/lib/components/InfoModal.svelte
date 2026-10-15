@@ -103,6 +103,10 @@
 					text: 'Switch between Today, History, and—when enabled—Nutrition in the section bar below the header. Use + to open Quick Log. Tap a tracker card to expand it and manage its entries. History summarizes your data by day, week, or month.'
 				},
 				{
+					title: 'PDF export',
+					text: 'Use PDF export in History to select a period and report sections. Loading report data requires a server connection. If export fails, your selection stays in the dialog so you can reconnect and try again.'
+				},
+				{
 					title: 'Supplements & reminders',
 					text: 'Create supplements under Manage with a name, unit, and optional nutrients. Use the bell to schedule reminders; logging a supplement up to 45 minutes early completes its closest reminder. Week plan shows the complete reminder schedule.',
 					link: { href: '/tracker/verwalten', label: 'Open Manage' }
@@ -242,6 +246,10 @@
 				{
 					title: 'Heute & Verlauf',
 					text: 'Über die Bereichsleiste unter dem Header wechselst du zwischen Heute, Verlauf und – falls aktiviert – Ernährung. Über + öffnest du das Quick-Log. Tippe eine Tracker-Karte an, um sie aufzuklappen und ihre Einträge zu verwalten. Der Verlauf fasst deine Daten nach Tag, Woche oder Monat zusammen.'
+				},
+				{
+					title: 'PDF-Export',
+					text: 'Wähle im Verlauf über den PDF-Export Zeitraum und Berichtsbereiche. Zum Laden der Berichtsdaten ist eine Serververbindung nötig. Schlägt der Export fehl, bleibt deine Auswahl im Dialog erhalten und du kannst es nach dem Verbinden erneut versuchen.'
 				},
 				{
 					title: 'Supplements & Erinnerungen',

@@ -13,6 +13,16 @@ const pwa = VitePWA({
 	filename: 'service-worker.ts',
 	injectRegister: false,
 	registerType: 'autoUpdate',
+	integration: {
+		configureCustomSWViteBuild(config) {
+			// PWA 2 still supplies the old Rollup option; Vite 8 uses Rolldown.
+			const output = config.build?.rollupOptions?.output;
+			if (output && !Array.isArray(output)) {
+				delete output.inlineDynamicImports;
+				output.codeSplitting = false;
+			}
+		}
+	},
 	manifest: {
 		name: 'Groly',
 		short_name: 'Groly',
@@ -37,7 +47,7 @@ const pwa = VitePWA({
 		}
 	},
 	injectManifest: {
-		globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}']
+		globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf}']
 	}
 });
 // SvelteKit owns HTML and the adapter owns final asset metadata. Generate the

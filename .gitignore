@@ -9,6 +9,7 @@ node_modules
 /build
 /playwright-report
 /test-results
+/migration-check-*
 
 # OS
 .DS_Store

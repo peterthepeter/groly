@@ -1,0 +1,5 @@
+# Official GitHub-hosted GA label, not yet in actionlint 1.7.12's built-in list.
+# https://github.com/actions/runner-images/issues/14748
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04

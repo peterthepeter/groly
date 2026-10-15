@@ -15,7 +15,7 @@ env:
 
 jobs:
   verify-and-publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
@@ -40,7 +40,8 @@ jobs:
           npm run check
           npm test
           npm run test:release
-          npm audit --audit-level=high
+          npm run test:dependencies
+          npm audit --audit-level=low
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.0.0
@@ -62,7 +63,7 @@ jobs:
           load: true
           push: false
           tags: ${{ steps.policy.outputs.localImage }}
-          cache-from: type=gha
+          cache-from: type=gha,scope=groly-amd64
 
       - name: Select the immutable local image
         if: github.event_name == 'workflow_dispatch'
@@ -85,8 +86,8 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.policy.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=groly-amd64
+          cache-to: type=gha,scope=groly-amd64,mode=min
 
       - name: Pull the immutable release candidate
         if: github.event_name == 'release'
@@ -108,12 +109,18 @@ jobs:
           curl --fail --location --retry 3 -o trivy-checksums.txt "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_checksums.txt"
           grep " trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz$" trivy-checksums.txt | sed "s/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz/trivy.tar.gz/" | sha256sum --check --strict
           tar -xzf trivy.tar.gz trivy
-          ./trivy image --scanners vuln --severity HIGH,CRITICAL --format json --output image-security.json --exit-code 1 "$GROLY_TEST_IMAGE"
+          ./trivy image --scanners vuln --format json --output image-security.json --exit-code 1 "$GROLY_TEST_IMAGE"
 
       - name: Verify fresh installation, direct upgrades and restore
         env:
           GROLY_TEST_REPORT: docker-upgrade-report.json
         run: npm run test:docker
+
+      - name: Cache browser test engines
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-26.04-${{ hashFiles('package-lock.json') }}
 
       - name: Install browser test engines
         run: npx --no-install playwright install --with-deps chromium webkit

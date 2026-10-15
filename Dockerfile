@@ -4,6 +4,7 @@ FROM node-base AS builder
 
 WORKDIR /app
 COPY package*.json ./
+COPY vendor ./vendor
 RUN npm ci --ignore-scripts
 
 COPY . .
@@ -21,7 +22,7 @@ WORKDIR /app
 
 # Copy only the verified Node runtime, so package managers and SDK headers never
 # enter a shipped image layer. SQLite 13 embeds SQLite in its native addon.
-RUN apk add --no-cache libstdc++ libgcc libatomic su-exec \
+RUN apk add --no-cache --upgrade zlib=1.3.2-r1 libstdc++ libgcc libatomic su-exec \
     && addgroup -g 1000 node \
     && adduser -u 1000 -G node -s /bin/sh -D node
 COPY --from=node-base /usr/local/bin/node /usr/local/bin/node

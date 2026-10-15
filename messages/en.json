@@ -73,6 +73,7 @@
 	"admin_role_label": "Role",
 	"admin_role_user": "User",
 	"admin_role_admin": "Admin",
+	"export_error": "Could not create the PDF. Check the connection and try again. Your selection is preserved.",
 	"sync_offline": "Offline",
 	"sync_server_offline": "Server offline",
 	"must_change_password": "Please change your password on first login",
