@@ -60,6 +60,17 @@
 
 	$effect(() => { applyTheme(userSettings.theme); });
 	$effect(() => { applyColorScheme(userSettings.colorScheme); });
+	let cachedHomeUserId: string | null = null;
+	$effect(() => {
+		const userId = data.user?.id ?? null;
+		if (userId === cachedHomeUserId) return;
+		cachedHomeUserId = userId;
+		if (userId && 'serviceWorker' in navigator) {
+			void navigator.serviceWorker.ready.then(registration => {
+				registration.active?.postMessage({ type: 'CACHE_HOME' });
+			});
+		}
+	});
 
 	onMount(() => {
 		initUpdateDetection();

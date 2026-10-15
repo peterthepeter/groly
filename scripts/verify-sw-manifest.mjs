@@ -10,6 +10,10 @@ assert(worker, 'Service worker missing from the production build');
 const source = await readFile(`build/client/${worker}`);
 assert(!source.includes(Buffer.from('self.__WB_MANIFEST')), 'Service worker precache manifest was not injected');
 assert(source.includes(Buffer.from('_app/immutable/')), 'Service worker does not precache application assets');
+assert(source.includes(Buffer.from('offline.html')), 'Offline fallback absent from precache');
+const offlinePage = await readFile('build/client/offline.html', 'utf8');
+assert(offlinePage.includes('data-offline-fallback'), 'Offline fallback missing');
+assert(!/<(?:script|link|img)[^>]+(?:src|href)=/i.test(offlinePage), 'Offline fallback must work without external assets');
 // The prebundled PDF runtime is loaded as a versioned vendor asset. All original
 // font faces must remain in the offline precache, with real font bytes intact.
 const assets = await readdir('build/client/_app/immutable/assets');

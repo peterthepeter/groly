@@ -90,7 +90,7 @@
 				},
 				{
 					title: 'Favorites',
-					text: 'Long-press an item and tap the star beside its quantity to save it. Open + → Favorites to add saved items quickly; long-press a favorite to remove it.'
+					text: 'Long-press an item and tap the star beside its quantity to save it. Open + → Favorites to add saved items quickly; long-press a favorite to remove it. Once loaded on this device, favorites also work offline. Additions and removals sync when you reconnect.'
 				}
 			]
 		},
@@ -152,6 +152,10 @@
 				{
 					title: 'Organize & remember',
 					text: 'Use favorites, ratings, and tags to organize recipes. “Cooked today” updates the cooking history; long-press the Recipes tab to arrange recipes manually.'
+				},
+				{
+					title: 'Offline recipes',
+					text: 'Previously opened recipes remain available offline with their ingredients and steps. Recipes not yet saved on this device show an offline message with a retry button.'
 				}
 			]
 		}
@@ -235,7 +239,7 @@
 				},
 				{
 					title: 'Favoriten',
-					text: 'Halte ein Item gedrückt und tippe auf den Stern neben der Menge. Über + → Favoriten fügst du gespeicherte Items schnell hinzu; langer Druck entfernt einen Favoriten.'
+					text: 'Halte ein Item gedrückt und tippe auf den Stern neben der Menge. Über + → Favoriten fügst du gespeicherte Items schnell hinzu; langer Druck entfernt einen Favoriten. Einmal auf diesem Gerät geladene Favoriten funktionieren auch offline. Änderungen werden beim Wiederverbinden synchronisiert.'
 				}
 			]
 		},
@@ -297,6 +301,10 @@
 				{
 					title: 'Ordnen & merken',
 					text: 'Organisiere Rezepte mit Favoriten, Bewertungen und Tags. „Heute gekocht“ aktualisiert den Kochverlauf; halte den Rezepte-Tab gedrückt, um Rezepte manuell zu sortieren.'
+				},
+				{
+					title: 'Rezepte offline',
+					text: 'Bereits geöffnete Rezepte bleiben mit Zutaten und Schritten offline verfügbar. Noch nicht auf diesem Gerät gespeicherte Rezepte zeigen einen Offline-Hinweis mit einer Schaltfläche zum erneuten Laden.'
 				}
 			]
 		}

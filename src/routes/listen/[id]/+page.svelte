@@ -12,15 +12,18 @@
 	import AddItemModal from '#lib/components/AddItemModal.svelte';
 	import AddItemBar from '#lib/components/AddItemBar.svelte';
 	import {
-		execute,
 		generateClientId,
 		queueItemCreate,
+		queueItemUpdate,
+		queueItemDelete,
+		deleteOfflineItem,
+		getOfflineFavorites,
+		cacheFavorites,
+		setFavoriteOffline,
 		getPendingCreateItems,
 		cacheItemsData,
 		getOfflineItems,
 		getOfflineListName,
-		updateOfflineItem,
-		deleteOfflineItem,
 		getCategoryOverrideForCreate,
 		refreshCategoryPreferences,
 		setCategoryPreferenceOffline,
@@ -129,7 +132,12 @@
 	async function loadItems() {
 		const targetListId = listId ?? '';
 		const requestVersion = ++itemsLoadVersion;
-		if (data.user?.id) void refreshCategoryPreferences(data.user.id);
+		if (data.user?.id) {
+			void refreshCategoryPreferences(data.user.id);
+			const cachedFavorites = await getOfflineFavorites(data.user.id);
+			if (requestVersion !== itemsLoadVersion) return;
+			if (cachedFavorites) favorites = cachedFavorites;
+		}
 
 		// Gecachte Daten sofort anzeigen, während der Netzwerk-Fetch läuft (stale-while-revalidate)
 		if (items.length === 0) {
@@ -148,6 +156,7 @@
 		}
 
 		try {
+			const requestStartedAt = Date.now();
 			const [listRes, itemsRes, suggestRes, favsRes] = await Promise.all([
 				fetch(`/api/lists/${targetListId}`),
 				fetch(`/api/lists/${targetListId}/items`),
@@ -161,7 +170,7 @@
 			userPermission = listData.userPermission ?? 'write';
 			const serverItems: Item[] = await itemsRes.json();
 			const pendingItems = data.user?.id
-				? await getPendingCreateItems(data.user.id, targetListId)
+				? await getPendingCreateItems(data.user.id, targetListId, requestStartedAt)
 				: [];
 			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
 			const serverIds = new Set(serverItems.map((item) => item.id));
@@ -172,10 +181,11 @@
 					.map((item) => ({ ...item, createdByUsername: data.user?.username ?? null }))
 			];
 			if (suggestRes.ok) suggestions = await suggestRes.json();
-			if (favsRes.ok) favorites = await favsRes.json();
+			if (favsRes.ok && data.user?.id) favorites = await cacheFavorites(data.user.id, await favsRes.json(), requestStartedAt);
 			// Cache als plain objects (vor State-Zuweisung)
-			void cacheItemsData(newItems);
-			items = newItems;
+			const mergedItems = await cacheItemsData(newItems, data.user?.id, requestStartedAt);
+			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
+			items = mergedItems;
 		} catch {
 			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
 			if (items.length === 0) {
@@ -191,22 +201,11 @@
 	}
 
 	async function toggleItem(item: Item) {
-		if (userPermission === 'read') return;
-		const newChecked = !item.isChecked;
-		const newCheckedAt = newChecked ? Math.floor(Date.now() / 1000) : null;
-		const clientUpdatedAt = item.updatedAt;
-		await execute(
-			() => fetch(`/api/items/${item.id}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ isChecked: newChecked, clientUpdatedAt })
-			}).then(r => { if (!r.ok) throw new Error(); }),
-			{ type: 'update_item', payload: { id: item.id, isChecked: newChecked, clientUpdatedAt }, createdAt: Date.now() },
-			() => {
-				items = items.map(i => i.id === item.id ? { ...i, isChecked: newChecked, checkedAt: newCheckedAt } : i);
-				void updateOfflineItem(item.id, { isChecked: newChecked, checkedAt: newCheckedAt, updatedAt: Math.floor(Date.now() / 1000) });
-			}
-		);
+		if (userPermission === 'read' || !data.user?.id) return;
+		const isChecked = !item.isChecked;
+		const checkedAt = isChecked ? Math.floor(Date.now() / 1000) : null;
+		await queueItemUpdate(data.user.id, item.id, { isChecked, checkedAt });
+		items = items.map(i => i.id === item.id ? { ...i, isChecked, checkedAt } : i);
 	}
 
 	async function addItem(name: string, quantityInfo: string, favoriteCategoryOverride?: string | null) {
@@ -254,21 +253,12 @@
 	async function saveEditItem(name: string, quantityInfo: string, categoryOverride: string | null, categoryPickerUsed: boolean) {
 		if (!editItem) return;
 		const id = editItem.id;
-		const clientUpdatedAt = editItem.updatedAt;
 		editItem = null;
 		addModalOpen = false;
-		const itemUpdate = execute(
-			() => fetch(`/api/items/${id}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, quantityInfo, categoryOverride, clientUpdatedAt })
-			}).then(r => { if (!r.ok) throw new Error(); }),
-			{ type: 'update_item', payload: { id, name, quantityInfo, categoryOverride, clientUpdatedAt }, createdAt: Date.now() },
-			() => {
-				items = items.map(i => i.id === id ? { ...i, name, quantityInfo: quantityInfo || null, categoryOverride } : i);
-				void updateOfflineItem(id, { name, quantityInfo: quantityInfo || null, categoryOverride, updatedAt: Math.floor(Date.now() / 1000) });
-			}
-		);
+		if (!data.user?.id) return;
+		const itemUpdate = queueItemUpdate(data.user.id, id, { name, quantityInfo: quantityInfo || null, categoryOverride }).then(() => {
+			items = items.map(i => i.id === id ? { ...i, name, quantityInfo: quantityInfo || null, categoryOverride } : i);
+		});
 		const preferenceAction = getCategoryPreferenceAction(categoryPickerUsed, categoryOverride);
 		const preferenceUpdate = data.user?.id && preferenceAction.type === 'set'
 			? setCategoryPreferenceOffline(data.user.id, name, preferenceAction.categoryOverride)
@@ -279,46 +269,20 @@
 	}
 
 	async function deleteItem(id: string) {
-		await execute(
-			() => fetch(`/api/items/${id}`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error(); }),
-			{ type: 'delete_item', payload: { id }, createdAt: Date.now() },
-			() => {
-				items = items.filter(i => i.id !== id);
-				void deleteOfflineItem(id);
-			}
-		);
+		if (!data.user?.id) return;
+		await queueItemDelete(data.user.id, id);
+		items = items.filter(i => i.id !== id);
 	}
 
 	async function addFavorite(name: string, quantityInfo: string) {
-		if (!favorites.some(f => f.name === name)) {
-			favorites = [...favorites, { name, quantityInfo: quantityInfo || null, categoryOverride: null }];
-		}
-		await fetch('/api/favorites', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name, quantityInfo: quantityInfo || null, categoryOverride: null })
-		});
+		if (!data.user?.id) return;
+		favorites = await setFavoriteOffline(data.user.id, { name, quantityInfo: quantityInfo || null, categoryOverride: null });
 	}
 
 	async function toggleFavorite(name: string, makeFavorite: boolean) {
+		if (!data.user?.id) return;
 		const item = items.find(i => i.name === name);
-		if (makeFavorite) {
-			if (!favorites.some(f => f.name === name)) {
-				favorites = [...favorites, { name, quantityInfo: item?.quantityInfo ?? null, categoryOverride: item?.categoryOverride ?? null }];
-			}
-			await fetch('/api/favorites', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, quantityInfo: item?.quantityInfo ?? null, categoryOverride: item?.categoryOverride ?? null })
-			});
-		} else {
-			favorites = favorites.filter(f => f.name !== name);
-			await fetch('/api/favorites', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name })
-			});
-		}
+		favorites = await setFavoriteOffline(data.user.id, { name, quantityInfo: item?.quantityInfo ?? null, categoryOverride: item?.categoryOverride ?? null }, !makeFavorite);
 	}
 
 	afterNavigate(({ to, from }) => {
@@ -461,17 +425,20 @@
 			if (sseConnectedSinceMount) void loadItems();
 			sseConnectedSinceMount = true;
 		}),
-		on('item_added', (ev) => {
+		on('item_added', async (ev) => {
 			if (ev.listId !== listId) return;
 			if (!items.some(i => i.id === (ev.item as Item).id)) {
-				items = [...items, ev.item as Item];
-				void cacheItemsData(items);
+				const [merged] = await cacheItemsData([ev.item as Item], data.user?.id);
+				if (ev.listId === listId && merged && !items.some(i => i.id === merged.id)) items = [...items, merged];
 			}
 		}),
-		on('item_updated', (ev) => {
+		on('item_updated', async (ev) => {
 			if (ev.listId !== listId) return;
-			items = items.map(i => i.id === (ev.item as Item).id ? { ...i, ...(ev.item as Item) } : i);
-			void updateOfflineItem((ev.item as Item).id, ev.item as Partial<Item>);
+			const current = items.find(i => i.id === (ev.item as Item).id);
+			if (!current) return;
+			const [merged] = await cacheItemsData([{ ...current, ...(ev.item as Item) }], data.user?.id);
+			if (ev.listId !== listId) return;
+			items = merged ? items.map(i => i.id === merged.id ? merged : i) : items.filter(i => i.id !== current.id);
 		}),
 		on('item_deleted', (ev) => {
 			if (ev.listId !== listId) return;

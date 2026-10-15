@@ -16,7 +16,10 @@ export function loadPdfRuntime(): Promise<PdfMake> {
 		if (!pdfMake?.createPdf) throw new Error('PDF runtime did not initialize');
 		// Keep all four original Roboto faces as cacheable binary assets instead
 		// of expanding them into an 850 KB base64 JavaScript font bundle.
-		pdfMake.addFonts({ Roboto: { normal, bold, italics, bolditalics } });
+		// PDFMake recognizes remote fonts by their absolute HTTP(S) URL. Kit's
+		// root-relative asset paths must not be interpreted as virtual filenames.
+		const absolute = (asset: string) => new URL(asset, document.baseURI).href;
+		pdfMake.addFonts({ Roboto: { normal: absolute(normal), bold: absolute(bold), italics: absolute(italics), bolditalics: absolute(bolditalics) } });
 		return pdfMake;
 	})().catch(error => {
 		loading = undefined;

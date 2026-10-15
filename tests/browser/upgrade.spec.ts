@@ -175,7 +175,8 @@ test('an installed 0.9.10 PWA upgrades with its session and unsynced changes int
 			return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 		});
 		expect(date).toBe(expected);
-		const meals = await (await page.request.get(`/api/meal-plan?from=${date}&to=${date}`)).json();
+		// Retry only ECONNRESET on an idle pooled socket; HTTP failures still fail.
+		const meals = await (await page.request.get(`/api/meal-plan?from=${date}&to=${date}`, { maxRetries: 1 })).json();
 		expect(meals.some((meal: { recipeId: string }) => meal.recipeId === 'upgrade-recipe')).toBe(true);
 		const worker = await page.request.get('/service-worker.js', { headers: { 'accept-encoding': 'gzip, br' } });
 		expect(worker.status()).toBe(200);

@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import adapter from '@sveltejs/adapter-node';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
+import { readFile } from 'node:fs/promises';
 
 const pwa = VitePWA({
 	strategies: 'injectManifest',
@@ -14,7 +15,9 @@ const pwa = VitePWA({
 	injectRegister: false,
 	registerType: 'autoUpdate',
 	integration: {
-		configureCustomSWViteBuild(config) {
+		async configureCustomSWViteBuild(config) {
+			const { version } = JSON.parse(await readFile('.svelte-kit/output/client/_app/version.json', 'utf8'));
+			config.define = { ...config.define, __GROLY_PAGE_CACHE__: JSON.stringify(`pages-${version}`) };
 			// PWA 2 still supplies the old Rollup option; Vite 8 uses Rolldown.
 			const output = config.build?.rollupOptions?.output;
 			if (output && !Array.isArray(output)) {
@@ -69,6 +72,7 @@ export default defineConfig({
 		paraglideVitePlugin({ project: './project.inlang', outdir: './src/lib/paraglide', strategy: ['globalVariable', 'baseLocale'] }),
 		tailwindcss(),
 		sveltekit({
+			paths: { relative: false },
 			adapter: { ...nodeAdapter, async adapt(builder) {
 				await pwa.find(plugin => plugin.name === 'vite-plugin-pwa')!.api.generateSW();
 				await nodeAdapter.adapt(builder);

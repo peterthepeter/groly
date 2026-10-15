@@ -66,7 +66,7 @@ export const PUT: RequestHandler = async (event) => {
 		: 0;
 	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: toUpdatedItemEventPayload(updated, createdByUsername), openCountDelta, byUserId: user!.id });
 
-	return Response.json({ ok: true });
+	return Response.json({ ok: true, updatedAt: ts });
 };
 
 export const DELETE: RequestHandler = async (event) => {

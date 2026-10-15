@@ -16,6 +16,7 @@ if (browser) {
 		setLocale(lang, { reload: false });
 		_lang = lang;
 		document.documentElement.lang = lang;
+		try { localStorage.setItem('groly_ui_lang', lang); } catch { /* Storage may be unavailable. */ }
 	});
 }
 
@@ -26,7 +27,10 @@ export function currentLang(): Locale {
 export function setLang(lang: Locale) {
 	setLocale(lang, { reload: false });
 	_lang = lang;
-	if (browser) document.documentElement.lang = lang;
+	if (browser) {
+		document.documentElement.lang = lang;
+		try { localStorage.setItem('groly_ui_lang', lang); } catch { /* Storage may be unavailable. */ }
+	}
 	userSettings.lang = lang;
 }
 
@@ -68,6 +72,7 @@ export async function initLanguage(
 	setLocale(lang, { reload: false });
 	_lang = lang;
 	document.documentElement.lang = lang;
+	try { localStorage.setItem('groly_ui_lang', lang); } catch { /* Storage may be unavailable. */ }
 	// If no explicit language preference was saved, detect from browser
 	if (userId && !hasSavedLanguage) {
 		setLang(languageFromBrowserLanguage(navigator.language));

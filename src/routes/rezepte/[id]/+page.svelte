@@ -9,6 +9,7 @@
 	import RecipeNutritionSheet from '#lib/components/recipe/RecipeNutritionSheet.svelte';
 	import RecipeTrackSheet from '#lib/components/recipe/RecipeTrackSheet.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import UnavailableView from '#lib/components/UnavailableView.svelte';
 	import { cacheRecipeDetail, getOfflineRecipeDetail } from '#lib/sync/manager';
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { acquireWakeLock, releaseWakeLock } from '#lib/wakeLock';
@@ -24,6 +25,7 @@
 	let shareModalOpen = $state(false);
 	let listModalOpen = $state(false);
 	let isOfflineFallback = $state(false);
+	let offlineUnavailable = $state(false);
 
 	let excludedIngredients = $state(new Set<string>());
 	let cookSaving = $state(false);
@@ -245,6 +247,9 @@
 	const recipeId = $derived(page.params.id ?? '');
 
 	async function loadRecipe() {
+		loading = true;
+		offlineUnavailable = false;
+		isOfflineFallback = false;
 		try {
 			const res = await fetch(`/api/recipes/${recipeId}`);
 			if (!res.ok) { goto('/rezepte'); return; }
@@ -262,8 +267,7 @@
 				originalServings = cached.servings;
 				isOfflineFallback = true;
 			} else {
-				goto('/rezepte');
-				return;
+				offlineUnavailable = true;
 			}
 		}
 		loading = false;
@@ -377,6 +381,8 @@
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"
 				     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 			</div>
+		{:else if offlineUnavailable}
+			<UnavailableView title={t.offline_recipe_title} message={t.offline_recipe_message} backHref="/rezepte" backLabel={t.offline_recipes} onRetry={() => void loadRecipe()} />
 		{:else if recipe}
 			<!-- Hero Image -->
 			<div class="relative w-full h-48 flex-shrink-0 overflow-hidden"

@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
 declare const self: ServiceWorkerGlobalScope;
 
-import { precacheAndRoute } from 'workbox-precaching';
+import { precacheAndRoute, matchPrecache } from 'workbox-precaching';
 import { registerRoute, NavigationRoute, setCatchHandler } from 'workbox-routing';
 import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
+declare const __GROLY_PAGE_CACHE__: string;
 
 // Precache all static assets emitted by Vite (JS, CSS, icons, etc.)
 // self.__WB_MANIFEST is injected by vite-plugin-pwa at build time
@@ -57,38 +58,60 @@ registerRoute(
 registerRoute(
 	new NavigationRoute(
 		new NetworkFirst({
-			cacheName: 'pages',
+			cacheName: __GROLY_PAGE_CACHE__,
 			networkTimeoutSeconds: 5,
-			plugins: [new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 7 * 24 * 60 * 60 })]
+			plugins: [
+				{ cacheWillUpdate: async ({ response }) => response.status === 200 && !response.redirected ? response : null },
+				new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 7 * 24 * 60 * 60 })
+			]
 		}),
 		// Don't intercept API routes
 		{ denylist: [/^\/api\//] }
 	)
 );
 
-// When a navigation request fails (no network, no cached page), serve the cached
-// root page as the app shell. SvelteKit's client-side router then takes over and
-// renders the correct route — data loading falls back to IndexedDB where available.
+// A home-page SSR document is not a generic app shell: serving it under a
+// recipe URL hydrates the wrong route and used to resolve CSS/JS incorrectly.
+// The fallback works independently of application JS, fonts and server loaders.
 setCatchHandler(async ({ request }) => {
 	if (request.destination === 'document') {
-		const cache = await caches.open('pages');
-		const shell = await cache.match('/');
-		if (shell) return shell;
+		const fallback = await matchPrecache('/offline.html');
+		if (fallback) return fallback;
 	}
 	return Response.error();
 });
 
+async function cacheHome() {
+	try {
+		const response = await fetch(new Request('/', { cache: 'reload', credentials: 'same-origin' }));
+		// Registration also runs on /login. A redirected response cannot safely
+		// be reused for an offline document navigation to /.
+		if (response.ok && !response.redirected && new URL(response.url).pathname === '/') {
+			await (await caches.open(__GROLY_PAGE_CACHE__)).put('/', response);
+		}
+	} catch { /* Retain an existing authenticated home page while offline. */ }
+}
+
 self.addEventListener('install', (event) => {
 	self.skipWaiting();
-	event.waitUntil(
-		caches.open('pages').then(cache =>
-			cache.add(new Request('/', { cache: 'reload' })).catch(() => {})
-		)
-	);
+	event.waitUntil(cacheHome());
 });
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (event) => event.waitUntil((async () => {
+	// Drop obsolete HTML, which references obsolete asset hashes. Keep the
+	// legacy data-response cache, IndexedDB and all pending user mutations.
+	for (const name of await caches.keys()) {
+		if (name.startsWith('pages-') && name !== __GROLY_PAGE_CACHE__) await caches.delete(name);
+	}
+	const legacy = await caches.open('pages');
+	for (const request of await legacy.keys()) {
+		if (!new URL(request.url).pathname.endsWith('/__data.json')) await legacy.delete(request);
+	}
+	await self.clients.claim();
+})()));
 self.addEventListener('message', (event) => {
-	if ((event.data as { type?: string })?.type === 'SKIP_WAITING') {
+	const type = (event.data as { type?: string })?.type;
+	if (type === 'CACHE_HOME') event.waitUntil(cacheHome());
+	if (type === 'SKIP_WAITING') {
 		self.skipWaiting();
 	}
 });

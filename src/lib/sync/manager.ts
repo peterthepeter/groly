@@ -1,5 +1,5 @@
 import { offlineDb } from './db';
-import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink, OfflineCategoryPreference, OfflineUserSettings, PendingMutation } from './db';
+import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink, OfflineCategoryPreference, OfflineUserSettings, OfflineFavorite, PendingMutation } from './db';
 import { networkStore } from '#lib/stores/online.svelte';
 import { isValidCategoryKey } from '#lib/categories';
 import { normalizeCategoryPreferenceName, resolveCategoryOverrideForCreate } from '#lib/categoryPreferences';
@@ -206,7 +206,7 @@ async function reconcileSettingsMutation(
 	await offlineDb.transaction('rw', offlineDb.pendingMutations, offlineDb.userSettings, async () => {
 		const latest = await offlineDb.pendingMutations.get(mutationId);
 		if (!latest) {
-			await offlineDb.userSettings.put({
+			await writeUserSettingsCache({
 				userId,
 				settings: serverState.settings as Record<string, unknown>,
 				revision: serverState.settingsRevision,
@@ -218,7 +218,7 @@ async function reconcileSettingsMutation(
 		if (!latestPayload) throw Object.assign(new Error('Invalid settings mutation'), { status: 400 });
 		if (latestPayload.generation === sentGeneration && sentPatchApplied) {
 			await offlineDb.pendingMutations.delete(mutationId);
-			await offlineDb.userSettings.put({
+			await writeUserSettingsCache({
 				userId,
 				settings: serverState.settings as Record<string, unknown>,
 				revision: serverState.settingsRevision,
@@ -235,7 +235,7 @@ async function reconcileSettingsMutation(
 				generation: latestPayload.generation
 			}
 		});
-		await offlineDb.userSettings.put({
+		await writeUserSettingsCache({
 			userId,
 			settings: applyUserSettingsPatch(serverState.settings, latestPayload.settings) as Record<string, unknown>,
 			revision: serverState.settingsRevision,
@@ -292,11 +292,57 @@ async function syncPendingUserSettings(mutation: PendingMutation, userId: string
 	}
 }
 
+async function confirmItemWrite(mutation: PendingMutation, response: Record<string, unknown>, userId: string) {
+	await offlineDb.transaction('rw', offlineDb.pendingMutations, offlineDb.items, async () => {
+		const later = (await offlineDb.pendingMutations.toArray()).filter(entry =>
+			entry.id! > mutation.id! && entry.type === 'update_item' &&
+			(entry.userId === undefined || entry.userId === userId) && entry.payload.id === mutation.payload.id
+		);
+		const revision = response.updatedAt;
+		if (typeof revision !== 'number' && later.length) throw Object.assign(new Error('Missing item revision'), { status: 502 });
+		if (typeof revision === 'number') {
+			// Rebase only descendants of our confirmed write. Genuine remote
+			// conflicts still use the server's existing 409 policy.
+			for (const entry of later) await offlineDb.pendingMutations.update(entry.id!, { payload: { ...entry.payload, clientUpdatedAt: revision } });
+			await offlineDb.items.update(mutation.payload.id as string, { updatedAt: revision, localConfirmedAt: Date.now() });
+		}
+		await offlineDb.pendingMutations.delete(mutation.id!);
+	});
+}
+
+async function syncItemUpdate(mutation: PendingMutation, userId: string) {
+	const response = await fetchWithTimeout(`/api/items/${mutation.payload.id}`, {
+		method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mutation.payload)
+	});
+	const body = await response.json();
+	if (response.status === 409 && body.current && typeof body.current.updatedAt === 'number') {
+		// A previous attempt may have reached the server but lost its response.
+		// Acknowledge only an already-applied patch; different remote values still
+		// follow the normal conflict policy, without an unconditional overwrite.
+		const keys = ['name', 'quantityInfo', 'categoryOverride', 'isChecked'].filter(key => key in mutation.payload);
+		if (keys.length && keys.every(key => body.current[key] === mutation.payload[key])) {
+			await confirmItemWrite(mutation, body.current, userId);
+			return;
+		}
+	}
+	if (!response.ok) throw Object.assign(new Error(`API error: ${response.status}`), { status: response.status });
+	await confirmItemWrite(mutation, body, userId);
+}
+
+async function confirmFavoriteWrite(mutation: PendingMutation, userId: string) {
+	await offlineDb.transaction('rw', offlineDb.userSettings, offlineDb.pendingMutations, async () => {
+		await offlineDb.userSettings.update(userId, { favoritesUpdatedAt: Date.now() });
+		await offlineDb.pendingMutations.delete(mutation.id!);
+	});
+}
+
 async function runPendingMutations(userId: string) {
-	const pending = (await offlineDb.pendingMutations.orderBy('createdAt').toArray())
+	const pending = (await offlineDb.pendingMutations.orderBy('id').toArray())
 		.filter(mutation => mutation.userId === undefined || mutation.userId === userId);
-	for (const mutation of pending) {
+	for (const snapshot of pending) {
 		if (activeUserId !== userId) break;
+		const mutation = await offlineDb.pendingMutations.get(snapshot.id!);
+		if (!mutation) continue;
 		try {
 			let mutationManagesItsOwnQueueEntry = false;
 			switch (mutation.type) {
@@ -310,10 +356,12 @@ async function runPendingMutations(userId: string) {
 					await apiFetch(`/api/lists/${mutation.payload.id}`, { method: 'DELETE' });
 					break;
 				case 'create_item':
-					await apiFetch(`/api/lists/${mutation.payload.listId}/items`, { method: 'POST', body: JSON.stringify(mutation.payload) });
+					await confirmItemWrite(mutation, await apiFetch(`/api/lists/${mutation.payload.listId}/items`, { method: 'POST', body: JSON.stringify(mutation.payload) }), userId);
+					mutationManagesItsOwnQueueEntry = true;
 					break;
 				case 'update_item':
-					await apiFetch(`/api/items/${mutation.payload.id}`, { method: 'PUT', body: JSON.stringify(mutation.payload) });
+					await syncItemUpdate(mutation, userId);
+					mutationManagesItsOwnQueueEntry = true;
 					break;
 				case 'delete_item':
 					await apiFetch(`/api/items/${mutation.payload.id}`, { method: 'DELETE' });
@@ -346,6 +394,16 @@ async function runPendingMutations(userId: string) {
 				case 'delete_category_preference':
 					await apiFetch('/api/category-preferences', { method: 'DELETE', body: JSON.stringify(mutation.payload) });
 					break;
+				case 'set_favorite':
+					await apiFetch('/api/favorites', { method: 'POST', body: JSON.stringify(mutation.payload) });
+					await confirmFavoriteWrite(mutation, userId);
+					mutationManagesItsOwnQueueEntry = true;
+					break;
+				case 'delete_favorite':
+					await apiFetch('/api/favorites', { method: 'DELETE', body: JSON.stringify(mutation.payload) });
+					await confirmFavoriteWrite(mutation, userId);
+					mutationManagesItsOwnQueueEntry = true;
+					break;
 				case 'update_user_settings':
 					mutationManagesItsOwnQueueEntry = true;
 					await syncPendingUserSettings(mutation, userId);
@@ -354,7 +412,7 @@ async function runPendingMutations(userId: string) {
 			if (!mutationManagesItsOwnQueueEntry) await offlineDb.pendingMutations.delete(mutation.id!);
 		} catch (e: unknown) {
 			const status = (e as { status?: number })?.status;
-			const isCategoryPreferenceMutation = mutation.type === 'set_category_preference' || mutation.type === 'delete_category_preference';
+			const isCategoryPreferenceMutation = mutation.type === 'set_category_preference' || mutation.type === 'delete_category_preference' || mutation.type === 'set_favorite' || mutation.type === 'delete_favorite';
 			const isSettingsMutation = mutation.type === 'update_user_settings';
 			if (status === 404 || status === 409 || status === 403 || (
 				status === 400 && (isCategoryPreferenceMutation || isSettingsMutation)
@@ -363,6 +421,7 @@ async function runPendingMutations(userId: string) {
 				// stammen daher typischerweise von einem kalten Proxy/WAF und dürfen eine
 				// persönliche Lernregel nicht vernichten. Nur echte 400-Validierungsfehler
 				// sind dauerhaft.
+				if ((mutation.type === 'set_favorite' || mutation.type === 'delete_favorite') && status !== 400) break;
 				if ((isCategoryPreferenceMutation || isSettingsMutation) && status !== 400) continue;
 				// Permanenter Fehler – Mutation überspringen (Item gelöscht, Konflikt oder keine Berechtigung)
 				// Ausnahme: selbst geloggte Tracker-Einträge NIEMALS wegen 4xx verwerfen.
@@ -464,15 +523,85 @@ export async function queueItemCreate(
 	if (networkStore.online) void drainPendingMutations();
 }
 
-export async function getPendingCreateItems(userId: string, listId: string): Promise<OfflineItem[]> {
+export async function getPendingCreateItems(userId: string, listId: string, requestStartedAt = Infinity): Promise<OfflineItem[]> {
 	const pending = (await offlineDb.pendingMutations.where('type').equals('create_item').toArray())
 		.filter((mutation) =>
 			(mutation.userId === undefined || mutation.userId === userId) &&
 			mutation.payload.listId === listId &&
 			typeof mutation.payload.id === 'string'
 		);
-	const rows = await offlineDb.items.bulkGet(pending.map((mutation) => mutation.payload.id as string));
-	return rows.filter((item): item is OfflineItem => item !== undefined);
+	const pendingIds = new Set(pending.map(mutation => mutation.payload.id));
+	return (await offlineDb.items.where('listId').equals(listId).toArray()).filter(item =>
+		pendingIds.has(item.id) || (item.localConfirmedAt !== undefined && item.localConfirmedAt >= requestStartedAt)
+	);
+}
+
+export async function queueItemUpdate(userId: string, id: string, changes: Partial<OfflineItem>): Promise<void> {
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.pendingMutations, async () => {
+		const item = await offlineDb.items.get(id);
+		if (!item) throw new Error('Local item missing');
+		const { updatedAt: _updatedAt, id: _id, listId: _listId, ...patch } = changes;
+		await offlineDb.items.update(id, patch);
+		await offlineDb.pendingMutations.add({ type: 'update_item', userId, payload: { ...patch, id, clientUpdatedAt: item.updatedAt }, createdAt: Date.now() });
+	});
+	if (activeUserId !== userId) return;
+	networkStore.setPending(await countActivePendingMutations());
+	if (networkStore.online) void drainPendingMutations();
+}
+
+export async function queueItemDelete(userId: string, id: string): Promise<void> {
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.pendingMutations, async () => {
+		await offlineDb.items.delete(id);
+		await offlineDb.pendingMutations.add({ type: 'delete_item', userId, payload: { id }, createdAt: Date.now() });
+	});
+	if (activeUserId !== userId) return;
+	networkStore.setPending(await countActivePendingMutations());
+	if (networkStore.online) void drainPendingMutations();
+}
+
+async function writeUserSettingsCache(row: OfflineUserSettings): Promise<void> {
+	await offlineDb.transaction('rw', offlineDb.userSettings, async () => {
+		await offlineDb.userSettings.put({ ...(await offlineDb.userSettings.get(row.userId)), ...row });
+	});
+}
+
+export async function getOfflineFavorites(userId: string): Promise<OfflineFavorite[] | null> {
+	return (await offlineDb.userSettings.get(userId))?.favorites ?? null;
+}
+
+function applyFavorite(favorites: OfflineFavorite[], favorite: OfflineFavorite, remove: boolean): OfflineFavorite[] {
+	const rest = favorites.filter(entry => entry.name !== favorite.name);
+	return remove ? rest : [favorite, ...rest];
+}
+
+export async function cacheFavorites(userId: string, favorites: OfflineFavorite[], requestStartedAt = Date.now()): Promise<OfflineFavorite[]> {
+	return offlineDb.transaction('rw', offlineDb.userSettings, offlineDb.pendingMutations, async () => {
+		const row = (await offlineDb.userSettings.get(userId)) ?? { userId, settings: {}, revision: 0, updatedAt: Date.now() };
+		if (row.favoritesUpdatedAt !== undefined && row.favoritesUpdatedAt >= requestStartedAt && row.favorites) favorites = row.favorites;
+		let effective = favorites.map(({ name, quantityInfo, categoryOverride }) => ({ name, quantityInfo, categoryOverride }));
+		for (const mutation of await offlineDb.pendingMutations.orderBy('id').toArray()) {
+			if (mutation.userId !== userId || !['set_favorite', 'delete_favorite'].includes(mutation.type)) continue;
+			effective = applyFavorite(effective, mutation.payload as unknown as OfflineFavorite, mutation.type === 'delete_favorite');
+		}
+		await offlineDb.userSettings.put({ ...row, favorites: effective });
+		return effective;
+	});
+}
+
+export async function setFavoriteOffline(userId: string, favorite: OfflineFavorite, remove = false): Promise<OfflineFavorite[]> {
+	const plain = { name: favorite.name.trim(), quantityInfo: favorite.quantityInfo, categoryOverride: favorite.categoryOverride };
+	const favorites = await offlineDb.transaction('rw', offlineDb.userSettings, offlineDb.pendingMutations, async () => {
+		const row = (await offlineDb.userSettings.get(userId)) ?? { userId, settings: {}, revision: 0, updatedAt: Date.now() };
+		const effective = applyFavorite(row.favorites ?? [], plain, remove);
+		await offlineDb.userSettings.put({ ...row, favorites: effective, favoritesUpdatedAt: Date.now() });
+		await offlineDb.pendingMutations.add({ userId, type: remove ? 'delete_favorite' : 'set_favorite', payload: plain, createdAt: Date.now() });
+		return effective;
+	});
+	if (activeUserId === userId) {
+		networkStore.setPending(await countActivePendingMutations());
+		if (networkStore.online) void drainPendingMutations();
+	}
+	return favorites;
 }
 
 // ── Tracker-Logs: optimistisch + idempotent ────────────────────────────────────
@@ -737,7 +866,7 @@ export async function queueUserSettingsPatch(
 			});
 		}
 
-		await offlineDb.userSettings.put({
+		await writeUserSettingsCache({
 			userId,
 			settings: plainEffectiveSettings as Record<string, unknown>,
 			revision: settingsRevision,
@@ -766,7 +895,7 @@ export async function refreshUserSettings(
 		if (payload) seededSettings = applyUserSettingsPatch(seededSettings, payload.settings);
 	}
 	if (!existing || seedRevision >= existing.revision) {
-		await offlineDb.userSettings.put({
+		await writeUserSettingsCache({
 			userId,
 			settings: seededSettings as Record<string, unknown>,
 			revision: seedRevision,
@@ -801,7 +930,7 @@ export async function refreshUserSettings(
 			revision: serverState.settingsRevision,
 			updatedAt: Date.now()
 		};
-		await offlineDb.userSettings.put(row);
+		await writeUserSettingsCache(row);
 		return row;
 	} catch {
 		return (await offlineDb.userSettings.get(userId)) ?? {
@@ -823,8 +952,31 @@ export async function getOfflineLists(): Promise<OfflineList[]> {
 	return offlineDb.lists.toArray();
 }
 
-export async function cacheItemsData(items: OfflineItem[]) {
-	await offlineDb.items.bulkPut(items);
+export async function cacheItemsData<T extends OfflineItem>(items: T[], userId = activeUserId, requestStartedAt = Date.now()): Promise<T[]> {
+	return offlineDb.transaction('rw', offlineDb.items, offlineDb.pendingMutations, async () => {
+		const pending = (await offlineDb.pendingMutations.orderBy('id').toArray()).filter(entry => entry.userId === undefined || entry.userId === userId);
+		const effective: T[] = [];
+		for (const item of items) {
+			if (pending.some(entry => entry.type === 'delete_item' && entry.payload.id === item.id)) continue;
+			let merged = { ...item };
+			const cached = await offlineDb.items.get(item.id);
+			// A GET begun before our write was acknowledged may finish after the
+			// queue entry is gone. Preserve the confirmed value in that one race.
+			if (cached?.localConfirmedAt !== undefined && cached.localConfirmedAt >= requestStartedAt) merged = { ...merged, ...cached };
+			for (const entry of pending) {
+				if (entry.type !== 'update_item' || entry.payload.id !== item.id) continue;
+				for (const key of ['name', 'quantityInfo', 'categoryOverride', 'isChecked', 'checkedAt'] as const) {
+					if (key in entry.payload) Object.assign(merged, { [key]: entry.payload[key] });
+				}
+				if (entry.payload.isChecked !== undefined && entry.payload.checkedAt === undefined) {
+					merged.checkedAt = entry.payload.isChecked ? Math.floor(entry.createdAt / 1000) : null;
+				}
+			}
+			await offlineDb.items.put(merged);
+			effective.push(merged);
+		}
+		return effective;
+	});
 }
 
 export async function getOfflineItems(listId: string): Promise<OfflineItem[]> {

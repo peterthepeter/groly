@@ -21,6 +21,7 @@ interface OfflineItem {
 	checkedAt: number | null;
 	categoryOverride: string | null;
 	updatedAt: number;
+	localConfirmedAt?: number;
 }
 
 interface PendingMutation {
@@ -40,6 +41,8 @@ interface PendingMutation {
 		| 'create_meditation_log'
 		| 'set_category_preference'
 		| 'delete_category_preference'
+		| 'set_favorite'
+		| 'delete_favorite'
 		| 'update_user_settings';
 	payload: Record<string, unknown>;
 	createdAt: number;
@@ -57,6 +60,14 @@ interface OfflineUserSettings {
 	settings: Record<string, unknown>;
 	revision: number;
 	updatedAt: number;
+	favorites?: OfflineFavorite[];
+	favoritesUpdatedAt?: number;
+}
+
+interface OfflineFavorite {
+	name: string;
+	quantityInfo: string | null;
+	categoryOverride: string | null;
 }
 
 interface OfflineSupplement {
@@ -204,5 +215,6 @@ export type {
 	OfflineMeditationLog,
 	OfflineCaffeineDrink,
 	OfflineCategoryPreference,
-	OfflineUserSettings
+	OfflineUserSettings,
+	OfflineFavorite
 };

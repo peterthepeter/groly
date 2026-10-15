@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '1.0.0-beta.3',
+		de: [
+			'Offline angelegte und abgehakte Artikel bleiben nach der Synchronisierung abgehakt.',
+			'Favoriten sind auch offline verfügbar; Änderungen werden beim Wiederverbinden synchronisiert.',
+			'Rezepte zeigen bei fehlenden Offline-Daten einen Hinweis mit Rückkehr und erneutem Laden. Der PDF-Export wurde zusätzlich abgesichert.'
+		],
+		en: [
+			'Items created and checked offline remain checked after synchronization.',
+			'Favorites are available offline; changes sync when reconnecting.',
+			'Recipes missing offline data show a message with navigation and retry controls. PDF export has also been hardened.'
+		]
+	},
+	{
 		version: '1.0.0-beta.2',
 		de: [
 			'Überarbeitete Vorschau auf Groly 1.0: Der aktualisierte technische Unterbau wurde weiter bereinigt und erneut auf sichere Versionswechsel geprüft.',

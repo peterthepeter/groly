@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f0e">
+<title>Groly · Offline</title>
+<style>
+:root{color-scheme:dark;--bg:#0a0f0e;--text:#edf3ef;--muted:#a9b7ae;--surface:#1a2520;--accent:#85d6a2;--on-accent:#08351b}
+@media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#f6faf7;--text:#14251b;--muted:#53665a;--surface:#e5eee8}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,sans-serif}main{max-width:430px;min-height:100dvh;margin:auto;padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 32px);display:flex;flex-direction:column}header{display:flex;justify-content:space-between;align-items:center}header strong{font-size:22px}section{margin-top:auto;padding-top:48px}h1{font-size:24px;line-height:1.3}p{color:var(--muted)}nav{display:flex;gap:12px;margin-top:24px}a,button{min-height:44px;border:0;border-radius:16px;padding:12px 16px;font:600 14px/1.4 system-ui,sans-serif;text-align:center;text-decoration:none;cursor:pointer}nav>*{flex:1;background:var(--surface);color:var(--text)}nav button{background:var(--accent);color:var(--on-accent)}.language button{padding:8px;min-width:44px;background:transparent;color:var(--text)}html[lang=de] [lang=en],html[lang=en] [lang=de]{display:none}
+</style>
+</head>
+<body>
+<main data-offline-fallback>
+<header><strong>Groly</strong><div class="language"><button onclick="setLang('de')">DE</button><button onclick="setLang('en')">EN</button></div></header>
+<section>
+<h1>Offline</h1>
+<p lang="de">Diese Seite ist auf deinem Gerät noch nicht offline verfügbar. Stelle die Verbindung wieder her und versuche es erneut.</p>
+<p lang="en">This page is not available offline on your device yet. Reconnect and try again.</p>
+<nav><a href="/"><span lang="de">Zur Startseite</span><span lang="en">Go home</span></a><button onclick="location.reload()"><span lang="de">Erneut versuchen</span><span lang="en">Try again</span></button></nav>
+</section>
+</main>
+<script>
+function setLang(lang){lang=lang==='de'?'de':'en';document.documentElement.lang=lang;for(const button of document.querySelectorAll('.language button'))button.setAttribute('aria-pressed',String(button.textContent.toLowerCase()===lang))}
+try{setLang(localStorage.getItem('groly_ui_lang')||(navigator.language.startsWith('de')?'de':'en'))}catch{setLang(navigator.language.startsWith('de')?'de':'en')}
+</script>
+</body>
+</html>
