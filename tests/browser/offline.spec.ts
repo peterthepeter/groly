@@ -28,8 +28,13 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 	const volume = `${id}-data`;
 	const errors: string[] = [];
 	let desktop: Awaited<ReturnType<typeof browser.newContext>> | undefined;
+	let releaseHomeLists!: () => void;
+	const homeListsReady = new Promise<void>(resolve => { releaseHomeLists = resolve; });
 	page.on('pageerror', error => errors.push(error.message));
 	try {
+		// Exercise slow initial loading deliberately. URL/SW readiness does not
+		// mean the list catalog has finished loading or been saved in IndexedDB.
+		await page.route('**/api/lists', async route => { await homeListsReady; await route.continue(); }, { times: 1 });
 		docker('volume', 'create', volume);
 		docker('run', '-d', '--platform', 'linux/amd64', '--name', id, '-p', '127.0.0.1:3100:3000',
 			'--mount', `type=volume,src=${volume},dst=/app/data`, '-e', 'ADMIN_USERNAME=offline-bootstrap',
@@ -43,6 +48,9 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await page.locator('button[type="submit"]').click();
 		await expect(page).toHaveURL('http://127.0.0.1:3100/');
 		await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+		releaseHomeLists();
+		await expect(page.getByText('Familie 🥦', { exact: true }).first()).toBeVisible();
+		await expect.poll(async () => (await rows(page, 'lists')).some(row => row.id === 'upgrade-list')).toBe(true);
 		// Create a catalog entry whose detail page has never been opened.
 		const created = await page.request.post('/api/recipes', { data: { title: 'Uncached recipe', servings: 2, ingredients: [], steps: [] } });
 		expect(created.status()).toBe(201);
@@ -136,6 +144,7 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		expect(favorites.some((row: { name: string }) => row.name === 'Äpfel')).toBe(false);
 		expect(errors).toEqual([]);
 	} finally {
+		releaseHomeLists();
 		await desktop?.close();
 		docker('rm', '-f', id);
 		docker('volume', 'rm', volume);
