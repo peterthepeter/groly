@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '1.0.0-beta.2',
+		de: [
+			'Überarbeitete Vorschau auf Groly 1.0: Der aktualisierte technische Unterbau wurde weiter bereinigt und erneut auf sichere Versionswechsel geprüft.',
+			'Der PDF-Export meldet Verbindungsfehler verständlich. Deine Auswahl bleibt erhalten, damit du den Export erneut starten kannst.'
+		],
+		en: [
+			'An updated preview of Groly 1.0: Core dependencies have been further cleaned up and safe version upgrades verified again.',
+			'PDF export now explains connection failures. Your selection is preserved so you can retry the export.'
+		]
+	},
+	{
 		version: '1.0.0-beta.1',
 		de: [
 			'Vorschau auf Groly 1.0: Nach langer Entwicklung ist es Zeit für Version 1. Ich hätte nie gedacht, dass so viele Menschen Groly nutzen – danke euch!',
