@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
-	import { currentLang } from '$lib/i18n.svelte';
+	import { currentLang } from '#lib/i18n.svelte';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -30,6 +30,10 @@
 				{
 					title: 'Updates',
 					text: 'When an update is ready, an arrow appears in the top bar. Tap it and reload Groly from the dialog.'
+				},
+				{
+					title: 'Backups before upgrades',
+					text: 'Before a new server version first starts, Groly saves a verified copy of the database and uploaded images in backups beside the database. Keep enough free space for both. If the backup fails, startup stops; the operator can check the container logs. Backups are never automatically deleted. To restore, stop Groly and restore the database and uploads from the same backup, then start the matching previous image. See the operator upgrade guide for the complete procedure.'
 				},
 				{
 					title: 'Quick access',
@@ -139,7 +143,7 @@
 				},
 				{
 					title: 'Meal plan',
-					text: 'Plan several meals per day, adjust servings, and add one meal or the entire week to a shopping list.'
+					text: 'Plan several meals per day, adjust servings, and add one meal or the entire week to a shopping list. New plans use your local calendar day. Older entries affected by the date bug may appear one day earlier after upgrading to 1.0; move those entries to the intended day.'
 				},
 				{
 					title: 'Organize & remember',
@@ -167,6 +171,10 @@
 				{
 					title: 'Updates',
 					text: 'Ist ein Update verfügbar, erscheint oben ein Pfeil. Tippe ihn an und lade Groly über den angezeigten Dialog neu.'
+				},
+				{
+					title: 'Sicherung vor Versionswechseln',
+					text: 'Vor dem ersten Start einer neuen Serverversion sichert Groly Datenbank und hochgeladene Bilder geprüft im Ordner backups neben der Datenbank. Dafür muss ausreichend freier Speicher vorhanden sein. Schlägt die Sicherung fehl, bleibt der Start gesperrt; die Ursache steht im Container-Log. Sicherungen werden nie automatisch gelöscht. Zum Wiederherstellen Groly stoppen, Datenbank und Bilder aus derselben Sicherung zurückspielen und das passende vorherige Image starten. Die vollständigen Schritte stehen in der Upgrade-Anleitung für Betreiber.'
 				},
 				{
 					title: 'Schnellzugriff',
@@ -276,7 +284,7 @@
 				},
 				{
 					title: 'Wochenplan',
-					text: 'Plane mehrere Mahlzeiten pro Tag, passe die Portionen an und übertrage ein Gericht oder die ganze Woche in eine Einkaufsliste.'
+					text: 'Plane mehrere Mahlzeiten pro Tag, passe die Portionen an und übertrage ein Gericht oder die ganze Woche in eine Einkaufsliste. Neue Pläne verwenden deinen lokalen Kalendertag. Ältere, vom Datumsfehler betroffene Einträge können nach dem Update auf 1.0 einen Tag früher erscheinen; verschiebe sie auf den gewünschten Tag.'
 				},
 				{
 					title: 'Ordnen & merken',

@@ -1,10 +1,10 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { lists, items, listMembers, users } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { lists, items, listMembers, users } from '#lib/db/schema';
 import { eq, count, sql } from 'drizzle-orm';
-import { now, generateId } from '$lib/auth';
+import { now, generateId } from '#lib/auth';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -107,7 +107,7 @@ export const GET: RequestHandler = async (event) => {
 		...acceptedShared
 	].sort((a, b) => a.updatedAt - b.updatedAt);
 
-	return json({ lists: allLists, pendingInvitations });
+	return Response.json({ lists: allLists, pendingInvitations });
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -115,12 +115,12 @@ export const POST: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const { name, description, iconId } = await event.request.json();
-	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
+	if (!name?.trim()) return Response.json({ error: 'Name erforderlich' }, { status: 400 });
 
 	const id = generateId(16);
 	const ts = now();
 	const safeIconId = iconId ?? null;
 	db.insert(lists).values({ id, name: name.trim(), description: description?.trim() ?? null, iconId: safeIconId, ownerId: user!.id, createdAt: ts, updatedAt: ts }).run();
 
-	return json({ id, name, description, iconId: safeIconId, ownerId: user!.id, openCount: 0, createdAt: ts, updatedAt: ts, isOwner: true, ownerUsername: null }, { status: 201 });
+	return Response.json({ id, name, description, iconId: safeIconId, ownerId: user!.id, openCount: 0, createdAt: ts, updatedAt: ts, isOwner: true, ownerUsername: null }, { status: 201 });
 };

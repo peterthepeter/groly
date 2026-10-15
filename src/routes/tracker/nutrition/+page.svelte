@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import MealEditSheet from '$lib/components/supplements/MealEditSheet.svelte';
-	import NutritionGoalSheet from '$lib/components/supplements/NutritionGoalSheet.svelte';
-	import NutritionMacroStrip from '$lib/components/supplements/NutritionMacroStrip.svelte';
-	import TrackerSectionNav from '$lib/components/supplements/TrackerSectionNav.svelte';
-	import { toLocalDateKey } from '$lib/dates';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { t, currentLang, nutrition_kcal_over, nutrition_kcal_remaining, nutrition_of_goal } from '$lib/i18n.svelte';
+	import { page } from '$app/state';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import MealEditSheet from '#lib/components/supplements/MealEditSheet.svelte';
+	import NutritionGoalSheet from '#lib/components/supplements/NutritionGoalSheet.svelte';
+	import NutritionMacroStrip from '#lib/components/supplements/NutritionMacroStrip.svelte';
+	import TrackerSectionNav from '#lib/components/supplements/TrackerSectionNav.svelte';
+	import { toLocalDateKey } from '#lib/dates';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { t, currentLang, nutrition_kcal_over, nutrition_kcal_remaining, nutrition_of_goal } from '#lib/i18n.svelte';
 
 	type Component = {
 		id: string;
@@ -46,7 +46,7 @@
 	let menuOpen = $state(false);
 	let dateStr = $state(
 		(() => {
-			const param = $page.url.searchParams.get('date');
+			const param = page.url.searchParams.get('date');
 			return param && /^\d{4}-\d{2}-\d{2}$/.test(param) ? param : toLocalDateKey(new Date());
 		})()
 	);

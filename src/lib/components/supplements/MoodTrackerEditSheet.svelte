@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { t } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 	import SupplementActiveToggle from './SupplementActiveToggle.svelte';
 	let { open = $bindable(false) }: { open: boolean } = $props();

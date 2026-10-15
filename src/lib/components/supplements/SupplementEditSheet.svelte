@@ -1,8 +1,8 @@
 <script lang="ts">
 	// Shared Manage presentation; domain behavior remains local to this editor.
 	import { untrack } from 'svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { displayUnit, SUPPLEMENT_UNITS } from '$lib/units';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { displayUnit, SUPPLEMENT_UNITS } from '#lib/units';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 	import SupplementActiveToggle from './SupplementActiveToggle.svelte';
 

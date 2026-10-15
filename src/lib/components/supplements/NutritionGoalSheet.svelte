@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { calculateNutritionTargets, type NutritionActivity, type NutritionSex } from '$lib/nutritionUtils';
+	import { t } from '#lib/i18n.svelte';
+	import { calculateNutritionTargets, type NutritionActivity, type NutritionSex } from '#lib/nutritionUtils';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	let {

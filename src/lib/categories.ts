@@ -3,9 +3,9 @@ export type Category = {
 	svgContent: string;
 };
 
-import { BRAND_CATEGORIES } from '$lib/brands';
-import { createItemResolver, type ItemResolution } from '$lib/itemResolver';
-import { VISUAL_GROUP_ICONS } from '$lib/itemVisualGroups';
+import { BRAND_CATEGORIES } from '#lib/brands';
+import { createItemResolver, type ItemResolution } from '#lib/itemResolver';
+import { VISUAL_GROUP_ICONS } from '#lib/itemVisualGroups';
 
 type CategoryDef = {
 	key: string;

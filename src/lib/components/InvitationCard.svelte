@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { getListIcon } from '$lib/listIcons';
-	import { t } from '$lib/i18n.svelte';
+	import { getListIcon } from '#lib/listIcons';
+	import { t } from '#lib/i18n.svelte';
 
 	const COLORS = ['#2E7D32', '#2e6771', '#4d626c', '#5a4080', '#a0522d', '#1a6b3c'];
 	function colorForName(name: string): string {

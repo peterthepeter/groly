@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { displayUnit } from '$lib/units';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { displayUnit } from '#lib/units';
 	import { goto } from '$app/navigation';
-	import { generateClientId, logSupplementOffline, logWaterOffline, logMeditationOffline } from '$lib/sync/manager';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { generateClientId, logSupplementOffline, logWaterOffline, logMeditationOffline } from '#lib/sync/manager';
+	import { userSettings } from '#lib/userSettings.svelte';
 	import { untrack, tick } from 'svelte';
-	import type { CaffeineDrink } from '$lib/db/schema';
-	import { todayKey as todayStr } from '$lib/dates';
+	import type { CaffeineDrink } from '#lib/db/schema';
+	import { todayKey as todayStr } from '#lib/dates';
 	import SupplementQuickLogTile from './SupplementQuickLogTile.svelte';
 	import TrackerTileShell from './TrackerTileShell.svelte';
 	import CaffeineDrinkPickerContent from './CaffeineDrinkPickerContent.svelte';
 	import WaterQuickAddContent from './WaterQuickAddContent.svelte';
 	import MeditationStartContent from './MeditationStartContent.svelte';
-	import { layoutBottomUp, sortQuickLogItems } from '$lib/supplements/quickLogGrid';
-	import { getMoodLevel } from '$lib/mood';
+	import { layoutBottomUp, sortQuickLogItems } from '#lib/supplements/quickLogGrid';
+	import { getMoodLevel } from '#lib/mood';
 
 	type Supplement = {
 		id: string; name: string; unit: string;

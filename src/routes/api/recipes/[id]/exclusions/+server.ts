@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { recipes, recipeIngredients, recipeIngredientExclusions } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { recipes, recipeIngredients, recipeIngredientExclusions } from '#lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
@@ -12,7 +12,7 @@ export const GET: RequestHandler = async (event) => {
 	const recipe = db.select({ id: recipes.id }).from(recipes)
 		.where(and(eq(recipes.id, event.params.id), eq(recipes.userId, user!.id)))
 		.get();
-	if (!recipe) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!recipe) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const exclusions = db.select({ ingredientId: recipeIngredientExclusions.ingredientId })
 		.from(recipeIngredientExclusions)
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async (event) => {
 		))
 		.all();
 
-	return json({ excludedIds: exclusions.map(e => e.ingredientId) });
+	return Response.json({ excludedIds: exclusions.map(e => e.ingredientId) });
 };
 
 export const PUT: RequestHandler = async (event) => {
@@ -33,7 +33,7 @@ export const PUT: RequestHandler = async (event) => {
 	const recipe = db.select({ id: recipes.id }).from(recipes)
 		.where(and(eq(recipes.id, event.params.id), eq(recipes.userId, user!.id)))
 		.get();
-	if (!recipe) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!recipe) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const body = await event.request.json();
 	const excludedIds: string[] = Array.isArray(body.excludedIds) ? body.excludedIds : [];
@@ -63,5 +63,5 @@ export const PUT: RequestHandler = async (event) => {
 		}).run();
 	}
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

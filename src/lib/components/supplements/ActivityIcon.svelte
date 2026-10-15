@@ -9,7 +9,7 @@
 		CloudMoon, Salad, Stethoscope, Thermometer, Leaf,
 		Briefcase, CircleCheck, AlarmClock, Plane, Bed,
 		ThermometerSun, Snowflake, Pill
-	} from 'lucide-svelte';
+	} from '@lucide/svelte';
 
 	const ICON_MAP: Record<string, any> = {
 		trophy: Trophy,

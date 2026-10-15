@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { t } from '$lib/i18n.svelte';
-	import { scaleAmount, type Recipe } from '$lib/recipeUtils';
-	import { getListIcon } from '$lib/listIcons';
+	import { t } from '#lib/i18n.svelte';
+	import { scaleAmount, type Recipe } from '#lib/recipeUtils';
+	import { getListIcon } from '#lib/listIcons';
 
 	let { recipe, excludedIngredients, currentServings, originalServings, open, onClose }: {
 		recipe: Recipe;

@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { requireAuth } from '$lib/auth/middleware';
+import { requireAuth } from '#lib/auth/middleware';
 import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async (event) => {

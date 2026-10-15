@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { nutritionMealFavorites, nutritionMealFavoriteComponents } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { nutritionMealFavorites, nutritionMealFavoriteComponents } from '#lib/db/schema';
 import { eq, desc, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -26,13 +26,13 @@ type InputComponent = {
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	const favs = db.select().from(nutritionMealFavorites)
 		.where(eq(nutritionMealFavorites.userId, user.id))
 		.orderBy(desc(nutritionMealFavorites.useCount), desc(nutritionMealFavorites.lastUsedAt))
 		.all();
-	if (favs.length === 0) return json({ mealFavorites: [] });
+	if (favs.length === 0) return Response.json({ mealFavorites: [] });
 
 	const favIds = favs.map((f) => f.id);
 	const allComps = db.select().from(nutritionMealFavoriteComponents).orderBy(asc(nutritionMealFavoriteComponents.sortOrder)).all();
@@ -43,21 +43,21 @@ export const GET: RequestHandler = async (event) => {
 		arr.push(c);
 		byFav.set(c.mealFavoriteId, arr);
 	}
-	return json({
+	return Response.json({
 		mealFavorites: favs.map((f) => ({ ...f, components: byFav.get(f.id) ?? [] }))
 	});
 };
 
 export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	try {
 		const body = await event.request.json();
 		const { displayName, defaultMealName, components, imageUrl, caffeineDrinkId } = body as {
 			displayName?: string; defaultMealName?: string | null; components?: InputComponent[]; imageUrl?: string | null; caffeineDrinkId?: string | null;
 		};
-		if (typeof displayName !== 'string' || !displayName.trim()) return json({ error: 'displayName required' }, { status: 400 });
+		if (typeof displayName !== 'string' || !displayName.trim()) return Response.json({ error: 'displayName required' }, { status: 400 });
 		const comps = Array.isArray(components) ? components : [];
 
 		const id = randomUUID();
@@ -100,8 +100,8 @@ export const POST: RequestHandler = async (event) => {
 			}).run();
 		}
 
-		return json({ id }, { status: 201 });
+		return Response.json({ id }, { status: 201 });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

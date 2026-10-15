@@ -19,10 +19,10 @@
 // Geofence (Liste am Standort öffnen) läuft NUR beim Voll-Resume (Mount/sichtbar),
 // nicht bei den Zusatz-Triggern — sonst gäbe es bei jedem Fokus eine GPS-Abfrage.
 
-import { consumePendingDeeplink } from '$lib/pendingDeeplink';
-import { findGeofenceMatch, resetLocationNavSession } from '$lib/locationNav';
-import { drainPendingMutations } from '$lib/sync/manager';
-import { refreshActiveUserSettings } from '$lib/userSettings.svelte';
+import { consumePendingDeeplink } from '#lib/pendingDeeplink';
+import { findGeofenceMatch, resetLocationNavSession } from '#lib/locationNav';
+import { drainPendingMutations } from '#lib/sync/manager';
+import { refreshActiveUserSettings } from '#lib/userSettings.svelte';
 
 export function initResumeOrchestrator() {
 	if (typeof window === 'undefined') return;

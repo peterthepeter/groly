@@ -1,30 +1,30 @@
-import * as m from '$lib/paraglide/messages';
-import { setLanguageTag, type AvailableLanguageTag } from '$lib/paraglide/runtime';
-import { browser } from '$app/environment';
-import { userSettings, initUserSettings, onUserSettingsApplied } from '$lib/userSettings.svelte';
-import type { UserSettings } from '$lib/userSettingsTypes';
-import { hasExplicitUserLanguage } from '$lib/userSettingsSync';
-import { languageFromBrowserLanguage } from '$lib/language';
+import * as m from '#lib/paraglide/messages';
+import { getLocale, setLocale, type Locale } from '#lib/paraglide/runtime';
+import { browser } from '$app/env';
+import { userSettings, initUserSettings, onUserSettingsApplied } from '#lib/userSettings.svelte';
+import type { UserSettings } from '#lib/userSettingsTypes';
+import { hasExplicitUserLanguage } from '#lib/userSettingsSync';
+import { languageFromBrowserLanguage } from '#lib/language';
 
-let _lang = $state<AvailableLanguageTag>('de');
+let _lang = $state<Locale>('de');
 let initializedUserId: string | null | undefined;
 let initializationToken = 0;
 
 if (browser) {
 	onUserSettingsApplied((settings) => {
 		const lang = settings.lang ?? 'de';
-		setLanguageTag(lang);
+		setLocale(lang, { reload: false });
 		_lang = lang;
 		document.documentElement.lang = lang;
 	});
 }
 
-export function currentLang(): AvailableLanguageTag {
-	return _lang;
+export function currentLang(): Locale {
+	return browser ? _lang : getLocale();
 }
 
-export function setLang(lang: AvailableLanguageTag) {
-	setLanguageTag(lang);
+export function setLang(lang: Locale) {
+	setLocale(lang, { reload: false });
 	_lang = lang;
 	if (browser) document.documentElement.lang = lang;
 	userSettings.lang = lang;
@@ -32,13 +32,13 @@ export function setLang(lang: AvailableLanguageTag) {
 
 // Explicit locale for pages rendered before a user has signed in. A server
 // request must not change Paraglide's process-wide language tag.
-export function localizedMessages(lang: AvailableLanguageTag): Record<NoArgMessages, string> {
+export function localizedMessages(lang: Locale): Record<NoArgMessages, string> {
 	return new Proxy({} as Record<NoArgMessages, string>, {
 		get(_target, key: string | symbol): string {
 			if (typeof key !== 'string') return '';
 			const fn = (m as Record<string, unknown>)[key];
 			return typeof fn === 'function'
-				? (fn as (params: {}, options: { languageTag: AvailableLanguageTag }) => string)({}, { languageTag: lang })
+				? (fn as (params: {}, options: { locale: Locale }) => string)({}, { locale: lang })
 				: '';
 		}
 	});
@@ -48,7 +48,7 @@ export async function initLanguage(
 	userId: string | null,
 	serverSettings: UserSettings = {},
 	settingsRevision = 0,
-	anonymousLang: AvailableLanguageTag = 'de'
+	anonymousLang: Locale = 'de'
 ) {
 	if (!browser) return;
 	if (initializedUserId === userId) return;
@@ -65,7 +65,7 @@ export async function initLanguage(
 		if (timeZone && effectiveSettings?.timeZone !== timeZone) userSettings.timeZone = timeZone;
 	}
 	const lang = userId ? userSettings.lang : anonymousLang;
-	setLanguageTag(lang);
+	setLocale(lang, { reload: false });
 	_lang = lang;
 	document.documentElement.lang = lang;
 	// If no explicit language preference was saved, detect from browser
@@ -86,77 +86,77 @@ export const t = new Proxy({} as Record<NoArgMessages, string>, {
 		void _lang; // register reactive dependency
 		if (typeof key !== 'string') return '';
 		const fn = (m as Record<string, unknown>)[key];
-		return typeof fn === 'function' ? (fn as () => string)() : '';
+		return typeof fn === 'function' ? (fn as (inputs: {}, options: { locale: Locale }) => string)({}, { locale: currentLang() }) : '';
 	}
 });
 
 // Parametric helpers with inline plural logic (Paraglide doesn't support ICU plural syntax)
 export function lists_active(count: number): string {
 	void _lang;
-	if (_lang === 'en') return `${count} active ${count === 1 ? 'list' : 'lists'}`;
+	if (currentLang() === 'en') return `${count} active ${count === 1 ? 'list' : 'lists'}`;
 	return `${count} aktive ${count === 1 ? 'Liste' : 'Listen'}`;
 }
 export function list_items_open(count: number): string {
 	void _lang;
-	if (_lang === 'en') return `${count} ${count === 1 ? 'item' : 'items'}`;
+	if (currentLang() === 'en') return `${count} ${count === 1 ? 'item' : 'items'}`;
 	return `${count} ${count === 1 ? 'Artikel' : 'Artikel'}`;
 }
 export function recipeLimitReached(limit: number): string {
 	void _lang;
-	return m.recipe_limit_reached({ limit }, { languageTag: _lang });
+	return m.recipe_limit_reached({ limit }, { locale: currentLang() });
 }
 export function items_checked_count(count: number): string {
 	void _lang;
-	if (_lang === 'en') return `${count} completed ${count === 1 ? 'item' : 'items'}`;
+	if (currentLang() === 'en') return `${count} completed ${count === 1 ? 'item' : 'items'}`;
 	return `${count} erledigte ${count === 1 ? 'Element' : 'Elemente'}`;
 }
 export function sync_pending(count: number): string {
 	void _lang;
-	if (_lang === 'en') return `${count} pending sync`;
+	if (currentLang() === 'en') return `${count} pending sync`;
 	return `${count} Sync offen`;
 }
 export function reminders_deactivated_for(name: string): string {
 	void _lang;
-	if (_lang === 'en') return `Reminders for "${name}" have been deactivated`;
+	if (currentLang() === 'en') return `Reminders for "${name}" have been deactivated`;
 	return `Erinnerungen für „${name}" wurden deaktiviert`;
 }
 
 export function nutrients_show_more(count: number): string {
 	void _lang;
-	if (_lang === 'en') return `Show ${count} more`;
+	if (currentLang() === 'en') return `Show ${count} more`;
 	return `${count} weitere anzeigen`;
 }
 
 export function nutrition_kcal_remaining(kcal: string): string {
 	void _lang;
-	if (_lang === 'en') return `${kcal} kcal remaining`;
+	if (currentLang() === 'en') return `${kcal} kcal remaining`;
 	return `Noch ${kcal} kcal frei`;
 }
 
 export function nutrition_kcal_over(kcal: string): string {
 	void _lang;
-	if (_lang === 'en') return `${kcal} kcal over goal`;
+	if (currentLang() === 'en') return `${kcal} kcal over goal`;
 	return `${kcal} kcal über dem Ziel`;
 }
 
 export function nutrition_of_goal(goal: string): string {
 	void _lang;
-	return _lang === 'en' ? `of ${goal}` : `von ${goal}`;
+	return currentLang() === 'en' ? `of ${goal}` : `von ${goal}`;
 }
 
 export function nutrition_nutrients_per_100(unit: string): string {
 	void _lang;
-	return _lang === 'en' ? `Nutrients per 100 ${unit}` : `Nährwerte pro 100 ${unit}`;
+	return currentLang() === 'en' ? `Nutrients per 100 ${unit}` : `Nährwerte pro 100 ${unit}`;
 }
 
 export function nutrition_meals_count(count: number): string {
 	void _lang;
-	if (_lang === 'en') return count === 1 ? '1 meal' : `${count} meals`;
+	if (currentLang() === 'en') return count === 1 ? '1 meal' : `${count} meals`;
 	return count === 1 ? '1 Mahlzeit' : `${count} Mahlzeiten`;
 }
 
 export function today_reminders_label(count: number): string {
 	void _lang;
-	if (_lang === 'en') return count === 0 ? 'All done' : count === 1 ? '1 open' : `${count} open`;
+	if (currentLang() === 'en') return count === 0 ? 'All done' : count === 1 ? '1 open' : `${count} open`;
 	return count === 0 ? 'Alles erledigt' : count === 1 ? '1 offen' : `${count} offen`;
 }

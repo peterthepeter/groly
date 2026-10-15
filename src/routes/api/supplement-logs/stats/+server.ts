@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { supplementLogs } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { supplementLogs } from '#lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
@@ -22,5 +22,5 @@ export const GET: RequestHandler = async (event) => {
 	const counts: Record<string, number> = {};
 	for (const row of rows) counts[row.supplementId] = row.count;
 
-	return json({ counts });
+	return Response.json({ counts });
 };

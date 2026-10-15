@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { tick } from 'svelte';
-	import { t, recipeLimitReached } from '$lib/i18n.svelte';
-	import { parseIngredientText } from '$lib/recipeIngredientParser';
+	import { t, recipeLimitReached } from '#lib/i18n.svelte';
+	import { parseIngredientText } from '#lib/recipeIngredientParser';
 
 	type Ingredient = { id: string; amount: string; unit: string; name: string };
 	type Step = { id: string; text: string };

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { t, currentLang, nutrients_show_more } from '$lib/i18n.svelte';
-	import { displayUnit } from '$lib/units';
-	import { formatTime } from '$lib/dates';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { t, currentLang, nutrients_show_more } from '#lib/i18n.svelte';
+	import { displayUnit } from '#lib/units';
+	import { formatTime } from '#lib/dates';
+	import { userSettings } from '#lib/userSettings.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import MoodHistoryView from './MoodHistoryView.svelte';
-	import type { CaffeineLog, MeditationLog } from '$lib/db/schema';
-	import { computeAdherence, computeTrackerStats, eachDayInRange, parseDaysMask, type ScheduleLite, type SupplementMeta } from '$lib/trackerStats';
-	import { tsToDateKey, todayKey } from '$lib/dates';
+	import type { CaffeineLog, MeditationLog } from '#lib/db/schema';
+	import { computeAdherence, computeTrackerStats, eachDayInRange, parseDaysMask, type ScheduleLite, type SupplementMeta } from '#lib/trackerStats';
+	import { tsToDateKey, todayKey } from '#lib/dates';
 
 	type Log = { id: string; supplementId: string; amount: number; loggedAt: number; note?: string | null };
 	type NutrientStat = { total: number; unit: string; name: string };

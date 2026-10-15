@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { on } from '$lib/sseStore.svelte';
+	import { on } from '#lib/sseStore.svelte';
 	import { goto } from '$app/navigation';
-	import { execute, cacheListsData, getOfflineLists, updateOfflineList, deleteOfflineList } from '$lib/sync/manager';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import ListCard from '$lib/components/ListCard.svelte';
-	import AddListModal from '$lib/components/AddListModal.svelte';
-	import ShareListModal from '$lib/components/ShareListModal.svelte';
-	import InvitationCard from '$lib/components/InvitationCard.svelte';
-	import MemberListModal from '$lib/components/MemberListModal.svelte';
-	import { t, currentLang, lists_active } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { getListIcon } from '$lib/listIcons';
-	import { env as publicEnv } from '$env/dynamic/public';
-	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
-	import FabWithShortcuts from '$lib/components/FabWithShortcuts.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
+	import { execute, cacheListsData, getOfflineLists, updateOfflineList, deleteOfflineList } from '#lib/sync/manager';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
+	import ListCard from '#lib/components/ListCard.svelte';
+	import AddListModal from '#lib/components/AddListModal.svelte';
+	import ShareListModal from '#lib/components/ShareListModal.svelte';
+	import InvitationCard from '#lib/components/InvitationCard.svelte';
+	import MemberListModal from '#lib/components/MemberListModal.svelte';
+	import { t, currentLang, lists_active } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { getListIcon } from '#lib/listIcons';
+	import * as publicEnv from '$app/env/public';
+	import PwaInstallModal from '#lib/components/PwaInstallModal.svelte';
+	import FabWithShortcuts from '#lib/components/FabWithShortcuts.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 

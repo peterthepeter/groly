@@ -4,7 +4,7 @@
 	import ManageSheetShell from './ManageSheetShell.svelte';
 	import NutritionFoodRow from './NutritionFoodRow.svelte';
 	import NutritionMacroStrip from './NutritionMacroStrip.svelte';
-	import { t } from '$lib/i18n.svelte';
+	import { t } from '#lib/i18n.svelte';
 
 	type Component = {
 		id?: string;

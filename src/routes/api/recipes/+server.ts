@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { recipes, recipeIngredients, recipeSteps, recipeTags } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { recipes, recipeIngredients, recipeSteps, recipeTags } from '#lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -46,7 +46,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 	const withTags = userRecipes.map((r) => ({ ...r, tags: tagsByRecipe.get(r.id) ?? [] }));
 
-	return json({ recipes: withTags, limit: RECIPE_LIMIT });
+	return Response.json({ recipes: withTags, limit: RECIPE_LIMIT });
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -56,13 +56,13 @@ export const POST: RequestHandler = async (event) => {
 	try {
 		const count = db.select().from(recipes).where(eq(recipes.userId, user!.id)).all().length;
 		if (count >= RECIPE_LIMIT) {
-			return json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht`, code: 'limit_reached', limit: RECIPE_LIMIT }, { status: 400 });
+			return Response.json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht`, code: 'limit_reached', limit: RECIPE_LIMIT }, { status: 400 });
 		}
 
 		const body = await event.request.json();
 		const { title, description, imageUrl, sourceUrl, servings, prepTime, cookTime, ingredients, steps } = body;
 
-		if (!title?.trim()) return json({ error: 'Titel erforderlich' }, { status: 400 });
+		if (!title?.trim()) return Response.json({ error: 'Titel erforderlich' }, { status: 400 });
 
 		const now = Date.now();
 		const recipeId = randomUUID();
@@ -109,9 +109,9 @@ export const POST: RequestHandler = async (event) => {
 			}
 		}
 
-		return json({ id: recipeId }, { status: 201 });
+		return Response.json({ id: recipeId }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/recipes error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

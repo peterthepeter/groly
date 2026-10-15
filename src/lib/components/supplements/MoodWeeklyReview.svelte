@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { findTag } from '$lib/mood';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { findTag } from '#lib/mood';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	type ReviewLog = { date: string; mood: number; energy?: number | null; activities?: string | string[] | null };

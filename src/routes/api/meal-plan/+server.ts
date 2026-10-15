@@ -1,17 +1,17 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { mealPlanEntries, recipes, recipeIngredients, recipeIngredientExclusions, items, lists, listMembers, itemHistory, users } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { mealPlanEntries, recipes, recipeIngredients, recipeIngredientExclusions, items, lists, listMembers, itemHistory, users } from '#lib/db/schema';
 import { eq, and, gte, lte, inArray, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { scaleAmount } from '$lib/recipeUtils';
-import { now as dbNow, generateId } from '$lib/auth';
-import { emitToListMembers } from '$lib/server/userEvents';
-import { schedulePushForItemAdded } from '$lib/server/pushDebounce';
-import { getCategoryPreferenceMap } from '$lib/server/categoryPreferences';
-import { resolveCategoryOverrideForCreate } from '$lib/categoryPreferences';
-import { toAddedItemEventPayload } from '$lib/server/itemEventPayload';
+import { scaleAmount } from '#lib/recipeUtils';
+import { now as dbNow, generateId } from '#lib/auth';
+import { emitToListMembers } from '#lib/server/userEvents';
+import { schedulePushForItemAdded } from '#lib/server/pushDebounce';
+import { getCategoryPreferenceMap } from '#lib/server/categoryPreferences';
+import { resolveCategoryOverrideForCreate } from '#lib/categoryPreferences';
+import { toAddedItemEventPayload } from '#lib/server/itemEventPayload';
 
 // GET /api/meal-plan?from=2026-04-14&to=2026-04-20
 export const GET: RequestHandler = async (event) => {
@@ -21,7 +21,7 @@ export const GET: RequestHandler = async (event) => {
 	const from = event.url.searchParams.get('from');
 	const to = event.url.searchParams.get('to');
 
-	if (!from || !to) return json({ error: 'from and to required' }, { status: 400 });
+	if (!from || !to) return Response.json({ error: 'from and to required' }, { status: 400 });
 
 	const entries = db
 		.select({
@@ -45,7 +45,7 @@ export const GET: RequestHandler = async (event) => {
 		)
 		.all();
 
-	return json(entries);
+	return Response.json(entries);
 };
 
 // PUT /api/meal-plan — create a new entry for a date
@@ -58,10 +58,10 @@ export const PUT: RequestHandler = async (event) => {
 		const body = await event.request.json();
 		const { date, recipeId, note, servings } = body;
 
-		if (!date || typeof date !== 'string') return json({ error: 'date required' }, { status: 400 });
+		if (!date || typeof date !== 'string') return Response.json({ error: 'date required' }, { status: 400 });
 
 		const hasContent = recipeId || (note && note.trim());
-		if (!hasContent) return json({ error: 'content required' }, { status: 400 });
+		if (!hasContent) return Response.json({ error: 'content required' }, { status: 400 });
 
 		const ts = dbNow();
 		const id = randomUUID();
@@ -75,10 +75,10 @@ export const PUT: RequestHandler = async (event) => {
 			createdAt: ts,
 			updatedAt: ts
 		}).run();
-		return json({ id });
+		return Response.json({ id });
 	} catch (e) {
 		console.error('PUT /api/meal-plan error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };
 
@@ -93,19 +93,19 @@ export const POST: RequestHandler = async (event) => {
 		const { dates, listId } = body as { dates: string[]; listId: string };
 
 		if (!Array.isArray(dates) || !listId) {
-			return json({ error: 'dates and listId required' }, { status: 400 });
+			return Response.json({ error: 'dates and listId required' }, { status: 400 });
 		}
 
 		// Prüfen ob der User Schreibzugriff auf die Liste hat
 		const list = db.select().from(lists).where(eq(lists.id, listId)).get();
-		if (!list) return json({ error: 'Liste nicht gefunden' }, { status: 404 });
+		if (!list) return Response.json({ error: 'Liste nicht gefunden' }, { status: 404 });
 		const isOwner = list.ownerId === user!.id;
 		const isMember = isOwner ? false : db
 			.select()
 			.from(listMembers)
 			.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, user!.id), eq(listMembers.status, 'accepted'), eq(listMembers.permission, 'write')))
 			.get();
-		if (!isOwner && !isMember) return json({ error: 'Keine Schreibberechtigung' }, { status: 403 });
+		if (!isOwner && !isMember) return Response.json({ error: 'Keine Schreibberechtigung' }, { status: 403 });
 
 		// Einträge für die angeforderten Tage laden
 		const entries = db
@@ -173,7 +173,7 @@ export const POST: RequestHandler = async (event) => {
 			itemsToAdd.push({ name: ing.name, quantityInfo });
 		}
 
-		if (itemsToAdd.length === 0) return json({ added: 0 });
+		if (itemsToAdd.length === 0) return Response.json({ added: 0 });
 
 		// Items direkt in die DB schreiben
 		const creator = db.select({ username: users.username }).from(users).where(eq(users.id, user!.id)).get();
@@ -220,9 +220,9 @@ export const POST: RequestHandler = async (event) => {
 			url: `/listen/${listId}`
 		});
 
-		return json({ added, listId });
+		return Response.json({ added, listId });
 	} catch (e) {
 		console.error('POST /api/meal-plan error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

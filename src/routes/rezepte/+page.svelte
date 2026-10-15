@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
-	import { page } from '$app/stores';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import FabWithShortcuts from '$lib/components/FabWithShortcuts.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import MealPlanner from '$lib/components/MealPlanner.svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { cacheRecipes, getOfflineRecipes } from '$lib/sync/manager';
+	import { page } from '$app/state';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
+	import FabWithShortcuts from '#lib/components/FabWithShortcuts.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import MealPlanner from '#lib/components/MealPlanner.svelte';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { cacheRecipes, getOfflineRecipes } from '#lib/sync/manager';
 
 	let { data } = $props();
 
@@ -70,7 +70,7 @@
 		updateGreetingOpacity();
 		return () => ro.disconnect();
 	});
-	const activeTab = $derived($page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
+	const activeTab = $derived(page.url.searchParams.get('tab') === 'mealplan' ? 'mealplan' : 'recipes');
 
 	const todayHour = new Date().getHours();
 	const todayGreeting = $derived(todayHour < 12 ? t.greeting_morning : todayHour < 18 ? t.greeting_day : todayHour < 22 ? t.greeting_evening : t.greeting_night);
@@ -326,12 +326,12 @@
 		     style="top: calc(env(safe-area-inset-top) + 5.25rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
 			<div class="flex gap-1 p-1 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<button
-					onclick={() => goto($page.url.pathname, { noScroll: true, keepFocus: true })}
+					onclick={() => goto(page.url.pathname, { reset: false })}
 					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all active:opacity-70"
 					style="background-color: {activeTab === 'recipes' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'recipes' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>{t.recipes_title}</button>
 				<button
-					onclick={() => { goto(`${$page.url.pathname}?tab=mealplan`, { noScroll: true, keepFocus: true }); closeSearch(); }}
+					onclick={() => { goto(`${page.url.pathname}?tab=mealplan`, { reset: false }); closeSearch(); }}
 					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all active:opacity-70"
 					style="background-color: {activeTab === 'mealplan' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'mealplan' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>{t.meal_plan_tab}</button>

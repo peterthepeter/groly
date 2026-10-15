@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { currentLang } from '$lib/i18n.svelte';
-	import { CHANGELOG } from '$lib/changelog';
+	import { currentLang } from '#lib/i18n.svelte';
+	import { CHANGELOG } from '#lib/changelog';
 
 	let { onClose }: { onClose: () => void } = $props();
 

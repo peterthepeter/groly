@@ -1,4 +1,4 @@
-import type { VisualGroup } from '$lib/itemVisualGroups';
+import type { VisualGroup } from '#lib/itemVisualGroups';
 
 export type ResolverSource =
 	| 'override'

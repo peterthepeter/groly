@@ -1,10 +1,10 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { lists, listMembers } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { lists, listMembers } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { emitMemberCountToOwner } from '$lib/server/userEvents';
+import { emitMemberCountToOwner } from '#lib/server/userEvents';
 
 export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -15,7 +15,7 @@ export const POST: RequestHandler = async (event) => {
 
 	// Nur der eingeladene User selbst kann annehmen
 	if (targetUserId !== user!.id) {
-		return json({ error: 'Keine Berechtigung' }, { status: 403 });
+		return Response.json({ error: 'Keine Berechtigung' }, { status: 403 });
 	}
 
 	const member = db
@@ -24,8 +24,8 @@ export const POST: RequestHandler = async (event) => {
 		.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, user!.id)))
 		.get();
 
-	if (!member) return json({ error: 'Einladung nicht gefunden' }, { status: 404 });
-	if (member.status === 'accepted') return json({ ok: true });
+	if (!member) return Response.json({ error: 'Einladung nicht gefunden' }, { status: 404 });
+	if (member.status === 'accepted') return Response.json({ ok: true });
 
 	db.update(listMembers)
 		.set({ status: 'accepted' })
@@ -35,5 +35,5 @@ export const POST: RequestHandler = async (event) => {
 	const list = db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, listId)).get();
 	if (list) emitMemberCountToOwner(listId, list.ownerId);
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

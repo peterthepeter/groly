@@ -3,7 +3,7 @@ import {
 	normalizeCategoryPreferenceName,
 	resolveCategoryOverrideForCreate,
 	getCategoryPreferenceAction
-} from '$lib/categoryPreferences';
+} from '#lib/categoryPreferences';
 
 describe('category preference resolution', () => {
 	it('uses the same exact normalized item name for German and separator variants', () => {

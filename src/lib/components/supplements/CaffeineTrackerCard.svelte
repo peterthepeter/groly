@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { formatTime } from '$lib/dates';
-	import type { CaffeineDrink } from '$lib/db/schema';
+	import { t } from '#lib/i18n.svelte';
+	import { formatTime } from '#lib/dates';
+	import type { CaffeineDrink } from '#lib/db/schema';
 	import CaffeineEditLogSheet from './CaffeineEditLogSheet.svelte';
 	import CaffeineDrinkPickerSheet from './CaffeineDrinkPickerSheet.svelte';
 	import CaffeineDrinkPickerContent from './CaffeineDrinkPickerContent.svelte';

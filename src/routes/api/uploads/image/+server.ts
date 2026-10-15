@@ -1,6 +1,6 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
+import { authGuard } from '#lib/auth/middleware';
 import { randomUUID } from 'crypto';
 import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
@@ -21,11 +21,11 @@ export const POST: RequestHandler = async (event) => {
 		const formData = await event.request.formData();
 		const file = formData.get('image');
 		if (!file || !(file instanceof File)) {
-			return json({ error: 'No image provided', code: 'no_image' }, { status: 400 });
+			return Response.json({ error: 'No image provided', code: 'no_image' }, { status: 400 });
 		}
 
 		if (file.size > 5 * 1024 * 1024) {
-			return json({ error: 'Image too large (max 5 MB)', code: 'image_too_large' }, { status: 400 });
+			return Response.json({ error: 'Image too large (max 5 MB)', code: 'image_too_large' }, { status: 400 });
 		}
 
 		// Derive extension from MIME type, default to jpg
@@ -37,9 +37,9 @@ export const POST: RequestHandler = async (event) => {
 		const buffer = Buffer.from(await file.arrayBuffer());
 		await writeFile(filepath, buffer);
 
-		return json({ url: `/uploads/${filename}` }, { status: 201 });
+		return Response.json({ url: `/uploads/${filename}` }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/uploads/image error:', e);
-		return json({ error: 'Upload failed', code: 'upload_failed' }, { status: 500 });
+		return Response.json({ error: 'Upload failed', code: 'upload_failed' }, { status: 500 });
 	}
 };

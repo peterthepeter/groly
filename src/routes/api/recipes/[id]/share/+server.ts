@@ -1,12 +1,12 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { recipes, recipeShares, users } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { recipes, recipeShares, users } from '#lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { getUserLang, sendPushToUser } from '$lib/server/pushNotifications';
+import { getUserLang, sendPushToUser } from '#lib/server/pushNotifications';
 import { randomUUID } from 'crypto';
-import * as m from '$lib/paraglide/messages';
+import * as m from '#lib/paraglide/messages';
 
 export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -15,23 +15,23 @@ export const POST: RequestHandler = async (event) => {
 	const recipe = db.select().from(recipes)
 		.where(and(eq(recipes.id, event.params.id), eq(recipes.userId, user!.id)))
 		.get();
-	if (!recipe) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!recipe) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	let body: { username?: string };
 	try {
 		body = await event.request.json();
 	} catch {
-		return json({ error: 'Ungültige Anfrage' }, { status: 400 });
+		return Response.json({ error: 'Ungültige Anfrage' }, { status: 400 });
 	}
 	const { username } = body;
-	if (!username?.trim()) return json({ error: 'Benutzername erforderlich' }, { status: 400 });
+	if (!username?.trim()) return Response.json({ error: 'Benutzername erforderlich' }, { status: 400 });
 
 	try {
 		const target = db.select().from(users)
 			.where(sql`lower(${users.username}) = lower(${username.trim()})`)
 			.get();
-		if (!target) return json({ error: 'Benutzer nicht gefunden' }, { status: 404 });
-		if (target.id === user!.id) return json({ error: 'Du kannst kein Rezept mit dir selbst teilen' }, { status: 400 });
+		if (!target) return Response.json({ error: 'Benutzer nicht gefunden' }, { status: 404 });
+		if (target.id === user!.id) return Response.json({ error: 'Du kannst kein Rezept mit dir selbst teilen' }, { status: 400 });
 
 		// Check for existing pending share
 		const existing = db.select().from(recipeShares)
@@ -40,7 +40,7 @@ export const POST: RequestHandler = async (event) => {
 				eq(recipeShares.receiverId, target.id),
 				eq(recipeShares.status, 'pending')
 			)).get();
-		if (existing) return json({ error: 'Bereits geteilt – warte auf Antwort' }, { status: 409 });
+		if (existing) return Response.json({ error: 'Bereits geteilt – warte auf Antwort' }, { status: 409 });
 
 		db.insert(recipeShares).values({
 			id: randomUUID(),
@@ -54,13 +54,13 @@ export const POST: RequestHandler = async (event) => {
 		const lang = getUserLang(target.settings);
 		await sendPushToUser(target.id, {
 			title: `Groly – ${user!.username}`,
-			body: m.recipe_share_push_body({ sender: user!.username, recipe: recipe.title }, { languageTag: lang }),
+			body: m.recipe_share_push_body({ sender: user!.username, recipe: recipe.title }, { locale: lang }),
 			url: '/rezepte'
 		});
 
-		return json({ ok: true }, { status: 201 });
+		return Response.json({ ok: true }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/recipes/[id]/share error:', e);
-		return json({ error: 'Fehler beim Teilen' }, { status: 500 });
+		return Response.json({ error: 'Fehler beim Teilen' }, { status: 500 });
 	}
 };

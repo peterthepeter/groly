@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { recipeShares, recipes, users } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { recipeShares, recipes, users } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
@@ -24,5 +24,5 @@ export const GET: RequestHandler = async (event) => {
 		.where(and(eq(recipeShares.receiverId, user!.id), eq(recipeShares.status, 'pending')))
 		.all();
 
-	return json(pending);
+	return Response.json(pending);
 };

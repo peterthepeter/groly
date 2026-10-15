@@ -1,11 +1,11 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
-import * as schema from '$lib/db/schema';
-import { persistItemCreate } from '$lib/server/itemCreate';
-import { queryItemSuggestions } from '$lib/server/itemSuggestions';
+import * as schema from '#lib/db/schema';
+import { persistItemCreate } from '#lib/server/itemCreate';
+import { queryItemSuggestions } from '#lib/server/itemSuggestions';
 
-type AppDatabase = typeof import('$lib/db').db;
+type AppDatabase = typeof import('#lib/db').db;
 
 let sqlite: Database.Database | null = null;
 

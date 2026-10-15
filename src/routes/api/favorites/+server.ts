@@ -1,10 +1,10 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { favorites } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { favorites } from '#lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { now } from '$lib/auth';
+import { now } from '#lib/auth';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async (event) => {
 		.orderBy(desc(favorites.createdAt))
 		.all();
 
-	return json(rows);
+	return Response.json(rows);
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -24,7 +24,7 @@ export const POST: RequestHandler = async (event) => {
 
 	const body = await event.request.json();
 	const name = body.name?.trim();
-	if (!name) return json({ error: 'Name required' }, { status: 400 });
+	if (!name) return Response.json({ error: 'Name required' }, { status: 400 });
 
 	db.insert(favorites)
 		.values({
@@ -43,7 +43,7 @@ export const POST: RequestHandler = async (event) => {
 		})
 		.run();
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
 
 export const DELETE: RequestHandler = async (event) => {
@@ -51,11 +51,11 @@ export const DELETE: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const body = await event.request.json();
-	if (!body.name) return json({ error: 'Name required' }, { status: 400 });
+	if (!body.name) return Response.json({ error: 'Name required' }, { status: 400 });
 
 	db.delete(favorites)
 		.where(and(eq(favorites.userId, user!.id), eq(favorites.name, body.name)))
 		.run();
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

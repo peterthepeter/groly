@@ -1,9 +1,9 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { db } from '$lib/db';
-import { barcodeCache } from '$lib/db/schema';
+import { db } from '#lib/db';
+import { barcodeCache } from '#lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { authGuard } from '$lib/auth/middleware';
+import { authGuard } from '#lib/auth/middleware';
 
 const USER_AGENT = 'Groly/0.2.6 (self-hosted grocery list app)';
 
@@ -77,7 +77,7 @@ export const GET: RequestHandler = async (event) => {
 	const { code } = event.params;
 
 	if (!code || !/^\d{8,14}$/.test(code)) {
-		return json({ name: null }, { status: 400 });
+		return Response.json({ name: null }, { status: 400 });
 	}
 
 	// Cache-Hit prüfen
@@ -87,12 +87,12 @@ export const GET: RequestHandler = async (event) => {
 			.set({ lastSeenAt: Date.now() })
 			.where(eq(barcodeCache.barcode, code))
 			.run();
-		return json({ name: cached.name });
+		return Response.json({ name: cached.name });
 	}
 
 	const name = await lookupName(code);
 
-	if (!name) return json({ name: null });
+	if (!name) return Response.json({ name: null });
 
 	// In Cache schreiben
 	db.insert(barcodeCache)
@@ -100,5 +100,5 @@ export const GET: RequestHandler = async (event) => {
 		.onConflictDoUpdate({ target: barcodeCache.barcode, set: { name, lastSeenAt: Date.now() } })
 		.run();
 
-	return json({ name });
+	return Response.json({ name });
 };

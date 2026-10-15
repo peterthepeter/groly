@@ -1,4 +1,4 @@
-import type { ListCategorySettings, UserSettings } from '$lib/userSettingsTypes';
+import type { ListCategorySettings, UserSettings } from '#lib/userSettingsTypes';
 
 export type UserSettingsPatch = Partial<Omit<UserSettings, 'listCategorySettings'>> & {
 	listCategorySettings?: Record<string, ListCategorySettings | null>;

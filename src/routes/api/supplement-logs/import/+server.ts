@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { supplementLogs, supplements } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { supplementLogs, supplements } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -15,7 +15,7 @@ export const POST: RequestHandler = async (event) => {
 		const rows: Array<{ loggedAt: number; supplement: string; amount: number; note?: string }> = body.rows ?? [];
 
 		if (!Array.isArray(rows) || rows.length === 0) {
-			return json({ error: 'No rows provided' }, { status: 400 });
+			return Response.json({ error: 'No rows provided' }, { status: 400 });
 		}
 
 		const userSupplements = db
@@ -55,9 +55,9 @@ export const POST: RequestHandler = async (event) => {
 			}
 		});
 
-		return json({ imported, skipped: Array.from(skipped) });
+		return Response.json({ imported, skipped: Array.from(skipped) });
 	} catch (e) {
 		console.error('POST /api/supplement-logs/import error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

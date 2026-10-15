@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
+	import { t } from '#lib/i18n.svelte';
 
 	type ParsedRecipe = {
 		title: string;
@@ -79,7 +79,7 @@
 
 	// Handle PWA Share Target: ?url=https://...
 	onMount(() => {
-		const sharedUrl = $page.url.searchParams.get('url');
+		const sharedUrl = page.url.searchParams.get('url');
 		if (sharedUrl) {
 			url = sharedUrl;
 			importUrl();

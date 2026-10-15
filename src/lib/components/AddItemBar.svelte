@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { tick, onMount } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { watchVisualViewportBottomOffset } from '$lib/visualViewport';
-	import { getCategoryForItem, getCategoryKey, CATEGORIES } from '$lib/categories';
+	import { t } from '#lib/i18n.svelte';
+	import { watchVisualViewportBottomOffset } from '#lib/visualViewport';
+	import { getCategoryForItem, getCategoryKey, CATEGORIES } from '#lib/categories';
 	import BarcodeScanner from './BarcodeScanner.svelte';
 
 	let { onAdd, onClose, suggestions = [], onSearchSuggestions = null, autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null }: {

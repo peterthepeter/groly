@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { supplementLogs, supplements, supplementNutrients, supplementReminderSchedules } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { supplementLogs, supplements, supplementNutrients, supplementReminderSchedules } from '#lib/db/schema';
 import { eq, and, gte, lte, inArray } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
@@ -14,7 +14,7 @@ export const GET: RequestHandler = async (event) => {
 	let to = Number(event.url.searchParams.get('to'));
 
 	if (!['day', 'week', 'month'].includes(period)) {
-		return json({ error: 'Invalid period' }, { status: 400 });
+		return Response.json({ error: 'Invalid period' }, { status: 400 });
 	}
 
 	// Backwards compatibility: older PWA clients (cached service worker) send ?date=YYYY-MM-DD
@@ -44,7 +44,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 
 	if (!from || !to || isNaN(from) || isNaN(to)) {
-		return json({ error: 'Invalid from/to' }, { status: 400 });
+		return Response.json({ error: 'Invalid from/to' }, { status: 400 });
 	}
 
 	// Get all logs for the period
@@ -77,7 +77,7 @@ export const GET: RequestHandler = async (event) => {
 		: [];
 
 	if (logs.length === 0) {
-		return json({ nutrients: {}, supplements: {}, logs: [], schedules: allSchedules, allSupplements: allUserSupplements, period, from, to });
+		return Response.json({ nutrients: {}, supplements: {}, logs: [], schedules: allSchedules, allSupplements: allUserSupplements, period, from, to });
 	}
 
 	// Get nutrients for all involved supplements (filtered in SQL, not in JS)
@@ -126,7 +126,7 @@ export const GET: RequestHandler = async (event) => {
 		supplementTotals[log.supplementId].total += log.amount;
 	}
 
-	return json({
+	return Response.json({
 		nutrients: nutrientTotals,
 		supplements: supplementTotals,
 		logs,

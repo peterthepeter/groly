@@ -1,4 +1,4 @@
-import { db } from '$lib/db';
+import { db } from '#lib/db';
 import {
 	supplements,
 	supplementLogs,
@@ -10,12 +10,12 @@ import {
 	meditationLogs,
 	moodReminderSchedules,
 	moodLogs
-} from '$lib/db/schema';
+} from '#lib/db/schema';
 import { and, eq, gte, lte, sql } from 'drizzle-orm';
 import { sendPushToUser } from './pushNotifications';
-import { toLocalDateKey } from '$lib/dates';
-import { matchSupplementReminderLogs } from '$lib/supplementReminderMatching';
-import { getZonedDateTimeParts, timeZoneFromSettings, zonedDateTimeToTimestamp } from '$lib/timeZones';
+import { toLocalDateKey } from '#lib/dates';
+import { matchSupplementReminderLogs } from '#lib/supplementReminderMatching';
+import { getZonedDateTimeParts, timeZoneFromSettings, zonedDateTimeToTimestamp } from '#lib/timeZones';
 
 async function checkSupplementReminders() {
 	const now = new Date();

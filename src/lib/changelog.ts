@@ -2,6 +2,19 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '1.0.0-beta.1',
+		de: [
+			'Vorschau auf Groly 1.0: Nach langer Entwicklung ist es Zeit für Version 1. Ich hätte nie gedacht, dass so viele Menschen Groly nutzen – danke euch!',
+			'Der technische Unterbau wurde umfassend aktualisiert. Automatische Sicherungen schützen Datenbank und Bilder vor Versionswechseln.',
+			'Der Datumsfehler aus GitHub-Issue #17 wurde behoben. Bereits falsch gespeicherte Essenspläne können einen Tag früher erscheinen und lassen sich auf den gewünschten Tag verschieben.'
+		],
+		en: [
+			'A preview of Groly 1.0: After a long development journey, it’s time for version 1. I never expected so many people to use Groly — thank you!',
+			'Core dependencies have been comprehensively updated. Automatic backups protect the database and uploaded images before version upgrades.',
+			'The date bug from GitHub issue #17 has been fixed. Previously affected meal plans may appear one day earlier; move them to the intended day.'
+		]
+	},
+	{
 		version: '0.9.10',
 		de: ['Englische Übersetzungen bei Einladungen, Meldungen und Bedienelementen ergänzt; Sprachwechsel nach dem Login korrigiert.'],
 		en: ['Completed English translations for invitations, messages, and controls; fixed language switching after login.']

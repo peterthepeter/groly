@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { scaleAmount, type Recipe } from '$lib/recipeUtils';
-	import RecipeShareModal from '$lib/components/recipe/RecipeShareModal.svelte';
-	import RecipeAddToListModal from '$lib/components/recipe/RecipeAddToListModal.svelte';
-	import RecipeNutritionSheet from '$lib/components/recipe/RecipeNutritionSheet.svelte';
-	import RecipeTrackSheet from '$lib/components/recipe/RecipeTrackSheet.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import { cacheRecipeDetail, getOfflineRecipeDetail } from '$lib/sync/manager';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { acquireWakeLock, releaseWakeLock } from '$lib/wakeLock';
+	import { page } from '$app/state';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { scaleAmount, type Recipe } from '#lib/recipeUtils';
+	import RecipeShareModal from '#lib/components/recipe/RecipeShareModal.svelte';
+	import RecipeAddToListModal from '#lib/components/recipe/RecipeAddToListModal.svelte';
+	import RecipeNutritionSheet from '#lib/components/recipe/RecipeNutritionSheet.svelte';
+	import RecipeTrackSheet from '#lib/components/recipe/RecipeTrackSheet.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import { cacheRecipeDetail, getOfflineRecipeDetail } from '#lib/sync/manager';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { acquireWakeLock, releaseWakeLock } from '#lib/wakeLock';
 
 	let wakeLockHeld = false;
 
@@ -242,7 +242,7 @@
 		recipe ? recipe.ingredients.filter(i => !excludedIngredients.has(i.id)).length : 0
 	);
 
-	const recipeId = $derived($page.params.id ?? '');
+	const recipeId = $derived(page.params.id ?? '');
 
 	async function loadRecipe() {
 		try {

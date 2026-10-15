@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { env as publicEnv } from '$env/dynamic/public';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import { t, currentLang, setLang } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { CATEGORY_LABELS } from '$lib/categories';
-	import { validatePasswordRule, getPasswordHint } from '$lib/password';
-	import { shortcuts, type Shortcut, type ShortcutAction } from '$lib/shortcuts.svelte';
+	import { page } from '$app/state';
+	import * as publicEnv from '$app/env/public';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import { t, currentLang, setLang } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { CATEGORY_LABELS } from '#lib/categories';
+	import { validatePasswordRule, getPasswordHint } from '#lib/password';
+	import { shortcuts, type Shortcut, type ShortcutAction } from '#lib/shortcuts.svelte';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
@@ -292,8 +292,8 @@
 	}
 
 	// ── Shortcuts ──────────────────────────────────────────────────────────────
-	let shortcutsOpen = $state($page.url.searchParams.get('expand') === 'shortcuts');
-	let locationOpen = $state($page.url.searchParams.get('expand') === 'location');
+	let shortcutsOpen = $state(page.url.searchParams.get('expand') === 'shortcuts');
+	let locationOpen = $state(page.url.searchParams.get('expand') === 'location');
 	let allLists = $state<{ id: string; name: string }[]>([]);
 	let allListsLoaded = $state(false);
 

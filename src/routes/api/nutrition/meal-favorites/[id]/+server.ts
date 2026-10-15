@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { nutritionMealFavorites, nutritionMealFavoriteComponents } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { nutritionMealFavorites, nutritionMealFavoriteComponents } from '#lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -32,10 +32,10 @@ function ensureOwn(userId: string, id: string) {
 
 export const PATCH: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	const fav = ensureOwn(user.id, event.params.id);
-	if (!fav) return json({ error: 'Not found' }, { status: 404 });
+	if (!fav) return Response.json({ error: 'Not found' }, { status: 404 });
 
 	try {
 		const body = await event.request.json();
@@ -84,19 +84,19 @@ export const PATCH: RequestHandler = async (event) => {
 			}
 		}
 
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };
 
 export const DELETE: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	const fav = ensureOwn(user.id, event.params.id);
-	if (!fav) return json({ error: 'Not found' }, { status: 404 });
+	if (!fav) return Response.json({ error: 'Not found' }, { status: 404 });
 
 	db.delete(nutritionMealFavorites).where(eq(nutritionMealFavorites.id, fav.id)).run();
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

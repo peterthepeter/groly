@@ -1,5 +1,5 @@
-import { isValidCategoryKey } from '$lib/categories';
-import { normalizeItemName } from '$lib/itemResolver';
+import { isValidCategoryKey } from '#lib/categories';
+import { normalizeItemName } from '#lib/itemResolver';
 
 export type CategoryPreferenceValue = {
 	normalizedName: string;

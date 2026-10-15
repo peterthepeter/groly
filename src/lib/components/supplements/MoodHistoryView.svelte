@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { toLocalDateKey, todayKey } from '$lib/dates';
-	import { getMoodLevel, MOOD_LEVELS, findTag } from '$lib/mood';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { toLocalDateKey, todayKey } from '#lib/dates';
+	import { getMoodLevel, MOOD_LEVELS, findTag } from '#lib/mood';
 	import MoodDayDetailSheet from './MoodDayDetailSheet.svelte';
 	import MoodEntrySheet from './MoodEntrySheet.svelte';
 	import MoodIcon from './MoodIcon.svelte';

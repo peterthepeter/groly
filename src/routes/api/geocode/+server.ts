@@ -1,6 +1,6 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
+import { authGuard } from '#lib/auth/middleware';
 
 export const GET: RequestHandler = async (event) => {
 	const { error } = authGuard(event);
@@ -18,18 +18,18 @@ export const GET: RequestHandler = async (event) => {
 				headers: { 'User-Agent': 'Groly/1.0 (self-hosted grocery app)' }
 			});
 			if (!res.ok) throw new Error('Nominatim error');
-			return json(await res.json());
+			return Response.json(await res.json());
 		}
 
 		// Forward geocoding
-		if (!q?.trim()) return json({ error: 'Query required' }, { status: 400 });
+		if (!q?.trim()) return Response.json({ error: 'Query required' }, { status: 400 });
 		const params = new URLSearchParams({ q: q.trim(), format: 'json', limit: '5', addressdetails: '1' });
 		const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
 			headers: { 'User-Agent': 'Groly/1.0 (self-hosted grocery app)' }
 		});
 		if (!res.ok) throw new Error('Nominatim error');
-		return json(await res.json());
+		return Response.json(await res.json());
 	} catch {
-		return json({ error: 'Geocoding failed' }, { status: 502 });
+		return Response.json({ error: 'Geocoding failed' }, { status: 502 });
 	}
 };

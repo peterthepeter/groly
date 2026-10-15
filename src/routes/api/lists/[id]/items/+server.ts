@@ -1,16 +1,16 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { lists, items, listMembers, users } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { lists, items, listMembers, users } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { emitToListMembers } from '$lib/server/userEvents';
-import { schedulePushForItemAdded } from '$lib/server/pushDebounce';
-import { now, generateId } from '$lib/auth';
-import { isValidCategoryKey } from '$lib/categories';
-import { getCategoryPreference } from '$lib/server/categoryPreferences';
-import { toAddedItemEventPayload } from '$lib/server/itemEventPayload';
-import { persistItemCreate } from '$lib/server/itemCreate';
+import { emitToListMembers } from '#lib/server/userEvents';
+import { schedulePushForItemAdded } from '#lib/server/pushDebounce';
+import { now, generateId } from '#lib/auth';
+import { isValidCategoryKey } from '#lib/categories';
+import { getCategoryPreference } from '#lib/server/categoryPreferences';
+import { toAddedItemEventPayload } from '#lib/server/itemEventPayload';
+import { persistItemCreate } from '#lib/server/itemCreate';
 
 function getListAccess(listId: string, userId: string): { list: typeof lists.$inferSelect; permission: 'owner' | 'write' | 'read' | null } {
 	const list = db.select().from(lists).where(eq(lists.id, listId)).get();
@@ -26,7 +26,7 @@ export const GET: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const { list, permission } = getListAccess(event.params.id, user!.id);
-	if (!list || permission === null) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!list || permission === null) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const listItems = db
 		.select({
@@ -47,7 +47,7 @@ export const GET: RequestHandler = async (event) => {
 		.where(eq(items.listId, event.params.id))
 		.all();
 
-	return json(listItems);
+	return Response.json(listItems);
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -55,13 +55,13 @@ export const POST: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const { list, permission } = getListAccess(event.params.id, user!.id);
-	if (!list || permission === null) return json({ error: 'Nicht gefunden' }, { status: 404 });
-	if (permission === 'read') return json({ error: 'Keine Schreibberechtigung' }, { status: 403 });
+	if (!list || permission === null) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (permission === 'read') return Response.json({ error: 'Keine Schreibberechtigung' }, { status: 403 });
 
 	const { name, quantityInfo, id: clientId, categoryOverride: requestedCategoryOverride } = await event.request.json();
-	if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
+	if (!name?.trim()) return Response.json({ error: 'Name erforderlich' }, { status: 400 });
 	if (requestedCategoryOverride != null && !isValidCategoryKey(requestedCategoryOverride)) {
-		return json({ error: 'Ungültige Kategorie' }, { status: 400 });
+		return Response.json({ error: 'Ungültige Kategorie' }, { status: 400 });
 	}
 
 	const id = typeof clientId === 'string' && clientId.length > 0 && clientId.length <= 32
@@ -84,10 +84,10 @@ export const POST: RequestHandler = async (event) => {
 
 	if (!persisted.inserted) {
 		if (persisted.item.listId !== event.params.id || persisted.item.createdBy !== user!.id) {
-			return json({ error: 'Item-ID bereits vergeben' }, { status: 409 });
+			return Response.json({ error: 'Item-ID bereits vergeben' }, { status: 409 });
 		}
 		const creator = db.select({ username: users.username }).from(users).where(eq(users.id, user!.id)).get();
-		return json(toAddedItemEventPayload(persisted.item, creator?.username ?? null));
+		return Response.json(toAddedItemEventPayload(persisted.item, creator?.username ?? null));
 	}
 
 	const creator = db.select({ username: users.username }).from(users).where(eq(users.id, user!.id)).get();
@@ -104,5 +104,5 @@ export const POST: RequestHandler = async (event) => {
 		url: `/listen/${event.params.id}`
 	});
 
-	return json(newItem, { status: 201 });
+	return Response.json(newItem, { status: 201 });
 };

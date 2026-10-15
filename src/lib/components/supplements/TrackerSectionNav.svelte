@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { t, today_reminders_label } from '$lib/i18n.svelte';
-	import { toLocalDateKey } from '$lib/dates';
-	import { matchSupplementReminderLogs } from '$lib/supplementReminderMatching';
+	import { t, today_reminders_label } from '#lib/i18n.svelte';
+	import { toLocalDateKey } from '#lib/dates';
+	import { matchSupplementReminderLogs } from '#lib/supplementReminderMatching';
 
 	type Section = 'today' | 'history' | 'nutrition';
 	type ReminderEntry = { scheduleId: string; supplementId: string; name: string };
@@ -102,8 +102,8 @@
 	}
 
 	function navigate(section: Section) {
-		if (section === 'today') void goto('/tracker', { noScroll: true, keepFocus: true });
-		else if (section === 'history') void goto('/tracker?tab=history', { noScroll: true, keepFocus: true });
+		if (section === 'today') void goto('/tracker', { reset: false });
+		else if (section === 'history') void goto('/tracker?tab=history', { reset: false });
 		else void goto('/tracker/nutrition');
 	}
 

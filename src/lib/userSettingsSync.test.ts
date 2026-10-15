@@ -5,7 +5,7 @@ import {
 	hasExplicitUserLanguage,
 	sanitizeUserSettingsPatch,
 	userSettingsPatchMatches
-} from '$lib/userSettingsSync';
+} from '#lib/userSettingsSync';
 
 describe('user settings patches', () => {
 	it('updates top-level settings without replacing unrelated values', () => {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { localizedMessages } from '$lib/i18n.svelte';
+	import { localizedMessages } from '#lib/i18n.svelte';
 
 	import { onMount } from 'svelte';
 
@@ -35,7 +35,7 @@
 				body: JSON.stringify({ username, password })
 			});
 			if (res.ok) {
-				await goto('/', { invalidateAll: true });
+				await goto('/', { refreshAll: true });
 			} else if (res.status === 429) {
 				error = t.login_rate_limited;
 			} else if (res.status === 400) {

@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { subscribe } from '$lib/server/userEvents';
+import { authGuard } from '#lib/auth/middleware';
+import { subscribe } from '#lib/server/userEvents';
 
 const enc = new TextEncoder();
 

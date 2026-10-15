@@ -1,19 +1,19 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { initLanguage, currentLang } from '$lib/i18n.svelte';
-	import { dispatch } from '$lib/sseStore.svelte';
-	import { initUpdateDetection, checkForUpdate } from '$lib/stores/pwa.svelte';
-	import { initResumeOrchestrator } from '$lib/resumeOrchestrator';
+	import { initLanguage, currentLang } from '#lib/i18n.svelte';
+	import { dispatch } from '#lib/sseStore.svelte';
+	import { initUpdateDetection, checkForUpdate } from '#lib/stores/pwa.svelte';
+	import { initResumeOrchestrator } from '#lib/resumeOrchestrator';
 	import { afterNavigate, onNavigate } from '$app/navigation';
-	import WhatsNewModal from '$lib/components/WhatsNewModal.svelte';
-	import ShortcutMenu from '$lib/components/ShortcutMenu.svelte';
-	import { shortcuts, shortcutMenu } from '$lib/shortcuts.svelte';
-	import { LATEST_CHANGES } from '$lib/changelog';
-	import { browser } from '$app/environment';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { installApiFetchTimeout } from '$lib/apiTimeout';
-	import { initSync } from '$lib/sync/manager';
+	import WhatsNewModal from '#lib/components/WhatsNewModal.svelte';
+	import ShortcutMenu from '#lib/components/ShortcutMenu.svelte';
+	import { shortcuts, shortcutMenu } from '#lib/shortcuts.svelte';
+	import { LATEST_CHANGES } from '#lib/changelog';
+	import { browser } from '$app/env';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { installApiFetchTimeout } from '#lib/apiTimeout';
+	import { initSync } from '#lib/sync/manager';
 
 	// Früh genug, dass es vor den ersten Seiten-Loadern greift (Layout-Script läuft
 	// vor dem Mounten der Seiten). Schützt alle Lese-Anfragen gegen tote Verbindungen

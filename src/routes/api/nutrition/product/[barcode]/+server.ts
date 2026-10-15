@@ -1,7 +1,7 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { lookupProduct } from '$lib/server/nutrition';
+import { authGuard } from '#lib/auth/middleware';
+import { lookupProduct } from '#lib/server/nutrition';
 
 export const GET: RequestHandler = async (event) => {
 	const { error } = authGuard(event);
@@ -9,6 +9,6 @@ export const GET: RequestHandler = async (event) => {
 
 	const code = event.params.barcode;
 	const product = await lookupProduct(code);
-	if (!product) return json({ product: null });
-	return json({ product });
+	if (!product) return Response.json({ product: null });
+	return Response.json({ product });
 };

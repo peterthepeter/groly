@@ -1,11 +1,11 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { meals, mealComponents, caffeineDrinks, caffeineLogs } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { meals, mealComponents, caffeineDrinks, caffeineLogs } from '#lib/db/schema';
 import { and, eq, asc, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { effectiveGrams, computeTotals, mealCaffeineLogPrefix } from '$lib/server/nutrition';
+import { effectiveGrams, computeTotals, mealCaffeineLogPrefix } from '#lib/server/nutrition';
 
 type InputComponent = {
 	productBarcode?: string | null;
@@ -35,7 +35,7 @@ function isValidTime(t: unknown): t is string {
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	const date = event.url.searchParams.get('date');
 	const from = event.url.searchParams.get('from');
@@ -57,10 +57,10 @@ export const GET: RequestHandler = async (event) => {
 			.orderBy(asc(meals.date), asc(meals.time))
 			.all();
 	} else {
-		return json({ error: 'date (YYYY-MM-DD) or from+to required' }, { status: 400 });
+		return Response.json({ error: 'date (YYYY-MM-DD) or from+to required' }, { status: 400 });
 	}
 
-	if (rows.length === 0) return json({ meals: [] });
+	if (rows.length === 0) return Response.json({ meals: [] });
 
 	const mealIds = rows.map((m) => m.id);
 	const allComponents = db.select().from(mealComponents).orderBy(asc(mealComponents.sortOrder)).all();
@@ -72,7 +72,7 @@ export const GET: RequestHandler = async (event) => {
 		byMeal.set(c.mealId, arr);
 	}
 
-	return json({
+	return Response.json({
 		meals: rows.map((m) => ({
 			...m,
 			components: byMeal.get(m.id) ?? []
@@ -82,7 +82,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	try {
 		const body = await event.request.json();
@@ -96,9 +96,9 @@ export const POST: RequestHandler = async (event) => {
 			caffeineDrinkIds?: string[];
 		};
 
-		if (typeof name !== 'string' || !name.trim()) return json({ error: 'name required' }, { status: 400 });
-		if (!isValidDate(date)) return json({ error: 'date YYYY-MM-DD required' }, { status: 400 });
-		if (!isValidTime(time)) return json({ error: 'time HH:MM required' }, { status: 400 });
+		if (typeof name !== 'string' || !name.trim()) return Response.json({ error: 'name required' }, { status: 400 });
+		if (!isValidDate(date)) return Response.json({ error: 'date YYYY-MM-DD required' }, { status: 400 });
+		if (!isValidTime(time)) return Response.json({ error: 'time HH:MM required' }, { status: 400 });
 		const comps = Array.isArray(components) ? components : [];
 
 		const now = Date.now();
@@ -186,8 +186,8 @@ export const POST: RequestHandler = async (event) => {
 			}
 		}
 
-		return json({ id: mealId }, { status: 201 });
+		return Response.json({ id: mealId }, { status: 201 });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

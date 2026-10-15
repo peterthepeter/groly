@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { parseRecipeHtml } from '$lib/server/recipeImport';
-import { parsePublicRecipeUrl, validateResolvedRecipeUrl } from '$lib/server/recipeImportSecurity';
+import { authGuard } from '#lib/auth/middleware';
+import { parseRecipeHtml } from '#lib/server/recipeImport';
+import { parsePublicRecipeUrl, validateResolvedRecipeUrl } from '#lib/server/recipeImportSecurity';
 
 const MAX_REDIRECTS = 5;
 const MAX_PAGE_BYTES = 3 * 1024 * 1024;
@@ -69,11 +69,11 @@ export const POST: RequestHandler = async (event) => {
 	try {
 		rawUrl = (await event.request.json() as { url?: unknown }).url;
 	} catch {
-		return json({ error: 'INVALID_URL' }, { status: 400 });
+		return Response.json({ error: 'INVALID_URL' }, { status: 400 });
 	}
-	if (typeof rawUrl !== 'string' || !rawUrl.trim()) return json({ error: 'INVALID_URL' }, { status: 400 });
+	if (typeof rawUrl !== 'string' || !rawUrl.trim()) return Response.json({ error: 'INVALID_URL' }, { status: 400 });
 	const sourceUrl = rawUrl.trim();
-	if (!parsePublicRecipeUrl(sourceUrl)) return json({ error: 'INVALID_URL' }, { status: 400 });
+	if (!parsePublicRecipeUrl(sourceUrl)) return Response.json({ error: 'INVALID_URL' }, { status: 400 });
 
 	let page: { html: string; finalUrl: string };
 	try {
@@ -83,10 +83,10 @@ export const POST: RequestHandler = async (event) => {
 			host: new URL(sourceUrl).hostname,
 			reason: cause instanceof Error ? cause.message : 'UNKNOWN'
 		});
-		return json({ error: 'PAGE_LOAD_FAILED' }, { status: 422 });
+		return Response.json({ error: 'PAGE_LOAD_FAILED' }, { status: 422 });
 	}
 
 	const recipe = parseRecipeHtml(page.html, page.finalUrl);
-	if (!recipe) return json({ error: 'NO_RECIPE_FOUND' }, { status: 422 });
-	return json({ ...recipe, sourceUrl });
+	if (!recipe) return Response.json({ error: 'NO_RECIPE_FOUND' }, { status: 422 });
+	return Response.json({ ...recipe, sourceUrl });
 };

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { getCategoryForItem } from '$lib/categories';
+	import { getCategoryForItem } from '#lib/categories';
 	import { onMount } from 'svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
 
 	let { item, onTap, onLongPress, createdByUsername = null, currentUsername = null, isFavorite = false }: {
 		item: { id: string; name: string; quantityInfo: string | null; categoryOverride?: string | null };

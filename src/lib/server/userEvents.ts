@@ -1,6 +1,6 @@
 // In-memory pub/sub für Server-Sent Events pro User (global user-scoped channel)
-import { db } from '$lib/db';
-import { lists, listMembers } from '$lib/db/schema';
+import { db } from '#lib/db';
+import { lists, listMembers } from '#lib/db/schema';
 import { eq, and, count } from 'drizzle-orm';
 
 const enc = new TextEncoder();

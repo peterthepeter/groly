@@ -1,21 +1,21 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { nutritionGoals } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { nutritionGoals } from '#lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	const g = db.select().from(nutritionGoals).where(eq(nutritionGoals.userId, user.id)).get();
-	return json({ goals: g ?? null });
+	return Response.json({ goals: g ?? null });
 };
 
 export const PUT: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	try {
 		const body = await event.request.json();
@@ -45,8 +45,8 @@ export const PUT: RequestHandler = async (event) => {
 			})
 			.run();
 
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

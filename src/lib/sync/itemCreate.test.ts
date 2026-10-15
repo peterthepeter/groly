@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { offlineDb, type OfflineItem } from '$lib/sync/db';
-import { drainPendingMutations, getPendingCreateItems, initSync, queueItemCreate } from '$lib/sync/manager';
+import { offlineDb, type OfflineItem } from '#lib/sync/db';
+import { drainPendingMutations, getPendingCreateItems, initSync, queueItemCreate } from '#lib/sync/manager';
 
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {

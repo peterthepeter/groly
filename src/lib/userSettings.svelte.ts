@@ -1,11 +1,11 @@
-import { browser } from '$app/environment';
-import { type UserSettings, type ListCategorySettings, type Shortcut, DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
-import { DEFAULT_CATEGORY_ORDER } from '$lib/categories';
-export type { UserSettings, ListCategorySettings, Shortcut } from '$lib/userSettingsTypes';
-export { DEFAULT_SETTINGS } from '$lib/userSettingsTypes';
-import type { AvailableLanguageTag } from '$lib/paraglide/runtime';
-import { drainPendingMutations, queueUserSettingsPatch, refreshUserSettings } from '$lib/sync/manager';
-import type { UserSettingsPatch } from '$lib/userSettingsSync';
+import { browser } from '$app/env';
+import { type UserSettings, type ListCategorySettings, type Shortcut, DEFAULT_SETTINGS } from '#lib/userSettingsTypes';
+import { DEFAULT_CATEGORY_ORDER } from '#lib/categories';
+export type { UserSettings, ListCategorySettings, Shortcut } from '#lib/userSettingsTypes';
+export { DEFAULT_SETTINGS } from '#lib/userSettingsTypes';
+import type { Locale } from '#lib/paraglide/runtime';
+import { drainPendingMutations, queueUserSettingsPatch, refreshUserSettings } from '#lib/sync/manager';
+import type { UserSettingsPatch } from '#lib/userSettingsSync';
 
 const CACHE_KEY = 'groly_settings';
 const CACHE_OWNER_KEY = 'groly_settings_owner';
@@ -42,7 +42,7 @@ function loadCache(userId?: string | null): UserSettings {
 			const legacyLang = localStorage.getItem('groly_lang');
 			const legacyCat = localStorage.getItem('groly_category_settings');
 			const merged: UserSettings = {};
-			if (legacyLang) merged.lang = legacyLang as AvailableLanguageTag;
+			if (legacyLang) merged.lang = legacyLang as Locale;
 			if (legacyCat) {
 				try { Object.assign(merged, JSON.parse(legacyCat)); } catch {}
 			}
@@ -224,7 +224,7 @@ export async function flushUserSettings(): Promise<void> {
 
 export const userSettings = {
 	get lang() { return _lang; },
-	set lang(v: AvailableLanguageTag) { _lang = v; scheduleSave({ lang: v }); },
+	set lang(v: Locale) { _lang = v; scheduleSave({ lang: v }); },
 	get timeZone() { return _timeZone; },
 	set timeZone(v: string) { _timeZone = v; scheduleSave({ timeZone: v }); },
 

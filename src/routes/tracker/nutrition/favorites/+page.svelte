@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import MealFavoriteEditSheet from '$lib/components/supplements/MealFavoriteEditSheet.svelte';
-	import AddComponentSheet from '$lib/components/supplements/AddComponentSheet.svelte';
-	import ManageSheetShell from '$lib/components/supplements/ManageSheetShell.svelte';
-	import NutritionFoodRow from '$lib/components/supplements/NutritionFoodRow.svelte';
-	import NutritionMacroStrip from '$lib/components/supplements/NutritionMacroStrip.svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { getNutritionCategoryIcon } from '$lib/nutritionCategoryIcons';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import MealFavoriteEditSheet from '#lib/components/supplements/MealFavoriteEditSheet.svelte';
+	import AddComponentSheet from '#lib/components/supplements/AddComponentSheet.svelte';
+	import ManageSheetShell from '#lib/components/supplements/ManageSheetShell.svelte';
+	import NutritionFoodRow from '#lib/components/supplements/NutritionFoodRow.svelte';
+	import NutritionMacroStrip from '#lib/components/supplements/NutritionMacroStrip.svelte';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { getNutritionCategoryIcon } from '#lib/nutritionCategoryIcons';
 
 	type Favorite = {
 		id: string;

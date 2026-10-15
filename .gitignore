@@ -7,6 +7,8 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+/playwright-report
+/test-results
 
 # OS
 .DS_Store
@@ -34,6 +36,10 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
+
+# Inlang SDK-generated project files
+/project.inlang/*
+!/project.inlang/settings.json
 
 # Vite
 vite.config.js.timestamp-*

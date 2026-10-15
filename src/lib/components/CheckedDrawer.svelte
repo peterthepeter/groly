@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { getCategoryForItem } from '$lib/categories';
+	import { t } from '#lib/i18n.svelte';
+	import { getCategoryForItem } from '#lib/categories';
 
 	type Item = { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number };
 

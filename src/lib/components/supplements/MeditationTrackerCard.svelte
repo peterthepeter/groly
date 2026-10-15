@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { formatTime } from '$lib/dates';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { t } from '#lib/i18n.svelte';
+	import { formatTime } from '#lib/dates';
+	import { userSettings } from '#lib/userSettings.svelte';
 	import MeditationTimerSheet from './MeditationTimerSheet.svelte';
 	import MeditationEditLogSheet from './MeditationEditLogSheet.svelte';
 	import MeditationReminderSheet from './MeditationReminderSheet.svelte';

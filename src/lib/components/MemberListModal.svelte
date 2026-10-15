@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { currentLang } from '$lib/i18n.svelte';
-	import { watchVisualViewportBottomOffset } from '$lib/visualViewport';
+	import { currentLang } from '#lib/i18n.svelte';
+	import { watchVisualViewportBottomOffset } from '#lib/visualViewport';
 
 	let { list, currentUserId, onLeave, onClose }: {
 		list: { id: string; name: string; ownerUsername?: string | null };

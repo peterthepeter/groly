@@ -1,11 +1,11 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { supplementLogs, supplements } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { supplementLogs, supplements } from '#lib/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { deductSupplementStock } from '$lib/supplementStock';
+import { deductSupplementStock } from '#lib/supplementStock';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -25,7 +25,7 @@ export const GET: RequestHandler = async (event) => {
 		.orderBy(supplementLogs.loggedAt)
 		.all();
 
-	return json({ logs });
+	return Response.json({ logs });
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -36,8 +36,8 @@ export const POST: RequestHandler = async (event) => {
 		const body = await event.request.json();
 		const { supplementId, amount, loggedAt, note, clientLogId } = body;
 
-		if (!supplementId) return json({ error: 'supplementId erforderlich' }, { status: 400 });
-		if (typeof amount !== 'number' || amount <= 0) return json({ error: 'Menge muss > 0 sein' }, { status: 400 });
+		if (!supplementId) return Response.json({ error: 'supplementId erforderlich' }, { status: 400 });
+		if (typeof amount !== 'number' || amount <= 0) return Response.json({ error: 'Menge muss > 0 sein' }, { status: 400 });
 
 		// Idempotenz: gleicher clientLogId vom selben User → vorhandenen Log zurückgeben
 		if (typeof clientLogId === 'string' && clientLogId.length > 0) {
@@ -52,7 +52,7 @@ export const POST: RequestHandler = async (event) => {
 					.from(supplements)
 					.where(and(eq(supplements.id, existing.supplementId), eq(supplements.userId, user!.id)))
 					.get();
-				return json({
+				return Response.json({
 					id: existing.id,
 					log: existing,
 					stockQuantity: existingSupplement?.stockQuantity ?? null,
@@ -67,7 +67,7 @@ export const POST: RequestHandler = async (event) => {
 			.from(supplements)
 			.where(and(eq(supplements.id, supplementId), eq(supplements.userId, user!.id)))
 			.get();
-		if (!supplement) return json({ error: 'Not found' }, { status: 404 });
+		if (!supplement) return Response.json({ error: 'Not found' }, { status: 404 });
 
 		const now = Date.now();
 		const id = randomUUID();
@@ -94,7 +94,7 @@ export const POST: RequestHandler = async (event) => {
 				.run();
 		});
 
-		return json({
+		return Response.json({
 			id,
 			log: {
 				id,
@@ -111,6 +111,6 @@ export const POST: RequestHandler = async (event) => {
 		}, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/supplement-logs error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

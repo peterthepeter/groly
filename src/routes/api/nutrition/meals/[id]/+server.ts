@@ -1,11 +1,11 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { meals, mealComponents, caffeineLogs } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { meals, mealComponents, caffeineLogs } from '#lib/db/schema';
 import { and, eq, like } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { effectiveGrams, computeTotals, mealCaffeineLogPrefix } from '$lib/server/nutrition';
+import { effectiveGrams, computeTotals, mealCaffeineLogPrefix } from '#lib/server/nutrition';
 
 type InputComponent = {
 	productBarcode?: string | null;
@@ -32,10 +32,10 @@ function ensureOwn(userId: string, mealId: string) {
 
 export const PATCH: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	const meal = ensureOwn(user.id, event.params.id);
-	if (!meal) return json({ error: 'Not found' }, { status: 404 });
+	if (!meal) return Response.json({ error: 'Not found' }, { status: 404 });
 
 	try {
 		const body = await event.request.json();
@@ -88,23 +88,23 @@ export const PATCH: RequestHandler = async (event) => {
 			}
 		}
 
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };
 
 export const DELETE: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	const meal = ensureOwn(user.id, event.params.id);
-	if (!meal) return json({ error: 'Not found' }, { status: 404 });
+	if (!meal) return Response.json({ error: 'Not found' }, { status: 404 });
 
 	db.delete(meals).where(eq(meals.id, meal.id)).run();
 	// Gespiegelte Koffein-Logs dieser Mahlzeit mitlöschen (eine Richtung: Nutrition → Koffein).
 	db.delete(caffeineLogs)
 		.where(and(eq(caffeineLogs.userId, user.id), like(caffeineLogs.clientLogId, `${mealCaffeineLogPrefix(meal.id)}%`)))
 		.run();
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

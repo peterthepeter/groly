@@ -6,6 +6,7 @@
 // pdfmake's strict types make the declarative content tree hard to satisfy without
 // scattering casts; we use `any` for the doc tree and rely on pdfmake's runtime validation.
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
+import { tsToDateKey } from './dates';
 import {
 	computeAdherence,
 	computeTrackerStats,
@@ -91,22 +92,13 @@ export async function exportReport(opts: ReportOptions): Promise<void> {
 	// Lazy-load pdfmake (heavy bundle ~600KB) only when user actually exports
 	const pdfMakeMod = await import('pdfmake/build/pdfmake');
 	const pdfFontsMod = await import('pdfmake/build/vfs_fonts');
-	// Different bundling layouts expose vfs at different keys; handle gracefully.
-	const pdfMake = (pdfMakeMod as { default?: unknown }).default ?? pdfMakeMod;
-	const vfs =
-		(pdfFontsMod as { pdfMake?: { vfs?: Record<string, string> } }).pdfMake?.vfs ??
-		(pdfFontsMod as { default?: { pdfMake?: { vfs?: Record<string, string> } } }).default?.pdfMake?.vfs ??
-		(pdfFontsMod as { vfs?: Record<string, string> }).vfs;
-	if (vfs) {
-		(pdfMake as { vfs?: Record<string, string> }).vfs = vfs;
-	}
+	const pdfMake = pdfMakeMod.default;
+	pdfMake.addVirtualFileSystem(pdfFontsMod.default);
 
 	const doc = buildDocument(opts);
-	const fmtFile = (d: number) => new Date(d).toISOString().slice(0, 10);
+	const fmtFile = tsToDateKey;
 	const filename = `groly-${opts.template}-${fmtFile(opts.range.from)}_${fmtFile(opts.range.to)}.pdf`;
-	(pdfMake as { createPdf: (d: TDocumentDefinitions) => { download: (n: string) => void } })
-		.createPdf(doc)
-		.download(filename);
+	await pdfMake.createPdf(doc).download(filename);
 }
 
 function buildDocument(opts: ReportOptions): TDocumentDefinitions {

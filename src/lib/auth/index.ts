@@ -1,5 +1,5 @@
-import { db } from '$lib/db';
-import { users, sessions } from '$lib/db/schema';
+import { db } from '#lib/db';
+import { users, sessions } from '#lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 

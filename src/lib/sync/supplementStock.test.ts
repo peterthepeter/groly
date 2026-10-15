@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { offlineDb, type OfflineSupplement } from '$lib/sync/db';
+import { offlineDb, type OfflineSupplement } from '#lib/sync/db';
 import {
 	cacheTodayLogs,
 	getOfflineTodayLogs,
@@ -8,7 +8,7 @@ import {
 	logSupplementOffline,
 	mergePendingSupplementStock,
 	onSupplementLogSynced
-} from '$lib/sync/manager';
+} from '#lib/sync/manager';
 
 function supplement(stockQuantity: number | null): OfflineSupplement {
 	return {

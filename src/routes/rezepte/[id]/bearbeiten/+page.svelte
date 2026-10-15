@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
-	import { page } from '$app/stores';
-	import { t } from '$lib/i18n.svelte';
-	import { parseIngredientText } from '$lib/recipeIngredientParser';
+	import { page } from '$app/state';
+	import { t } from '#lib/i18n.svelte';
+	import { parseIngredientText } from '#lib/recipeIngredientParser';
 
 	type Ingredient = { id: string; amount: string; unit: string; name: string };
 	type Step = { id: string; text: string };
 
 	function uid() { return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
 
-	const recipeId = $derived($page.params.id);
+	const recipeId = $derived(page.params.id);
 
 	let title = $state('');
 	let description = $state('');

@@ -1,8 +1,8 @@
 import type { LayoutServerLoad } from './$types';
-import { db } from '$lib/db';
-import { users } from '$lib/db/schema';
+import { db } from '#lib/db';
+import { users } from '#lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { languageFromAcceptLanguage } from '$lib/language';
+import { languageFromAcceptLanguage } from '#lib/language';
 
 export const load: LayoutServerLoad = async ({ locals, request }) => {
 	if (!locals.user) return {

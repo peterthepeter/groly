@@ -1,7 +1,7 @@
 // Shared Nutrition-Helpers für Server-Endpoints.
 
-import { db, sqlite } from '$lib/db';
-import { barcodeCache } from '$lib/db/schema';
+import { db, sqlite } from '#lib/db';
+import { barcodeCache } from '#lib/db/schema';
 import { eq, or, like, sql, desc } from 'drizzle-orm';
 
 const USER_AGENT = 'Groly/0.7 (self-hosted grocery list app)';

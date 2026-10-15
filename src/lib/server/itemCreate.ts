@@ -1,5 +1,5 @@
-import type { db as appDb } from '$lib/db';
-import { itemHistory, items, lists } from '$lib/db/schema';
+import type { db as appDb } from '#lib/db';
+import { itemHistory, items, lists } from '#lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 type AppDatabase = typeof appDb;

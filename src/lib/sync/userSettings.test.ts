@@ -1,13 +1,13 @@
 import 'fake-indexeddb/auto';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { offlineDb } from '$lib/sync/db';
+import { offlineDb } from '#lib/sync/db';
 import {
 	drainPendingMutations,
 	getOfflineUserSettings,
 	initSync,
 	queueUserSettingsPatch,
 	refreshUserSettings
-} from '$lib/sync/manager';
+} from '#lib/sync/manager';
 
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {

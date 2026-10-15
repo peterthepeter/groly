@@ -1,8 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { validateInvite, consumeInvite } from '$lib/auth/invites';
-import { validatePasswordRule } from '$lib/password';
-import { languageFromAcceptLanguage } from '$lib/language';
+import { validateInvite, consumeInvite } from '#lib/auth/invites';
+import { validatePasswordRule } from '#lib/password';
+import { languageFromAcceptLanguage } from '#lib/language';
 
 export const load: PageServerLoad = ({ params, request }) => {
 	const lang = languageFromAcceptLanguage(request.headers.get('accept-language'));

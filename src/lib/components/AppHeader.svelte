@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { networkStore } from '$lib/stores/online.svelte';
-	import { t, sync_pending } from '$lib/i18n.svelte';
+	import { networkStore } from '#lib/stores/online.svelte';
+	import { t, sync_pending } from '#lib/i18n.svelte';
 
 	import type { Snippet } from 'svelte';
 

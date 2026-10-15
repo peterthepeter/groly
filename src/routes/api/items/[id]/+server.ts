@@ -1,14 +1,14 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { lists, items, listMembers, users } from '$lib/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { emitToListMembers } from '$lib/server/userEvents';
 
-import { now } from '$lib/auth';
-import { isValidCategoryKey } from '$lib/categories';
-import { toUpdatedItemEventPayload } from '$lib/server/itemEventPayload';
+import type { RequestHandler } from './$types';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { lists, items, listMembers, users } from '#lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { emitToListMembers } from '#lib/server/userEvents';
+
+import { now } from '#lib/auth';
+import { isValidCategoryKey } from '#lib/categories';
+import { toUpdatedItemEventPayload } from '#lib/server/itemEventPayload';
 
 async function getWritableItem(itemId: string, userId: string) {
 	const item = db.select().from(items).where(eq(items.id, itemId)).get();
@@ -26,13 +26,13 @@ export const PUT: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const item = await getWritableItem(event.params.id, user!.id);
-	if (!item) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!item) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const body = await event.request.json();
 
 	// Konfliktprüfung: Item wurde server-seitig geändert seit letztem Client-Stand
 	if (body.clientUpdatedAt !== undefined && item.updatedAt > body.clientUpdatedAt) {
-		return json({ error: 'Konflikt', current: item }, { status: 409 });
+		return Response.json({ error: 'Konflikt', current: item }, { status: 409 });
 	}
 
 	const ts = now();
@@ -49,7 +49,7 @@ export const PUT: RequestHandler = async (event) => {
 	}
 	if (body.categoryOverride !== undefined) {
 		if (body.categoryOverride !== null && !isValidCategoryKey(body.categoryOverride)) {
-			return json({ error: 'Ungültige Kategorie' }, { status: 400 });
+			return Response.json({ error: 'Ungültige Kategorie' }, { status: 400 });
 		}
 		updates.categoryOverride = body.categoryOverride ?? null;
 	}
@@ -66,7 +66,7 @@ export const PUT: RequestHandler = async (event) => {
 		: 0;
 	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: toUpdatedItemEventPayload(updated, createdByUsername), openCountDelta, byUserId: user!.id });
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
 
 export const DELETE: RequestHandler = async (event) => {
@@ -74,9 +74,9 @@ export const DELETE: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const item = await getWritableItem(event.params.id, user!.id);
-	if (!item) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!item) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	db.delete(items).where(eq(items.id, item.id)).run();
 	emitToListMembers(item.listId, { type: 'item_deleted', listId: item.listId, id: item.id, wasChecked: item.isChecked, byUserId: user!.id });
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

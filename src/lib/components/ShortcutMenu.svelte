@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import type { Shortcut, ShortcutAction } from '$lib/shortcuts.svelte';
-	import * as m from '$lib/paraglide/messages';
+	import type { Shortcut, ShortcutAction } from '#lib/shortcuts.svelte';
+	import * as m from '#lib/paraglide/messages';
 
 	let { shortcuts, onClose }: { shortcuts: Shortcut[]; onClose: () => void } = $props();
 

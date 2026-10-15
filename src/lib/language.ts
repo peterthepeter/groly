@@ -1,12 +1,12 @@
-import type { AvailableLanguageTag } from '$lib/paraglide/runtime';
+import type { Locale } from '#lib/paraglide/runtime';
 
 // German is shown only for German browser preferences. English is the fallback
 // for every other language because those languages have no translations yet.
-export function languageFromBrowserLanguage(language: string | null): AvailableLanguageTag {
+export function languageFromBrowserLanguage(language: string | null): Locale {
 	const tag = language?.trim().toLowerCase();
 	return tag === 'de' || tag?.startsWith('de-') ? 'de' : 'en';
 }
 
-export function languageFromAcceptLanguage(header: string | null): AvailableLanguageTag {
+export function languageFromAcceptLanguage(header: string | null): Locale {
 	return languageFromBrowserLanguage(header?.split(',')[0]?.split(';')[0] ?? null);
 }

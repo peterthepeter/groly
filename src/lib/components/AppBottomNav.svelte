@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { t } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { page } from '$app/state';
+	import { t } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
 	import FabWithShortcuts from './FabWithShortcuts.svelte';
 
 	let {
@@ -60,9 +60,9 @@
 			{#if userSettings.showSupplementTracker}
 				<button
 					onclick={() => {
-					if (activeTab === 'tracker' && $page.url.pathname === '/tracker') {
-						const isHistory = $page.url.searchParams.get('tab') === 'history';
-						goto(isHistory ? '/tracker' : '/tracker?tab=history', { noScroll: true, keepFocus: true });
+					if (activeTab === 'tracker' && page.url.pathname === '/tracker') {
+						const isHistory = page.url.searchParams.get('tab') === 'history';
+						goto(isHistory ? '/tracker' : '/tracker?tab=history', { reset: false });
 					} else {
 						goto('/tracker');
 					}
@@ -96,9 +96,9 @@
 			{#if userSettings.showRecipes}
 				<button
 					onclick={() => {
-					if (activeTab === 'recipes' && $page.url.pathname === '/rezepte') {
-						const isMealplan = $page.url.searchParams.get('tab') === 'mealplan';
-						goto(isMealplan ? '/rezepte' : '/rezepte?tab=mealplan', { noScroll: true, keepFocus: true });
+					if (activeTab === 'recipes' && page.url.pathname === '/rezepte') {
+						const isMealplan = page.url.searchParams.get('tab') === 'mealplan';
+						goto(isMealplan ? '/rezepte' : '/rezepte?tab=mealplan', { reset: false });
 					} else {
 						goto('/rezepte');
 					}

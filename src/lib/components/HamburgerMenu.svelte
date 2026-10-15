@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import InfoModal from '$lib/components/InfoModal.svelte';
-	import PwaInstallModal from '$lib/components/PwaInstallModal.svelte';
-	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
-	import AboutModal from '$lib/components/AboutModal.svelte';
-	import { CHANGELOG } from '$lib/changelog';
+	import { page } from '$app/state';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import InfoModal from '#lib/components/InfoModal.svelte';
+	import PwaInstallModal from '#lib/components/PwaInstallModal.svelte';
+	import ChangelogModal from '#lib/components/ChangelogModal.svelte';
+	import AboutModal from '#lib/components/AboutModal.svelte';
+	import { CHANGELOG } from '#lib/changelog';
 
 	let { open = $bindable(false), user, installPrompt = null }: {
 		open: boolean;
@@ -78,7 +78,7 @@
 				<button
 					onclick={() => navigate('/einstellungen/admin')}
 					class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
-					style="height: 44px; background-color: {$page.url.pathname.startsWith('/einstellungen/admin') ? 'rgba(255,255,255,0.06)' : 'transparent'}"
+					style="height: 44px; background-color: {page.url.pathname.startsWith('/einstellungen/admin') ? 'rgba(255,255,255,0.06)' : 'transparent'}"
 				>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -94,7 +94,7 @@
 			<button
 				onclick={() => navigate('/einstellungen')}
 				class="w-full flex items-center gap-4 px-4 transition-colors active:opacity-70 text-left"
-				style="height: 44px; background-color: {$page.url.pathname === '/einstellungen' ? 'rgba(255,255,255,0.06)' : 'transparent'}"
+				style="height: 44px; background-color: {page.url.pathname === '/einstellungen' ? 'rgba(255,255,255,0.06)' : 'transparent'}"
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<circle cx="12" cy="12" r="3"/>

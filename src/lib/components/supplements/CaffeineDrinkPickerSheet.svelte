@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
-	import type { CaffeineDrink } from '$lib/db/schema';
+	import { t } from '#lib/i18n.svelte';
+	import type { CaffeineDrink } from '#lib/db/schema';
 	import CaffeineDrinkPickerContent from './CaffeineDrinkPickerContent.svelte';
 
 	let {

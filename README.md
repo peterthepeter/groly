@@ -341,6 +341,8 @@ Everyone staying on `:latest` is unaffected by beta builds. To leave the beta ch
 
 > **Back up your database before switching to `:beta`.** Beta builds may apply new database migrations that do not yet exist in `:latest`. Returning to `:latest` afterwards can fail if a newer migration has already run. The database lives in the `/app/data` volume — copy it somewhere safe first.
 
+Groly 1.0 creates verified database and upload backups before version upgrades and keeps your existing container configuration. See the [upgrade and restore guide (English / Deutsch)](docs/UPGRADING.md), including free-space requirements and the effect of the meal-plan date fix on older entries.
+
 ### Unraid
 
 Install via **Community Applications** (search for "Groly") or add the template manually:

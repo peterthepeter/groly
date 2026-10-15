@@ -3,13 +3,17 @@ export function initUpdateDetection() {
 
 	// Wenn ein neuer SW die Kontrolle übernimmt (auto-skipWaiting), Version speichern und neu laden.
 	// hadController stellt sicher, dass wir nur bei echten Updates reloaden, nicht beim ersten Install.
-	const hadController = !!navigator.serviceWorker.controller;
+	let hadController = !!navigator.serviceWorker.controller;
 	navigator.serviceWorker.addEventListener('controllerchange', () => {
-		if (!hadController) return;
+		if (!hadController) { hadController = true; return; }
 		// localStorage wird NICHT hier gesetzt — sonst überschreibt der Reload
 		// das "ungelesen"-Signal für das WhatsNew-Modal. Das setzt das Modal selbst beim Schließen.
 		window.location.reload();
 	});
+	if (import.meta.env.PROD) {
+		void navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+			.catch(error => console.error('Service worker registration failed', error));
+	}
 }
 
 let _lastUpdateCheck = 0;

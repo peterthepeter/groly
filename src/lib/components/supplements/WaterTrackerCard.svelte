@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { formatTime } from '$lib/dates';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { t } from '#lib/i18n.svelte';
+	import { formatTime } from '#lib/dates';
+	import { userSettings } from '#lib/userSettings.svelte';
 	import WaterEditLogSheet from './WaterEditLogSheet.svelte';
 	import WaterReminderSheet from './WaterReminderSheet.svelte';
 	import TrackerTileShell from './TrackerTileShell.svelte';

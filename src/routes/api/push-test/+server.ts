@@ -1,7 +1,7 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { sendPushToUser } from '$lib/server/pushNotifications';
+import { authGuard } from '#lib/auth/middleware';
+import { sendPushToUser } from '#lib/server/pushNotifications';
 
 // Server-side rate limit: 1 test per 60s per user
 const lastTestTime = new Map<string, number>();
@@ -17,7 +17,7 @@ export const POST: RequestHandler = async (event) => {
 	const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
 
 	if (remaining > 0) {
-		return json({ error: 'rate_limited', remaining }, { status: 429 });
+		return Response.json({ error: 'rate_limited', remaining }, { status: 429 });
 	}
 
 	// Set rate limit only after successful send
@@ -34,9 +34,9 @@ export const POST: RequestHandler = async (event) => {
 	});
 
 	if (result === 'no_subscription') {
-		return json({ error: 'no_subscription' }, { status: 404 });
+		return Response.json({ error: 'no_subscription' }, { status: 404 });
 	}
 
 	lastTestTime.set(userId, now);
-	return json({ ok: true, delivered: result === 'sent' });
+	return Response.json({ ok: true, delivered: result === 'sent' });
 };

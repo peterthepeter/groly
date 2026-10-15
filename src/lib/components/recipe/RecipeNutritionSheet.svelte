@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
-	import AddComponentSheet from '$lib/components/supplements/AddComponentSheet.svelte';
-	import ManageSheetShell from '$lib/components/supplements/ManageSheetShell.svelte';
-	import { t } from '$lib/i18n.svelte';
+	import AddComponentSheet from '#lib/components/supplements/AddComponentSheet.svelte';
+	import ManageSheetShell from '#lib/components/supplements/ManageSheetShell.svelte';
+	import { t } from '#lib/i18n.svelte';
 
 	type Comp = {
 		productBarcode: string | null;

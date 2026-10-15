@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { flushSync, onMount, onDestroy, tick } from 'svelte';
-	import { on } from '$lib/sseStore.svelte';
+	import { on } from '#lib/sseStore.svelte';
 	import { goto, afterNavigate } from '$app/navigation';
-	import { page } from '$app/stores';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import ItemTile from '$lib/components/ItemTile.svelte';
-	import ItemRow from '$lib/components/ItemRow.svelte';
-	import CheckedDrawer from '$lib/components/CheckedDrawer.svelte';
-	import AddItemModal from '$lib/components/AddItemModal.svelte';
-	import AddItemBar from '$lib/components/AddItemBar.svelte';
+	import { page } from '$app/state';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import ItemTile from '#lib/components/ItemTile.svelte';
+	import ItemRow from '#lib/components/ItemRow.svelte';
+	import CheckedDrawer from '#lib/components/CheckedDrawer.svelte';
+	import AddItemModal from '#lib/components/AddItemModal.svelte';
+	import AddItemBar from '#lib/components/AddItemBar.svelte';
 	import {
 		execute,
 		generateClientId,
@@ -25,14 +25,14 @@
 		refreshCategoryPreferences,
 		setCategoryPreferenceOffline,
 		deleteCategoryPreferenceOffline
-	} from '$lib/sync/manager';
-	import { acquireWakeLock, releaseWakeLock } from '$lib/wakeLock';
+	} from '#lib/sync/manager';
+	import { acquireWakeLock, releaseWakeLock } from '#lib/wakeLock';
 
 	let wakeLockHeld = false;
-	import { t, list_items_open } from '$lib/i18n.svelte';
-	import { getCategoryKey } from '$lib/categories';
-	import { getCategoryPreferenceAction } from '$lib/categoryPreferences';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { t, list_items_open } from '#lib/i18n.svelte';
+	import { getCategoryKey } from '#lib/categories';
+	import { getCategoryPreferenceAction } from '#lib/categoryPreferences';
+	import { userSettings } from '#lib/userSettings.svelte';
 
 	const LISTVIEW_HINT_KEY = 'groly_listview_hint_dismissed';
 	const LOCATION_HINT_KEY = 'groly_location_hint_dismissed';
@@ -76,7 +76,7 @@
 	const pullOpacity = $derived(Math.min(pullDistance / (PULL_THRESHOLD * 0.6), 1));
 	const pullArrowRotation = $derived(Math.min(pullDistance / PULL_THRESHOLD, 1) * 180);
 
-	const listId = $derived($page.params.id);
+	const listId = $derived(page.params.id);
 	const openItems = $derived.by(() => {
 		const unchecked = items.filter(i => !i.isChecked);
 		const listSettings = listId ? userSettings.getListCategorySettings(listId) : null;

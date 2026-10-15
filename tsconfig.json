@@ -1,6 +1,9 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
+	"extends": "$app/tsconfig",
+	"include": ["src", "tests", "*.ts"],
+	"exclude": ["src/service-worker", "node_modules", "build"],
 	"compilerOptions": {
+		"paths": { "#lib/*": ["./src/lib/*"] },
 		"rewriteRelativeImportExtensions": true,
 		"allowJs": true,
 		"checkJs": true,

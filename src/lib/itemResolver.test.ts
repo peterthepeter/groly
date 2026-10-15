@@ -7,9 +7,9 @@ import {
 	getCategoryForItem,
 	getCategoryKey,
 	resolveItem
-} from '$lib/categories';
-import { normalizeItemName } from '$lib/itemResolver';
-import { VISUAL_GROUP_ICONS, VISUAL_GROUPS, type VisualGroup } from '$lib/itemVisualGroups';
+} from '#lib/categories';
+import { normalizeItemName } from '#lib/itemResolver';
+import { VISUAL_GROUP_ICONS, VISUAL_GROUPS, type VisualGroup } from '#lib/itemVisualGroups';
 
 type GoldenCase = readonly [name: string, categoryKey: string, visualGroup?: VisualGroup];
 

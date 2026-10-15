@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { currentLang } from '$lib/i18n.svelte';
-	import { LIST_ICONS, getListIcon, getListIconLabel } from '$lib/listIcons';
+	import { currentLang } from '#lib/i18n.svelte';
+	import { LIST_ICONS, getListIcon, getListIconLabel } from '#lib/listIcons';
 
 	let { selectedIconId, name = '', onSelect, flat = false }: {
 		selectedIconId: string | null;

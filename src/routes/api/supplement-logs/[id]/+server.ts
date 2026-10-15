@@ -1,10 +1,10 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { supplementLogs, supplements } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { supplementLogs, supplements } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { recalculateSupplementStock, restoreSupplementStock } from '$lib/supplementStock';
+import { recalculateSupplementStock, restoreSupplementStock } from '#lib/supplementStock';
 
 export const PUT: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -18,7 +18,7 @@ export const PUT: RequestHandler = async (event) => {
 		.where(and(eq(supplementLogs.id, id), eq(supplementLogs.userId, user!.id)))
 		.get();
 
-	if (!existing) return json({ error: 'Not found' }, { status: 404 });
+	if (!existing) return Response.json({ error: 'Not found' }, { status: 404 });
 
 	try {
 		const body = await event.request.json();
@@ -29,7 +29,7 @@ export const PUT: RequestHandler = async (event) => {
 			: existing.note;
 
 		if (!isFinite(newAmount) || newAmount <= 0) {
-			return json({ error: 'Menge muss > 0 sein' }, { status: 400 });
+			return Response.json({ error: 'Menge muss > 0 sein' }, { status: 400 });
 		}
 
 		db.transaction(() => {
@@ -58,9 +58,9 @@ export const PUT: RequestHandler = async (event) => {
 			}
 		});
 
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };
 
@@ -76,7 +76,7 @@ export const DELETE: RequestHandler = async (event) => {
 		.where(and(eq(supplementLogs.id, id), eq(supplementLogs.userId, user!.id)))
 		.get();
 
-	if (!existing) return json({ error: 'Not found' }, { status: 404 });
+	if (!existing) return Response.json({ error: 'Not found' }, { status: 404 });
 
 	db.transaction(() => {
 		db.delete(supplementLogs).where(eq(supplementLogs.id, id)).run();
@@ -97,5 +97,5 @@ export const DELETE: RequestHandler = async (event) => {
 			.run();
 	});
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

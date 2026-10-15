@@ -1,16 +1,19 @@
-import { bootstrapAdmin } from '$lib/auth';
-import { runMigrations, db, sqlite } from '$lib/db';
-import { appMeta, pushSubscriptions, users } from '$lib/db/schema';
+import { bootstrapAdmin } from '#lib/auth';
+import { runMigrations, db, sqlite } from '#lib/db';
+import { appMeta, pushSubscriptions, users } from '#lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
-import { LATEST_CHANGES } from '$lib/changelog';
+import { LATEST_CHANGES } from '#lib/changelog';
 import { sendPushToUser } from './pushNotifications';
 import { subsSize } from './userEvents';
 import { attemptsSize } from './loginRateLimit';
 import { cleanupBarcodeCache, cleanupOldData } from './cleanup';
 import { scheduleNextReminderCheck } from './reminders';
 import { GENERIC_FOODS } from './genericFoodsSeed';
+import { prepareUpgradeBackup, markSuccessfulStart } from './upgradeBackup';
 
-let initialized = false;
+let initialization: Promise<void> | undefined;
+let status: 'starting' | 'ready' | 'failed' = 'starting';
+export function startupStatus() { return status; }
 
 function migrateItemHistory() {
 	const done = db.select().from(appMeta).where(eq(appMeta.key, 'item_history_migrated')).get();
@@ -279,9 +282,17 @@ function bootstrapGenericFoods() {
 		.run();
 }
 
-export async function init() {
-	if (initialized) return;
-	initialized = true; // set synchronously before any await to prevent concurrent init
+export function init(): Promise<void> {
+	return initialization ??= initialize().then(() => { status = 'ready'; }).catch((error) => {
+		status = 'failed';
+		console.error('[groly:startup] Startup blocked; existing data has not been reset. Resolve the error and restart.', error);
+		throw error;
+	});
+}
+
+async function initialize() {
+	await prepareUpgradeBackup(sqlite, process.env.DATABASE_URL ?? './data/groly.db', LATEST_CHANGES.version);
+	sqlite.pragma('journal_mode = WAL');
 	runMigrations();
 	ensureSupplementLogNoteColumn();
 	ensureMealFavoriteCaffeineColumn();
@@ -294,6 +305,7 @@ export async function init() {
 	await notifyOnNewVersion();
 	cleanupBarcodeCache();
 	cleanupOldData();
+	markSuccessfulStart(sqlite, LATEST_CHANGES.version);
 	setInterval(cleanupBarcodeCache, 24 * 60 * 60 * 1000);
 	setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
 	scheduleNextReminderCheck();

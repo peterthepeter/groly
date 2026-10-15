@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { recipeShares, recipes, recipeIngredients, recipeSteps } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { recipeShares, recipes, recipeIngredients, recipeSteps } from '#lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -15,32 +15,32 @@ export const PUT: RequestHandler = async (event) => {
 	const share = db.select().from(recipeShares)
 		.where(and(eq(recipeShares.id, event.params.id), eq(recipeShares.receiverId, user!.id)))
 		.get();
-	if (!share) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!share) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	let body: { action?: string };
 	try {
 		body = await event.request.json();
 	} catch {
-		return json({ error: 'Ungültige Anfrage' }, { status: 400 });
+		return Response.json({ error: 'Ungültige Anfrage' }, { status: 400 });
 	}
 	const { action } = body;
 
 	if (action === 'decline') {
 		db.delete(recipeShares).where(eq(recipeShares.id, event.params.id)).run();
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	}
 
 	if (action === 'accept') {
 		// Check recipient's recipe limit
 		const count = db.select().from(recipes).where(eq(recipes.userId, user!.id)).all().length;
 		if (count >= RECIPE_LIMIT) {
-			return json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht` }, { status: 400 });
+			return Response.json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht` }, { status: 400 });
 		}
 
 		const original = db.select().from(recipes).where(eq(recipes.id, share.recipeId)).get();
 		if (!original) {
 			db.delete(recipeShares).where(eq(recipeShares.id, event.params.id)).run();
-			return json({ error: 'Originalrezept nicht mehr vorhanden' }, { status: 404 });
+			return Response.json({ error: 'Originalrezept nicht mehr vorhanden' }, { status: 404 });
 		}
 
 		const now = Date.now();
@@ -78,8 +78,8 @@ export const PUT: RequestHandler = async (event) => {
 		}
 
 		db.delete(recipeShares).where(eq(recipeShares.id, event.params.id)).run();
-		return json({ recipeId: newRecipeId });
+		return Response.json({ recipeId: newRecipeId });
 	}
 
-	return json({ error: 'Ungültige Aktion' }, { status: 400 });
+	return Response.json({ error: 'Ungültige Aktion' }, { status: 400 });
 };

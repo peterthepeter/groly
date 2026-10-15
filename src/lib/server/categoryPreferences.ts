@@ -1,9 +1,9 @@
 import { and, eq } from 'drizzle-orm';
-import { db } from '$lib/db';
-import { categoryPreferences } from '$lib/db/schema';
-import { isValidCategoryKey } from '$lib/categories';
-import { normalizeCategoryPreferenceName } from '$lib/categoryPreferences';
-import { now } from '$lib/auth';
+import { db } from '#lib/db';
+import { categoryPreferences } from '#lib/db/schema';
+import { isValidCategoryKey } from '#lib/categories';
+import { normalizeCategoryPreferenceName } from '#lib/categoryPreferences';
+import { now } from '#lib/auth';
 
 export function getCategoryPreferences(userId: string) {
 	return db.select({

@@ -1,10 +1,10 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { adminGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
+import { adminGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
 import { sql } from 'drizzle-orm';
-import { createUser } from '$lib/auth';
-import { createInvite } from '$lib/auth/invites';
+import { createUser } from '#lib/auth';
+import { createInvite } from '#lib/auth/invites';
 import { randomBytes } from 'crypto';
 
 export const GET: RequestHandler = async (event) => {
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async (event) => {
 		LEFT JOIN recipes r ON r.user_id = u.id
 		GROUP BY u.id
 	`);
-	return json(allUsers);
+	return Response.json(allUsers);
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -39,7 +39,7 @@ export const POST: RequestHandler = async (event) => {
 
 	const { username, role } = await event.request.json();
 	const trimmed = String(username ?? '').trim();
-	if (!trimmed) return json({ error: 'Benutzername erforderlich' }, { status: 400 });
+	if (!trimmed) return Response.json({ error: 'Benutzername erforderlich' }, { status: 400 });
 
 	// Placeholder password the user can never know — overwritten when invite is consumed.
 	const placeholder = `!invite!${randomBytes(32).toString('base64url')}`;
@@ -48,10 +48,10 @@ export const POST: RequestHandler = async (event) => {
 	try {
 		userId = await createUser(trimmed, placeholder, role === 'admin' ? 'admin' : 'user', false);
 	} catch {
-		return json({ error: 'Benutzername bereits vergeben' }, { status: 409 });
+		return Response.json({ error: 'Benutzername bereits vergeben' }, { status: 409 });
 	}
 
 	const token = createInvite(userId, 'invite');
 	const origin = event.url.origin;
-	return json({ id: userId, inviteToken: token, inviteUrl: `${origin}/invite/${token}`, type: 'invite' }, { status: 201 });
+	return Response.json({ id: userId, inviteToken: token, inviteUrl: `${origin}/invite/${token}`, type: 'invite' }, { status: 201 });
 };

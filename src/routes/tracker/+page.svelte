@@ -1,35 +1,35 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
-	import { page } from '$app/stores';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs, onSupplementLogSynced } from '$lib/sync/manager';
-	import { displayUnit } from '$lib/units';
-	import { formatTime } from '$lib/dates';
-	import { flushUserSettings, userSettings } from '$lib/userSettings.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import QuickLogSheet from '$lib/components/supplements/QuickLogSheet.svelte';
-	import EditLogSheet from '$lib/components/supplements/EditLogSheet.svelte';
-	import CaffeineEditLogSheet from '$lib/components/supplements/CaffeineEditLogSheet.svelte';
-	import WaterEditLogSheet from '$lib/components/supplements/WaterEditLogSheet.svelte';
-	import WaterTrackerCard from '$lib/components/supplements/WaterTrackerCard.svelte';
-	import CaffeineTrackerCard from '$lib/components/supplements/CaffeineTrackerCard.svelte';
-	import MeditationTrackerCard from '$lib/components/supplements/MeditationTrackerCard.svelte';
-	import MeditationTimerSheet from '$lib/components/supplements/MeditationTimerSheet.svelte';
-	import MoodTrackerCard from '$lib/components/supplements/MoodTrackerCard.svelte';
-	import MoodEntrySheet from '$lib/components/supplements/MoodEntrySheet.svelte';
-	import MoodWeeklyReview from '$lib/components/supplements/MoodWeeklyReview.svelte';
-	import EatTrackerCard from '$lib/components/supplements/EatTrackerCard.svelte';
-	import TrackerSectionNav from '$lib/components/supplements/TrackerSectionNav.svelte';
-	import HistoryTab from '$lib/components/supplements/HistoryTab.svelte';
-	import ExportSheet from '$lib/components/supplements/ExportSheet.svelte';
-	import { exportReport, type ReportSections } from '$lib/pdfExport';
-	import { findTag } from '$lib/mood';
-	import { toLocalDateKey } from '$lib/dates';
-	import { layoutBottomUpRows } from '$lib/supplements/quickLogGrid';
-	import type { WaterLog, CaffeineLog, CaffeineDrink, MeditationLog } from '$lib/db/schema';
+	import { page } from '$app/state';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs, onSupplementLogSynced } from '#lib/sync/manager';
+	import { displayUnit } from '#lib/units';
+	import { formatTime } from '#lib/dates';
+	import { flushUserSettings, userSettings } from '#lib/userSettings.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import QuickLogSheet from '#lib/components/supplements/QuickLogSheet.svelte';
+	import EditLogSheet from '#lib/components/supplements/EditLogSheet.svelte';
+	import CaffeineEditLogSheet from '#lib/components/supplements/CaffeineEditLogSheet.svelte';
+	import WaterEditLogSheet from '#lib/components/supplements/WaterEditLogSheet.svelte';
+	import WaterTrackerCard from '#lib/components/supplements/WaterTrackerCard.svelte';
+	import CaffeineTrackerCard from '#lib/components/supplements/CaffeineTrackerCard.svelte';
+	import MeditationTrackerCard from '#lib/components/supplements/MeditationTrackerCard.svelte';
+	import MeditationTimerSheet from '#lib/components/supplements/MeditationTimerSheet.svelte';
+	import MoodTrackerCard from '#lib/components/supplements/MoodTrackerCard.svelte';
+	import MoodEntrySheet from '#lib/components/supplements/MoodEntrySheet.svelte';
+	import MoodWeeklyReview from '#lib/components/supplements/MoodWeeklyReview.svelte';
+	import EatTrackerCard from '#lib/components/supplements/EatTrackerCard.svelte';
+	import TrackerSectionNav from '#lib/components/supplements/TrackerSectionNav.svelte';
+	import HistoryTab from '#lib/components/supplements/HistoryTab.svelte';
+	import ExportSheet from '#lib/components/supplements/ExportSheet.svelte';
+	import { exportReport, type ReportSections } from '#lib/pdfExport';
+	import { findTag } from '#lib/mood';
+	import { toLocalDateKey } from '#lib/dates';
+	import { layoutBottomUpRows } from '#lib/supplements/quickLogGrid';
+	import type { WaterLog, CaffeineLog, CaffeineDrink, MeditationLog } from '#lib/db/schema';
 
 	let { data } = $props();
 
@@ -110,7 +110,7 @@
 	let loading = $state(true);
 	let supplementsRequestId = 0;
 	let todayLogsRequestId = 0;
-	const activeTab = $derived($page.url.searchParams.get('tab') === 'history' ? 'history' : 'today');
+	const activeTab = $derived(page.url.searchParams.get('tab') === 'history' ? 'history' : 'today');
 
 	const toLocalDateStr = toLocalDateKey;
 
@@ -226,13 +226,13 @@
 	// Opens the matching sheet immediately, then strips the param from the URL
 	// so a reload won't re-open it.
 	function handleActionParam() {
-		const action = $page.url.searchParams.get('action');
+		const action = page.url.searchParams.get('action');
 		if (!action) return;
 
 		const consume = () => {
-			const url = new URL($page.url);
+			const url = new URL(page.url.href);
 			url.searchParams.delete('action');
-			goto(url.pathname + url.search, { replaceState: true, noScroll: true, keepFocus: true });
+			goto(url.pathname + url.search, { replace: true, reset: false });
 		};
 
 		switch (action) {
@@ -977,7 +977,7 @@
 			if (editLogSheet) { editLogSheet = null; cancel(); return; }
 			if (addLogSheet) { addLogSheet = null; cancel(); return; }
 			if (quickLogOpen) { quickLogOpen = false; cancel(); return; }
-		} else if (to && to.url.pathname !== $page.url.pathname) {
+		} else if (to && to.url.pathname !== page.url.pathname) {
 			// Echter Seitenwechsel: Sheets schließen.
 			// Same-page Query-Umschreiben (z.B. consume() in handleActionParam
 			// nach Push-Deep-Link) darf das offene Sheet NICHT killen.
@@ -1059,7 +1059,7 @@
 	// React to push-triggered deep-links while the app is already open on /supplements
 	// (SW navigates the existing client → action param appears → open the sheet).
 	$effect(() => {
-		void $page.url.searchParams.get('action');
+		void page.url.searchParams.get('action');
 		handleActionParam();
 	});
 

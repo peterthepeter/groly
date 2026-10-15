@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import BarcodeScanner from '$lib/components/BarcodeScanner.svelte';
-	import { t, currentLang, nutrition_nutrients_per_100 } from '$lib/i18n.svelte';
-	import { getNutritionCategoryIcon } from '$lib/nutritionCategoryIcons';
-	import { nextNutritionUseCount, nutritionBasisSuffix, parseOptionalNutritionNumber } from '$lib/nutritionUtils';
+	import BarcodeScanner from '#lib/components/BarcodeScanner.svelte';
+	import { t, currentLang, nutrition_nutrients_per_100 } from '#lib/i18n.svelte';
+	import { getNutritionCategoryIcon } from '#lib/nutritionCategoryIcons';
+	import { nextNutritionUseCount, nutritionBasisSuffix, parseOptionalNutritionNumber } from '#lib/nutritionUtils';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 	import NutritionFoodRow from './NutritionFoodRow.svelte';
 	import NutritionMacroStrip from './NutritionMacroStrip.svelte';

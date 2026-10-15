@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { localizedMessages } from '$lib/i18n.svelte';
-	import { getPasswordHint, validatePasswordRule } from '$lib/password';
+	import { localizedMessages } from '#lib/i18n.svelte';
+	import { getPasswordHint, validatePasswordRule } from '#lib/password';
 
 	let { data, form } = $props();
 	const t = $derived(localizedMessages(data.lang));

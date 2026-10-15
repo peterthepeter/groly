@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { toLocalDateKey } from '#lib/dates';
 	import { goto } from '$app/navigation';
 	import { tick, onMount } from 'svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { getListIcon } from '$lib/listIcons';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { getListIcon } from '#lib/listIcons';
 
 	type RecipeOption = { id: string; title: string; imageUrl: string | null; servings: number };
 	type PlanEntry = {
@@ -46,7 +47,7 @@
 	});
 
 	function toISO(d: Date): string {
-		return d.toISOString().slice(0, 10);
+		return toLocalDateKey(d);
 	}
 
 	function kwNumber(d: Date): number {

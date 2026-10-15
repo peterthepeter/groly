@@ -2,8 +2,8 @@
 // Event-Listener-Registrierung passiert im resumeOrchestrator, nicht hier —
 // dieses Modul ist reine Logik.
 
-import { getOfflineLists } from '$lib/sync/manager';
-import { userSettings } from '$lib/userSettings.svelte';
+import { getOfflineLists } from '#lib/sync/manager';
+import { userSettings } from '#lib/userSettings.svelte';
 
 const RADIUS_M = 100;
 const SESSION_KEY = 'groly_loc_nav_done';

@@ -1,5 +1,5 @@
-import { db } from '$lib/db';
-import { barcodeCache, items, itemHistory, sessions, supplementLogs, mealPlanEntries, userInvites } from '$lib/db/schema';
+import { db } from '#lib/db';
+import { barcodeCache, items, itemHistory, sessions, supplementLogs, mealPlanEntries, userInvites } from '#lib/db/schema';
 import { and, eq, lt, or, isNotNull } from 'drizzle-orm';
 
 const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;

@@ -1,5 +1,5 @@
-import { json } from '@sveltejs/kit';
+
 
 export function GET() {
-	return json({ ok: true });
+	return Response.json({ ok: true });
 }

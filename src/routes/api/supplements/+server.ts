@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { supplements, supplementNutrients } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { supplements, supplementNutrients } from '#lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -29,7 +29,7 @@ export const GET: RequestHandler = async (event) => {
 			.sort((a, b) => a.sortOrder - b.sortOrder)
 	}));
 
-	return json({ supplements: result });
+	return Response.json({ supplements: result });
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -40,8 +40,8 @@ export const POST: RequestHandler = async (event) => {
 		const body = await event.request.json();
 		const { name, unit, brand, info, notes, active, nutrients: nutrientRows, stockQuantity, defaultAmount } = body;
 
-		if (!name?.trim()) return json({ error: 'Name erforderlich' }, { status: 400 });
-		if (!unit?.trim()) return json({ error: 'Einheit erforderlich' }, { status: 400 });
+		if (!name?.trim()) return Response.json({ error: 'Name erforderlich' }, { status: 400 });
+		if (!unit?.trim()) return Response.json({ error: 'Einheit erforderlich' }, { status: 400 });
 
 		const now = Date.now();
 		const id = randomUUID();
@@ -77,9 +77,9 @@ export const POST: RequestHandler = async (event) => {
 			}
 		}
 
-		return json({ id }, { status: 201 });
+		return Response.json({ id }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/supplements error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

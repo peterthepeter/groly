@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { currentLang, t } from '$lib/i18n.svelte';
+	import { currentLang, t } from '#lib/i18n.svelte';
 
 	let { onClose, deferredPrompt = $bindable<any>(null) }: {
 		onClose: () => void;

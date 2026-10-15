@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { t, currentLang, nutrition_meals_count } from '$lib/i18n.svelte';
+	import { t, currentLang, nutrition_meals_count } from '#lib/i18n.svelte';
 	import TrackerTileShell from './TrackerTileShell.svelte';
 
 	type Meal = {

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
-	import { getListIcon } from '$lib/listIcons';
+	import { t } from '#lib/i18n.svelte';
+	import { getListIcon } from '#lib/listIcons';
 
 	let {
 		supplementId = $bindable<string | null>(null),

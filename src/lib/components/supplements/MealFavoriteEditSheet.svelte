@@ -5,7 +5,7 @@
 	import NutritionFoodRow from './NutritionFoodRow.svelte';
 	import NutritionMacroStrip from './NutritionMacroStrip.svelte';
 	import SupplementActiveToggle from './SupplementActiveToggle.svelte';
-	import { t } from '$lib/i18n.svelte';
+	import { t } from '#lib/i18n.svelte';
 
 	type CaffeineDrink = { id: string; name: string; defaultMl: number; caffeineMg: number };
 	type Component = {

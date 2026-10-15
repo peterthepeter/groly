@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import type { CaffeineDrink } from '$lib/db/schema';
+	import { t } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import type { CaffeineDrink } from '#lib/db/schema';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 	import SupplementActiveToggle from './SupplementActiveToggle.svelte';
 

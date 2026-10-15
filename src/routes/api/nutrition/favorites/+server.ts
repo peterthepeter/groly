@@ -1,14 +1,14 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { nutritionFavorites, genericFoods } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { nutritionFavorites, genericFoods } from '#lib/db/schema';
 import { and, eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	// Kategorie des verknüpften generischen Lebensmittels mitliefern (für das Listen-Icon).
 	const rows = db.select({
@@ -38,12 +38,12 @@ export const GET: RequestHandler = async (event) => {
 		customFiberPer100: r.fav.customFiberPer100 ?? r.genericFiber,
 		customSaltPer100: r.fav.customSaltPer100 ?? r.genericSalt
 	}));
-	return json({ favorites: favs });
+	return Response.json({ favorites: favs });
 };
 
 export const POST: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	try {
 		const body = await event.request.json();
@@ -52,9 +52,9 @@ export const POST: RequestHandler = async (event) => {
 			customSugarPer100, customFiberPer100, customSaltPer100,
 			defaultAmount, defaultUnit, defaultGramsPerPiece } = body;
 
-		if (typeof displayName !== 'string' || !displayName.trim()) return json({ error: 'displayName required' }, { status: 400 });
-		if (!['g', 'ml', 'piece'].includes(defaultUnit)) return json({ error: 'invalid unit' }, { status: 400 });
-		if (typeof defaultAmount !== 'number' || !(defaultAmount > 0)) return json({ error: 'invalid amount' }, { status: 400 });
+		if (typeof displayName !== 'string' || !displayName.trim()) return Response.json({ error: 'displayName required' }, { status: 400 });
+		if (!['g', 'ml', 'piece'].includes(defaultUnit)) return Response.json({ error: 'invalid unit' }, { status: 400 });
+		if (typeof defaultAmount !== 'number' || !(defaultAmount > 0)) return Response.json({ error: 'invalid amount' }, { status: 400 });
 
 		// Dedupe: existiert bereits ein Favorit mit gleichem Barcode, gleichem Generic-Food,
 		// oder (für custom-Einträge) gleichem displayName? Dann nur useCount erhöhen.
@@ -85,7 +85,7 @@ export const POST: RequestHandler = async (event) => {
 				.set(patch)
 				.where(eq(nutritionFavorites.id, existing.id))
 				.run();
-			return json({ id: existing.id, deduplicated: true }, { status: 200 });
+			return Response.json({ id: existing.id, deduplicated: true }, { status: 200 });
 		}
 
 		const id = randomUUID();
@@ -111,8 +111,8 @@ export const POST: RequestHandler = async (event) => {
 			createdAt: Date.now()
 		}).run();
 
-		return json({ id }, { status: 201 });
+		return Response.json({ id }, { status: 201 });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

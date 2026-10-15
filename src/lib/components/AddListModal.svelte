@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import IconPicker from '$lib/components/IconPicker.svelte';
-	import MapPickerSheet from '$lib/components/MapPickerSheet.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { CATEGORY_LABELS, DEFAULT_CATEGORY_ORDER } from '$lib/categories';
-	import { watchVisualViewportBottomOffset } from '$lib/visualViewport';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import IconPicker from '#lib/components/IconPicker.svelte';
+	import MapPickerSheet from '#lib/components/MapPickerSheet.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { CATEGORY_LABELS, DEFAULT_CATEGORY_ORDER } from '#lib/categories';
+	import { watchVisualViewportBottomOffset } from '#lib/visualViewport';
 
 	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0 }: {
 		list?: { id: string; name: string; description: string | null; iconId?: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null } | null;

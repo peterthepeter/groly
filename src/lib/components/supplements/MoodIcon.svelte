@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Angry, Frown, Meh, Smile, Laugh } from 'lucide-svelte';
+	import { Angry, Frown, Meh, Smile, Laugh } from '@lucide/svelte';
 
 	const ICONS = { 1: Angry, 2: Frown, 3: Meh, 4: Smile, 5: Laugh };
 

@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { meditationLogs } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { meditationLogs } from '#lib/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -24,7 +24,7 @@ export const GET: RequestHandler = async (event) => {
 		.orderBy(meditationLogs.loggedAt)
 		.all();
 
-	return json({ logs });
+	return Response.json({ logs });
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -36,7 +36,7 @@ export const POST: RequestHandler = async (event) => {
 		const { durationSeconds, loggedAt, clientLogId } = body;
 
 		if (typeof durationSeconds !== 'number' || durationSeconds <= 0 || !Number.isInteger(durationSeconds)) {
-			return json({ error: 'durationSeconds muss eine positive ganze Zahl sein' }, { status: 400 });
+			return Response.json({ error: 'durationSeconds muss eine positive ganze Zahl sein' }, { status: 400 });
 		}
 
 		if (typeof clientLogId === 'string' && clientLogId.length > 0) {
@@ -45,7 +45,7 @@ export const POST: RequestHandler = async (event) => {
 				.from(meditationLogs)
 				.where(and(eq(meditationLogs.userId, user!.id), eq(meditationLogs.clientLogId, clientLogId)))
 				.get();
-			if (existing) return json({ id: existing.id, deduped: true }, { status: 200 });
+			if (existing) return Response.json({ id: existing.id, deduped: true }, { status: 200 });
 		}
 
 		const now = Date.now();
@@ -60,9 +60,9 @@ export const POST: RequestHandler = async (event) => {
 			createdAt: now
 		}).run();
 
-		return json({ id }, { status: 201 });
+		return Response.json({ id }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/meditation-logs error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

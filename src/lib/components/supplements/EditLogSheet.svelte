@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { displayUnit } from '$lib/units';
-	import { generateClientId, logSupplementOffline } from '$lib/sync/manager';
+	import { todayKey } from '#lib/dates';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { displayUnit } from '#lib/units';
+	import { generateClientId, logSupplementOffline } from '#lib/sync/manager';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	type EditLogSheetType = {
@@ -66,10 +67,11 @@
 	let createTime = $state('');
 	let createNote = $state('');
 	let createDate = $state('');
-	const today = new Date().toISOString().split('T')[0];
+	let today = $state(todayKey());
 
 	$effect(() => {
 		if (createSheet) {
+			today = todayKey();
 			createDate = createSheet.date;
 			createSupplementId = '';
 			createAmount = 1;

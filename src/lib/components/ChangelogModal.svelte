@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { AvailableLanguageTag } from '$lib/paraglide/runtime';
+	import type { Locale } from '#lib/paraglide/runtime';
 
 	let { entries, lang, onClose }: {
 		entries: { version: string; de: string[]; en: string[] }[];
-		lang: AvailableLanguageTag;
+		lang: Locale;
 		onClose: () => void;
 	} = $props();
 </script>

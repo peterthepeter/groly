@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { supplementLogs, supplements, supplementNutrients } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { supplementLogs, supplements, supplementNutrients } from '#lib/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { zipSync, strToU8 } from 'fflate';
 

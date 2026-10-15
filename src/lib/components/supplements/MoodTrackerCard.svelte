@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
-	import { getMoodLevel, findTag } from '$lib/mood';
+	import { t } from '#lib/i18n.svelte';
+	import { getMoodLevel, findTag } from '#lib/mood';
 	import MoodEntrySheet from './MoodEntrySheet.svelte';
 	import MoodIcon from './MoodIcon.svelte';
 	import ActivityIcon from './ActivityIcon.svelte';

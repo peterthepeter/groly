@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { lists, listMembers, listNotificationPrefs } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { lists, listMembers, listNotificationPrefs } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export const PUT: RequestHandler = async (event) => {
@@ -13,12 +13,12 @@ export const PUT: RequestHandler = async (event) => {
 	const { enabled } = await event.request.json();
 
 	if (typeof enabled !== 'boolean') {
-		return json({ error: 'enabled muss ein Boolean sein' }, { status: 400 });
+		return Response.json({ error: 'enabled muss ein Boolean sein' }, { status: 400 });
 	}
 
 	// Prüfen ob User Zugang zur Liste hat (Owner oder Member)
 	const list = db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, listId)).get();
-	if (!list) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!list) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const isOwner = list.ownerId === user!.id;
 	const member = db
@@ -27,7 +27,7 @@ export const PUT: RequestHandler = async (event) => {
 		.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, user!.id)))
 		.get();
 
-	if (!isOwner && member?.status !== 'accepted') return json({ error: 'Keine Berechtigung' }, { status: 403 });
+	if (!isOwner && member?.status !== 'accepted') return Response.json({ error: 'Keine Berechtigung' }, { status: 403 });
 
 	if (isOwner) {
 		// Owner-Präferenz in list_notification_prefs speichern
@@ -54,7 +54,7 @@ export const PUT: RequestHandler = async (event) => {
 			.run();
 	}
 
-	return json({ ok: true, enabled });
+	return Response.json({ ok: true, enabled });
 };
 
 export const GET: RequestHandler = async (event) => {
@@ -64,7 +64,7 @@ export const GET: RequestHandler = async (event) => {
 	const listId = event.params.id;
 
 	const list = db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, listId)).get();
-	if (!list) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!list) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const isOwner = list.ownerId === user!.id;
 	const member = db
@@ -73,7 +73,7 @@ export const GET: RequestHandler = async (event) => {
 		.where(and(eq(listMembers.listId, listId), eq(listMembers.userId, user!.id)))
 		.get();
 
-	if (!isOwner && member?.status !== 'accepted') return json({ error: 'Keine Berechtigung' }, { status: 403 });
+	if (!isOwner && member?.status !== 'accepted') return Response.json({ error: 'Keine Berechtigung' }, { status: 403 });
 
 	const pref = db
 		.select()
@@ -83,5 +83,5 @@ export const GET: RequestHandler = async (event) => {
 		)
 		.get();
 
-	return json({ enabled: pref === undefined ? true : pref.enabled });
+	return Response.json({ enabled: pref === undefined ? true : pref.enabled });
 };

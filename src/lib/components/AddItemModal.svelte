@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
-	import { MANUAL_CATEGORIES, CATEGORY_LABELS, getCategoryForItem } from '$lib/categories';
-	import { userSettings } from '$lib/userSettings.svelte';
+	import { t } from '#lib/i18n.svelte';
+	import { MANUAL_CATEGORIES, CATEGORY_LABELS, getCategoryForItem } from '#lib/categories';
+	import { userSettings } from '#lib/userSettings.svelte';
 
 	let { item = null, onSave, onClose, onDelete = null, isFavorite = false, onToggleFavorite = null }: {
 		item?: { name: string; quantityInfo: string | null; categoryOverride?: string | null } | null;

@@ -1,16 +1,16 @@
 import { offlineDb } from './db';
 import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink, OfflineCategoryPreference, OfflineUserSettings, PendingMutation } from './db';
-import { networkStore } from '$lib/stores/online.svelte';
-import { isValidCategoryKey } from '$lib/categories';
-import { normalizeCategoryPreferenceName, resolveCategoryOverrideForCreate } from '$lib/categoryPreferences';
-import type { UserSettings } from '$lib/userSettingsTypes';
+import { networkStore } from '#lib/stores/online.svelte';
+import { isValidCategoryKey } from '#lib/categories';
+import { normalizeCategoryPreferenceName, resolveCategoryOverrideForCreate } from '#lib/categoryPreferences';
+import type { UserSettings } from '#lib/userSettingsTypes';
 import {
 	applyUserSettingsPatch,
 	combineUserSettingsPatches,
 	sanitizeUserSettingsPatch,
 	userSettingsPatchMatches,
 	type UserSettingsPatch
-} from '$lib/userSettingsSync';
+} from '#lib/userSettingsSync';
 
 let activeUserId: string | null = null;
 let syncInitialized = false;

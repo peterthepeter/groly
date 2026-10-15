@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import AppHeader from '$lib/components/AppHeader.svelte';
-	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
-	import AppBottomNav from '$lib/components/AppBottomNav.svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
+	import AppHeader from '#lib/components/AppHeader.svelte';
+	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
+	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import { t, currentLang } from '#lib/i18n.svelte';
 
 	let { data } = $props();
 

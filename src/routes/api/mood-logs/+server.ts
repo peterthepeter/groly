@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { moodLogs } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { moodLogs } from '#lib/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -24,7 +24,7 @@ export const GET: RequestHandler = async (event) => {
 		.orderBy(moodLogs.date)
 		.all();
 
-	return json({ logs });
+	return Response.json({ logs });
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -36,13 +36,13 @@ export const POST: RequestHandler = async (event) => {
 		const { date, mood, energy, activities, note, gratitude } = body;
 
 		if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-			return json({ error: 'Ungültiges Datum' }, { status: 400 });
+			return Response.json({ error: 'Ungültiges Datum' }, { status: 400 });
 		}
 		if (!Number.isInteger(mood) || mood < 1 || mood > 5) {
-			return json({ error: 'Stimmung muss 1–5 sein' }, { status: 400 });
+			return Response.json({ error: 'Stimmung muss 1–5 sein' }, { status: 400 });
 		}
 		if (!Number.isInteger(energy) || energy < 1 || energy > 5) {
-			return json({ error: 'Energie muss 1–5 sein' }, { status: 400 });
+			return Response.json({ error: 'Energie muss 1–5 sein' }, { status: 400 });
 		}
 
 		const now = Date.now();
@@ -59,7 +59,7 @@ export const POST: RequestHandler = async (event) => {
 				.set({ mood, energy, activities: activitiesJson, note: note ?? null, gratitude: gratitude ?? null, updatedAt: now })
 				.where(eq(moodLogs.id, existing.id))
 				.run();
-			return json({ id: existing.id });
+			return Response.json({ id: existing.id });
 		}
 
 		const id = randomUUID();
@@ -76,9 +76,9 @@ export const POST: RequestHandler = async (event) => {
 			updatedAt: now
 		}).run();
 
-		return json({ id }, { status: 201 });
+		return Response.json({ id }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/mood-logs error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

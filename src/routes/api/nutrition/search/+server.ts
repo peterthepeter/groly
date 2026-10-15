@@ -1,9 +1,9 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { searchOff, searchLocalCache, type ProductData } from '$lib/server/nutrition';
-import { db } from '$lib/db';
-import { genericFoods } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { searchOff, searchLocalCache, type ProductData } from '#lib/server/nutrition';
+import { db } from '#lib/db';
+import { genericFoods } from '#lib/db/schema';
 import { sql, or, like } from 'drizzle-orm';
 
 type GenericResult = {
@@ -103,7 +103,7 @@ export const GET: RequestHandler = async (event) => {
 	// source: 'local' = nur Generics + Cache (schnell), 'off' = nur Online-Produkte (langsam),
 	// fehlt = beides kombiniert (Rückwärtskompatibilität, z.B. Generic-Lookup per id).
 	const source = event.url.searchParams.get('source');
-	if (!q) return json({ generic: [], products: [] });
+	if (!q) return Response.json({ generic: [], products: [] });
 
 	const looksLikeBarcode = /^\d{8,14}$/.test(q);
 
@@ -126,16 +126,16 @@ export const GET: RequestHandler = async (event) => {
 
 	// Stufe „off" — nur die langsame Online-Suche.
 	if (source === 'off') {
-		if (looksLikeBarcode) return json({ products: [] });
+		if (looksLikeBarcode) return Response.json({ products: [] });
 		const off = await searchOff(q, 15, event.request.signal);
-		return json({ products: off.map(mapProduct) });
+		return Response.json({ products: off.map(mapProduct) });
 	}
 
 	// Stufe „local" — Generics + lokaler Cache, ohne Netzwerk.
 	const generic = searchGenerics(q, lang);
 	if (source === 'local') {
 		const local = looksLikeBarcode ? [] : searchLocalCache(q, 15);
-		return json({ generic, products: local.map(mapProduct), looksLikeBarcode });
+		return Response.json({ generic, products: local.map(mapProduct), looksLikeBarcode });
 	}
 
 	// Default: beides kombiniert (lokal hat Vorrang, OFF füllt auf).
@@ -153,5 +153,5 @@ export const GET: RequestHandler = async (event) => {
 		products = combined.slice(0, 20).map(mapProduct);
 	}
 
-	return json({ generic, products, looksLikeBarcode });
+	return Response.json({ generic, products, looksLikeBarcode });
 };

@@ -1,11 +1,11 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { recipes, recipeIngredients, recipeNutritionComponents } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { recipes, recipeIngredients, recipeNutritionComponents } from '#lib/db/schema';
 import { and, eq, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { recipeIngredientsSnapshot } from '$lib/server/nutrition';
+import { recipeIngredientsSnapshot } from '#lib/server/nutrition';
 
 type InputComponent = {
 	ingredientId?: string | null;
@@ -43,13 +43,13 @@ function currentSnapshot(recipeId: string): string {
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	const recipeId = event.url.searchParams.get('recipeId');
-	if (!recipeId) return json({ error: 'recipeId required' }, { status: 400 });
+	if (!recipeId) return Response.json({ error: 'recipeId required' }, { status: 400 });
 
 	const recipe = loadRecipeForUser(recipeId, user.id);
-	if (!recipe) return json({ error: 'Not found' }, { status: 404 });
+	if (!recipe) return Response.json({ error: 'Not found' }, { status: 404 });
 
 	const components = db.select().from(recipeNutritionComponents)
 		.where(eq(recipeNutritionComponents.recipeId, recipeId))
@@ -59,7 +59,7 @@ export const GET: RequestHandler = async (event) => {
 	const mapped = recipe.nutritionIngredientsSnapshot != null;
 	const stale = mapped && recipe.nutritionIngredientsSnapshot !== currentSnapshot(recipeId);
 
-	return json({
+	return Response.json({
 		components,
 		mapped,
 		stale,
@@ -69,7 +69,7 @@ export const GET: RequestHandler = async (event) => {
 
 export const PUT: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
-	if (error || !user) return error ?? json({ error: 'Unauthorized' }, { status: 401 });
+	if (error || !user) return error ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 
 	try {
 		const body = await event.request.json();
@@ -78,10 +78,10 @@ export const PUT: RequestHandler = async (event) => {
 			components?: InputComponent[];
 			mappedServings?: number;
 		};
-		if (!recipeId) return json({ error: 'recipeId required' }, { status: 400 });
+		if (!recipeId) return Response.json({ error: 'recipeId required' }, { status: 400 });
 
 		const recipe = loadRecipeForUser(recipeId, user.id);
-		if (!recipe) return json({ error: 'Not found' }, { status: 404 });
+		if (!recipe) return Response.json({ error: 'Not found' }, { status: 404 });
 
 		const comps = Array.isArray(components) ? components : [];
 		const servings = typeof mappedServings === 'number' && mappedServings > 0
@@ -125,8 +125,8 @@ export const PUT: RequestHandler = async (event) => {
 			updatedAt: Date.now()
 		}).where(eq(recipes.id, recipeId)).run();
 
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

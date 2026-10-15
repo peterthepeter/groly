@@ -1,8 +1,8 @@
 import webpush from 'web-push';
-import { db } from '$lib/db';
-import { pushSubscriptions, listMembers, listNotificationPrefs, lists, users } from '$lib/db/schema';
+import { db } from '#lib/db';
+import { pushSubscriptions, listMembers, listNotificationPrefs, lists, users } from '#lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 type Lang = 'de' | 'en';
 type PayloadFn = (lang: Lang) => { title: string; body: string; url?: string };

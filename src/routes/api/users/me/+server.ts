@@ -1,13 +1,13 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { changePassword, verifyPassword } from '$lib/auth';
-import { validatePassword, validatePasswordRule } from '$lib/password';
-import { db } from '$lib/db';
-import { users } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { changePassword, verifyPassword } from '#lib/auth';
+import { validatePassword, validatePasswordRule } from '#lib/password';
+import { db } from '#lib/db';
+import { users } from '#lib/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { DEFAULT_SETTINGS, type UserSettings } from '$lib/userSettingsTypes';
-import { applyUserSettingsPatch, sanitizeUserSettingsPatch } from '$lib/userSettingsSync';
+import { DEFAULT_SETTINGS, type UserSettings } from '#lib/userSettingsTypes';
+import { applyUserSettingsPatch, sanitizeUserSettingsPatch } from '#lib/userSettingsSync';
 
 function mergeSettings(stored: string | null | undefined): UserSettings {
 	const base: UserSettings = { ...DEFAULT_SETTINGS };
@@ -22,7 +22,7 @@ export const GET: RequestHandler = async (event) => {
 	if (error) return error;
 
 	const fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
-	return json({
+	return Response.json({
 		settings: mergeSettings(fullUser?.settings),
 		settingsRevision: fullUser?.settingsRevision ?? 0
 	});
@@ -37,9 +37,9 @@ export const PATCH: RequestHandler = async (event) => {
 	// Settings update (no password required)
 	if (body.settings !== undefined) {
 		const patch = sanitizeUserSettingsPatch(body.settings);
-		if (!patch) return json({ error: 'Ungültige Einstellungen' }, { status: 400 });
+		if (!patch) return Response.json({ error: 'Ungültige Einstellungen' }, { status: 400 });
 		const fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
-		if (!fullUser) return json({ error: 'Nicht gefunden' }, { status: 404 });
+		if (!fullUser) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 		const current = mergeSettings(fullUser?.settings);
 		const requestedRevision = body.settingsRevision;
 
@@ -58,14 +58,14 @@ export const PATCH: RequestHandler = async (event) => {
 				})
 				.where(eq(users.id, user!.id))
 				.run();
-			return json({ ok: true, settings: merged, settingsRevision: nextRevision });
+			return Response.json({ ok: true, settings: merged, settingsRevision: nextRevision });
 		}
 
 		if (!Number.isSafeInteger(requestedRevision) || requestedRevision < 0) {
-			return json({ error: 'Ungültige Einstellungsrevision' }, { status: 400 });
+			return Response.json({ error: 'Ungültige Einstellungsrevision' }, { status: 400 });
 		}
 		if (requestedRevision !== fullUser.settingsRevision) {
-			return json({
+			return Response.json({
 				error: 'settings_conflict',
 				settings: current,
 				settingsRevision: fullUser.settingsRevision
@@ -84,29 +84,29 @@ export const PATCH: RequestHandler = async (event) => {
 			.run();
 		if (result.changes !== 1) {
 			const latest = db.select().from(users).where(eq(users.id, user!.id)).get();
-			return json({
+			return Response.json({
 				error: 'settings_conflict',
 				settings: mergeSettings(latest?.settings),
 				settingsRevision: latest?.settingsRevision ?? 0
 			}, { status: 409 });
 		}
-		return json({ ok: true, settings: merged, settingsRevision: nextRevision });
+		return Response.json({ ok: true, settings: merged, settingsRevision: nextRevision });
 	}
 
 	// Password change
 	const { currentPassword, newPassword } = body;
-	if (!currentPassword || !newPassword) return json({ error: 'Fehlende Felder' }, { status: 400 });
+	if (!currentPassword || !newPassword) return Response.json({ error: 'Fehlende Felder' }, { status: 400 });
 	const pwError = validatePassword(newPassword);
-	if (pwError) return json({ error: pwError, code: validatePasswordRule(newPassword) }, { status: 400 });
+	if (pwError) return Response.json({ error: pwError, code: validatePasswordRule(newPassword) }, { status: 400 });
 
 	const fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
 	if (!fullUser || !verifyPassword(currentPassword, fullUser.passwordHash)) {
-		return json({ error: 'Aktuelles Passwort falsch', code: 'current_password_wrong' }, { status: 401 });
+		return Response.json({ error: 'Aktuelles Passwort falsch', code: 'current_password_wrong' }, { status: 401 });
 	}
 	if (newPassword === currentPassword) {
-		return json({ error: 'Neues Passwort darf nicht mit dem aktuellen übereinstimmen', code: 'same_password' }, { status: 400 });
+		return Response.json({ error: 'Neues Passwort darf nicht mit dem aktuellen übereinstimmen', code: 'same_password' }, { status: 400 });
 	}
 
 	changePassword(user!.id, newPassword);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t, currentLang } from '$lib/i18n.svelte';
+	import { t, currentLang } from '#lib/i18n.svelte';
 
 	let { version, items, onClose }: {
 		version: string;

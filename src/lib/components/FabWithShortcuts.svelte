@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { shortcuts, shortcutMenu } from '$lib/shortcuts.svelte';
+	import { shortcuts, shortcutMenu } from '#lib/shortcuts.svelte';
 
 	let { onTap, label = 'Hinzufügen', size = 12, color = 'var(--color-primary)' }: { onTap: () => void; label?: string; size?: number; color?: string } = $props();
 

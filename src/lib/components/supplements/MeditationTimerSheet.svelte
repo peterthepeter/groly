@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { getRandomQuote } from '$lib/meditationQuotes';
-	import { playMeditationSound, preloadMeditationSounds } from '$lib/audio/meditationAudio';
-	import { acquireWakeLock, releaseWakeLock } from '$lib/wakeLock';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { getRandomQuote } from '#lib/meditationQuotes';
+	import { playMeditationSound, preloadMeditationSounds } from '#lib/audio/meditationAudio';
+	import { acquireWakeLock, releaseWakeLock } from '#lib/wakeLock';
 
 	let {
 		open = $bindable<boolean>(false),

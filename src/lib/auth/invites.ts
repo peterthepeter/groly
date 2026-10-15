@@ -1,5 +1,5 @@
-import { db } from '$lib/db';
-import { userInvites, users, sessions } from '$lib/db/schema';
+import { db } from '#lib/db';
+import { userInvites, users, sessions } from '#lib/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { randomBytes, createHash } from 'crypto';
 import { generateId, hashPassword, now } from './index';

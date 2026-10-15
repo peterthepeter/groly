@@ -1,8 +1,8 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { recipes, recipeIngredients, recipeSteps, recipeTags } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { recipes, recipeIngredients, recipeSteps, recipeTags } from '#lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -13,7 +13,7 @@ export const GET: RequestHandler = async (event) => {
 	const recipe = db.select().from(recipes)
 		.where(and(eq(recipes.id, event.params.id), eq(recipes.userId, user!.id)))
 		.get();
-	if (!recipe) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!recipe) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const ingredients = db.select().from(recipeIngredients)
 		.where(eq(recipeIngredients.recipeId, event.params.id))
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async (event) => {
 		.all()
 		.map((r) => r.tag);
 
-	return json({ ...recipe, ingredients, steps, tags });
+	return Response.json({ ...recipe, ingredients, steps, tags });
 };
 
 export const PUT: RequestHandler = async (event) => {
@@ -40,12 +40,12 @@ export const PUT: RequestHandler = async (event) => {
 	const recipe = db.select().from(recipes)
 		.where(and(eq(recipes.id, event.params.id), eq(recipes.userId, user!.id)))
 		.get();
-	if (!recipe) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!recipe) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	const body = await event.request.json();
 	const { title, description, imageUrl, sourceUrl, servings, prepTime, cookTime, ingredients, steps, isFavorite, rating, tags } = body;
 
-	if (!title?.trim()) return json({ error: 'Titel erforderlich' }, { status: 400 });
+	if (!title?.trim()) return Response.json({ error: 'Titel erforderlich' }, { status: 400 });
 
 	const now = Date.now();
 
@@ -135,7 +135,7 @@ export const PUT: RequestHandler = async (event) => {
 		}
 	}
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
 
 export const DELETE: RequestHandler = async (event) => {
@@ -145,8 +145,8 @@ export const DELETE: RequestHandler = async (event) => {
 	const recipe = db.select().from(recipes)
 		.where(and(eq(recipes.id, event.params.id), eq(recipes.userId, user!.id)))
 		.get();
-	if (!recipe) return json({ error: 'Nicht gefunden' }, { status: 404 });
+	if (!recipe) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
 	db.delete(recipes).where(eq(recipes.id, event.params.id)).run();
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

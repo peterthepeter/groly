@@ -1,9 +1,9 @@
 // Shortcuts are stored as part of userSettings so they sync to the server
 // and are available across all devices for the user.
-export type { Shortcut, ShortcutAction } from '$lib/userSettingsTypes';
+export type { Shortcut, ShortcutAction } from '#lib/userSettingsTypes';
 
-import { userSettings } from '$lib/userSettings.svelte';
-import type { Shortcut } from '$lib/userSettingsTypes';
+import { userSettings } from '#lib/userSettings.svelte';
+import type { Shortcut } from '#lib/userSettingsTypes';
 
 export const shortcuts = {
 	get list() { return userSettings.shortcuts; },

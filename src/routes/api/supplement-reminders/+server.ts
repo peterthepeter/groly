@@ -1,11 +1,11 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { authGuard } from '$lib/auth/middleware';
-import { db } from '$lib/db';
-import { supplementReminderSchedules, supplements, supplementReminderOverrides } from '$lib/db/schema';
+import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { supplementReminderSchedules, supplements, supplementReminderOverrides } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getZonedDateTimeParts, resolveTimeZone } from '$lib/timeZones';
+import { getZonedDateTimeParts, resolveTimeZone } from '#lib/timeZones';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -20,7 +20,7 @@ export const GET: RequestHandler = async (event) => {
 			.from(supplements)
 			.where(and(eq(supplements.id, supplementId), eq(supplements.userId, user!.id)))
 			.get();
-		if (!supplement) return json({ error: 'Not found' }, { status: 404 });
+		if (!supplement) return Response.json({ error: 'Not found' }, { status: 404 });
 	}
 
 	if (supplementId) {
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async (event) => {
 			.where(eq(supplementReminderSchedules.supplementId, supplementId))
 			.orderBy(supplementReminderSchedules.createdAt)
 			.all();
-		return json({ schedules: rows });
+		return Response.json({ schedules: rows });
 	}
 
 	// ?today=1 → return today's active reminders grouped by time + today's overrides
@@ -93,7 +93,7 @@ export const GET: RequestHandler = async (event) => {
 			.all();
 		const overrides = Object.fromEntries(overrideRows.map(r => [r.reminderTime, r.done]));
 
-		return json({ todayReminders, overrides });
+		return Response.json({ todayReminders, overrides });
 	}
 
 	// ?all=1 → return all active reminder schedules of active supplements (for the week plan view)
@@ -114,7 +114,7 @@ export const GET: RequestHandler = async (event) => {
 				eq(supplementReminderSchedules.active, true)
 			))
 			.all();
-		return json({ schedules: rows });
+		return Response.json({ schedules: rows });
 	}
 
 	// No supplementId → return all supplement IDs that have at least one reminder (for this user)
@@ -125,7 +125,7 @@ export const GET: RequestHandler = async (event) => {
 		.where(eq(supplements.userId, user!.id))
 		.all();
 	const supplementIdsWithReminders = [...new Set(allRows.map(r => r.supplementId))];
-	return json({ supplementIdsWithReminders });
+	return Response.json({ supplementIdsWithReminders });
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -136,9 +136,9 @@ export const POST: RequestHandler = async (event) => {
 		const body = await event.request.json();
 		const { supplementId, days, time } = body;
 
-		if (!supplementId) return json({ error: 'supplementId erforderlich' }, { status: 400 });
-		if (!Array.isArray(days) || days.length === 0) return json({ error: 'Mindestens ein Tag erforderlich' }, { status: 400 });
-		if (!time || !/^\d{2}:\d{2}$/.test(time)) return json({ error: 'Zeit ungültig (HH:MM)' }, { status: 400 });
+		if (!supplementId) return Response.json({ error: 'supplementId erforderlich' }, { status: 400 });
+		if (!Array.isArray(days) || days.length === 0) return Response.json({ error: 'Mindestens ein Tag erforderlich' }, { status: 400 });
+		if (!time || !/^\d{2}:\d{2}$/.test(time)) return Response.json({ error: 'Zeit ungültig (HH:MM)' }, { status: 400 });
 
 		// Verify supplement belongs to user
 		const supplement = db
@@ -146,7 +146,7 @@ export const POST: RequestHandler = async (event) => {
 			.from(supplements)
 			.where(and(eq(supplements.id, supplementId), eq(supplements.userId, user!.id)))
 			.get();
-		if (!supplement) return json({ error: 'Supplement nicht gefunden' }, { status: 404 });
+		if (!supplement) return Response.json({ error: 'Supplement nicht gefunden' }, { status: 404 });
 
 		const id = randomUUID();
 		const now = Date.now();
@@ -160,9 +160,9 @@ export const POST: RequestHandler = async (event) => {
 			createdAt: now
 		}).run();
 
-		return json({ id }, { status: 201 });
+		return Response.json({ id }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/supplement-reminders error:', e);
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}
 };

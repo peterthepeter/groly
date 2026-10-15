@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toAddedItemEventPayload, toUpdatedItemEventPayload } from '$lib/server/itemEventPayload';
+import { toAddedItemEventPayload, toUpdatedItemEventPayload } from '#lib/server/itemEventPayload';
 
 const item = {
 	id: 'item-1',

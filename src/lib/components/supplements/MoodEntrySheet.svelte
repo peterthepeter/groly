@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { MOOD_LEVELS, ENERGY_LEVELS, ACTIVITY_CATEGORIES, type ActivityTag } from '$lib/mood';
-	import { clearMoodDraft, loadMoodDraft, saveMoodDraft } from '$lib/moodDraft';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { page } from '$app/stores';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { MOOD_LEVELS, ENERGY_LEVELS, ACTIVITY_CATEGORIES, type ActivityTag } from '#lib/mood';
+	import { clearMoodDraft, loadMoodDraft, saveMoodDraft } from '#lib/moodDraft';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { page } from '$app/state';
 	import { tick, untrack } from 'svelte';
 	import MoodIcon from './MoodIcon.svelte';
 	import ActivityIcon from './ActivityIcon.svelte';
@@ -32,7 +32,7 @@
 	let initializedKey = $state<string | null>(null);
 	let draftReady = $state(false);
 	let baselineSignature = $state('');
-	const draftUserId = $derived($page.data.user?.id ?? 'anonymous');
+	const draftUserId = $derived(page.data.user?.id ?? 'anonymous');
 
 	type DraftValues = { mood: MoodValue | null; energy: MoodValue | null; activities: string[]; note: string; gratitude: string };
 

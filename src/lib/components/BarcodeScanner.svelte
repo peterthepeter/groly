@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '$lib/i18n.svelte';
+	import { t } from '#lib/i18n.svelte';
 
 	// Minimale Typen für die native BarcodeDetector API (Chrome/Android)
 	interface NativeBarcodeDetector {

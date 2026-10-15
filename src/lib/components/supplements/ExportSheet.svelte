@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { todayKey, tsToDateKey } from '$lib/dates';
-	import type { ReportSections } from '$lib/pdfExport';
+	import { t } from '#lib/i18n.svelte';
+	import { todayKey, tsToDateKey } from '#lib/dates';
+	import type { ReportSections } from '#lib/pdfExport';
 
 	type Period = '7' | '30' | '90' | 'current' | 'custom';
 

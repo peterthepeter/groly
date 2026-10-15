@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { todayKey } from '#lib/dates';
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { generateClientId, logCaffeineOffline } from '$lib/sync/manager';
-	import type { CaffeineDrink } from '$lib/db/schema';
+	import { t } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { generateClientId, logCaffeineOffline } from '#lib/sync/manager';
+	import type { CaffeineDrink } from '#lib/db/schema';
 
 	let {
 		drinks,
@@ -91,7 +92,7 @@
 		saving = true;
 		errorMsg = null;
 		const [hh, mm] = logTime.split(':').map(Number);
-		const d = new Date((logDate ?? new Date().toISOString().slice(0, 10)) + 'T00:00:00');
+		const d = new Date((logDate ?? todayKey()) + 'T00:00:00');
 		d.setHours(hh, mm, 0, 0);
 		try {
 			await logCaffeineOffline({

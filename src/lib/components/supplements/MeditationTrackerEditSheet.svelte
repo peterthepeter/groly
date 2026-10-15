@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { t, currentLang } from '$lib/i18n.svelte';
-	import { userSettings } from '$lib/userSettings.svelte';
-	import { MEDITATION_SOUNDS } from '$lib/audio/meditationSounds';
-	import { playMeditationSound, stopAllMeditationSounds } from '$lib/audio/meditationAudio';
+	import { t, currentLang } from '#lib/i18n.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
+	import { MEDITATION_SOUNDS } from '#lib/audio/meditationSounds';
+	import { playMeditationSound, stopAllMeditationSounds } from '#lib/audio/meditationAudio';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 
 	let {
