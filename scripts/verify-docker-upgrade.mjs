@@ -204,11 +204,51 @@ try {
 	const fresh = volume('fresh');
 	let container = start(image, fresh, 'fresh');
 	await ready(container, true);
+	const runtime = evaluate(container, async () => {
+		const { existsSync, readdirSync } = await import('node:fs');
+		const forbidden = ['@zxing/browser', '@zxing/library', '@lucide/svelte', '@undecaf/zbar-wasm', 'dexie', 'leaflet', 'pdfmake', 'workbox-window', 'workbox-precaching', 'workbox-routing', 'workbox-strategies', 'workbox-expiration', 'vite', 'vitest', 'typescript', '@inlang/paraglide-js', 'drizzle-kit', 'kysely'];
+		const leftoverPackages = forbidden.filter(name => existsSync(`/app/node_modules/${name}`));
+		const leftoverTools = ['/usr/local/bin/npm', '/usr/local/bin/npx', '/usr/local/bin/yarn', '/usr/local/bin/corepack', '/usr/local/include/node', '/usr/local/lib/node_modules', '/usr/bin/python3', '/usr/bin/g++', '/usr/bin/make'].filter(existsSync);
+		const sqliteBinaries = readdirSync('/app/node_modules/better-sqlite3/prebuilds');
+		const migrationMetadata = readdirSync('/app/src/lib/db/migrations/meta');
+		const barcodeWasm = readdirSync('/app/build/client/_app/immutable/assets').find(name => /^zbar[.-].*\.wasm$/.test(name));
+		return { leftoverPackages, leftoverTools, sqliteBinaries, expectedBinary: `linuxmusl-${process.arch}.node`, migrationMetadata, barcodeWasm };
+	});
+	assert.deepEqual(runtime.leftoverPackages, [], 'Browser/build dependencies leaked into the runtime');
+	assert.deepEqual(runtime.leftoverTools, [], 'Build tools or package managers leaked into the runtime');
+	assert.deepEqual(runtime.sqliteBinaries, [runtime.expectedBinary], 'Unused native platform binaries shipped');
+	assert.deepEqual(runtime.migrationMetadata, ['_journal.json'], 'Drizzle generation snapshots shipped');
+	assert(runtime.barcodeWasm, 'The required browser barcode decoder WASM asset is missing');
+	const wasm = evaluate(container, async name => {
+		const response = await fetch(`http://127.0.0.1:3000/_app/immutable/assets/${name}`);
+		const bytes = Buffer.from(await response.arrayBuffer());
+		return { status: response.status, magic: bytes.subarray(0, 4).toString('hex'), size: bytes.length };
+	}, [runtime.barcodeWasm]);
+	assert.equal(wasm.status, 200);
+	assert.equal(wasm.magic, '0061736d');
+	assert(wasm.size > 1000);
+	console.log('PASS runtime contents: no browser/build packages, tools or foreign native binaries; barcode WASM served');
 	await smoke(container);
 	assert.equal(request(container, '/api/auth/me').status, 401);
 	assert.equal(evaluate(container, snapshotUpgradeData).integrity, 'ok');
 	remove(container);
 	console.log('PASS fresh installation and production service worker');
+	const alternate = volume('custom-port');
+	container = start(image, alternate, 'custom-port', ['-e', 'PORT=3101']);
+	let alternateReady = false;
+	for (let attempt = 0; attempt < 120; attempt++) {
+		try {
+			alternateReady = evaluate(container, async () => (await fetch('http://127.0.0.1:3101/api/health')).status === 200);
+			if (alternateReady) break;
+		} catch { /* Wait for the configured port. */ }
+		await delay(500);
+	}
+	assert(alternateReady, 'The existing PORT setting no longer works');
+	const healthcheck = JSON.parse(docker('inspect', '--format', '{{json .Config.Healthcheck.Test}}', container));
+	assert.equal(healthcheck[0], 'CMD-SHELL');
+	assert.equal(JSON.parse(docker('exec', container, 'sh', '-c', healthcheck[1])).status, 'ready', 'Image healthcheck ignores PORT');
+	remove(container);
+	console.log('PASS custom PORT and actual Docker healthcheck');
 	for (const baseline of baselines) await verifyUpgrade(baseline);
 	if (process.env.GROLY_DATA_COPY) await verifyUpgrade('0.9.10', process.env.GROLY_DATA_COPY);
 	if (process.env.GROLY_TEST_REPORT) writeFileSync(process.env.GROLY_TEST_REPORT, JSON.stringify({ image, results }, null, 2) + '\n');

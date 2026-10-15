@@ -8,7 +8,7 @@ import { markSuccessfulStart, prepareUpgradeBackup, verifyUpgradeBackup } from '
 
 vi.mock('node:fs/promises', async importOriginal => {
 	const actual = await importOriginal<typeof import('node:fs/promises')>();
-	return { ...actual, statfs: vi.fn(actual.statfs), copyFile: vi.fn(actual.copyFile) };
+	return { ...actual, statfs: vi.fn(actual.statfs), copyFile: vi.fn(actual.copyFile), writeFile: vi.fn(actual.writeFile) };
 });
 
 let directory: string;
@@ -86,6 +86,23 @@ describe('pre-upgrade backups', () => {
 		const backup = (await prepareUpgradeBackup(sqlite, filename, '1.0.0'))!;
 		await rm(backup, { recursive: true });
 		await expect(prepareUpgradeBackup(sqlite, filename, '1.0.0')).rejects.toThrow('backup is missing');
+	});
+	it('publishes the retry marker atomically after an interrupted marker write', async () => {
+		await seed();
+		const actualWrite = await vi.importActual<typeof fs>('node:fs/promises');
+		vi.mocked(fs.writeFile).mockImplementation(async (...args: Parameters<typeof fs.writeFile>) => {
+			if (String(args[0]).includes('.pending-')) {
+				await actualWrite.writeFile(args[0], '{');
+				throw new Error('Marker write interrupted');
+			}
+			return actualWrite.writeFile(...args);
+		});
+		await expect(prepareUpgradeBackup(sqlite, filename, '1.0.0')).rejects.toThrow('Marker write interrupted');
+		expect(await readdir(path.join(directory, 'backups'))).not.toContain('.upgrade-1.0.0.json');
+		vi.mocked(fs.writeFile).mockImplementation(actualWrite.writeFile);
+		const backup = (await prepareUpgradeBackup(sqlite, filename, '1.0.0'))!;
+		expect((await verifyUpgradeBackup(backup, sqlite)).database.path).toBe('groly.db');
+		expect((await readdir(path.join(directory, 'backups'))).filter(name => !name.startsWith('.'))).toHaveLength(2);
 	});
 	it('retains an interrupted partial backup and creates a verified snapshot on retry', async () => {
 		await seed();

@@ -147,8 +147,10 @@ export async function prepareUpgradeBackup(database: Database.Database, database
 	await flush(staging);
 	await rename(staging, completed);
 	// Publish the retry marker only after a complete, verified snapshot exists.
-	await writeFile(stateFile, JSON.stringify({ directory: name, sourceVersion }) + '\n', { flag: 'wx', mode: 0o600 });
-	await flush(stateFile);
+	const stagingState = path.join(backupRoot, `.pending-${targetVersion}-${randomUUID()}.json`);
+	await writeFile(stagingState, JSON.stringify({ directory: name, sourceVersion }) + '\n', { flag: 'wx', mode: 0o600 });
+	await flush(stagingState);
+	await rename(stagingState, stateFile);
 	await flush(backupRoot);
 	if (database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'app_meta'").get()) {
 		database.prepare('INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(PENDING_KEY, name);

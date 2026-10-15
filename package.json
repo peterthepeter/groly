@@ -8,14 +8,16 @@
 		"build": "vite build && node scripts/verify-sw-manifest.mjs",
 		"preview": "vite preview",
 		"test": "vitest run",
-		"prepare": "svelte-kit sync",
+		"prepare": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --strategy globalVariable baseLocale && svelte-kit sync",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:browser": "playwright test",
-		"test:docker": "node scripts/verify-docker-upgrade.mjs"
+		"test:docker": "node scripts/verify-docker-upgrade.mjs",
+		"test:release": "node --test scripts/release-policy.test.mjs"
 	},
 	"devDependencies": {
 		"@inlang/paraglide-js": "2.28.0",
+		"@lucide/svelte": "1.57.0",
 		"@playwright/test": "1.64.1",
 		"@sveltejs/adapter-node": "6.0.0",
 		"@sveltejs/kit": "3.1.0",
@@ -25,8 +27,12 @@
 		"@types/leaflet": "1.9.22",
 		"@types/pdfmake": "0.3.3",
 		"@types/web-push": "3.6.4",
+		"@undecaf/zbar-wasm": "0.11.0",
+		"dexie": "4.4.6",
 		"drizzle-kit": "0.31.11",
 		"fake-indexeddb": "6.2.5",
+		"leaflet": "1.9.4",
+		"pdfmake": "0.3.11",
 		"svelte": "5.57.2",
 		"svelte-check": "4.7.6",
 		"tailwindcss": "4.3.3",
@@ -35,23 +41,17 @@
 		"vite-plugin-pwa": "2.0.0",
 		"vitest": "5.0.4",
 		"workbox-build": "7.4.1",
-		"workbox-window": "7.4.1"
-	},
-	"dependencies": {
-		"@lucide/svelte": "1.57.0",
-		"@undecaf/zbar-wasm": "0.11.0",
-		"@zxing/browser": "0.2.1",
-		"better-sqlite3": "13.0.3",
-		"dexie": "4.4.6",
-		"drizzle-orm": "0.45.4",
-		"fflate": "0.8.3",
-		"leaflet": "1.9.4",
-		"pdfmake": "0.3.11",
-		"web-push": "3.6.7",
 		"workbox-expiration": "7.4.1",
 		"workbox-precaching": "7.4.1",
 		"workbox-routing": "7.4.1",
-		"workbox-strategies": "7.4.1"
+		"workbox-strategies": "7.4.1",
+		"workbox-window": "7.4.1"
+	},
+	"dependencies": {
+		"better-sqlite3": "13.0.3",
+		"drizzle-orm": "0.45.4",
+		"fflate": "0.8.3",
+		"web-push": "3.6.7"
 	},
 	"engines": {
 		"node": ">=24 <25"

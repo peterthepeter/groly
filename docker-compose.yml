@@ -20,7 +20,7 @@ services:
       - PUBLIC_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:$${PORT:-3000}/api/health"]
       start_period: 10m
       interval: 30s
       timeout: 5s

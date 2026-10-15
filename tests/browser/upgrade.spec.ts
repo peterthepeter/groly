@@ -15,13 +15,17 @@ test('an installed 0.9.10 PWA upgrades with its session and unsynced changes int
 	let container = '';
 	const errors: string[] = [];
 	const activeRequests = new Set<object>();
-	page.on('request', req => { if (req.url().startsWith('http://127.0.0.1:3100/api/') && !/\/api\/(events|ping|auth\/login)(?:[?]|$)/.test(req.url())) activeRequests.add(req); });
-	page.on('response', response => activeRequests.delete(response.request()));
-	page.on('requestfailed', req => { activeRequests.delete(req); });
+	let lastApiActivity = Date.now();
+	page.on('request', req => { if (req.url().startsWith('http://127.0.0.1:3100/api/') && !/\/api\/(events|ping|auth\/login)(?:[?]|$)/.test(req.url())) { activeRequests.add(req); lastApiActivity = Date.now(); } });
+	page.on('response', response => { if (activeRequests.delete(response.request())) lastApiActivity = Date.now(); });
+	page.on('requestfailed', req => { if (activeRequests.delete(req)) lastApiActivity = Date.now(); });
 	page.on('pageerror', error => errors.push(error.message));
 	const settled = async () => {
 		await expect(page.locator('.animate-spin')).toHaveCount(0);
-		await expect.poll(() => activeRequests.size).toBe(0);
+		// Full-page navigation must wait for deferred IndexedDB/settings loads too.
+		// Ignore long-lived SSE and wait for a brief quiet period between API bursts.
+		const started = Date.now();
+		await expect.poll(() => activeRequests.size === 0 && Date.now() - Math.max(started, lastApiActivity) >= 250).toBe(true);
 	};
 	const start = (target: string, suffix: string) => {
 		container = `${id}-${suffix}`;
@@ -145,7 +149,9 @@ test('an installed 0.9.10 PWA upgrades with its session and unsynced changes int
 		await page.goto('/einstellungen');
 		await settled();
 		await page.getByRole('button', { name: de.language, exact: true }).click();
+		const languageSaved = page.waitForResponse(response => response.url().endsWith('/api/users/me') && response.request().method() === 'PATCH' && response.ok() && response.request().postDataJSON()?.settings?.lang === 'en');
 		await page.getByRole('button', { name: de.language_en, exact: true }).click();
+		expect((await (await languageSaved).json()).settings.lang).toBe('en');
 		await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 		await expect(page.getByText(en.language, { exact: true })).toBeVisible();
 		await settled();

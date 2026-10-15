@@ -89,6 +89,8 @@ function tx(lang: 'de' | 'en', de: string, en: string): string {
 }
 
 export async function exportReport(opts: ReportOptions): Promise<void> {
+	// Exports run in the browser. This also keeps PDF code/fonts out of SSR builds.
+	if (import.meta.env.SSR) return;
 	// Lazy-load pdfmake (heavy bundle ~600KB) only when user actually exports
 	const pdfMakeMod = await import('pdfmake/build/pdfmake');
 	const pdfFontsMod = await import('pdfmake/build/vfs_fonts');

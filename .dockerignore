@@ -9,6 +9,10 @@
 node_modules
 .svelte-kit
 build
+src/lib/paraglide
+project.inlang/*
+!project.inlang/settings.json
+!project.inlang/paraglide.config.*
 data
 **/backups
 **/*.db
