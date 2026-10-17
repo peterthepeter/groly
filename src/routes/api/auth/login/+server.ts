@@ -7,17 +7,20 @@ import * as m from '#lib/paraglide/messages';
 
 export const POST: RequestHandler = async (event) => {
 	const lang = languageFromAcceptLanguage(event.request.headers.get('accept-language'));
-	const { username, password } = await event.request.json();
-	if (!username || !password) {
+	let body;
+	try { body = await event.request.json(); } catch { body = null; }
+	const { username, password } = body ?? {};
+	if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password || username.length > 256 || password.length > 4096) {
 		return Response.json({ error: m.login_missing_credentials({}, { locale: lang }) }, { status: 400 });
 	}
 
-	// Rate-limit per IP+username so failed attempts on one account don't block others
-	if (!checkRateLimit(`${event.getClientAddress()}:${String(username).toLowerCase()}`)) {
+	const normalizedUsername = username.trim();
+	const ip = event.getClientAddress();
+	if (!checkRateLimit(`ip:${ip}`, 100) || !checkRateLimit(JSON.stringify([ip, normalizedUsername.toLowerCase()]))) {
 		return Response.json({ error: m.login_rate_limited({}, { locale: lang }) }, { status: 429 });
 	}
 
-	const result = await login(username, password);
+	const result = await login(normalizedUsername, password);
 	if (!result) {
 		return Response.json({ error: m.login_error({}, { locale: lang }) }, { status: 401 });
 	}

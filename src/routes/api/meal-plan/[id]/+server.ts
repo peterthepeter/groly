@@ -2,7 +2,7 @@
 import type { RequestHandler } from './$types';
 import { authGuard } from '#lib/auth/middleware';
 import { db } from '#lib/db';
-import { mealPlanEntries } from '#lib/db/schema';
+import { mealPlanEntries, recipes } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { now as dbNow } from '#lib/auth';
 
@@ -23,6 +23,9 @@ export const PATCH: RequestHandler = async (event) => {
 
 	try {
 		const body = await event.request.json();
+		if (body.recipeId != null && (typeof body.recipeId !== 'string' || !db.select({ id: recipes.id }).from(recipes).where(and(eq(recipes.id, body.recipeId), eq(recipes.userId, user!.id))).get())) {
+			return Response.json({ error: 'Rezept nicht gefunden' }, { status: 404 });
+		}
 		const ts = dbNow();
 
 		db.update(mealPlanEntries)

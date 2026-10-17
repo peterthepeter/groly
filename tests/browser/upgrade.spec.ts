@@ -2,14 +2,16 @@ import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { seedUpgradeFixture } from '../../scripts/docker-fixtures.mjs';
+import { resolveLatestImage } from '../../scripts/upgrade-baselines.mjs';
 import de from '../../messages/de.json' with { type: 'json' };
 import en from '../../messages/en.json' with { type: 'json' };
 
 const image = process.env.GROLY_TEST_IMAGE;
+const baseline = image ? process.env.GROLY_LATEST_IMAGE ?? resolveLatestImage() : '';
 test.skip(!image, 'Set GROLY_TEST_IMAGE to the production Docker candidate');
 const docker = (...args: string[]) => execFileSync('docker', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 120_000 }).trim();
 
-test('an installed 0.9.10 PWA upgrades with its session and unsynced changes intact', async ({ page, context, request }) => {
+test('the published latest PWA upgrades directly with its session and unsynced changes intact', async ({ page, context, request }) => {
 	const id = `groly-browser-${randomUUID().slice(0, 8)}`;
 	const volume = `${id}-data`;
 	let container = '';
@@ -42,7 +44,7 @@ test('an installed 0.9.10 PWA upgrades with its session and unsynced changes int
 	};
 	try {
 		docker('volume', 'create', volume);
-		start('ghcr.io/peterthepeter/groly:0.9.10', 'old');
+		start(baseline, 'old');
 		await wait(false);
 		execFileSync('docker', ['exec', '-i', container, 'node', '--input-type=module'], { input: `await (${seedUpgradeFixture.toString()})()`, stdio: ['pipe', 'pipe', 'pipe'] });
 		await page.goto('/login');

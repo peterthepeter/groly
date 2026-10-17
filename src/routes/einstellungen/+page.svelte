@@ -10,6 +10,7 @@
 	import { CATEGORY_LABELS } from '#lib/categories';
 	import { validatePasswordRule, getPasswordHint } from '#lib/password';
 	import { shortcuts, type Shortcut, type ShortcutAction } from '#lib/shortcuts.svelte';
+	import { logoutDevice, syncDevicePush } from '#lib/deviceSession';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
@@ -423,6 +424,7 @@
 			});
 
 			if (res.ok) {
+				if (data.user?.id) void syncDevicePush(data.user.id);
 				success = t.settings_password_success;
 				currentPassword = '';
 				newPassword = '';
@@ -505,7 +507,7 @@
 		</div>
 		<div class="text-center mt-6">
 			<button
-				onclick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); goto('/login'); }}
+				onclick={async () => { await logoutDevice(); goto('/login'); }}
 				class="text-xs active:opacity-60 transition-opacity"
 				style="color: var(--color-on-surface-variant)"
 			>{t.nav_logout}</button>

@@ -3,6 +3,14 @@ import { db } from '#lib/db';
 import { pushSubscriptions, listMembers, listNotificationPrefs, lists, users } from '#lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import * as env from '$app/env/private';
+import { publicPushAgent } from './publicNetwork';
+
+async function sendNotification(sub: { userId: string; endpoint: string; auth: string; p256dh: string }, payload: string) {
+	const agent = await publicPushAgent(sub.endpoint);
+	try {
+		return await webpush.sendNotification({ endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } }, JSON.stringify({ ...JSON.parse(payload), userId: sub.userId }), { agent, timeout: 10_000 });
+	} finally { agent.destroy(); }
+}
 
 type Lang = 'de' | 'en';
 type PayloadFn = (lang: Lang) => { title: string; body: string; url?: string };
@@ -88,10 +96,7 @@ export async function sendPushToListMembers(
 		subs.map(async ({ sub, settings }) => {
 			const lang = getUserLang(settings);
 			try {
-				await webpush.sendNotification(
-					{ endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
-					JSON.stringify(payloadFn(lang))
-				);
+				await sendNotification(sub, JSON.stringify(payloadFn(lang)));
 			} catch (err: unknown) {
 				const status = (err as { statusCode?: number })?.statusCode;
 				if (status === 410 || status === 404) {
@@ -128,10 +133,7 @@ export async function sendPushToUser(
 	await Promise.allSettled(
 		subs.map(async (sub) => {
 			try {
-				await webpush.sendNotification(
-					{ endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
-					payloadStr
-				);
+				await sendNotification(sub, payloadStr);
 				anySuccess = true;
 			} catch (err: unknown) {
 				const status = (err as { statusCode?: number })?.statusCode;

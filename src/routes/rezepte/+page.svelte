@@ -158,13 +158,14 @@
 	};
 
 	async function loadRecipes() {
+		const cacheUserId = data.user?.id ?? null;
 		try {
 			const res = await fetch('/api/recipes');
 			if (!res.ok) throw new Error();
 			const json = await res.json();
 			recipes = json.recipes ?? [];
 			limit = json.limit ?? 50;
-			try { await cacheRecipes(json.recipes ?? []); } catch (e) { console.error('cacheRecipes failed:', e); }
+			try { await cacheRecipes(json.recipes ?? [], cacheUserId); } catch (e) { console.error('cacheRecipes failed:', e); }
 		} catch {
 			const cached = await getOfflineRecipes();
 			recipes = cached;
@@ -412,17 +413,16 @@
 			</div>
 		{:else}
 			{#snippet recipeRow(recipe: Recipe)}
-				{@const metaText = totalTime(recipe) || recipe.description}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					onclick={() => goto(`/rezepte/${recipe.id}`)}
+				{@const metaText = [totalTime(recipe), ...(recipe.tags ?? [])].filter(Boolean).join(' · ')}
+				<a
+					href={`/rezepte/${recipe.id}`}
+					data-recipe-id={recipe.id}
 					class="w-full flex items-center gap-3 px-4 py-1 text-left active:opacity-70 transition-opacity cursor-pointer"
 				>
 					<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
 					     style="background-color: var(--color-surface-container)">
 						{#if recipe.imageUrl}
-							<img src={recipe.imageUrl} alt={recipe.title} class="w-full h-full object-cover" />
+							<img src={recipe.imageUrl} alt="" class="w-full h-full object-cover" />
 						{:else}
 							<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M8 2v4a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2"/>
@@ -436,15 +436,15 @@
 					<div class="flex-1 min-w-0 flex flex-col justify-center">
 						<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{recipe.title}</div>
 						{#if recipe.rating || metaText}
-							<div class="text-xs mt-0.5 truncate flex items-center gap-1" style="color: var(--color-on-surface-variant)">
+							<div data-recipe-meta class="text-xs mt-0.5 truncate" style="color: var(--color-on-surface-variant)">
 								{#if recipe.rating}
-									<svg width="11" height="11" viewBox="0 0 24 24" fill="var(--color-primary)" stroke="var(--color-primary)" stroke-width="1.5" stroke-linejoin="round" class="flex-shrink-0">
+									<svg width="11" height="11" viewBox="0 0 24 24" fill="var(--color-primary)" stroke="var(--color-primary)" stroke-width="1.5" stroke-linejoin="round" class="inline-block align-[-1px] mr-1" aria-hidden="true">
 										<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
 									</svg>
 									<span style="color: var(--color-primary)">{recipe.rating}</span>
-									{#if metaText}<span aria-hidden="true">·</span>{/if}
+									{#if metaText}<span aria-hidden="true"> · </span>{/if}
 								{/if}
-								{#if metaText}<span class="truncate">{metaText}</span>{/if}
+								{#if metaText}<span>{metaText}</span>{/if}
 							</div>
 						{/if}
 					</div>
@@ -460,35 +460,25 @@
 							<span class="text-xs font-medium" style="color: var(--color-primary)">{formatLastCooked(recipe.lastCookedAt)}</span>
 						</div>
 					{/if}
-				</div>
+				</a>
 			{/snippet}
 
-			<!-- Bottom-up: non-favorites bubble above, favorites bubble below (near thumb) -->
-			<div bind:this={bubbleContainerEl}>
-			{#if otherRecipes.length > 0}
-				<div class="rounded-2xl overflow-hidden mb-2" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-					<div class="px-4 pt-3 pb-1 flex items-center gap-2">
-						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-on-surface-variant)"></span>
-						<p class="text-sm font-semibold" style="color: var(--color-on-surface-variant)">{t.recipes_title}</p>
-					</div>
+			<!-- One bottom-anchored surface, with favorites nearest the thumb. -->
+			<div bind:this={bubbleContainerEl} data-recipe-card class="rounded-2xl overflow-hidden pb-2" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+				<h2 class="px-4 pt-3 pb-1 text-sm font-semibold" style="color: var(--color-primary)">{t.recipes_title}</h2>
+				{#if otherRecipes.length > 0}
 					{#each otherRecipes as recipe (recipe.id)}
 						{@render recipeRow(recipe)}
 					{/each}
-					<div class="h-2"></div>
-				</div>
-			{/if}
-			{#if favoriteRecipes.length > 0}
-				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-					<div class="px-4 pt-3 pb-1 flex items-center gap-2">
-						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
-						<p class="text-sm font-semibold" style="color: var(--color-primary)">{t.recipe_favorite}</p>
-					</div>
+				{/if}
+				{#if favoriteRecipes.length > 0}
+					{#if otherRecipes.length > 0}
+						<h3 class="mx-4 mt-2 pt-2 pb-1 text-sm font-semibold" style="color: var(--color-primary); border-top: 1px solid var(--bubble-container-border)">{t.recipes_favorites}</h3>
+					{/if}
 					{#each favoriteRecipes as recipe (recipe.id)}
 						{@render recipeRow(recipe)}
 					{/each}
-					<div class="h-2"></div>
-				</div>
-			{/if}
+				{/if}
 			</div>
 		{/if}
 

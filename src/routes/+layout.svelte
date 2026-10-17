@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { initLanguage, currentLang } from '#lib/i18n.svelte';
 	import { dispatch } from '#lib/sseStore.svelte';
 	import { initUpdateDetection, checkForUpdate } from '#lib/stores/pwa.svelte';
@@ -14,6 +14,7 @@
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { installApiFetchTimeout } from '#lib/apiTimeout';
 	import { initSync } from '#lib/sync/manager';
+	import { setServiceWorkerAccount, syncDevicePush } from '#lib/deviceSession';
 
 	// Früh genug, dass es vor den ersten Seiten-Loadern greift (Layout-Script läuft
 	// vor dem Mounten der Seiten). Schützt alle Lese-Anfragen gegen tote Verbindungen
@@ -24,7 +25,9 @@
 
 	let { data, children } = $props();
 
-	$effect(() => {
+	if (browser) untrack(() => initSync(data.user?.id ?? null));
+
+	$effect.pre(() => {
 		if (!browser) return;
 		const userId = data.user?.id ?? null;
 		initSync(userId);
@@ -60,16 +63,11 @@
 
 	$effect(() => { applyTheme(userSettings.theme); });
 	$effect(() => { applyColorScheme(userSettings.colorScheme); });
-	let cachedHomeUserId: string | null = null;
 	$effect(() => {
+		if (!browser) return;
 		const userId = data.user?.id ?? null;
-		if (userId === cachedHomeUserId) return;
-		cachedHomeUserId = userId;
-		if (userId && 'serviceWorker' in navigator) {
-			void navigator.serviceWorker.ready.then(registration => {
-				registration.active?.postMessage({ type: 'CACHE_HOME' });
-			});
-		}
+		void setServiceWorkerAccount(userId);
+		if (userId) void syncDevicePush(userId);
 	});
 
 	onMount(() => {
@@ -89,35 +87,11 @@
 			}
 		}
 
-		// Re-register push subscription once per day (fire-and-forget, kein await nötig)
-		void (async () => {
-			if (
-				'serviceWorker' in navigator &&
-				'PushManager' in window &&
-				Notification.permission === 'granted'
-			) {
-				const THROTTLE_KEY = 'groly_push_reregister';
-				const last = parseInt(localStorage.getItem(THROTTLE_KEY) ?? '0', 10);
-				if (Date.now() - last > 86_400_000) {
-					try {
-						const reg = await navigator.serviceWorker.ready;
-						const sub = await reg.pushManager.getSubscription();
-						if (sub) {
-							const json = sub.toJSON();
-							fetch('/api/push/subscribe', {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys })
-							}).catch(() => {});
-							localStorage.setItem(THROTTLE_KEY, String(Date.now()));
-						}
-					} catch { /* ignore */ }
-				}
-			}
-		})();
+	});
 
-		// Globaler SSE-Kanal — nur wenn eingeloggt
-		if (!data.user) return;
+	$effect(() => {
+		const userId = data.user?.id ?? '';
+		if (!browser || !userId) return;
 
 		let sse: EventSource | null = null;
 		let retryDelay = 1000;
@@ -125,7 +99,7 @@
 		let connected = false;
 
 		function connectSSE() {
-			sse = new EventSource('/api/events');
+			sse = new EventSource(`/api/events?userId=${encodeURIComponent(userId)}`);
 			sse.onopen = () => {
 				retryDelay = 1000;
 				if (connected) dispatch({ type: 'sse_connected' });
@@ -182,7 +156,9 @@
 
 
 <div class="max-w-[430px] mx-auto relative">
-	{@render children()}
+	{#key data.user?.id}
+		{@render children()}
+	{/key}
 </div>
 
 <!--

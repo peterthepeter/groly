@@ -2,6 +2,11 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '1.0.0-beta.4',
+		de: ['Kontowechsel und Offline-Daten besser geschützt; Anmeldung und Rezeptimport abgesichert; Rezeptansicht und Einkaufsliste verbessert.'],
+		en: ['Improved account switching and offline data protection; hardened sign-in and recipe import; improved recipe views and shopping lists.']
+	},
+	{
 		version: '1.0.0-beta.3',
 		de: [
 			'Offline angelegte und abgehakte Artikel bleiben nach der Synchronisierung abgehakt.',

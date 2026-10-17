@@ -1,6 +1,8 @@
 
 import type { RequestHandler } from './$types';
 import { adminGuard } from '#lib/auth/middleware';
+import { fetchPublicResource } from '#lib/server/publicNetwork';
+import { parsePublicRecipeUrl } from '#lib/server/recipeImportSecurity';
 
 function stripHtml(html: string): string {
 	return html
@@ -165,19 +167,7 @@ function extractPackageSize(text: string): { packageSize: number; unit: string }
 }
 
 async function fetchWithTimeout(url: string, accept = 'text/html'): Promise<Response> {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), 12000);
-	try {
-		return await fetch(url, {
-			signal: controller.signal,
-			headers: {
-				'User-Agent': 'Mozilla/5.0 (compatible; Groly/1.0)',
-				'Accept': accept,
-			}
-		});
-	} finally {
-		clearTimeout(timer);
-	}
+	return (await fetchPublicResource(url, accept)).response;
 }
 
 export const GET: RequestHandler = async (event) => {
@@ -195,18 +185,7 @@ export const GET: RequestHandler = async (event) => {
 		return Response.json({ error: 'Ungültige URL', code: 'invalid_url' }, { status: 400 });
 	}
 
-	// Block SSRF: reject private/internal hostnames and IP ranges
-	const host = targetUrl.hostname.toLowerCase();
-	const isPrivate =
-		host === 'localhost' ||
-		host.endsWith('.local') ||
-		host.endsWith('.internal') ||
-		/^127\./.test(host) ||
-		/^10\./.test(host) ||
-		/^192\.168\./.test(host) ||
-		/^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-		host === '169.254.169.254'; // cloud metadata
-	if (isPrivate) return Response.json({ error: 'URL nicht erlaubt', code: 'url_not_allowed' }, { status: 400 });
+	if (!parsePublicRecipeUrl(rawUrl)) return Response.json({ error: 'URL nicht erlaubt', code: 'url_not_allowed' }, { status: 400 });
 
 	try {
 		let name = '';

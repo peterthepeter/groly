@@ -7,6 +7,7 @@ const enc = new TextEncoder();
 
 type Controller = ReadableStreamDefaultController<Uint8Array>;
 const subs = new Map<string, Set<Controller>>();
+const authorized = new WeakMap<Controller, () => boolean>();
 
 export function subsSize(): number {
 	let total = 0;
@@ -14,9 +15,10 @@ export function subsSize(): number {
 	return total;
 }
 
-export function subscribe(userId: string, ctrl: Controller): () => void {
+export function subscribe(userId: string, ctrl: Controller, isAuthorized: () => boolean = () => true): () => void {
 	if (!subs.has(userId)) subs.set(userId, new Set());
 	subs.get(userId)!.add(ctrl);
+	authorized.set(ctrl, isAuthorized);
 	return () => {
 		subs.get(userId)?.delete(ctrl);
 		if (subs.get(userId)?.size === 0) subs.delete(userId);
@@ -28,8 +30,14 @@ export function emit(userId: string, event: object): void {
 	if (!controllers?.size) return;
 	const msg = enc.encode(`data: ${JSON.stringify(event)}\n\n`);
 	for (const ctrl of controllers) {
+		if (!authorized.get(ctrl)?.()) {
+			controllers.delete(ctrl);
+			try { ctrl.close(); } catch { /* Already closed. */ }
+			continue;
+		}
 		try { ctrl.enqueue(msg); } catch { /* Verbindung bereits geschlossen */ }
 	}
+	if (!controllers.size) subs.delete(userId);
 }
 
 /** Sendet den aktuellen memberCount (aus DB) an den Owner einer Liste */

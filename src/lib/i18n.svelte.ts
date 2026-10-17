@@ -165,3 +165,8 @@ export function today_reminders_label(count: number): string {
 	if (currentLang() === 'en') return count === 0 ? 'All done' : count === 1 ? '1 open' : `${count} open`;
 	return count === 0 ? 'Alles erledigt' : count === 1 ? '1 offen' : `${count} offen`;
 }
+
+export function recipeShoppingAddLabel(count: number): string {
+	void _lang;
+	return count === 1 ? t.recipe_shopping_add_one : m.recipe_shopping_add_many({ count }, { locale: currentLang() });
+}

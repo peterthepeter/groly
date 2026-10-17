@@ -95,18 +95,18 @@ export const PATCH: RequestHandler = async (event) => {
 
 	// Password change
 	const { currentPassword, newPassword } = body;
-	if (!currentPassword || !newPassword) return Response.json({ error: 'Fehlende Felder' }, { status: 400 });
+	if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || !currentPassword || !newPassword || currentPassword.length > 4096 || newPassword.length > 4096) return Response.json({ error: 'Fehlende Felder' }, { status: 400 });
 	const pwError = validatePassword(newPassword);
 	if (pwError) return Response.json({ error: pwError, code: validatePasswordRule(newPassword) }, { status: 400 });
 
 	const fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
-	if (!fullUser || !verifyPassword(currentPassword, fullUser.passwordHash)) {
+	if (!fullUser || !verifyPassword(currentPassword.trim(), fullUser.passwordHash)) {
 		return Response.json({ error: 'Aktuelles Passwort falsch', code: 'current_password_wrong' }, { status: 401 });
 	}
-	if (newPassword === currentPassword) {
+	if (newPassword.trim() === currentPassword.trim()) {
 		return Response.json({ error: 'Neues Passwort darf nicht mit dem aktuellen übereinstimmen', code: 'same_password' }, { status: 400 });
 	}
 
-	changePassword(user!.id, newPassword);
+	changePassword(user!.id, newPassword, event.cookies.get('session'), event.cookies.get('push_device'));
 	return Response.json({ ok: true });
 };

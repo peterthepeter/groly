@@ -308,6 +308,7 @@
 	}
 
 	async function loadSupplements() {
+		const cacheUserId = data.user?.id ?? null;
 		const requestId = ++supplementsRequestId;
 		const requestStartedAt = Date.now();
 		try {
@@ -316,7 +317,7 @@
 			const data = await res.json() as { supplements: Supplement[] };
 			const merged = await mergePendingSupplementStock(data.supplements, requestStartedAt);
 			if (requestId !== supplementsRequestId) return;
-			await cacheSupplements(merged);
+			await cacheSupplements(merged, cacheUserId);
 			if (requestId !== supplementsRequestId) return;
 			supplements = merged;
 		} catch {
@@ -334,6 +335,7 @@
 	}
 
 	async function loadTodayLogs() {
+		const cacheUserId = data.user?.id ?? null;
 		const requestId = ++todayLogsRequestId;
 		const requestStartedAt = Date.now();
 		const from = todayStart();
@@ -344,7 +346,7 @@
 			const data = await res.json();
 			const serverLogs = data.logs as Log[];
 			if (requestId !== todayLogsRequestId) return;
-			const merged = await cacheTodayLogs(serverLogs, requestStartedAt);
+			const merged = await cacheTodayLogs(serverLogs, requestStartedAt, cacheUserId);
 			if (requestId !== todayLogsRequestId) return;
 			todayLogs = merged;
 		} catch {
@@ -569,6 +571,7 @@
 	}
 
 	async function loadWaterLogs() {
+		const cacheUserId = data.user?.id ?? null;
 		if (!userSettings.waterTrackerEnabled) return;
 		const from = todayStart();
 		const to = todayEnd();
@@ -577,7 +580,7 @@
 			if (res.ok) {
 				const data = await res.json();
 				const serverLogs = data.logs as WaterLog[];
-				cacheWaterLogs(serverLogs).catch(() => {});
+				cacheWaterLogs(serverLogs, cacheUserId).catch(() => {});
 				const pending = await getPendingLogs('create_water_log', from, to);
 				const seen = new Set(serverLogs.map(l => (l as { clientLogId?: string }).clientLogId).filter(Boolean));
 				const extra = pending
@@ -610,6 +613,7 @@
 	}
 
 	async function loadCaffeineLogs() {
+		const cacheUserId = data.user?.id ?? null;
 		if (!userSettings.caffeineTrackerEnabled) return;
 		const from = todayStart();
 		const to = todayEnd();
@@ -618,7 +622,7 @@
 			if (res.ok) {
 				const data = await res.json();
 				const serverLogs = data.logs as CaffeineLog[];
-				cacheCaffeineLogs(serverLogs).catch(() => {});
+				cacheCaffeineLogs(serverLogs, cacheUserId).catch(() => {});
 				const pending = await getPendingLogs('create_caffeine_log', from, to);
 				const seen = new Set(serverLogs.map(l => (l as { clientLogId?: string }).clientLogId).filter(Boolean));
 				const extra = pending
@@ -645,6 +649,7 @@
 	}
 
 	async function loadMeditationLogs() {
+		const cacheUserId = data.user?.id ?? null;
 		if (!userSettings.meditationTrackerEnabled) return;
 		const from = todayStart();
 		const to = todayEnd();
@@ -653,7 +658,7 @@
 			if (res.ok) {
 				const data = await res.json();
 				const serverLogs = data.logs as MeditationLog[];
-				cacheMeditationLogs(serverLogs).catch(() => {});
+				cacheMeditationLogs(serverLogs, cacheUserId).catch(() => {});
 				const pending = await getPendingLogs('create_meditation_log', from, to);
 				const seen = new Set(serverLogs.map(l => (l as { clientLogId?: string }).clientLogId).filter(Boolean));
 				const extra = pending
@@ -1218,12 +1223,12 @@
 	{/if}
 	</div><!-- end sticky overlay -->
 
-		{#if activeTab === 'today' && userSettings.greetingEnabled}
+		{#if activeTab === 'today' && userSettings.greetingEnabled && overlayHeight > 0}
 			{@const hour = now.getHours()}
 			{@const todayGreeting = hour < 12 ? t.greeting_morning : hour < 18 ? t.greeting_day : hour < 22 ? t.greeting_evening : t.greeting_night}
 			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(now)}
 			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(now)}
-			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; transition: top 0.25s ease, opacity 0.15s ease;">
+			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; transition: opacity 0.15s ease;">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user.username}</p>
 				{#if trackerInfoLine}

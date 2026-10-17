@@ -7,13 +7,7 @@ import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategi
 import { ExpirationPlugin } from 'workbox-expiration';
 declare const __GROLY_PAGE_CACHE__: string;
 
-// Precache all static assets emitted by Vite (JS, CSS, icons, etc.)
-// self.__WB_MANIFEST is injected by vite-plugin-pwa at build time
-declare global {
-	interface ServiceWorkerGlobalScope {
-		__WB_MANIFEST: Array<{ url: string; revision: string | null }>;
-	}
-}
+// self.__WB_MANIFEST is injected by vite-plugin-pwa at build time.
 precacheAndRoute(self.__WB_MANIFEST);
 
 // Cache-first for SvelteKit immutable assets (content-hashed, never change)
@@ -42,33 +36,62 @@ registerRoute(
 	})
 );
 
-// Cache SvelteKit server-load responses (__data.json) so offline navigation works
-// after the user has visited a page at least once while online.
-registerRoute(
-	({ url }) => url.pathname.endsWith('/__data.json'),
-	new NetworkFirst({
-		cacheName: 'pages',
+// Authenticated documents and loader responses are partitioned by account.
+// Static assets remain shared; pending mutations live independently in IndexedDB.
+const ACCOUNT_STATE = 'groly-account-state';
+const ACCOUNT_KEY = new URL('/__groly_account__', self.location.origin).href;
+let accountGeneration = 0;
+let accountWrites = Promise.resolve();
+let account: Promise<string | null> = caches.open(ACCOUNT_STATE)
+	.then(cache => cache.match(ACCOUNT_KEY))
+	.then(async response => response ? (await response.json()).userId as string | null : null);
+
+function pageCache(userId: string) { return `${__GROLY_PAGE_CACHE__}-user-${encodeURIComponent(userId)}`; }
+function dataCache(userId: string) { return `account-data-${encodeURIComponent(userId)}`; }
+
+async function saveAccount(userId: string | null) {
+	accountGeneration++;
+	account = Promise.resolve(userId);
+	accountWrites = accountWrites.then(async () => {
+		await (await caches.open(ACCOUNT_STATE)).put(ACCOUNT_KEY, Response.json({ userId }));
+	});
+	await accountWrites;
+}
+
+function accountStrategy(userId: string, data = false) {
+	return new NetworkFirst({
+		cacheName: data ? dataCache(userId) : pageCache(userId),
 		networkTimeoutSeconds: 5,
-		plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 7 * 24 * 60 * 60 })]
-	})
+		plugins: [
+			{ cacheWillUpdate: async ({ response }) => response.status === 200 && !response.redirected && response.headers.get('X-Groly-User') === userId ? response : null },
+			new ExpirationPlugin({ maxEntries: data ? 30 : 20, maxAgeSeconds: 7 * 24 * 60 * 60 })
+		]
+	});
+}
+
+// Also clear the worker's identity for installed pre-1.0 clients, whose logout
+// code does not send SET_ACCOUNT. Push APIs must never be needed to sign out.
+registerRoute(
+	({ url }) => url.origin === self.location.origin && url.pathname === '/api/auth/logout',
+	async ({ request }) => {
+		const response = await fetch(request);
+		if (response.ok) await saveAccount(null);
+		return response;
+	},
+	'POST'
 );
 
-// Navigation requests (full page loads): NetworkFirst with cache fallback
-// This ensures the app shell loads offline from cache
 registerRoute(
-	new NavigationRoute(
-		new NetworkFirst({
-			cacheName: __GROLY_PAGE_CACHE__,
-			networkTimeoutSeconds: 5,
-			plugins: [
-				{ cacheWillUpdate: async ({ response }) => response.status === 200 && !response.redirected ? response : null },
-				new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 7 * 24 * 60 * 60 })
-			]
-		}),
-		// Don't intercept API routes
-		{ denylist: [/^\/api\//] }
-	)
+	({ url }) => url.pathname.endsWith('/__data.json') && !/^\/(login|invite)(\/|$)/.test(url.pathname),
+	async options => {
+		const userId = await account;
+		return userId ? accountStrategy(userId, true).handle(options) : fetch(options.request);
+	}
 );
+registerRoute(new NavigationRoute(async options => {
+	const userId = await account;
+	return userId ? accountStrategy(userId).handle(options) : fetch(options.request);
+}, { denylist: [/^\/api\//, /^\/(login|invite)(\/|$)/] }));
 
 // A home-page SSR document is not a generic app shell: serving it under a
 // recipe URL hydrates the wrong route and used to resolve CSS/JS incorrectly.
@@ -81,52 +104,60 @@ setCatchHandler(async ({ request }) => {
 	return Response.error();
 });
 
-async function cacheHome() {
+async function cacheHome(allowAccountChange = false) {
+	const generation = accountGeneration;
+	const expectedUser = await account;
 	try {
 		const response = await fetch(new Request('/', { cache: 'reload', credentials: 'same-origin' }));
-		// Registration also runs on /login. A redirected response cannot safely
-		// be reused for an offline document navigation to /.
-		if (response.ok && !response.redirected && new URL(response.url).pathname === '/') {
-			await (await caches.open(__GROLY_PAGE_CACHE__)).put('/', response);
+		const userId = response.headers.get('X-Groly-User');
+		if (generation === accountGeneration && (allowAccountChange || !expectedUser || expectedUser === userId) && response.ok && !response.redirected && userId && new URL(response.url).pathname === '/') {
+			await saveAccount(userId);
+			await (await caches.open(pageCache(userId))).put('/', response);
 		}
-	} catch { /* Retain an existing authenticated home page while offline. */ }
+	} catch { /* Keep the current account's shell available offline. */ }
 }
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
 	self.skipWaiting();
-	event.waitUntil(cacheHome());
+	event.waitUntil(cacheHome(true));
 });
-self.addEventListener('activate', (event) => event.waitUntil((async () => {
-	// Drop obsolete HTML, which references obsolete asset hashes. Keep the
-	// legacy data-response cache, IndexedDB and all pending user mutations.
+self.addEventListener('activate', event => event.waitUntil((async () => {
 	for (const name of await caches.keys()) {
-		if (name.startsWith('pages-') && name !== __GROLY_PAGE_CACHE__) await caches.delete(name);
-	}
-	const legacy = await caches.open('pages');
-	for (const request of await legacy.keys()) {
-		if (!new URL(request.url).pathname.endsWith('/__data.json')) await legacy.delete(request);
+		// Legacy caches have no trustworthy account label. These are server-read
+		// responses only; IndexedDB and every pending write are preserved.
+		if (name === 'pages' || (name.startsWith('pages-') && !name.startsWith(`${__GROLY_PAGE_CACHE__}-user-`))) await caches.delete(name);
 	}
 	await self.clients.claim();
 })()));
-self.addEventListener('message', (event) => {
-	const type = (event.data as { type?: string })?.type;
-	if (type === 'CACHE_HOME') event.waitUntil(cacheHome());
-	if (type === 'SKIP_WAITING') {
-		self.skipWaiting();
+self.addEventListener('message', event => {
+	const data = event.data as { type?: string; userId?: unknown };
+	if (data?.type === 'SET_ACCOUNT' && (data.userId === null || typeof data.userId === 'string')) {
+		event.waitUntil((async () => {
+			await saveAccount(data.userId as string | null);
+			event.ports[0]?.postMessage({ ok: true });
+			if (data.userId) await cacheHome();
+		})());
 	}
+	// Old installed clients send CACHE_HOME rather than SET_ACCOUNT. Derive their
+	// account only from the authenticated server response, never from cached HTML.
+	if (data?.type === 'CACHE_HOME') event.waitUntil(cacheHome(true));
+	if (data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('push', (event) => {
 	if (!event.data) return;
-	const data = event.data.json() as { title: string; body: string; url?: string; tag?: string };
+	const data = event.data.json() as { title: string; body: string; url?: string; tag?: string; userId?: string };
 	event.waitUntil(
-		self.registration.showNotification(data.title, {
-			body: data.body,
-			icon: '/icons/icon-192.png',
-			badge: '/icons/icon-192.png',
-			tag: data.tag,
-			data: { url: data.url ?? '/' }
-		})
+		(async () => {
+			if (!data.userId || data.userId !== await account) return;
+			await self.registration.showNotification(data.title, {
+				body: data.body,
+				icon: '/icons/icon-192.png',
+				badge: '/icons/icon-192.png',
+				tag: data.tag,
+				data: { url: data.url ?? '/', userId: data.userId }
+			});
+		})()
 	);
 });
 
@@ -155,6 +186,8 @@ self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 	const url: string = (event.notification.data as { url: string })?.url ?? '/';
 	event.waitUntil((async () => {
+		const notificationUser = (event.notification.data as { userId?: string })?.userId;
+		if (!notificationUser || notificationUser !== await account) return;
 		// Die EINE Wahrheit: Deep-Link in die persistente IDB-Mailbox schreiben.
 		// Passiert in JEDEM Fall (kalt/warm/Suspend); die App liest sie beim Aufwachen
 		// geduldig aus (resumeOrchestrator), denn dieser Write committet nach langem

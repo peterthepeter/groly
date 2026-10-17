@@ -10,7 +10,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=/app/data/groly.db
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme123}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - ORIGIN=${ORIGIN:-}
       # Web Push (VAPID) - Keys generieren mit:
       # node -e "const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(k)"

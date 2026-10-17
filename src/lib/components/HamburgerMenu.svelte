@@ -7,6 +7,7 @@
 	import ChangelogModal from '#lib/components/ChangelogModal.svelte';
 	import AboutModal from '#lib/components/AboutModal.svelte';
 	import { CHANGELOG } from '#lib/changelog';
+	import { logoutDevice } from '#lib/deviceSession';
 
 	let { open = $bindable(false), user, installPrompt = null }: {
 		open: boolean;
@@ -22,7 +23,7 @@
 	function close() { open = false; }
 
 	async function logout() {
-		await fetch('/api/auth/logout', { method: 'POST' });
+		await logoutDevice();
 		close();
 		goto('/login');
 	}

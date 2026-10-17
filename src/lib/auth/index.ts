@@ -1,6 +1,7 @@
 import { db } from '#lib/db';
-import { users, sessions } from '#lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, sessions, userInvites, pushSubscriptions } from '#lib/db/schema';
+import { and, eq, ne } from 'drizzle-orm';
+import { closeSessionStreams, closeUserStreams } from '#lib/server/sessionStreams';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 
 export function generateId(len = 24): string {
@@ -80,13 +81,21 @@ export function getSession(sessionId: string) {
 
 export function logout(sessionId: string) {
 	db.delete(sessions).where(eq(sessions.id, sessionId)).run();
+	closeSessionStreams(sessionId);
 }
 
-export function changePassword(userId: string, newPassword: string) {
-	db.update(users)
-		.set({ passwordHash: hashPassword(newPassword.trim()), mustChangePassword: false, updatedAt: now() })
-		.where(eq(users.id, userId))
-		.run();
+export function changePassword(userId: string, newPassword: string, keepSessionId?: string, keepPushDeviceId?: string) {
+	const passwordHash = hashPassword(newPassword.trim());
+	db.transaction(() => {
+		db.update(users)
+			.set({ passwordHash, mustChangePassword: false, updatedAt: now() })
+			.where(eq(users.id, userId))
+			.run();
+		db.delete(sessions).where(and(eq(sessions.userId, userId), keepSessionId ? ne(sessions.id, keepSessionId) : undefined)).run();
+		db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.userId, userId), keepPushDeviceId ? ne(pushSubscriptions.id, keepPushDeviceId) : undefined)).run();
+		db.update(userInvites).set({ usedAt: now() }).where(eq(userInvites.userId, userId)).run();
+	});
+	closeUserStreams(userId, keepSessionId);
 }
 
 export function bootstrapAdmin() {
@@ -98,7 +107,7 @@ export function bootstrapAdmin() {
 
 	// First start: at least one admin must exist. Require env vars.
 	if (!anyUser) {
-		if (!adminPassword) {
+		if (!adminPassword?.trim() || adminPassword.trim() === 'changeme123') {
 			throw new Error('[groly] ADMIN_PASSWORD environment variable is required on first start');
 		}
 		createUser(adminUsername, adminPassword, 'admin', false);
@@ -112,9 +121,9 @@ export function bootstrapAdmin() {
 	if (adminPasswordReset) {
 		const target = db.select().from(users).where(eq(users.username, adminUsername)).get();
 		if (target) {
+			changePassword(target.id, adminPasswordReset);
 			db.update(users)
 				.set({
-					passwordHash: hashPassword(adminPasswordReset),
 					mustChangePassword: false,
 					role: 'admin',
 					updatedAt: now()

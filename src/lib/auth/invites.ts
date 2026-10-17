@@ -2,7 +2,7 @@ import { db } from '#lib/db';
 import { userInvites, users, sessions } from '#lib/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { randomBytes, createHash } from 'crypto';
-import { generateId, hashPassword, now } from './index';
+import { changePassword, generateId, now } from './index';
 
 const INVITE_TTL_SECONDS = 48 * 60 * 60; // 48h
 
@@ -61,16 +61,13 @@ export function consumeInvite(token: string, newPassword: string): { sessionId: 
 	if (inv.expiresAt < now()) return { error: 'expired' };
 
 	const ts = now();
-	db.update(users)
-		.set({ passwordHash: hashPassword(newPassword.trim()), mustChangePassword: false, updatedAt: ts })
-		.where(eq(users.id, inv.userId))
-		.run();
-	db.update(userInvites).set({ usedAt: ts }).where(eq(userInvites.id, inv.id)).run();
-
 	const sessionId = generateId(32);
 	const expiresAt = ts + 60 * 60 * 24 * 30;
-	db.insert(sessions).values({ id: sessionId, userId: inv.userId, expiresAt, createdAt: ts }).run();
-	db.update(users).set({ lastLoginAt: ts }).where(eq(users.id, inv.userId)).run();
+	db.transaction(() => {
+		changePassword(inv.userId, newPassword);
+		db.insert(sessions).values({ id: sessionId, userId: inv.userId, expiresAt, createdAt: ts }).run();
+		db.update(users).set({ lastLoginAt: ts }).where(eq(users.id, inv.userId)).run();
+	});
 
 	return { sessionId };
 }

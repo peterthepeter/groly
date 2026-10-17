@@ -3,10 +3,13 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { statSync, writeFileSync } from 'node:fs';
 import { seedUpgradeFixture, snapshotUpgradeData } from './docker-fixtures.mjs';
+import { baselineImage, resolveLatestImage } from './upgrade-baselines.mjs';
 
 const image = process.env.GROLY_TEST_IMAGE;
 assert(image, 'Set GROLY_TEST_IMAGE to the candidate image or immutable registry digest');
 const baselines = (process.env.GROLY_BASELINES ?? '0.9.10,0.9.9,0.9.8-hotfix.2').split(',').filter(Boolean);
+const latestImage = process.env.GROLY_LATEST_IMAGE ?? resolveLatestImage();
+baselines.unshift(latestImage);
 if (process.env.GROLY_DATA_COPY) assert(statSync(`${process.env.GROLY_DATA_COPY}/groly.db`).size > 0, 'Real-data copy must contain a nonempty groly.db');
 const prefix = `groly-verify-${randomUUID().slice(0, 8)}`;
 const containers = new Set(), volumes = new Set();
@@ -138,7 +141,7 @@ async function expectBlocked(container, before, label) {
 }
 
 async function verifyUpgrade(baseline, dataCopy) {
-	const suffix = dataCopy ? 'real-copy' : baseline.replaceAll('.', '-');
+	const suffix = dataCopy ? 'real-copy' : baseline.replace(/[^a-zA-Z0-9-]/g, '-').slice(-32);
 	const data = volume(suffix);
 	if (dataCopy) {
 		const copy = `${prefix}-copy`;
@@ -147,7 +150,7 @@ async function verifyUpgrade(baseline, dataCopy) {
 		docker('cp', `${dataCopy}/.`, `${copy}:/app/data`);
 		remove(copy);
 	}
-	let container = start(`ghcr.io/peterthepeter/groly:${baseline}`, data, `old-${suffix}`);
+	let container = start(baselineImage(baseline), data, `old-${suffix}`);
 	await ready(container);
 	let cookie;
 	if (!dataCopy) cookie = evaluate(container, seedUpgradeFixture).cookie;
@@ -180,7 +183,7 @@ async function verifyUpgrade(baseline, dataCopy) {
 	docker('run', '--rm', '--platform', 'linux/amd64', '--network', 'none', '--entrypoint', 'node',
 		'--mount', `type=volume,src=${data},dst=/source,readonly`, '--mount', `type=volume,src=${restored},dst=/target`,
 		image, '--input-type=module', '-e', `import{cpSync,existsSync}from'node:fs';const source=${JSON.stringify('/source/backups/' + snapshots[0].name)};cpSync(source+'/groly.db','/target/groly.db');if(existsSync(source+'/uploads'))cpSync(source+'/uploads','/target/uploads',{recursive:true});`);
-	container = start(`ghcr.io/peterthepeter/groly:${baseline}`, restored, `restored-${suffix}`);
+	container = start(baselineImage(baseline), restored, `restored-${suffix}`);
 	await ready(container);
 	compare(before, evaluate(container, snapshotUpgradeData), 'Restore with original image');
 	assert.equal(request(container, '/api/auth/me', { headers: { cookie } }).status, 200);
@@ -250,7 +253,7 @@ try {
 	remove(container);
 	console.log('PASS custom PORT and actual Docker healthcheck');
 	for (const baseline of baselines) await verifyUpgrade(baseline);
-	if (process.env.GROLY_DATA_COPY) await verifyUpgrade('0.9.10', process.env.GROLY_DATA_COPY);
+	if (process.env.GROLY_DATA_COPY) await verifyUpgrade(latestImage, process.env.GROLY_DATA_COPY);
 	if (process.env.GROLY_TEST_REPORT) writeFileSync(process.env.GROLY_TEST_REPORT, JSON.stringify({ image, results }, null, 2) + '\n');
 } finally {
 	for (const container of containers) try { docker('rm', '-f', container); } catch { /* Reported test failure takes priority. */ }

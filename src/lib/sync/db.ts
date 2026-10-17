@@ -1,6 +1,11 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
 
-interface OfflineList {
+export interface AccountCache {
+	cacheUserId?: string;
+	userId?: string;
+}
+
+interface OfflineList extends AccountCache {
 	id: string;
 	name: string;
 	description: string | null;
@@ -12,7 +17,7 @@ interface OfflineList {
 	locationName?: string | null;
 }
 
-interface OfflineItem {
+interface OfflineItem extends AccountCache {
 	id: string;
 	listId: string;
 	name: string;
@@ -70,7 +75,7 @@ interface OfflineFavorite {
 	categoryOverride: string | null;
 }
 
-interface OfflineSupplement {
+interface OfflineSupplement extends AccountCache {
 	id: string;
 	userId?: string;
 	name: string;
@@ -86,7 +91,7 @@ interface OfflineSupplement {
 	localStockUpdatedAt?: number;
 }
 
-interface OfflineSupplementLog {
+interface OfflineSupplementLog extends AccountCache {
 	id: string;
 	userId?: string;
 	supplementId: string;
@@ -99,7 +104,7 @@ interface OfflineSupplementLog {
 	localConfirmedAt?: number;
 }
 
-interface OfflineRecipe {
+interface OfflineRecipe extends AccountCache {
 	id: string;
 	title: string;
 	description: string | null;
@@ -121,14 +126,14 @@ interface OfflineRecipeDetail extends OfflineRecipe {
 	steps: { id: string; stepNumber: number; text: string }[];
 }
 
-interface OfflineWaterLog {
+interface OfflineWaterLog extends AccountCache {
 	id: string;
 	amountMl: number;
 	loggedAt: number;
 	clientLogId?: string | null;
 }
 
-interface OfflineCaffeineLog {
+interface OfflineCaffeineLog extends AccountCache {
 	id: string;
 	drinkName: string;
 	caffeineMg: number;
@@ -137,7 +142,7 @@ interface OfflineCaffeineLog {
 	clientLogId?: string | null;
 }
 
-interface OfflineMeditationLog {
+interface OfflineMeditationLog extends AccountCache {
 	id: string;
 	durationSeconds: number;
 	loggedAt: number;
@@ -167,6 +172,9 @@ class GrolydDb extends Dexie {
 	caffeineDrinks!: EntityTable<OfflineCaffeineDrink, 'id'>;
 	categoryPreferences!: Table<OfflineCategoryPreference, [string, string]>;
 	userSettings!: EntityTable<OfflineUserSettings, 'userId'>;
+	cacheMeta!: EntityTable<{ key: string; value: string | null }, 'key'>;
+	accountLists!: Table<OfflineList & { cacheUserId: string }, [string, string]>;
+	accountItems!: Table<OfflineItem & { cacheUserId: string }, [string, string]>;
 
 	constructor() {
 		super('groly');
@@ -197,6 +205,11 @@ class GrolydDb extends Dexie {
 		});
 		this.version(7).stores({
 			userSettings: 'userId, updatedAt'
+		});
+		this.version(8).stores({
+			cacheMeta: 'key',
+			accountLists: '[cacheUserId+id], cacheUserId',
+			accountItems: '[cacheUserId+id], cacheUserId, [cacheUserId+listId]'
 		});
 	}
 }

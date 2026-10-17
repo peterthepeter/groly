@@ -220,6 +220,7 @@
 	}
 
 	async function loadLists() {
+		const cacheUserId = data.user?.id ?? null;
 		const requestVersion = ++listsLoadVersion;
 
 		// Gecachte Daten sofort anzeigen (stale-while-revalidate)
@@ -238,7 +239,7 @@
 			const newLists: ListItem[] = (json && typeof json === 'object' && 'lists' in json) ? json.lists : json;
 			const newInvitations = json?.pendingInvitations ?? [];
 			// Cache als plain objects (vor State-Zuweisung, um Svelte-Proxy-Probleme mit IndexedDB zu vermeiden)
-			void cacheListsData(newLists);
+			void cacheListsData(newLists, cacheUserId, true);
 			lists = newLists;
 			pendingInvitations = newInvitations;
 		} catch {
@@ -262,7 +263,7 @@
 			const newList = await res.json();
 			const listWithCount = { ...newList, openCount: 0 };
 			lists = [...lists, listWithCount];
-			void cacheListsData(lists);
+			void cacheListsData(lists, data.user?.id ?? null);
 			if (shareAfterCreate) {
 				shareList = listWithCount;
 			}

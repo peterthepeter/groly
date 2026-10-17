@@ -1,4 +1,6 @@
-import { offlineDb } from './db';
+import { offlineDb, type AccountCache } from './db';
+import { cachedForUser, migrateAccountCache } from './accountCache';
+import { setApiUserId } from '#lib/apiTimeout';
 import type { OfflineList, OfflineItem, OfflineSupplement, OfflineSupplementLog, OfflineRecipe, OfflineRecipeDetail, OfflineWaterLog, OfflineCaffeineLog, OfflineMeditationLog, OfflineCaffeineDrink, OfflineCategoryPreference, OfflineUserSettings, OfflineFavorite, PendingMutation } from './db';
 import { networkStore } from '#lib/stores/online.svelte';
 import { isValidCategoryKey } from '#lib/categories';
@@ -13,6 +15,14 @@ import {
 } from '#lib/userSettingsSync';
 
 let activeUserId: string | null = null;
+let accountReady: Promise<void> = Promise.resolve();
+let accountMigrationStarted = false;
+
+async function scopedRows<T extends AccountCache>(read: () => Promise<T[]>, userId = activeUserId): Promise<T[]> {
+	await accountReady;
+	if (!userId || activeUserId !== userId) return [];
+	return (await read()).filter(row => cachedForUser(row, userId));
+}
 let syncInitialized = false;
 let drainPromise: Promise<void> | null = null;
 let drainingUserId: string | null = null;
@@ -80,7 +90,7 @@ async function confirmSupplementLogMutation(
 				.toArray())
 				.filter(entry =>
 					entry.id !== mutation.id &&
-					(entry.userId === undefined || entry.userId === userId) &&
+					entry.userId === userId &&
 					entry.payload.supplementId === result.log.supplementId
 				)
 				.reduce((sum, entry) => sum + (typeof entry.payload.amount === 'number' ? entry.payload.amount : 0), 0);
@@ -127,10 +137,10 @@ export async function fetchWithTimeout(url: string, init: RequestInit = {}, time
 	}
 }
 
-async function apiFetch(url: string, options?: RequestInit) {
+async function apiFetch(url: string, options?: RequestInit, userId = drainingUserId ?? activeUserId) {
 	const res = await fetchWithTimeout(url, {
 		...options,
-		headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) }
+		headers: { 'Content-Type': 'application/json', ...(userId ? { 'X-Groly-User': userId } : {}), ...(options?.headers ?? {}) }
 	});
 	if (!res.ok) {
 		const err = new Error(`API error: ${res.status}`) as Error & { status: number };
@@ -141,9 +151,9 @@ async function apiFetch(url: string, options?: RequestInit) {
 }
 
 function belongsToActiveUser(mutation: PendingMutation): boolean {
-	// Mutationen aus älteren App-Versionen hatten noch keine Besitzer-ID. Sie werden
-	// aus Kompatibilitätsgründen beim aktuell angemeldeten Benutzer fertig verarbeitet.
-	return mutation.userId === undefined || mutation.userId === activeUserId;
+	// Legacy ownership is migrated once from the recorded old account. Unknown
+	// owners remain stored and must never be replayed under the next account.
+	return mutation.userId !== undefined && mutation.userId === activeUserId;
 }
 
 async function countActivePendingMutations(): Promise<number> {
@@ -256,7 +266,7 @@ async function syncPendingUserSettings(mutation: PendingMutation, userId: string
 
 		const response = await fetchWithTimeout('/api/users/me', {
 			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-Groly-User': userId },
 			body: JSON.stringify({ settings: payload.settings, settingsRevision: payload.settingsRevision })
 		});
 		let responseBody: unknown = null;
@@ -293,10 +303,10 @@ async function syncPendingUserSettings(mutation: PendingMutation, userId: string
 }
 
 async function confirmItemWrite(mutation: PendingMutation, response: Record<string, unknown>, userId: string) {
-	await offlineDb.transaction('rw', offlineDb.pendingMutations, offlineDb.items, async () => {
+	await offlineDb.transaction('rw', offlineDb.pendingMutations, offlineDb.items, offlineDb.accountItems, async () => {
 		const later = (await offlineDb.pendingMutations.toArray()).filter(entry =>
 			entry.id! > mutation.id! && entry.type === 'update_item' &&
-			(entry.userId === undefined || entry.userId === userId) && entry.payload.id === mutation.payload.id
+			entry.userId === userId && entry.payload.id === mutation.payload.id
 		);
 		const revision = response.updatedAt;
 		if (typeof revision !== 'number' && later.length) throw Object.assign(new Error('Missing item revision'), { status: 502 });
@@ -304,7 +314,8 @@ async function confirmItemWrite(mutation: PendingMutation, response: Record<stri
 			// Rebase only descendants of our confirmed write. Genuine remote
 			// conflicts still use the server's existing 409 policy.
 			for (const entry of later) await offlineDb.pendingMutations.update(entry.id!, { payload: { ...entry.payload, clientUpdatedAt: revision } });
-			await offlineDb.items.update(mutation.payload.id as string, { updatedAt: revision, localConfirmedAt: Date.now() });
+			await offlineDb.items.update(mutation.payload.id as string, { updatedAt: revision, localConfirmedAt: Date.now(), cacheUserId: userId });
+			await offlineDb.accountItems.update([userId, mutation.payload.id as string], { updatedAt: revision, localConfirmedAt: Date.now() });
 		}
 		await offlineDb.pendingMutations.delete(mutation.id!);
 	});
@@ -312,7 +323,7 @@ async function confirmItemWrite(mutation: PendingMutation, response: Record<stri
 
 async function syncItemUpdate(mutation: PendingMutation, userId: string) {
 	const response = await fetchWithTimeout(`/api/items/${mutation.payload.id}`, {
-		method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mutation.payload)
+		method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Groly-User': userId }, body: JSON.stringify(mutation.payload)
 	});
 	const body = await response.json();
 	if (response.status === 409 && body.current && typeof body.current.updatedAt === 'number') {
@@ -337,12 +348,13 @@ async function confirmFavoriteWrite(mutation: PendingMutation, userId: string) {
 }
 
 async function runPendingMutations(userId: string) {
+	await accountReady;
 	const pending = (await offlineDb.pendingMutations.orderBy('id').toArray())
-		.filter(mutation => mutation.userId === undefined || mutation.userId === userId);
+		.filter(mutation => mutation.userId === userId);
 	for (const snapshot of pending) {
 		if (activeUserId !== userId) break;
 		const mutation = await offlineDb.pendingMutations.get(snapshot.id!);
-		if (!mutation) continue;
+		if (!mutation || activeUserId !== userId) continue;
 		try {
 			let mutationManagesItsOwnQueueEntry = false;
 			switch (mutation.type) {
@@ -474,6 +486,7 @@ export async function execute<T>(
 	offlineMutation: Parameters<typeof offlineDb.pendingMutations.add>[0],
 	optimisticUpdate: () => void
 ): Promise<T | null> {
+	const userId = activeUserId;
 	optimisticUpdate();
 
 	if (networkStore.online) {
@@ -484,7 +497,7 @@ export async function execute<T>(
 		}
 	}
 
-	await addPendingMutation({ ...offlineMutation, userId: activeUserId ?? undefined });
+	await addPendingMutation({ ...offlineMutation, userId: userId ?? undefined });
 	// Sofort versuchen, die Queue zu leeren (z.B. 409-Konflikte bereinigen)
 	if (networkStore.online) void drainPendingMutations();
 	return null;
@@ -508,8 +521,9 @@ export async function queueItemCreate(
 	item: OfflineItem,
 	payload: CreateItemMutationPayload
 ): Promise<void> {
-	await offlineDb.transaction('rw', offlineDb.items, offlineDb.pendingMutations, async () => {
-		await offlineDb.items.put(item);
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
+		await offlineDb.items.put({ ...item, cacheUserId: userId });
+		await offlineDb.accountItems.put({ ...item, cacheUserId: userId });
 		await offlineDb.pendingMutations.add({
 			type: 'create_item',
 			userId,
@@ -526,22 +540,24 @@ export async function queueItemCreate(
 export async function getPendingCreateItems(userId: string, listId: string, requestStartedAt = Infinity): Promise<OfflineItem[]> {
 	const pending = (await offlineDb.pendingMutations.where('type').equals('create_item').toArray())
 		.filter((mutation) =>
-			(mutation.userId === undefined || mutation.userId === userId) &&
+			mutation.userId === userId &&
 			mutation.payload.listId === listId &&
 			typeof mutation.payload.id === 'string'
 		);
 	const pendingIds = new Set(pending.map(mutation => mutation.payload.id));
-	return (await offlineDb.items.where('listId').equals(listId).toArray()).filter(item =>
-		pendingIds.has(item.id) || (item.localConfirmedAt !== undefined && item.localConfirmedAt >= requestStartedAt)
+	return (await offlineDb.accountItems.where('[cacheUserId+listId]').equals([userId, listId]).toArray()).filter(item =>
+		cachedForUser(item, userId) && (pendingIds.has(item.id) || (item.localConfirmedAt !== undefined && item.localConfirmedAt >= requestStartedAt))
 	);
 }
 
 export async function queueItemUpdate(userId: string, id: string, changes: Partial<OfflineItem>): Promise<void> {
-	await offlineDb.transaction('rw', offlineDb.items, offlineDb.pendingMutations, async () => {
-		const item = await offlineDb.items.get(id);
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
+		const item = await offlineDb.accountItems.get([userId, id]) ?? await offlineDb.items.get(id);
 		if (!item) throw new Error('Local item missing');
+		if (item.cacheUserId && item.cacheUserId !== userId) throw new Error('Local item belongs to another account');
 		const { updatedAt: _updatedAt, id: _id, listId: _listId, ...patch } = changes;
-		await offlineDb.items.update(id, patch);
+		await offlineDb.items.update(id, { ...patch, cacheUserId: userId });
+		await offlineDb.accountItems.put({ ...item, ...patch, cacheUserId: userId });
 		await offlineDb.pendingMutations.add({ type: 'update_item', userId, payload: { ...patch, id, clientUpdatedAt: item.updatedAt }, createdAt: Date.now() });
 	});
 	if (activeUserId !== userId) return;
@@ -550,8 +566,9 @@ export async function queueItemUpdate(userId: string, id: string, changes: Parti
 }
 
 export async function queueItemDelete(userId: string, id: string): Promise<void> {
-	await offlineDb.transaction('rw', offlineDb.items, offlineDb.pendingMutations, async () => {
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
 		await offlineDb.items.delete(id);
+		await offlineDb.accountItems.delete([userId, id]);
 		await offlineDb.pendingMutations.add({ type: 'delete_item', userId, payload: { id }, createdAt: Date.now() });
 	});
 	if (activeUserId !== userId) return;
@@ -620,14 +637,20 @@ export async function setFavoriteOffline(userId: string, favorite: OfflineFavori
 async function enqueueLog(
 	type: 'create_supplement_log' | 'create_water_log' | 'create_caffeine_log' | 'create_meditation_log',
 	payload: Record<string, unknown>,
-	localWrite: () => Promise<unknown>
+	localWrite: (userId: string) => Promise<unknown>
 ): Promise<void> {
-	await localWrite();
-	await addPendingMutation({ type, payload, createdAt: Date.now(), userId: activeUserId ?? undefined });
+	const userId = activeUserId;
+	if (!userId) return;
+	await accountReady;
+	await localWrite(userId);
+	await addPendingMutation({ type, payload, createdAt: Date.now(), userId });
 	if (networkStore.online) void drainPendingMutations();
 }
 
 export async function logSupplementOffline(args: { supplementId: string; amount: number; loggedAt: number; note: string | null; clientLogId: string }): Promise<void> {
+	const userId = activeUserId;
+	if (!userId) return;
+	await accountReady;
 	await offlineDb.transaction(
 		'rw',
 		offlineDb.supplementLogs,
@@ -636,7 +659,7 @@ export async function logSupplementOffline(args: { supplementId: string; amount:
 		async () => {
 			await offlineDb.supplementLogs.put({
 				id: args.clientLogId,
-				...(activeUserId ? { userId: activeUserId } : {}),
+				userId,
 				supplementId: args.supplementId,
 				amount: args.amount,
 				loggedAt: args.loggedAt,
@@ -662,7 +685,7 @@ export async function logSupplementOffline(args: { supplementId: string; amount:
 					clientLogId: args.clientLogId
 				},
 				createdAt: Date.now(),
-				...(activeUserId ? { userId: activeUserId } : {})
+				userId
 			});
 		}
 	);
@@ -674,7 +697,7 @@ export async function logWaterOffline(args: { amountMl: number; loggedAt: number
 	await enqueueLog(
 		'create_water_log',
 		{ amountMl: args.amountMl, loggedAt: args.loggedAt, clientLogId: args.clientLogId },
-		() => offlineDb.waterLogs.put({ id: args.clientLogId, amountMl: args.amountMl, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
+		(userId) => offlineDb.waterLogs.put({ cacheUserId: userId, id: args.clientLogId, amountMl: args.amountMl, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
 	);
 }
 
@@ -682,7 +705,7 @@ export async function logCaffeineOffline(args: { drinkName: string; amountMl: nu
 	await enqueueLog(
 		'create_caffeine_log',
 		{ drinkName: args.drinkName, amountMl: args.amountMl, caffeineMg: args.caffeineMg, loggedAt: args.loggedAt, clientLogId: args.clientLogId },
-		() => offlineDb.caffeineLogs.put({ id: args.clientLogId, drinkName: args.drinkName, amountMl: args.amountMl, caffeineMg: args.caffeineMg, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
+		(userId) => offlineDb.caffeineLogs.put({ cacheUserId: userId, id: args.clientLogId, drinkName: args.drinkName, amountMl: args.amountMl, caffeineMg: args.caffeineMg, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
 	);
 }
 
@@ -690,7 +713,7 @@ export async function logMeditationOffline(args: { durationSeconds: number; logg
 	await enqueueLog(
 		'create_meditation_log',
 		{ durationSeconds: args.durationSeconds, loggedAt: args.loggedAt, clientLogId: args.clientLogId },
-		() => offlineDb.meditationLogs.put({ id: args.clientLogId, durationSeconds: args.durationSeconds, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
+		(userId) => offlineDb.meditationLogs.put({ cacheUserId: userId, id: args.clientLogId, durationSeconds: args.durationSeconds, loggedAt: args.loggedAt, clientLogId: args.clientLogId })
 	);
 }
 
@@ -724,7 +747,7 @@ async function sendOrQueueCategoryPreference(
 			await apiFetch('/api/category-preferences', {
 				method: type === 'set_category_preference' ? 'PUT' : 'DELETE',
 				body: JSON.stringify(payload)
-			});
+			}, userId);
 			return;
 		} catch {
 			// Antwort verloren oder Server nicht erreichbar: idempotent nachstellen.
@@ -767,7 +790,7 @@ export async function refreshCategoryPreferences(userId: string): Promise<void> 
 	const syncStartedAt = Date.now();
 	let serverRows: OfflineCategoryPreference[];
 	try {
-		const response = await fetchWithTimeout('/api/category-preferences');
+		const response = await fetchWithTimeout('/api/category-preferences', { headers: { 'X-Groly-User': userId } });
 		if (!response.ok) return;
 		const rows = await response.json() as Array<Partial<OfflineCategoryPreference>>;
 		serverRows = rows.flatMap(row =>
@@ -914,7 +937,7 @@ export async function refreshUserSettings(
 	}
 
 	try {
-		const response = await fetchWithTimeout('/api/users/me', { cache: 'no-store' });
+		const response = await fetchWithTimeout('/api/users/me', { cache: 'no-store', headers: { 'X-Groly-User': userId } });
 		if (!response.ok) throw new Error(`API error: ${response.status}`);
 		const serverState = readSettingsServerState(await response.json());
 		if (!serverState) throw new Error('Invalid settings response');
@@ -944,25 +967,42 @@ export async function refreshUserSettings(
 
 // ── Listen-Cache ───────────────────────────────────────────────────────────────
 
-export async function cacheListsData(lists: OfflineList[]) {
-	await offlineDb.lists.bulkPut(lists);
+export async function cacheListsData(lists: OfflineList[], userId = activeUserId, replace = false) {
+	await accountReady;
+	if (!userId) return;
+	await offlineDb.transaction('rw', offlineDb.lists, offlineDb.accountLists, offlineDb.accountItems, async () => {
+		if (replace) {
+			const ids = new Set(lists.map(row => row.id));
+			const old = await offlineDb.accountLists.where('cacheUserId').equals(userId).toArray();
+			for (const row of old) {
+				if (ids.has(row.id)) continue;
+				await offlineDb.accountLists.delete([userId, row.id]);
+				await offlineDb.accountItems.where('[cacheUserId+listId]').equals([userId, row.id]).delete();
+			}
+		}
+		const rows = lists.map(row => ({ ...row, cacheUserId: userId }));
+		await offlineDb.lists.bulkPut(rows);
+		await offlineDb.accountLists.bulkPut(rows);
+	});
 }
 
 export async function getOfflineLists(): Promise<OfflineList[]> {
-	return offlineDb.lists.toArray();
+	return scopedRows(() => offlineDb.accountLists.toArray());
 }
 
 export async function cacheItemsData<T extends OfflineItem>(items: T[], userId = activeUserId, requestStartedAt = Date.now()): Promise<T[]> {
-	return offlineDb.transaction('rw', offlineDb.items, offlineDb.pendingMutations, async () => {
-		const pending = (await offlineDb.pendingMutations.orderBy('id').toArray()).filter(entry => entry.userId === undefined || entry.userId === userId);
+	await accountReady;
+	if (!userId) return [];
+	return offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
+		const pending = (await offlineDb.pendingMutations.orderBy('id').toArray()).filter(entry => entry.userId === userId);
 		const effective: T[] = [];
 		for (const item of items) {
 			if (pending.some(entry => entry.type === 'delete_item' && entry.payload.id === item.id)) continue;
 			let merged = { ...item };
-			const cached = await offlineDb.items.get(item.id);
+			const cached = await offlineDb.accountItems.get([userId, item.id]) ?? await offlineDb.items.get(item.id);
 			// A GET begun before our write was acknowledged may finish after the
 			// queue entry is gone. Preserve the confirmed value in that one race.
-			if (cached?.localConfirmedAt !== undefined && cached.localConfirmedAt >= requestStartedAt) merged = { ...merged, ...cached };
+			if (cached && cachedForUser(cached, userId) && cached.localConfirmedAt !== undefined && cached.localConfirmedAt >= requestStartedAt) merged = { ...merged, ...cached };
 			for (const entry of pending) {
 				if (entry.type !== 'update_item' || entry.payload.id !== item.id) continue;
 				for (const key of ['name', 'quantityInfo', 'categoryOverride', 'isChecked', 'checkedAt'] as const) {
@@ -972,7 +1012,8 @@ export async function cacheItemsData<T extends OfflineItem>(items: T[], userId =
 					merged.checkedAt = entry.payload.isChecked ? Math.floor(entry.createdAt / 1000) : null;
 				}
 			}
-			await offlineDb.items.put(merged);
+			await offlineDb.items.put({ ...merged, cacheUserId: userId ?? undefined });
+			await offlineDb.accountItems.put({ ...merged, cacheUserId: userId });
 			effective.push(merged);
 		}
 		return effective;
@@ -980,36 +1021,49 @@ export async function cacheItemsData<T extends OfflineItem>(items: T[], userId =
 }
 
 export async function getOfflineItems(listId: string): Promise<OfflineItem[]> {
-	return offlineDb.items.where('listId').equals(listId).toArray();
+	const userId = activeUserId;
+	if (!userId) return [];
+	return scopedRows(() => offlineDb.accountItems.where('[cacheUserId+listId]').equals([userId, listId]).toArray(), userId);
 }
 
 export async function getOfflineListName(listId: string): Promise<string> {
-	const list = await offlineDb.lists.get(listId);
-	return list?.name ?? '';
+	await accountReady;
+	const list = activeUserId ? await offlineDb.accountLists.get([activeUserId, listId]) : undefined;
+	return list && cachedForUser(list, activeUserId) ? list.name : '';
 }
 
 export async function updateOfflineItem(id: string, changes: Partial<OfflineItem>) {
+	const userId = activeUserId;
 	await offlineDb.items.update(id, changes);
+	if (userId) await offlineDb.accountItems.update([userId, id], changes);
 }
 
 export async function deleteOfflineItem(id: string) {
+	const userId = activeUserId;
 	await offlineDb.items.delete(id);
+	if (userId) await offlineDb.accountItems.delete([userId, id]);
 }
 
 export async function updateOfflineList(id: string, changes: Partial<OfflineList>) {
+	const userId = activeUserId;
 	await offlineDb.lists.update(id, changes);
+	if (userId) await offlineDb.accountLists.update([userId, id], changes);
 }
 
 export async function deleteOfflineList(id: string) {
+	const userId = activeUserId;
 	await offlineDb.lists.delete(id);
+	if (userId) await offlineDb.accountLists.delete([userId, id]);
 }
 
 // ── Supplement-Cache ───────────────────────────────────────────────────────────
 
-export async function cacheSupplements(supplements: OfflineSupplement[]) {
+export async function cacheSupplements(supplements: OfflineSupplement[], userId = activeUserId) {
+	await accountReady;
+	if (!userId) return;
 	const rows = supplements.map(supplement => ({
 		...supplement,
-		...(activeUserId ? { userId: activeUserId } : {})
+		userId
 	}));
 	await offlineDb.supplements.bulkPut(rows);
 }
@@ -1054,9 +1108,9 @@ export async function getOfflineSupplements(): Promise<OfflineSupplement[]> {
 	return activeUserId ? rows.filter(row => row.userId === activeUserId) : [];
 }
 
-export async function cacheTodayLogs(logs: OfflineSupplementLog[], requestStartedAt = 0): Promise<OfflineSupplementLog[]> {
-	if (!activeUserId) return logs;
-	const userId = activeUserId;
+export async function cacheTodayLogs(logs: OfflineSupplementLog[], requestStartedAt = 0, userId = activeUserId): Promise<OfflineSupplementLog[]> {
+	if (!userId) return logs;
+	await accountReady;
 	const d = new Date();
 	d.setHours(0, 0, 0, 0);
 	const from = d.getTime();
@@ -1097,42 +1151,48 @@ export async function getOfflineTodayLogs(): Promise<OfflineSupplementLog[]> {
 
 // ── Rezept-Cache ───────────────────────────────────────────────────────────────
 
-export async function cacheRecipes(recipes: OfflineRecipe[]) {
-	await offlineDb.recipes.bulkPut(recipes);
+export async function cacheRecipes(recipes: OfflineRecipe[], userId = activeUserId) {
+	await accountReady;
+	if (userId) await offlineDb.recipes.bulkPut(recipes.map(row => ({ ...row, cacheUserId: userId })));
 }
 
 export async function getOfflineRecipes(): Promise<OfflineRecipe[]> {
-	return offlineDb.recipes.toArray();
+	return scopedRows(() => offlineDb.recipes.toArray());
 }
 
-export async function cacheRecipeDetail(detail: OfflineRecipeDetail) {
-	await offlineDb.recipeDetails.put(detail);
+export async function cacheRecipeDetail(detail: OfflineRecipeDetail, userId = activeUserId) {
+	await accountReady;
+	if (userId) await offlineDb.recipeDetails.put({ ...detail, cacheUserId: userId });
 }
 
 export async function getOfflineRecipeDetail(id: string): Promise<OfflineRecipeDetail | undefined> {
-	return offlineDb.recipeDetails.get(id);
+	await accountReady;
+	const row = await offlineDb.recipeDetails.get(id);
+	return row && cachedForUser(row, activeUserId) ? row : undefined;
 }
 
 // ── Wasser-Cache ───────────────────────────────────────────────────────────────
 
-export async function cacheWaterLogs(logs: OfflineWaterLog[]) {
-	await offlineDb.waterLogs.bulkPut(logs);
+export async function cacheWaterLogs(logs: OfflineWaterLog[], userId = activeUserId) {
+	await accountReady;
+	if (userId) await offlineDb.waterLogs.bulkPut(logs.map(row => ({ ...row, cacheUserId: userId })));
 }
 
 export async function getOfflineWaterLogsToday(): Promise<OfflineWaterLog[]> {
 	const d = new Date(); d.setHours(0, 0, 0, 0);
-	return offlineDb.waterLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray();
+	return scopedRows(() => offlineDb.waterLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray());
 }
 
 // ── Koffein-Cache ──────────────────────────────────────────────────────────────
 
-export async function cacheCaffeineLogs(logs: OfflineCaffeineLog[]) {
-	await offlineDb.caffeineLogs.bulkPut(logs);
+export async function cacheCaffeineLogs(logs: OfflineCaffeineLog[], userId = activeUserId) {
+	await accountReady;
+	if (userId) await offlineDb.caffeineLogs.bulkPut(logs.map(row => ({ ...row, cacheUserId: userId })));
 }
 
 export async function getOfflineCaffeineLogsToday(): Promise<OfflineCaffeineLog[]> {
 	const d = new Date(); d.setHours(0, 0, 0, 0);
-	return offlineDb.caffeineLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray();
+	return scopedRows(() => offlineDb.caffeineLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray());
 }
 
 // Koffein-Getränke-Katalog (admin-verwaltet, kein Pending-State) — voller Ersatz
@@ -1148,23 +1208,32 @@ export async function getOfflineCaffeineDrinks(): Promise<OfflineCaffeineDrink[]
 
 // ── Meditation-Cache ───────────────────────────────────────────────────────────
 
-export async function cacheMeditationLogs(logs: OfflineMeditationLog[]) {
-	await offlineDb.meditationLogs.bulkPut(logs);
+export async function cacheMeditationLogs(logs: OfflineMeditationLog[], userId = activeUserId) {
+	await accountReady;
+	if (userId) await offlineDb.meditationLogs.bulkPut(logs.map(row => ({ ...row, cacheUserId: userId })));
 }
 
 export async function getOfflineMeditationLogsToday(): Promise<OfflineMeditationLog[]> {
 	const d = new Date(); d.setHours(0, 0, 0, 0);
-	return offlineDb.meditationLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray();
+	return scopedRows(() => offlineDb.meditationLogs.where('loggedAt').between(d.getTime(), d.getTime() + 86_400_000 - 1, true, true).toArray());
 }
 
 export async function getOfflineMeditationLogsRange(from: number, to: number): Promise<OfflineMeditationLog[]> {
-	return offlineDb.meditationLogs.where('loggedAt').between(from, to, true, true).toArray();
+	return scopedRows(() => offlineDb.meditationLogs.where('loggedAt').between(from, to, true, true).toArray());
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 
 export function initSync(userId: string | null = null) {
 	activeUserId = userId;
+	setApiUserId(userId);
+	if (!accountMigrationStarted && typeof localStorage !== 'undefined') {
+		accountMigrationStarted = true;
+		let legacyOwner: string | null = null;
+		try { legacyOwner = localStorage.getItem('groly_settings_owner'); } catch { /* Storage may be unavailable. */ }
+		accountReady = migrateAccountCache(legacyOwner);
+		void accountReady.catch(error => console.error('Offline ownership migration failed', error));
+	}
 	if (typeof window === 'undefined') return;
 	void countActivePendingMutations().then(count => networkStore.setPending(count));
 	if (syncInitialized) {

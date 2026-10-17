@@ -21,7 +21,11 @@
 				},
 				{
 					title: 'Offline & sync',
-					text: 'You can keep working without an internet connection. Changes are saved on your device and synced automatically when you are back online.'
+					text: 'You can keep working without an internet connection. Changes are saved on your device and synced automatically when you are back online. Private offline data and pending changes stay assigned to your account when you switch accounts.'
+				},
+				{
+					title: 'Account security',
+					text: 'Changing your password signs out your other devices and invalidates old reset links. A password reset signs out all existing sessions. Signing out stops push notifications for that account on this device; they resume after you sign in again.'
 				},
 				{
 					title: 'Language',
@@ -143,7 +147,7 @@
 				},
 				{
 					title: 'Cook & shop',
-					text: 'Adjust the serving count, deselect ingredients you do not need, and use the cart to add the rest to a shopping list.'
+					text: 'All ingredients remain readable when cooking. Tap the shopping-bag button to select ingredients and a destination list, then confirm at the bottom. Your ingredient selection is remembered for each recipe, including after adding to a list. Unselected ingredients move below the selected ones the next time you open the dialog; rows stay in place while you change the selection. You can also create a new list in this dialog.'
 				},
 				{
 					title: 'Meal plan',
@@ -151,7 +155,7 @@
 				},
 				{
 					title: 'Organize & remember',
-					text: 'Use favorites, ratings, and tags to organize recipes. “Cooked today” updates the cooking history; long-press the Recipes tab to arrange recipes manually.'
+					text: 'Recipes share one card with favorites at the bottom. The overview shows ratings, total preparation and cooking time, and tags as a compact text line; descriptions remain in recipe details. Use favorites, ratings, and tags to organize recipes. “Cooked today” updates the cooking history; use the sort menu to change the recipe order.'
 				},
 				{
 					title: 'Offline recipes',
@@ -171,6 +175,10 @@
 				{
 					title: 'Offline & Synchronisation',
 					text: 'Du kannst ohne Internet weiterarbeiten. Änderungen bleiben auf deinem Gerät gespeichert und werden automatisch synchronisiert, sobald du wieder online bist.'
+				},
+				{
+					title: 'Kontosicherheit',
+					text: 'Ein Passwortwechsel meldet deine anderen Geräte ab und macht alte Zurücksetzungslinks ungültig. Beim Zurücksetzen des Passworts werden alle bisherigen Sitzungen abgemeldet. Nach dem Abmelden erhält dieses Gerät keine Push-Nachrichten mehr für das Konto; nach erneuter Anmeldung werden sie wieder aktiviert. Private Offline-Daten und ausstehende Änderungen bleiben deinem Konto zugeordnet.'
 				},
 				{
 					title: 'Sprache',
@@ -292,7 +300,7 @@
 				},
 				{
 					title: 'Kochen & einkaufen',
-					text: 'Passe die Portionenzahl an, wähle nicht benötigte Zutaten ab und übertrage den Rest über den Warenkorb in eine Einkaufsliste.'
+					text: 'Beim Kochen bleiben alle Zutaten lesbar. Über die Einkaufstasche wählst du Zutaten und die Ziel-Einkaufsliste aus und bestätigst unten. Die Zutatenauswahl wird pro Rezept gemerkt, auch nach dem Hinzufügen. Abgewählte Zutaten stehen beim nächsten Öffnen unter den ausgewählten; während der Auswahl bleiben die Zeilen an ihrem Platz. Im Dialog kannst du auch eine neue Liste anlegen.'
 				},
 				{
 					title: 'Wochenplan',
@@ -300,7 +308,7 @@
 				},
 				{
 					title: 'Ordnen & merken',
-					text: 'Organisiere Rezepte mit Favoriten, Bewertungen und Tags. „Heute gekocht“ aktualisiert den Kochverlauf; halte den Rezepte-Tab gedrückt, um Rezepte manuell zu sortieren.'
+					text: 'Rezepte stehen in einer gemeinsamen Karte mit Favoriten unten. Die Übersicht zeigt Bewertungen, die gesamte Vorbereitungs- und Kochzeit sowie Tags als kompakte Textzeile; Beschreibungen bleiben in den Rezeptdetails. Organisiere Rezepte mit Favoriten, Bewertungen und Tags. „Heute gekocht“ aktualisiert den Kochverlauf; über das Sortiermenü änderst du die Reihenfolge der Rezepte.'
 				},
 				{
 					title: 'Rezepte offline',

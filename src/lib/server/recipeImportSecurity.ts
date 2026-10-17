@@ -21,12 +21,13 @@ export function isPrivateIpAddress(rawAddress: string): boolean {
 			|| a >= 224;
 	}
 	if (isIP(address) === 6) {
-		return address === '::'
-			|| address === '::1'
-			|| address.startsWith('::ffff:')
-			|| /^f[cd]/.test(address)
-			|| /^fe[89ab]/.test(address)
-			|| /^ff/.test(address);
+		// Only global unicast. Exclude documentation and transition ranges whose
+		// embedded IPv4 address could route back into the operator's network.
+		return !/^[23][0-9a-f]{3}:/.test(address)
+			|| address.startsWith('2001:db8:')
+			|| address.startsWith('2001:0:')
+			|| address.startsWith('2001::')
+			|| address.startsWith('2002:');
 	}
 	return true;
 }
@@ -41,7 +42,7 @@ export function parsePublicRecipeUrl(raw: string): URL | null {
 	if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
 	if (parsed.username || parsed.password) return null;
 	const host = parsed.hostname.toLowerCase();
-	if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return null;
+	if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return null;
 	// Domain names are resolved below. Only pass literal IP addresses to the IP-range check.
 	const literalIp = host.replace(/^\[|\]$/g, '');
 	if (isIP(literalIp) !== 0 && isPrivateIpAddress(literalIp)) return null;
@@ -49,13 +50,21 @@ export function parsePublicRecipeUrl(raw: string): URL | null {
 }
 
 export async function validateResolvedRecipeUrl(raw: string): Promise<URL | null> {
+	return (await resolvePublicUrl(raw))?.url ?? null;
+}
+
+export async function resolvePublicUrl(raw: string): Promise<{ url: URL; addresses: Awaited<ReturnType<typeof resolveAddresses>> } | null> {
 	const parsed = parsePublicRecipeUrl(raw);
 	if (!parsed) return null;
 	try {
-		const addresses = await lookup(parsed.hostname, { all: true, verbatim: true });
+		const addresses = await resolveAddresses(parsed.hostname.replace(/^\[|\]$/g, ''));
 		if (addresses.length === 0 || addresses.some(({ address }) => isPrivateIpAddress(address))) return null;
+		return { url: parsed, addresses };
 	} catch {
 		return null;
 	}
-	return parsed;
+}
+
+function resolveAddresses(host: string) {
+	return lookup(host, { all: true, verbatim: true });
 }

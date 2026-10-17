@@ -65,7 +65,11 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await expect(page.getByText('Hafermilch', { exact: true })).toBeVisible();
 		await expect.poll(async () => (await rows(page, 'userSettings')).some(row => row.favorites?.some((fav: { name: string }) => fav.name === 'Äpfel'))).toBe(true);
 		await expect.poll(async () => (await rows(page, 'pendingMutations')).length).toBe(0);
-		desktop = await browser.newContext({ storageState: await context.storageState() });
+		// A separate client needs the session only. Let it load its own settings
+		// from the server, avoiding hidden origin-page navigation while WebKit
+		// applies an unrelated copy of the phone's localStorage.
+		desktop = await browser.newContext();
+		await desktop.addCookies(await context.cookies());
 		const desktopPage = await desktop.newPage();
 		await desktopPage.goto('http://127.0.0.1:3100/listen/upgrade-list');
 		await expect(desktopPage.getByText('Hafermilch', { exact: true })).toBeVisible();
@@ -101,6 +105,8 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await page.getByRole('button', { name: `${de.recipe_instructions} (1)`, exact: true }).click();
 		await expect(page.getByText('Gemüse anbraten.', { exact: true })).toBeVisible();
 		await page.getByRole('button', { name: de.a11y_back, exact: true }).click();
+		await expect(page.locator('[data-recipe-card]')).toHaveCount(1);
+		await expect(page.locator('[data-recipe-id="upgrade-recipe"] [data-recipe-meta]')).toHaveText('Familie');
 		await page.getByText('Uncached recipe', { exact: true }).click();
 		await expect(page.locator('[data-offline-unavailable]')).toContainText(de.offline_recipe_message);
 		await expect(page.getByRole('heading', { name: de.offline_recipe_title })).toBeVisible();

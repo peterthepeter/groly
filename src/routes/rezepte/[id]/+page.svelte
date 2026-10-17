@@ -10,7 +10,7 @@
 	import RecipeTrackSheet from '#lib/components/recipe/RecipeTrackSheet.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
 	import UnavailableView from '#lib/components/UnavailableView.svelte';
-	import { cacheRecipeDetail, getOfflineRecipeDetail } from '#lib/sync/manager';
+	import { cacheRecipeDetail, getOfflineRecipeDetail, fetchWithTimeout } from '#lib/sync/manager';
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { acquireWakeLock, releaseWakeLock } from '#lib/wakeLock';
 
@@ -28,6 +28,12 @@
 	let offlineUnavailable = $state(false);
 
 	let excludedIngredients = $state(new Set<string>());
+	let exclusionsSaving = $state(false);
+	let exclusionsLoading = $state(true);
+	let exclusionsLoaded = $state(false);
+	let exclusionsLoadError = $state(false);
+	let exclusionsSaveError = $state(false);
+	let pendingExclusions: { recipeId: string; excludedIds: string[] } | null = null;
 	let cookSaving = $state(false);
 
 	// Nutrition-Tracking
@@ -213,23 +219,49 @@
 	}
 
 	async function loadExclusions() {
+		exclusionsLoading = true;
+		exclusionsLoadError = false;
 		try {
-			const res = await fetch(`/api/recipes/${recipeId}/exclusions`);
-			if (res.ok) {
-				const data = await res.json();
-				excludedIngredients = new Set(data.excludedIds);
-			}
-		} catch {}
+			const res = await fetchWithTimeout(`/api/recipes/${recipeId}/exclusions`);
+			if (!res.ok) throw new Error('Selection unavailable');
+			const data = await res.json();
+			excludedIngredients = new Set(data.excludedIds);
+			exclusionsLoaded = true;
+		} catch {
+			exclusionsLoadError = true;
+		} finally {
+			exclusionsLoading = false;
+		}
 	}
 
 	async function saveExclusions(excluded: Set<string>) {
+		pendingExclusions = { recipeId, excludedIds: [...excluded] };
+		if (exclusionsSaving) return;
+		exclusionsSaving = true;
+		exclusionsSaveError = false;
 		try {
-			await fetch(`/api/recipes/${recipeId}/exclusions`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ excludedIds: [...excluded] })
-			});
-		} catch {}
+			// The endpoint replaces the full selection. Serialize writes and
+			// coalesce changes made while a previous request is in flight.
+			while (pendingExclusions) {
+				const next = pendingExclusions;
+				pendingExclusions = null;
+				try {
+					const response = await fetchWithTimeout(`/api/recipes/${next.recipeId}/exclusions`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ excludedIds: next.excludedIds })
+					});
+					if (!response.ok) throw new Error('Selection could not be saved');
+				} catch {
+					pendingExclusions ??= next;
+					throw new Error('Selection could not be saved');
+				}
+			}
+		} catch {
+			exclusionsSaveError = true;
+		} finally {
+			exclusionsSaving = false;
+		}
 	}
 
 	function toggleIngredient(id: string) {
@@ -247,6 +279,7 @@
 	const recipeId = $derived(page.params.id ?? '');
 
 	async function loadRecipe() {
+		const cacheUserId = page.data.user?.id ?? null;
 		loading = true;
 		offlineUnavailable = false;
 		isOfflineFallback = false;
@@ -257,9 +290,11 @@
 			recipe = data;
 			currentServings = data.servings;
 			originalServings = data.servings;
-			cacheRecipeDetail(data).catch(() => {});
+			cacheRecipeDetail(data, cacheUserId).catch(() => {});
 			await loadExclusions();
 		} catch {
+			exclusionsLoading = false;
+			exclusionsLoadError = true;
 			const cached = await getOfflineRecipeDetail(recipeId);
 			if (cached) {
 				recipe = cached as Recipe;
@@ -614,8 +649,7 @@
 						<!-- Shopping list (primary) -->
 						{#if recipe.ingredients.length > 0}
 							<button
-								onclick={() => listModalOpen = true}
-								disabled={selectedCount === 0}
+								onclick={(event) => { event.currentTarget.focus({ preventScroll: true }); listModalOpen = true; }}
 								aria-label={t.a11y_add_to_list}
 								class="flex items-center gap-1.5 px-2.5 h-8 rounded-full text-xs font-semibold active:opacity-70 disabled:opacity-40 active:scale-95 transition-transform"
 								style="background-color: var(--color-primary); color: var(--color-on-primary)"
@@ -698,53 +732,18 @@
 					{#if recipe.ingredients.length === 0}
 						<p class="text-sm text-center py-6" style="color: var(--color-on-surface-variant)">{t.recipe_no_ingredients}</p>
 					{:else}
-						{@const activeIngs = recipe.ingredients.filter(i => !excludedIngredients.has(i.id))}
-						{@const excludedIngs = recipe.ingredients.filter(i => excludedIngredients.has(i.id))}
-						{#snippet ingRow(ing: NonNullable<typeof recipe>['ingredients'][0], i: number)}
-							{@const excluded = excludedIngredients.has(ing.id)}
-							<!-- svelte-ignore a11y_click_events_have_key_events -->
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div
-								class="flex items-center gap-3 px-4 py-2.5 active:opacity-60 cursor-pointer"
-								onclick={() => toggleIngredient(ing.id)}
-							>
-								<div class="w-4.5 h-4.5 rounded-md flex items-center justify-center flex-shrink-0"
-								     style="background-color: {excluded ? 'transparent' : 'var(--color-primary)'}; border: 1.5px solid {excluded ? 'var(--color-outline)' : 'var(--color-primary)'}">
-									{#if !excluded}
-										<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-											<polyline points="20 6 9 17 4 12"/>
-										</svg>
+						<ul class="rounded-xl overflow-hidden" data-recipe-ingredients style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+							{#each recipe.ingredients as ing (ing.id)}
+								<li class="flex items-start gap-3 px-4 py-2.5">
+									{#if ing.amount || ing.unit}
+										<span class="text-sm font-semibold shrink-0 min-w-10 max-w-[35%] text-right break-words tabular-nums" style="color: var(--color-primary)">
+											{scaleAmount(ing.amount, currentServings, originalServings) ?? ''}{ing.unit ? '\u00a0' + ing.unit : ''}
+										</span>
 									{/if}
-								</div>
-								{#if ing.amount || ing.unit}
-									<span class="text-sm font-semibold flex-shrink-0 min-w-10 text-right"
-									      style="color: {excluded ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}">
-										{scaleAmount(ing.amount, currentServings, originalServings) ?? ''}{ing.unit ? '\u00a0' + ing.unit : ''}
-									</span>
-								{/if}
-								<span class="text-sm flex-1" style="color: {excluded ? 'var(--color-on-surface-variant)' : 'var(--color-on-surface)'}; text-decoration: {excluded ? 'line-through' : 'none'}">{ing.name}</span>
-							</div>
-						{/snippet}
-
-						<!-- Active ingredients -->
-						{#if activeIngs.length > 0}
-							<div class="rounded-xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-								{#each activeIngs as ing, i}
-									{@render ingRow(ing, i)}
-								{/each}
-							</div>
-						{/if}
-
-						<!-- Excluded ingredients -->
-						{#if excludedIngs.length > 0}
-							<div class="mt-3">
-<div class="rounded-xl overflow-hidden opacity-60" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-									{#each excludedIngs as ing, i}
-										{@render ingRow(ing, i)}
-									{/each}
-								</div>
-							</div>
-						{/if}
+									<span class="text-sm flex-1 min-w-0 break-words" style="color: var(--color-on-surface)">{ing.name}</span>
+								</li>
+							{/each}
+						</ul>
 					{/if}
 				{/if}
 
@@ -777,14 +776,20 @@
 
 {#if recipe}
 	<RecipeShareModal recipeId={recipeId} open={shareModalOpen} onClose={() => shareModalOpen = false} />
-	<RecipeAddToListModal
-		{recipe}
-		{excludedIngredients}
-		{currentServings}
-		{originalServings}
-		open={listModalOpen}
-		onClose={() => listModalOpen = false}
-	/>
+	{#if listModalOpen}
+		<RecipeAddToListModal
+			{recipe}
+			{excludedIngredients}
+			{currentServings}
+			{originalServings}
+			selectionSaving={exclusionsSaving || exclusionsLoading}
+			selectionUnavailable={!exclusionsLoaded}
+			selectionSaveError={exclusionsSaveError || exclusionsLoadError}
+			onToggleIngredient={toggleIngredient}
+			onRetrySelection={() => { if (exclusionsLoaded) void saveExclusions(excludedIngredients); else void loadExclusions(); }}
+			onClose={() => listModalOpen = false}
+		/>
+	{/if}
 {/if}
 
 <!-- Nutrition: Nährwerte zuordnen -->

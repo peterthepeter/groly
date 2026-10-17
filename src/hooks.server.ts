@@ -25,6 +25,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const isAuthRoute = path.startsWith('/login');
 	const isInviteRoute = path.startsWith('/invite/');
 	const isApiRoute = path.startsWith('/api');
+	const expectedUser = event.request.headers.get('x-groly-user');
+	if (isApiRoute && path !== '/api/auth/login' && expectedUser && expectedUser !== user?.id && !(path === '/api/auth/logout' && !user)) {
+		return Response.json({ error: 'Account changed; sign in again' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
+	}
 
 	if (!isApiRoute && !isAuthRoute && !isInviteRoute && !user) {
 		redirect(302, '/login');
@@ -46,6 +50,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		transformPageChunk: ({ html }) => html.replace('<html lang="de">', `<html lang="${locale}">`)
 	}));
 	applySecurityHeaders(response);
+	response.headers.set('X-Groly-User', user?.id ?? '');
 	// API-Antworten nie cachen: die URLs (z.B. /api/supplement-logs?from=…&to=…) sind
 	// über den Tag identisch. Ohne no-store beantwortet iOS Safari sie nach langem
 	// Standby aus dem eigenen HTTP-Cache statt neu zu laden → frisch geloggte Einträge

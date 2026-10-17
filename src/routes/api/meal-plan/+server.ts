@@ -35,7 +35,7 @@ export const GET: RequestHandler = async (event) => {
 			recipeServings: recipes.servings
 		})
 		.from(mealPlanEntries)
-		.leftJoin(recipes, eq(mealPlanEntries.recipeId, recipes.id))
+		.leftJoin(recipes, and(eq(mealPlanEntries.recipeId, recipes.id), eq(recipes.userId, user!.id)))
 		.where(
 			and(
 				eq(mealPlanEntries.userId, user!.id),
@@ -62,6 +62,9 @@ export const PUT: RequestHandler = async (event) => {
 
 		const hasContent = recipeId || (note && note.trim());
 		if (!hasContent) return Response.json({ error: 'content required' }, { status: 400 });
+		if (recipeId != null && (typeof recipeId !== 'string' || !db.select({ id: recipes.id }).from(recipes).where(and(eq(recipes.id, recipeId), eq(recipes.userId, user!.id))).get())) {
+			return Response.json({ error: 'Rezept nicht gefunden' }, { status: 404 });
+		}
 
 		const ts = dbNow();
 		const id = randomUUID();
@@ -126,7 +129,7 @@ export const POST: RequestHandler = async (event) => {
 			}
 		}
 
-		const recipeIds = [...recipeServingsMap.keys()];
+		let recipeIds = [...recipeServingsMap.keys()];
 
 		// Rezept-Standardportionen laden
 		const recipeDefaultServings = new Map<string, number>();
@@ -134,9 +137,10 @@ export const POST: RequestHandler = async (event) => {
 			const recipeRows = db
 				.select({ id: recipes.id, servings: recipes.servings })
 				.from(recipes)
-				.where(inArray(recipes.id, recipeIds))
+				.where(and(inArray(recipes.id, recipeIds), eq(recipes.userId, user!.id)))
 				.all();
 			for (const r of recipeRows) recipeDefaultServings.set(r.id, r.servings);
+			recipeIds = recipeRows.map(r => r.id);
 		}
 
 		// Ausgeschlossene Zutaten des Users laden

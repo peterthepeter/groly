@@ -17,6 +17,10 @@
 
 const GET_TIMEOUT_MS = 8000;
 let installed = false;
+let clientUserId: string | null = null;
+
+export function setApiUserId(userId: string | null) { clientUserId = userId; }
+export function getApiUserId() { return clientUserId; }
 
 export function installApiFetchTimeout(): void {
 	if (installed || typeof window === 'undefined') return;
@@ -25,9 +29,13 @@ export function installApiFetchTimeout(): void {
 	const nativeFetch = window.fetch.bind(window);
 
 	const wrapped = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+		if (!isSameOriginApi(input)) return nativeFetch(input, init);
+		const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+		if (clientUserId && !headers.has('X-Groly-User')) headers.set('X-Groly-User', clientUserId);
+		init = { ...init, headers };
 		const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
 		// Nur same-origin GET an /api/ ohne bereits gesetztes Signal absichern.
-		if (method !== 'GET' || init?.signal || !isSameOriginApi(input)) {
+		if (method !== 'GET' || init?.signal) {
 			return nativeFetch(input, init);
 		}
 		const ctrl = new AbortController();
