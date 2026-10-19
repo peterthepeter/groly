@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
-	import { currentLang } from '#lib/i18n.svelte';
+	import { currentLang, t } from '#lib/i18n.svelte';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -15,6 +15,7 @@
 			section: 'App & Basics',
 			svg: `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`,
 			items: [
+				{ title: t.icon_settings_title, text: t.icon_help, link: { href: '/einstellungen#app-icon', label: t.icon_settings_title } },
 				{
 					title: 'One-handed use',
 					text: 'Groly is designed for one-handed use. New items appear at the bottom and lists grow upward; navigation and sheets also open from the bottom.'
@@ -168,6 +169,7 @@
 			section: 'App & Grundlagen',
 			svg: `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`,
 			items: [
+				{ title: t.icon_settings_title, text: t.icon_help, link: { href: '/einstellungen#app-icon', label: t.icon_settings_title } },
 				{
 					title: 'Einhandbedienung',
 					text: 'Groly ist für die Bedienung mit einer Hand ausgelegt. Neue Items erscheinen unten und Listen wachsen nach oben; auch Navigation und Dialoge öffnen sich von unten.'

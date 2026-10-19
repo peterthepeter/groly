@@ -91,7 +91,7 @@ registerRoute(
 registerRoute(new NavigationRoute(async options => {
 	const userId = await account;
 	return userId ? accountStrategy(userId).handle(options) : fetch(options.request);
-}, { denylist: [/^\/api\//, /^\/(login|invite)(\/|$)/] }));
+}, { denylist: [/^\/api\//, /^\/(login|invite|install)(\/|$)/] }));
 
 // A home-page SSR document is not a generic app shell: serving it under a
 // recipe URL hydrates the wrong route and used to resolve CSS/JS incorrectly.

@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '1.0.0-beta.5',
+		de: [
+			'Dunkles App-Icon als Standard für neue Installationen.',
+			'Helles oder dunkles Icon in den Einstellungen auswählbar, mit Installationshinweisen für iOS und Android.'
+		],
+		en: [
+			'Dark app icon is now the default for new installations.',
+			'Choose a light or dark icon in settings, with installation instructions for iOS and Android.'
+		]
+	},
+	{
 		version: '1.0.0-beta.4',
 		de: ['Kontowechsel und Offline-Daten besser geschützt; Anmeldung und Rezeptimport abgesichert; Rezeptansicht und Einkaufsliste verbessert.'],
 		en: ['Improved account switching and offline data protection; hardened sign-in and recipe import; improved recipe views and shopping lists.']

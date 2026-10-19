@@ -5,6 +5,7 @@ import { init, startupStatus } from '#lib/server/startup';
 import { applySecurityHeaders } from '#lib/server/security';
 import { languageFromAcceptLanguage } from '#lib/language';
 import { withRequestLocale } from '#lib/server/requestLocale';
+import { APP_ICON_COOKIE, appIconAssets, isAppIcon, isIconInstallPage } from '#lib/appIcon';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const initialization = init();
@@ -15,6 +16,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 	try { await initialization; }
 	catch { return Response.json({ error: 'Startup unavailable; check container logs' }, { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '30' } }); }
+
+	// The installed start URL carries the variant even after a manual reinstall.
+	// This preference grants no access and is independent of account settings.
+	const startupIcon = event.url.pathname === '/' ? event.url.searchParams.get('app-icon') : null;
+	if (isAppIcon(startupIcon)) {
+		event.cookies.set(APP_ICON_COOKIE, startupIcon, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 * 5 });
+	}
+	const savedIcon = event.cookies.get(APP_ICON_COOKIE);
+	const icon = appIconAssets(isAppIcon(savedIcon) ? savedIcon : 'dark');
 
 	const sessionId = event.cookies.get('session');
 	const user = sessionId ? getSession(sessionId) : null;
@@ -30,7 +40,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return Response.json({ error: 'Account changed; sign in again' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
 	}
 
-	if (!isApiRoute && !isAuthRoute && !isInviteRoute && !user) {
+	if (!isApiRoute && !isAuthRoute && !isInviteRoute && !isIconInstallPage(path) && !user) {
 		redirect(302, '/login');
 	}
 
@@ -48,6 +58,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	} catch { /* Invalid legacy settings use the existing German default. */ }
 	const response = await withRequestLocale(locale, event.url.origin, () => resolve(event, {
 		transformPageChunk: ({ html }) => html.replace('<html lang="de">', `<html lang="${locale}">`)
+			.replace('__GROLY_TOUCH_ICON__', icon.touch)
+			.replace('__GROLY_ICON_MANIFEST__', isAppIcon(savedIcon) ? icon.manifest : '/manifest.webmanifest')
 	}));
 	applySecurityHeaders(response);
 	response.headers.set('X-Groly-User', user?.id ?? '');

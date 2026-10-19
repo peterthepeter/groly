@@ -5,6 +5,7 @@
 	import AppHeader from '#lib/components/AppHeader.svelte';
 	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
+	import AppIconSettings from '#lib/components/AppIconSettings.svelte';
 	import { t, currentLang, setLang } from '#lib/i18n.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { CATEGORY_LABELS } from '#lib/categories';
@@ -1569,6 +1570,8 @@
 					</div>
 				{/if}
 			</div>
+
+			<AppIconSettings />
 
 			<!-- Color scheme -->
 			<div>

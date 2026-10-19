@@ -1,0 +1,47 @@
+/* Minimalist / Refined: the existing Groly icon and flat, divided steps. */
+:root {
+	color-scheme: light dark;
+	--bg: #f8f9fa; --text: #2d3335; --muted: #5a6062;
+	--accent: #2e7d32; --on-accent: #fff; --line: #00000014; --control: #0000000b;
+	font-family: 'Manrope', sans-serif;
+	background: var(--bg); color: var(--text);
+}
+@media (prefers-color-scheme: dark) {
+	:root { --bg: #111513; --text: #e8e8e8; --muted: #9a9a9a; --accent: #81c784; --on-accent: #0f2010; --line: #ffffff12; --control: #ffffff0a; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+main { max-width: 430px; min-height: 100svh; margin: auto; padding: max(20px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 28px; }
+a { color: inherit; text-underline-offset: 4px; }
+.brand { font: 700 20px 'Plus Jakarta Sans', sans-serif; text-decoration: none; }
+nav { display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
+nav a { padding: 12px 0; }
+nav [aria-current] { color: var(--text); font-weight: 600; }
+.intro { margin-top: auto; }
+.preview { display: block; border-radius: 22%; }
+.variant { color: var(--accent); font-weight: 600; font-size: 13px; margin: 12px 0 6px; }
+h1 { font: 700 25px/1.25 'Plus Jakarta Sans', sans-serif; letter-spacing: -.6px; margin: 0 0 12px; }
+p { font-size: 13px; line-height: 1.65; color: var(--muted); margin: 0 0 16px; }
+button, input { font: inherit; }
+button { cursor: pointer; min-height: 44px; border: 0; color: var(--text); background: none; font-size: 14px; font-weight: 600; }
+button:active { opacity: .75; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.platforms { display: flex; border-bottom: 1px solid var(--line); margin-top: 4px; }
+.platforms button { flex: 1; border-bottom: 2px solid transparent; }
+.platforms [aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+ol { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+li { counter-increment: step; display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 13px; line-height: 1.65; padding: 14px 0; border-bottom: 1px solid var(--line); }
+li::before { content: counter(step, decimal-leading-zero); color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.account-note { margin-top: 14px; font-size: 12px; }
+footer { margin-top: 8px; }
+footer p { font-size: 12px; }
+label { display: block; font-size: 11px; color: var(--muted); margin: 10px 0 4px; }
+input { width: 100%; min-width: 0; padding: 8px 0; font-size: 16px; color: var(--text); border: 0; border-bottom: 1px solid var(--line); background: transparent; }
+.primary, .secondary { width: 100%; border-radius: 999px; padding: 10px 16px; }
+.primary { background: var(--accent); color: var(--on-accent); margin-bottom: 8px; }
+.secondary { background: var(--control); margin-top: 12px; }
+[role="status"]:empty { margin: 0; }
+[role="status"]:not(:empty) { margin: 8px 0; }
+.open-app { display: block; text-align: center; padding: 16px 0 0; font-size: 13px; }
