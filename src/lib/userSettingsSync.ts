@@ -1,3 +1,4 @@
+import { normalizeShortcuts } from '#lib/shortcutActions';
 import type { ListCategorySettings, UserSettings } from '#lib/userSettingsTypes';
 
 export type UserSettingsPatch = Partial<Omit<UserSettings, 'listCategorySettings'>> & {
@@ -22,6 +23,10 @@ export function sanitizeUserSettingsPatch(value: unknown): UserSettingsPatch | n
 	if (!isRecord(plainValue)) return null;
 	const patch = plainValue as UserSettingsPatch;
 	if (plainValue.listCategorySettings !== undefined && !isRecord(plainValue.listCategorySettings)) return null;
+	if (plainValue.shortcuts !== undefined) {
+		if (!Array.isArray(plainValue.shortcuts)) return null;
+		patch.shortcuts = normalizeShortcuts(plainValue.shortcuts);
+	}
 	return patch;
 }
 

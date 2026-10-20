@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import type { Shortcut, ShortcutAction } from '#lib/shortcuts.svelte';
+	import { executeShortcut, type Shortcut } from '#lib/shortcuts.svelte';
+	import ShortcutActionIcon from '#lib/components/ShortcutActionIcon.svelte';
 	import * as m from '#lib/paraglide/messages';
 
 	let { shortcuts, onClose }: { shortcuts: Shortcut[]; onClose: () => void } = $props();
@@ -16,24 +17,12 @@
 
 	function execute(sc: Shortcut) {
 		onClose();
-		if (sc.action === 'recipes') {
-			goto('/rezepte');
-			return;
-		}
-		if (sc.action === 'mealplan') {
-			goto('/rezepte?tab=mealplan');
-			return;
-		}
-		const params = sc.action !== 'go' ? `?action=${sc.action}` : '';
-		if (sc.action === 'add') {
-			(document.getElementById('ios-keyboard-bridge') as HTMLInputElement | null)?.focus();
-		}
-		goto(`/listen/${sc.listId}${params}`);
+		executeShortcut(sc);
 	}
 
 	function goToSettings() {
 		onClose();
-		goto('/einstellungen?expand=shortcuts');
+		goto('/einstellungen/schnellzugriff');
 	}
 </script>
 
@@ -77,7 +66,7 @@
 				       transform: translateY({offsets[i] ?? 0}px);
 				       animation-delay: {i * 40}ms"
 			>
-				{@render actionIcon(sc.action)}
+				<ShortcutActionIcon action={sc.action} color="var(--color-primary)" />
 				<span
 					class="text-xs font-semibold text-center leading-snug"
 					style="color: var(--color-on-surface); word-break: break-word; overflow-wrap: break-word; width: 100%"
@@ -86,42 +75,6 @@
 		{/each}
 	{/if}
 </div>
-
-{#snippet actionIcon(action: ShortcutAction)}
-	{#if action === 'scanner'}
-		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-			<path d="M3 9V6a2 2 0 0 1 2-2h2"/>
-			<path d="M3 15v3a2 2 0 0 0 2 2h2"/>
-			<path d="M21 9V6a2 2 0 0 0-2-2h-2"/>
-			<path d="M21 15v3a2 2 0 0 1-2 2h-2"/>
-			<line x1="10" y1="9" x2="10" y2="15"/>
-			<line x1="13" y1="9" x2="13" y2="15"/>
-			<line x1="16" y1="9" x2="16" y2="15"/>
-		</svg>
-	{:else if action === 'add'}
-		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" class="flex-shrink-0">
-			<line x1="12" y1="5" x2="12" y2="19"/>
-			<line x1="5" y1="12" x2="19" y2="12"/>
-		</svg>
-	{:else if action === 'recipes'}
-		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-			<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-			<path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-		</svg>
-	{:else if action === 'mealplan'}
-		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-			<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-			<line x1="16" y1="2" x2="16" y2="6"/>
-			<line x1="8" y1="2" x2="8" y2="6"/>
-			<line x1="3" y1="10" x2="21" y2="10"/>
-			<line x1="8" y1="14" x2="16" y2="14"/>
-		</svg>
-	{:else}
-		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-			<polyline points="9 18 15 12 9 6"/>
-		</svg>
-	{/if}
-{/snippet}
 
 <style>
 	.shortcut-btn {

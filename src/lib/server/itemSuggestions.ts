@@ -9,10 +9,13 @@ export function queryItemSuggestions(database: AppDatabase, userId: string, rawQ
 	const where = query
 		? and(
 			eq(itemHistory.userId, userId),
-			sql`instr(lower(${itemHistory.name}), ${query}) > 0`,
-			sql`lower(${itemHistory.name}) <> ${query}`
+			sql`instr(lower(${itemHistory.name}), ${query}) > 0`
 		)
 		: eq(itemHistory.userId, userId);
+
+	// Frequency matters most; a 30-day decay lets changing habits catch up.
+	const now = Math.floor(Date.now() / 1000);
+	const relevance = sql`${itemHistory.useCount} * 1.0 / (1 + max(0, ${now} - ${itemHistory.lastUsedAt}) / 2592000.0)`;
 
 	const rows = database
 		.select({ name: itemHistory.name })
@@ -21,12 +24,12 @@ export function queryItemSuggestions(database: AppDatabase, userId: string, rawQ
 		.orderBy(
 			...(query
 				? [
-					sql`CASE WHEN instr(lower(${itemHistory.name}), ${query}) = 1 THEN 0 ELSE 1 END`,
+					sql`CASE WHEN lower(${itemHistory.name}) = ${query} THEN 0 WHEN instr(lower(${itemHistory.name}), ${query}) = 1 THEN 1 ELSE 2 END`,
+					desc(relevance),
 					desc(itemHistory.lastUsedAt),
-					desc(itemHistory.useCount),
 					asc(itemHistory.name)
 				]
-				: [desc(itemHistory.lastUsedAt), desc(itemHistory.useCount), asc(itemHistory.name)])
+				: [desc(relevance), desc(itemHistory.lastUsedAt), asc(itemHistory.name)])
 		)
 		.limit(limit)
 		.all();

@@ -1,0 +1,1 @@
+ALTER TABLE `user_invites` ADD `token_value` text;

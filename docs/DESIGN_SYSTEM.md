@@ -85,6 +85,7 @@ Rules:
 - Days, time ranges, intervals, and actions should visually belong to one reminder card.
 - A nested background is allowed only when it represents a real interaction: selected option, footer action, inline editor, or transient overlay.
 - Prefer spacing and dividers over additional outlines.
+- List and recipe overview rows share `inset-row-divider`: a 1 px line using `--bubble-container-border`, inset 16 px on both sides. Show it only between entries within the same group and omit it after the last entry. In the recipe overview, the Favorites heading and 8 px of spacing separate the groups without an additional line.
 - Never use a rectangular background that ignores the rounded outer container; clip or round the first and last interactive cells appropriately.
 
 ## 5. Geometry and spacing

@@ -1,584 +1,317 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
+	import { ArrowLeft, ChevronRight, ListOrdered, MapPin, Users, Bell, LocateFixed, Map, Search, X, Trash2 } from '@lucide/svelte';
 	import { t, currentLang } from '#lib/i18n.svelte';
-	import IconPicker from '#lib/components/IconPicker.svelte';
+	import ManageSheetShell from '#lib/components/supplements/ManageSheetShell.svelte';
+	import CategoryOrderEditor from '#lib/components/CategoryOrderEditor.svelte';
+	import SettingsSelectRow from '#lib/components/SettingsSelectRow.svelte';
+	import SettingsToggleRow from '#lib/components/SettingsToggleRow.svelte';
 	import MapPickerSheet from '#lib/components/MapPickerSheet.svelte';
+	import { LIST_ICONS, getListIcon, getListIconLabel } from '#lib/listIcons';
 	import { userSettings } from '#lib/userSettings.svelte';
-	import { CATEGORY_LABELS, DEFAULT_CATEGORY_ORDER } from '#lib/categories';
+	import type { ListCategorySettings } from '#lib/userSettingsTypes';
 	import { watchVisualViewportBottomOffset } from '#lib/visualViewport';
 
-	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0 }: {
+	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0, suspended = false }: {
 		list?: { id: string; name: string; description: string | null; iconId?: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null } | null;
-		onSave: (name: string, description: string, iconId: string | null, shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null) => void;
+		onSave: (name: string, description: string, iconId: string | null, shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null) => void | Promise<void>;
 		onDelete?: (() => void) | null;
 		onShare?: (() => void) | null;
 		onClose: () => void;
 		memberCount?: number;
+		suspended?: boolean;
 	} = $props();
 
+	const id = $props.id();
+	// The component stays mounted while sharing; all list edits remain a local draft.
 	// svelte-ignore state_referenced_locally
 	let name = $state(list?.name ?? '');
 	// svelte-ignore state_referenced_locally
 	let description = $state(list?.description ?? '');
 	// svelte-ignore state_referenced_locally
-	let selectedIconId = $state<string | null>(list?.iconId ?? 'supermarkt');
-	let bottomOffset = $state(0);
-	let notificationsEnabled = $state(true);
-	let notifLoading = $state(false);
-	let shareAfterCreate = $state(false);
-	let categorySortOpen = $state(false);
-
-	// Location state
+	let selectedIconId = $state<string | null>(list ? list.iconId ?? null : 'supermarkt');
+	// svelte-ignore state_referenced_locally
+	let categorySettings = $state<ListCategorySettings | null>(initialCategorySettings(list?.id));
+	// svelte-ignore state_referenced_locally
+	let locationDisabled = $state(list?.id ? userSettings.isListLocationDisabled(list.id) : false);
 	// svelte-ignore state_referenced_locally
 	let locationLat = $state<number | null>(list?.locationLat ?? null);
 	// svelte-ignore state_referenced_locally
 	let locationLng = $state<number | null>(list?.locationLng ?? null);
 	// svelte-ignore state_referenced_locally
 	let locationName = $state<string | null>(list?.locationName ?? null);
+	let view = $state<'list' | 'categories' | 'location'>('list');
+	let bottomOffset = $state(0);
+	let saving = $state(false);
+	let saveError = $state('');
+	let shareAfterCreate = $state(false);
+	let notificationsEnabled = $state(true);
+	let originalNotifications = $state<boolean | null>(null);
+	let notificationsLoading = $state(false);
+	let notificationsError = $state(false);
+	let notificationRetry = $state(0);
 	let locationQuery = $state('');
-	let locationResults = $state<{ display_name: string; lat: string; lon: string }[]>([]);
+	type LocationResult = { display_name: string; lat: string; lon: string };
+	let locationResults = $state<LocationResult[]>([]);
 	let locationSearching = $state(false);
 	let locationError = $state('');
-	let locationOpen = $state(false);
-
-	const listLocationDisabled = $derived(list?.id ? userSettings.isListLocationDisabled(list.id) : false);
-
 	let locationGpsLoading = $state(false);
 	let mapPickerOpen = $state(false);
+	const selectedIcon = $derived(getListIcon(selectedIconId));
+	const iconOptions = $derived([{ value: 'standard', label: t.list_icon_standard }, ...LIST_ICONS.map(icon => ({ value: icon.id, label: getListIconLabel(icon, currentLang()) }))]);
+	const title = $derived(view === 'categories' ? t.settings_category_sorting : view === 'location' ? t.list_location : list ? t.list_edit_title : t.list_create_title);
 
-	function onMapConfirm(lat: number, lng: number, displayName: string) {
-		locationLat = lat;
-		locationLng = lng;
-		locationName = displayName;
-		locationResults = [];
-		locationQuery = '';
+	function initialCategorySettings(listId?: string): ListCategorySettings | null {
+		const settings = listId ? userSettings.getListCategorySettings(listId) : null;
+		return settings ? { enabled: settings.enabled, order: [...settings.order] } : null;
 	}
 
-	async function searchLocation() {
-		if (!locationQuery.trim()) return;
-		locationSearching = true;
-		locationError = '';
-		locationResults = [];
+	function toggleGlobalCategories() {
+		categorySettings = categorySettings ? null : { enabled: userSettings.categorySortEnabled, order: [...userSettings.categoryOrder] };
+	}
+
+	function close() { if (!saving) onClose(); }
+
+	async function save() {
+		if (!name.trim() || saving) return;
+		saving = true;
+		saveError = '';
 		try {
-			const res = await fetch(`/api/geocode?q=${encodeURIComponent(locationQuery.trim())}`);
-			const data = await res.json();
-			if (Array.isArray(data)) {
-				locationResults = data.slice(0, 5);
-			} else {
-				locationError = currentLang() === 'en' ? 'No results found.' : 'Keine Ergebnisse gefunden.';
+			if (list && originalNotifications !== null && notificationsEnabled !== originalNotifications) {
+				const response = await fetch(`/api/lists/${list.id}/notifications`, {
+					method: 'PUT', headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ enabled: notificationsEnabled })
+				});
+				if (!response.ok) throw new Error();
+				originalNotifications = notificationsEnabled;
 			}
+			// Persist only fields changed in this draft; do not overwrite settings synced elsewhere.
+			if (list) {
+				const original = initialCategory;
+				if (JSON.stringify(categorySettings) !== JSON.stringify(original)) {
+					if (categorySettings) userSettings.setListCategorySettings(list.id, { enabled: categorySettings.enabled, order: [...categorySettings.order] });
+					else userSettings.clearListCategorySettings(list.id);
+				}
+				if (locationDisabled !== initialLocationDisabled) userSettings.setListLocationDisabled(list.id, locationDisabled);
+			}
+			await onSave(name.trim(), description.trim(), selectedIconId, shareAfterCreate, locationLat, locationLng, locationName);
 		} catch {
-			locationError = currentLang() === 'en' ? 'Search failed.' : 'Suche fehlgeschlagen.';
+			saveError = t.list_save_error;
+		} finally {
+			saving = false;
 		}
-		locationSearching = false;
 	}
+	// Snapshot baselines independently of the mutable draft.
+	// svelte-ignore state_referenced_locally
+	const initialCategory = initialCategorySettings(list?.id);
+	// svelte-ignore state_referenced_locally
+	const initialLocationDisabled = list?.id ? userSettings.isListLocationDisabled(list.id) : false;
 
-	async function useCurrentLocation() {
-		if (!('geolocation' in navigator)) {
-			locationError = currentLang() === 'en' ? 'Geolocation not supported.' : 'Standort nicht verfügbar.';
-			return;
-		}
-		locationGpsLoading = true;
-		locationError = '';
-		navigator.geolocation.getCurrentPosition(async (pos) => {
-			const { latitude, longitude } = pos.coords;
-			try {
-				const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
-				const data = await res.json();
-				locationLat = latitude;
-				locationLng = longitude;
-				locationName = data.display_name ?? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-				locationResults = [];
-			} catch {
-				locationLat = latitude;
-				locationLng = longitude;
-				locationName = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-			}
-			locationGpsLoading = false;
-		}, () => {
-			locationError = currentLang() === 'en' ? 'Location access denied.' : 'Standortzugriff verweigert.';
-			locationGpsLoading = false;
-		}, { timeout: 8000, maximumAge: 30000 });
-	}
-
-	function selectLocation(result: { display_name: string; lat: string; lon: string }) {
-		locationLat = parseFloat(result.lat);
-		locationLng = parseFloat(result.lon);
-		locationName = result.display_name;
-		locationResults = [];
-		locationQuery = '';
-	}
-
-	function clearLocation() {
-		locationLat = null;
-		locationLng = null;
-		locationName = null;
-		locationResults = [];
-		locationQuery = '';
-	}
-
-	function toggleListLocationDisabled() {
-		if (!list?.id) return;
-		userSettings.setListLocationDisabled(list.id, !listLocationDisabled);
-	}
-
-	const listCatSettings = $derived(list?.id ? userSettings.getListCategorySettings(list.id) : null);
-
-	function enableCustomSort() {
-		if (!list?.id) return;
-		userSettings.setListCategorySettings(list.id, {
-			enabled: userSettings.categorySortEnabled,
-			order: [...userSettings.categoryOrder]
-		});
-	}
-
-	function resetToGlobal() {
-		if (!list?.id) return;
-		userSettings.clearListCategorySettings(list.id);
-	}
-
-	function toggleListSortEnabled() {
-		if (!list?.id || !listCatSettings) return;
-		userSettings.setListCategorySettings(list.id, { ...listCatSettings, enabled: !listCatSettings.enabled });
-	}
-
-	// Notification-Präferenz laden wenn Liste besteht und geteilt ist
 	$effect(() => {
-		if (list?.id && memberCount > 0) {
-			fetch(`/api/lists/${list.id}/notifications`)
-				.then(r => r.json())
-				.then(d => { notificationsEnabled = d.enabled ?? true; })
-				.catch(() => {});
-		}
+		void notificationRetry;
+		if (!list?.id || memberCount === 0 || untrack(() => originalNotifications) !== null) return;
+		const controller = new AbortController();
+		notificationsLoading = true;
+		notificationsError = false;
+		fetch(`/api/lists/${list.id}/notifications`, { signal: controller.signal })
+			.then(async response => {
+				if (!response.ok) throw new Error();
+				const data = await response.json();
+				if (typeof data.enabled !== 'boolean') throw new Error();
+				if (!controller.signal.aborted) {
+					notificationsEnabled = data.enabled;
+					originalNotifications = data.enabled;
+				}
+			})
+			.catch(() => { if (!controller.signal.aborted) notificationsError = true; })
+			.finally(() => { if (!controller.signal.aborted) notificationsLoading = false; });
+		return () => controller.abort();
 	});
 
-	async function toggleNotifications() {
-		if (!list?.id || notifLoading) return;
-		notifLoading = true;
-		const next = !notificationsEnabled;
-		await fetch(`/api/lists/${list.id}/notifications`, {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ enabled: next })
-		}).catch(() => {});
-		notificationsEnabled = next;
-		notifLoading = false;
+	function selectLocation(result: LocationResult) {
+		onMapConfirm(Number(result.lat), Number(result.lon), result.display_name);
+	}
+	function onMapConfirm(lat: number, lng: number, displayName: string) {
+		locationLat = lat; locationLng = lng; locationName = displayName;
+		locationResults = []; locationQuery = ''; locationError = '';
+	}
+	function clearLocation() {
+		locationLat = null; locationLng = null; locationName = null;
+		locationResults = []; locationQuery = ''; locationError = '';
+	}
+	async function searchLocation() {
+		if (!locationQuery.trim() || locationSearching) return;
+		locationSearching = true; locationError = ''; locationResults = [];
+		try {
+			const response = await fetch(`/api/geocode?q=${encodeURIComponent(locationQuery.trim())}`);
+			if (!response.ok) throw new Error();
+			const data = await response.json();
+			if (!Array.isArray(data) || data.length === 0) locationError = t.list_location_no_results;
+			else locationResults = data.slice(0, 5);
+		} catch { locationError = t.list_location_search_error; }
+		finally { locationSearching = false; }
+	}
+	function useCurrentLocation() {
+		if (!('geolocation' in navigator)) { locationError = t.list_location_unavailable; return; }
+		locationGpsLoading = true; locationError = '';
+		navigator.geolocation.getCurrentPosition(async ({ coords: { latitude, longitude } }) => {
+			let displayName = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+			try {
+				const response = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+				if (response.ok) displayName = (await response.json()).display_name ?? displayName;
+			} catch { /* Coordinates remain usable if reverse geocoding is unavailable. */ }
+			onMapConfirm(latitude, longitude, displayName);
+			locationGpsLoading = false;
+		}, () => { locationError = t.list_location_denied; locationGpsLoading = false; }, { timeout: 8000, maximumAge: 30000 });
 	}
 
-	onMount(() => {
-		return watchVisualViewportBottomOffset((offset) => {
-			bottomOffset = offset;
-		});
-	});
-
+	onMount(() => watchVisualViewportBottomOffset(offset => { bottomOffset = offset; }));
 </script>
 
-<!-- Backdrop -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)"
-     onclick={onClose}></div>
+{#snippet iconPreview(iconId: string | null)}
+	{@const icon = getListIcon(iconId)}
+	{#if icon}
+		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={icon.color} stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{@html icon.svgContent}</svg>
+	{:else}
+		<span class="initial-preview" aria-hidden="true">{name[0]?.toUpperCase() || '?'}</span>
+	{/if}
+{/snippet}
 
-<!-- Modal -->
-<div class="fixed left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-4 pt-3"
-     style="background-color: var(--modal-bg); bottom: {bottomOffset}px">
-	<div class="flex justify-center mb-2">
-		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
-	</div>
-
-	<div class="flex items-center justify-between mb-3">
-		<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{list ? t.list_edit_title : t.list_create_title}</h2>
-		{#if list && onShare}
-			<button
-				onclick={onShare}
-				class="p-2 rounded-xl active:opacity-60"
-				style="color: var(--color-primary)"
-				aria-label={t.a11y_share_list}
-			>
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-					<circle cx="9" cy="7" r="4"/>
-					<line x1="19" y1="8" x2="19" y2="14"/>
-					<line x1="22" y1="11" x2="16" y2="11"/>
-				</svg>
-			</button>
-		{/if}
-	</div>
-
-	<div class="space-y-2 mb-2">
-		<!-- Optionen-Bubble: Share/Notif + Category Sort (edit) + Icon-Picker -->
-		<div class="rounded-2xl overflow-visible" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-			{#if !list}
-				<button
-					type="button"
-					onclick={() => shareAfterCreate = !shareAfterCreate}
-					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
-					style="height: 44px"
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-					     stroke={shareAfterCreate ? 'var(--color-primary)' : 'var(--color-outline)'}
-					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-						<polyline points="16 6 12 2 8 6"/>
-						<line x1="12" y1="2" x2="12" y2="15"/>
-					</svg>
-					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
-						{currentLang() === 'en' ? 'Share after creating' : 'Nach Erstellen teilen'}
-					</span>
-					<div class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-					     style="background-color: {shareAfterCreate ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
-						{#if shareAfterCreate}
-							<span class="absolute top-0.5 h-4 w-4 rounded-full"
-							      style="background-color: white; transform: translateX(1.25rem)"></span>
-						{/if}
-					</div>
-				</button>
+{#if !suspended && !mapPickerOpen}
+	<ManageSheetShell accent="var(--color-primary)" {title} onclose={close} bottom={`${bottomOffset}px`} maxHeight={`min(90dvh, calc(100dvh - ${bottomOffset}px))`}>
+		{#snippet headerActions()}
+			{#if view === 'list' && list && onDelete}
+				<button type="button" class="list-header-delete" aria-label={t.list_delete} title={t.list_delete} disabled={saving} onclick={() => { if (confirm(t.confirm_delete_list)) { onDelete?.(); onClose(); } }}><Trash2 size={18} aria-hidden="true" /></button>
 			{/if}
-
-			{#if list && memberCount > 0}
-				<button
-					type="button"
-					onclick={toggleNotifications}
-					disabled={notifLoading}
-					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
-					style="height: 44px"
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-					     stroke={notificationsEnabled ? 'var(--color-primary)' : 'var(--color-outline)'}
-					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						{#if notificationsEnabled}
-							<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-							<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-						{:else}
-							<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-							<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-							<line x1="1" y1="1" x2="23" y2="23"/>
-						{/if}
-					</svg>
-					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
-						{currentLang() === 'en' ? 'Notifications' : 'Benachrichtigungen'}
-					</span>
-					<span class="text-xs font-medium" style="color: {notificationsEnabled ? 'var(--color-primary)' : 'var(--color-outline)'}">
-						{notificationsEnabled ? (currentLang() === 'en' ? 'On' : 'An') : (currentLang() === 'en' ? 'Off' : 'Aus')}
-					</span>
-				</button>
-			{/if}
-
-			{#if list}
-				<button
-					type="button"
-					onclick={() => categorySortOpen = !categorySortOpen}
-					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
-					style="height: 44px"
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-					     stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-						<line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
-						<line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-					</svg>
-					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
-						{currentLang() === 'en' ? 'Category sorting' : 'Kategorien sortieren'}
-					</span>
-					<span class="text-xs font-medium mr-1" style="color: {listCatSettings ? 'var(--color-primary)' : 'var(--color-outline)'}">
-						{listCatSettings ? (currentLang() === 'en' ? 'Custom' : 'Angepasst') : (currentLang() === 'en' ? 'Automatic' : 'Automatisch')}
-					</span>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
-					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({categorySortOpen ? 180 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="6 9 12 15 18 9"/>
-					</svg>
-				</button>
-				{#if categorySortOpen}
-					<div class="px-4 pb-3 pt-1">
-						{#if !listCatSettings}
-							<p class="text-xs mb-3" style="color: var(--color-on-surface-variant)">
-								{currentLang() === 'en' ? 'Uses the global setting from preferences.' : 'Verwendet die globale Einstellung aus den Einstellungen.'}
-							</p>
-							<button type="button" onclick={enableCustomSort}
-								class="w-full py-2.5 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity"
-								style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
-								{currentLang() === 'en' ? 'Customise for this list' : 'Für diese Liste anpassen'}
-							</button>
-						{:else}
-							<button type="button" onclick={toggleListSortEnabled}
-								class="w-full flex items-center gap-3 mb-3 active:opacity-70 transition-opacity">
-								<span class="flex-1 text-xs text-left" style="color: var(--color-on-surface-variant)">
-									{currentLang() === 'en' ? 'Sort by category' : 'Nach Kategorie sortieren'}
-								</span>
-								<div class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
-								     style="background-color: {listCatSettings.enabled ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
-									<div class="absolute top-0.5 w-5 h-5 rounded-full transition-transform shadow-sm"
-									     style="background-color: white; left: {listCatSettings.enabled ? '1.25rem' : '0.125rem'}"></div>
-								</div>
-							</button>
-							{#if listCatSettings.enabled}
-								<p class="text-xs mb-2" style="color: var(--color-on-surface-variant)">
-									{currentLang() === 'en' ? 'First category appears at the bottom of the grid.' : 'Erste Kategorie erscheint unten im Raster.'}
-								</p>
-								<div class="space-y-1 mb-3 overflow-y-auto" style="max-height: 220px">
-									{#each listCatSettings.order as key, i}
-										<div class="flex items-center gap-2 rounded-xl px-3 py-2" style="background-color: var(--color-surface-low)">
-											<span class="flex-1 text-xs font-medium" style="color: var(--color-on-surface)">
-												{i + 1}. {CATEGORY_LABELS[key]?.[currentLang()] ?? key}
-											</span>
-											<button type="button" onclick={() => list && userSettings.moveListCategoryUp(list.id, i)}
-												disabled={i === 0} aria-label={t.a11y_move_up} class="p-1 rounded-lg disabled:opacity-20" style="color: var(--color-on-surface-variant)">
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-											</button>
-											<button type="button" onclick={() => list && userSettings.moveListCategoryDown(list.id, i)}
-												disabled={i === listCatSettings.order.length - 1} aria-label={t.a11y_move_down} class="p-1 rounded-lg disabled:opacity-20" style="color: var(--color-on-surface-variant)">
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-											</button>
-										</div>
-									{/each}
-								</div>
-							{/if}
-							<button type="button" onclick={resetToGlobal}
-								class="w-full py-2 rounded-xl text-xs font-medium active:opacity-70 transition-opacity"
-								style="background-color: color-mix(in srgb, var(--color-outline) 12%, transparent); color: var(--color-on-surface-variant)">
-								{currentLang() === 'en' ? 'Reset to global setting' : 'Auf globale Einstellung zurücksetzen'}
-							</button>
-						{/if}
-					</div>
-				{/if}
-			{/if}
-
-			<IconPicker {selectedIconId} {name} onSelect={(id) => selectedIconId = id} flat />
-		</div>
-
-		<!-- Standorterkennung -->
-		{#if userSettings.locationNavEnabled}
-			<div class="rounded-xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-				<!-- Header -->
-				<button
-					type="button"
-					onclick={() => locationOpen = !locationOpen}
-					class="w-full flex items-center gap-3 px-4 active:opacity-70 transition-opacity"
-					style="height: 52px"
-				>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-					     stroke={locationLat !== null ? 'var(--color-primary)' : 'var(--color-outline)'}
-					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-						<circle cx="12" cy="10" r="3"/>
-					</svg>
-					<span class="flex-1 text-sm text-left" style="color: var(--color-on-surface)">
-						{currentLang() === 'en' ? 'Location' : 'Standort'}
-					</span>
-					<span class="text-xs font-medium mr-1"
-					      style="color: var(--color-primary)">
-						{locationLat !== null
-							? (currentLang() === 'en' ? 'Set' : 'Gesetzt')
-							: (currentLang() === 'en' ? 'Set up' : 'Einrichten')}
-					</span>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
-					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({locationOpen ? 180 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="6 9 12 15 18 9"/>
-					</svg>
-				</button>
-
-				{#if locationOpen}
-					<div class="px-4 pb-4">
-						<!-- Current location display -->
-						{#if locationLat !== null && locationName}
-							<div class="rounded-xl px-3 py-2.5 mb-3 flex items-start gap-2"
-							     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent)">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-								     stroke="var(--color-primary)" stroke-width="2"
-								     stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0 mt-0.5">
-									<polyline points="20 6 9 17 4 12"/>
-								</svg>
-								<span class="text-xs leading-relaxed flex-1"
-								      style="color: var(--color-primary)">{locationName}</span>
-								<button type="button" onclick={clearLocation} aria-label={t.a11y_remove_location}
-								        class="flex-shrink-0 p-0.5 rounded active:opacity-60"
-								        style="color: var(--color-outline)">
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-									     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<line x1="18" y1="6" x2="6" y2="18"/>
-										<line x1="6" y1="6" x2="18" y2="18"/>
-									</svg>
-								</button>
-							</div>
-						{:else if locationLat !== null}
-							<div class="rounded-xl px-3 py-2 mb-3 flex items-center justify-between"
-							     style="background-color: color-mix(in srgb, var(--color-primary) 10%, transparent)">
-								<span class="text-xs" style="color: var(--color-primary)">
-									{locationLat.toFixed(4)}, {locationLng?.toFixed(4)}
-								</span>
-								<button type="button" onclick={clearLocation} aria-label={t.a11y_remove_location}
-								        class="p-0.5 rounded active:opacity-60" style="color: var(--color-outline)">
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-									     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<line x1="18" y1="6" x2="6" y2="18"/>
-										<line x1="6" y1="6" x2="18" y2="18"/>
-									</svg>
-								</button>
-							</div>
-						{/if}
-
-						<!-- Search input -->
-						<div class="flex gap-2 mb-2">
-							<div class="flex-1 rounded-xl px-3 flex items-center"
-							     style="background-color: var(--color-surface-low); height: 40px">
-								<input
-									type="text"
-									placeholder={currentLang() === 'en' ? 'Search address…' : 'Adresse suchen…'}
-									bind:value={locationQuery}
-									onkeydown={(e) => e.key === 'Enter' && searchLocation()}
-									class="w-full bg-transparent outline-none text-xs"
-									style="color: var(--color-on-surface); font-size: 16px"
-								/>
-							</div>
-							<button
-								type="button"
-								onclick={searchLocation}
-								disabled={locationSearching || !locationQuery.trim()}
-								class="px-3 rounded-xl text-xs font-semibold disabled:opacity-40 transition-opacity active:opacity-70"
-								style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary); height: 40px; white-space: nowrap"
-							>
-								{locationSearching ? '…' : (currentLang() === 'en' ? 'Search' : 'Suchen')}
-							</button>
-							<!-- GPS Button -->
-							<button
-								type="button"
-								onclick={useCurrentLocation}
-								disabled={locationGpsLoading}
-								aria-label={currentLang() === 'en' ? 'Use current location' : 'Aktuellen Standort verwenden'}
-								class="rounded-xl flex items-center justify-center disabled:opacity-40 transition-opacity active:opacity-70 flex-shrink-0"
-								style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary); width: 40px; height: 40px"
-							>
-								{#if locationGpsLoading}
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite">
-										<path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-									</svg>
-								{:else}
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<circle cx="12" cy="12" r="3"/>
-										<line x1="12" y1="2" x2="12" y2="5"/>
-										<line x1="12" y1="19" x2="12" y2="22"/>
-										<line x1="2" y1="12" x2="5" y2="12"/>
-										<line x1="19" y1="12" x2="22" y2="12"/>
-									</svg>
-								{/if}
-							</button>
-
-							<!-- Map picker button -->
-							<button
-								type="button"
-								onclick={() => mapPickerOpen = true}
-								aria-label={t.map_pick_on_map}
-								class="rounded-xl flex items-center justify-center transition-opacity active:opacity-70 flex-shrink-0"
-								style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary); width: 40px; height: 40px"
-							>
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-									<line x1="9" y1="3" x2="9" y2="18"/>
-									<line x1="15" y1="6" x2="15" y2="21"/>
-								</svg>
-							</button>
+		{/snippet}
+		{#snippet body()}
+			<fieldset class="list-editor" disabled={saving} aria-busy={saving}>
+				{#if view === 'list'}
+					<div class="manage-settings-surface list-surface">
+						<label class="manage-settings-row list-field" for={`${id}-name`}>
+							<span class="manage-label">{t.list_name_label}</span>
+							<input id={`${id}-name`} class="manage-settings-input" type="text" bind:value={name} placeholder={t.list_name_label} disabled={saving} />
+						</label>
+						<label class="manage-settings-row list-field" for={`${id}-description`}>
+							<span class="manage-label">{t.list_description_label}</span>
+							<input id={`${id}-description`} class="manage-settings-input" type="text" bind:value={description} placeholder={t.list_optional} disabled={saving} />
+						</label>
+						<div class="list-flat-row">
+							<SettingsSelectRow label={t.list_icon} value={selectedIconId ?? 'standard'} options={iconOptions} onchange={value => { selectedIconId = value === 'standard' ? null : value; }}>
+								{#snippet preview()}{@render iconPreview(selectedIcon?.id ?? null)}{/snippet}
+								{#snippet optionPreview(value)}{@render iconPreview(value === 'standard' ? null : value)}{/snippet}
+							</SettingsSelectRow>
 						</div>
-
-						<!-- Error -->
-						{#if locationError}
-							<p class="text-xs mb-2" style="color: var(--color-error)">{locationError}</p>
-						{/if}
-
-						<!-- Results -->
-						{#if locationResults.length > 0}
-							<div class="space-y-1 mb-2">
-								{#each locationResults as result}
-									<button
-										type="button"
-										onclick={() => selectLocation(result)}
-										class="w-full text-left rounded-xl px-3 py-2.5 active:opacity-70 transition-opacity"
-										style="background-color: var(--color-surface-low)"
-									>
-										<span class="text-xs leading-relaxed line-clamp-2"
-										      style="color: var(--color-on-surface)">{result.display_name}</span>
-									</button>
-								{/each}
-							</div>
-						{/if}
-
-						<!-- Auto-open toggle (only when coords set and editing existing list) -->
-						{#if locationLat !== null && list}
-							<button
-								type="button"
-								onclick={toggleListLocationDisabled}
-								class="w-full flex items-center gap-3 mt-2 active:opacity-70 transition-opacity"
-							>
-								<span class="flex-1 text-xs text-left" style="color: var(--color-on-surface-variant)">
-									{currentLang() === 'en' ? 'Auto-open this list' : 'Liste automatisch öffnen'}
-								</span>
-								<div class="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
-								     style="background-color: {!listLocationDisabled ? 'var(--color-primary)' : 'var(--color-surface-high)'}">
-									<div class="absolute top-0.5 w-5 h-5 rounded-full transition-transform shadow-sm"
-									     style="background-color: white; left: {!listLocationDisabled ? '1.25rem' : '0.125rem'}"></div>
-								</div>
+						{#if list}
+							<button type="button" class="list-row" disabled={saving} onclick={() => view = 'categories'}>
+								<ListOrdered size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.settings_category_sorting}</span>
+								<span class="row-value" class:custom={categorySettings !== null}>{categorySettings ? t.list_sort_custom : t.list_sort_global}</span><ChevronRight size={16} aria-hidden="true" />
 							</button>
 						{/if}
+						{#if userSettings.locationNavEnabled}
+							<button type="button" class="list-row" disabled={saving} onclick={() => view = 'location'}>
+								<MapPin size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.list_location}</span>
+								<span class="row-value">{locationLat !== null ? locationName || `${locationLat.toFixed(4)}, ${locationLng?.toFixed(4)}` : t.list_location_setup}</span><ChevronRight size={16} aria-hidden="true" />
+							</button>
+						{/if}
+						{#if list && onShare}
+							<button type="button" class="list-row" disabled={saving} onclick={onShare}>
+								<Users size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.list_share_members}</span>
+								<span class="row-value">{memberCount > 0 ? memberCount : t.list_share_invite}</span><ChevronRight size={16} aria-hidden="true" />
+							</button>
+						{:else if !list}
+							<div class="list-flat-row"><SettingsToggleRow label={t.list_share_after_create} checked={shareAfterCreate} onchange={() => shareAfterCreate = !shareAfterCreate} disabled={saving}>
+								{#snippet icon()}<Users size={18} aria-hidden="true" />{/snippet}
+							</SettingsToggleRow></div>
+						{/if}
+						{#if list && memberCount > 0}
+							<div class="list-flat-row"><SettingsToggleRow label={t.list_notifications} checked={notificationsEnabled} onchange={() => notificationsEnabled = !notificationsEnabled} disabled={saving || notificationsLoading || originalNotifications === null}>
+								{#snippet icon()}<Bell size={18} aria-hidden="true" />{/snippet}
+							</SettingsToggleRow>
+							{#if notificationsError}<button type="button" class="list-retry" onclick={() => notificationRetry += 1}>{t.list_notifications_retry}</button>{/if}
+							</div>
+						{/if}
+					</div>
+				{:else if view === 'categories'}
+					<div class="manage-settings-surface list-surface">
+						<SettingsToggleRow label={t.list_sort_use_global} description={t.list_sort_global_hint} checked={categorySettings === null} onchange={toggleGlobalCategories} />
+						{#if categorySettings}
+							<div class="list-flat-row"><SettingsToggleRow label={t.list_sort_enabled} checked={categorySettings.enabled} onchange={() => { if (categorySettings) categorySettings.enabled = !categorySettings.enabled; }} /></div>
+							{#if categorySettings.enabled}
+								<div class="list-flat-row category-editor"><CategoryOrderEditor order={categorySettings.order} onchange={order => { if (categorySettings) categorySettings.order = order; }} /></div>
+							{/if}
+						{:else}
+							<p class="list-hint">{t.list_sort_global_hint}</p>
+						{/if}
+					</div>
+				{:else}
+					<div class="manage-settings-surface list-surface">
+						{#if locationLat !== null}
+							<div class="list-location-value"><MapPin size={18} aria-hidden="true" /><span>{locationName || `${locationLat.toFixed(4)}, ${locationLng?.toFixed(4)}`}</span><button type="button" aria-label={t.a11y_remove_location} onclick={clearLocation}><X size={18} aria-hidden="true" /></button></div>
+						{/if}
+						<form class="location-search list-flat-row" onsubmit={event => { event.preventDefault(); void searchLocation(); }}>
+							<input type="search" aria-label={t.list_location_search} placeholder={t.list_location_search} bind:value={locationQuery} />
+							<button type="submit" disabled={locationSearching || !locationQuery.trim()} aria-label={t.a11y_search}><Search size={18} aria-hidden="true" /></button>
+						</form>
+						<button type="button" class="list-row" disabled={locationGpsLoading} onclick={useCurrentLocation}><LocateFixed size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{locationGpsLoading ? t.list_location_loading : t.list_location_current}</span></button>
+						<button type="button" class="list-row" onclick={() => mapPickerOpen = true}><Map size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.map_pick_on_map}</span><ChevronRight size={16} aria-hidden="true" /></button>
+						{#if locationSearching}<p class="list-hint" role="status">{t.list_location_loading}</p>{/if}
+						{#if locationError}<p class="list-error" role="alert">{locationError}</p>{/if}
+						{#each locationResults as result}<button type="button" class="list-row location-result" onclick={() => selectLocation(result)}><span>{result.display_name}</span></button>{/each}
+						{#if list && locationLat !== null}<div class="list-flat-row"><SettingsToggleRow label={t.list_location_auto_open} checked={!locationDisabled} onchange={() => locationDisabled = !locationDisabled} /></div>{/if}
 					</div>
 				{/if}
-			</div>
-		{/if}
+				{#if saveError}<p class="list-error" role="alert">{saveError}</p>{/if}
+			</fieldset>
+		{/snippet}
+		{#snippet footer()}
+			{#if view === 'list'}
+				<button type="button" class="manage-secondary list-footer-action" disabled={saving} onclick={close}>{t.list_cancel}</button>
+				<button type="button" class="manage-primary list-footer-action" disabled={!name.trim() || saving} onclick={save}>{saving ? t.list_saving : list ? t.list_save : t.create}</button>
+			{:else}
+				<button type="button" class="manage-secondary list-footer-action list-detail-back" onclick={() => view = 'list'}><ArrowLeft size={18} aria-hidden="true" />{t.a11y_back}</button>
+				<button type="button" class="manage-primary list-footer-action" onclick={() => view = 'list'}>{t.sort_mode_done}</button>
+			{/if}
+		{/snippet}
+	</ManageSheetShell>
+{/if}
 
-<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-			<!-- svelte-ignore a11y_autofocus -->
-			<input
-				type="text"
-				placeholder={t.list_name_label}
-				bind:value={name}
-				autofocus
-				onfocus={(e) => { const el = e.target as HTMLInputElement; setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0); }}
-				class="w-full px-4 bg-transparent outline-none text-base font-medium"
-				style="color: var(--color-on-surface); font-size: 16px; height: 44px"
-			/>
-			<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
-			<input
-				type="text"
-				placeholder={t.list_description_placeholder}
-				bind:value={description}
-				class="w-full px-4 bg-transparent outline-none text-sm"
-				style="color: var(--color-on-surface); font-size: 16px; height: 44px"
-			/>
-		</div>
-	</div>
+<MapPickerSheet bind:open={mapPickerOpen} initialLat={locationLat} initialLng={locationLng} initialName={locationName} onConfirm={onMapConfirm} />
 
-	<div class="flex gap-3">
-		{#if list && onDelete}
-			<button
-				onclick={() => { if (confirm(t.confirm_delete_list)) { onDelete!(); onClose(); } }}
-				class="px-4 py-3.5 rounded-full text-sm font-semibold"
-				style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)"
-			>
-				{t.list_delete}
-			</button>
-		{/if}
-		<button
-			onclick={onClose}
-			class="flex-1 py-3.5 rounded-full text-sm font-semibold"
-			style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
-		>
-			{t.list_cancel}
-		</button>
-		<button
-			onclick={() => name.trim() && onSave(name.trim(), description.trim(), selectedIconId, shareAfterCreate, locationLat, locationLng, locationName)}
-			disabled={!name.trim()}
-			class="flex-1 py-3.5 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
-			style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-		>
-			{list ? t.list_save : t.create}
-		</button>
-	</div>
-</div>
-
-<MapPickerSheet
-	bind:open={mapPickerOpen}
-	initialLat={locationLat}
-	initialLng={locationLng}
-	initialName={locationName}
-	onConfirm={onMapConfirm}
-/>
+<style>
+	.list-editor { min-width: 0; margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px; }
+	.list-surface { border-radius: 16px; }
+	.list-surface :global(.settings-select-label), .list-surface :global(.settings-toggle-label) { font-weight: 600; }
+	.list-flat-row, .list-row { border-top: 1px solid var(--bubble-container-border); }
+	.list-flat-row:first-child, .list-row:first-child { border-top: 0; }
+	.list-field { display: block; padding: 5px 20px 3px; }
+	.list-field > .manage-label { margin: 0; }
+	.list-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 9px 20px; text-align: left; color: var(--color-on-surface-variant); }
+	.row-label { flex: 1; color: var(--color-on-surface); }
+	.row-value { min-width: 0; max-width: 43%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 400; line-height: 1.4; }
+	.list-surface :global(.settings-select-value) { font-size: 14px; font-weight: 400; line-height: 1.4; }
+	.row-value.custom { color: var(--color-primary); }
+	.list-row :global(svg) { flex: none; }
+	.list-row:active { background: var(--bubble-interactive-bg); }
+	.list-row:focus-visible, .list-location-value button:focus-visible, .location-search button:focus-visible, .list-retry:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: 12px; }
+	.list-row:disabled, .list-footer-action:disabled, .location-search button:disabled { opacity: 0.45; }
+	.initial-preview { display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; font-size: 14px; font-weight: 650; }
+	.list-hint { padding: 4px 20px 12px; margin: 0; color: var(--color-on-surface-variant); font-size: 12px; line-height: 1.5; }
+	.category-editor { padding-top: 8px; }
+	.list-header-delete { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; color: var(--color-error); }
+	.list-header-delete:active { background: color-mix(in srgb, var(--color-error) 10%, transparent); }
+	.list-header-delete:focus-visible { outline: 2px solid var(--color-error); outline-offset: -3px; }
+	.list-header-delete:disabled { opacity: 0.45; }
+	.list-field input::placeholder { color: var(--color-on-surface-variant); opacity: 1; }
+	.list-footer-action { min-height: 44px; }
+	.list-detail-back { gap: 8px; }
+	.list-location-value { display: flex; align-items: center; gap: 12px; padding-left: 20px; padding-right: 8px; color: var(--color-on-surface-variant); }
+	.list-location-value > span { flex: 1; min-width: 0; padding: 10px 0; font-size: 14px; overflow-wrap: anywhere; color: var(--color-on-surface); }
+	.list-location-value :global(svg) { flex: none; }
+	.list-location-value button, .location-search button { display: flex; justify-content: center; align-items: center; width: 44px; height: 44px; flex: none; }
+	.location-search { display: flex; align-items: center; padding: 3px 8px 3px 20px; color: var(--color-on-surface-variant); }
+	.location-search input { width: 100%; min-width: 0; min-height: 40px; font-size: 16px; outline: none; background: transparent; color: var(--color-on-surface); }
+	.location-result { color: var(--color-on-surface); font-size: 14px; line-height: 1.5; }
+	.list-error { margin: 0; padding: 8px 20px; color: var(--color-error); font-size: 12px; line-height: 1.5; }
+	.list-retry { width: 100%; min-height: 44px; padding: 4px 20px; color: var(--color-error); font-size: 12px; text-align: left; }
+</style>

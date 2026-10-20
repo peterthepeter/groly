@@ -6,7 +6,7 @@ export type ListCategorySettings = {
 	order: string[];
 };
 
-export type ShortcutAction = 'go' | 'add' | 'scanner' | 'recipes' | 'mealplan';
+export type ShortcutAction = 'go' | 'add' | 'scanner' | 'log-tracker' | 'log-supplement';
 
 export type Shortcut = {
 	id: string;

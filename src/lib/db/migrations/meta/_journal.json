@@ -351,6 +351,13 @@
       "when": 1788355618464,
       "tag": "0049_public_blazing_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1792502230356,
+      "tag": "0050_recoverable_admin_invites",
+      "breakpoints": true
     }
   ]
 }

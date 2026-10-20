@@ -253,40 +253,41 @@
 		loading = false;
 	}
 
-	async function createList(name: string, description: string, iconId: string | null, shareAfterCreate?: boolean) {
+	async function createList(name: string, description: string, iconId: string | null, shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null) {
 		const res = await fetch('/api/lists', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name, description, iconId })
+			body: JSON.stringify({ name, description, iconId, locationLat, locationLng, locationName })
 		});
 		if (res.ok) {
 			const newList = await res.json();
-			const listWithCount = { ...newList, openCount: 0 };
+			const listWithCount = { ...newList, openCount: 0, memberCount: 0 };
 			lists = [...lists, listWithCount];
 			void cacheListsData(lists, data.user?.id ?? null);
 			if (shareAfterCreate) {
 				shareList = listWithCount;
 			}
 		}
+		if (!res.ok) throw new Error();
 		addModalOpen = false;
 	}
 
 	async function saveEditList(name: string, description: string, iconId: string | null, _shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null) {
 		if (!editList) return;
 		const id = editList.id;
-		editList = null;
 		await execute(
 			() => fetch(`/api/lists/${id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ name, description, iconId, locationLat, locationLng, locationName })
 			}).then(r => { if (!r.ok) throw new Error(); }),
-			{ type: 'update_list', payload: { id, name, description, iconId }, createdAt: Date.now() },
+			{ type: 'update_list', payload: { id, name, description, iconId, locationLat, locationLng, locationName }, createdAt: Date.now() },
 			() => {
 				lists = lists.map(l => l.id === id ? { ...l, name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null } : l);
-				void updateOfflineList(id, { name, description: description || null });
+				void updateOfflineList(id, { name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null });
 			}
 		);
+		editList = null;
 	}
 
 	async function deleteList(id: string) {
@@ -586,18 +587,14 @@
 						</div>
 					{/each}
 				{:else}
-					<div bind:this={bubbleContainerEl} class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-						<div class="px-4 pt-3 pb-1 flex items-center gap-2">
-							<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
-							<p class="text-sm font-semibold" style="color: var(--color-on-surface)">{t.nav_lists}</p>
-						</div>
+					<div bind:this={bubbleContainerEl} role="group" aria-label={t.nav_lists} class="rounded-2xl overflow-hidden py-1" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 						{#each displayedLists as list, i (list.id)}
 							<ListCard
 								{list}
 								onClick={() => goto(`/listen/${list.id}`)}
 								onLongPress={list.isOwner ? () => { editList = list; } : () => { memberOptions = list; }}
 								onShare={list.isOwner && list.memberCount > 0 ? () => { shareList = list; } : null}
-								showBorder={i < displayedLists.length - 1 || pendingInvitations.length > 0}
+								showBorder={i < displayedLists.length - 1}
 							/>
 						{/each}
 					</div>
@@ -633,10 +630,11 @@
 {#if editList}
 	<AddListModal
 		list={editList}
-		memberCount={editList.memberCount}
+		memberCount={lists.find(list => list.id === editList?.id)?.memberCount ?? editList.memberCount}
 		onSave={saveEditList}
 		onDelete={() => deleteList(editList!.id)}
-		onShare={() => { shareList = editList; editList = null; }}
+		onShare={() => { shareList = editList; }}
+		suspended={shareList?.id === editList.id}
 		onClose={() => editList = null}
 	/>
 {/if}
@@ -645,7 +643,7 @@
 	<ShareListModal
 		listId={shareList.id}
 		listName={shareList.name}
-		onClose={() => shareList = null}
+		onClose={() => { shareList = null; void loadLists(); }}
 	/>
 {/if}
 

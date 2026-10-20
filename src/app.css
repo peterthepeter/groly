@@ -254,6 +254,21 @@
 }
 
 @layer utilities {
+  /* Shared dividers for rows inside list and recipe overview surfaces. */
+  .inset-row-divider {
+    position: relative;
+  }
+
+  .inset-row-divider::after {
+    content: '';
+    position: absolute;
+    inset-inline: 16px;
+    bottom: 0;
+    height: 1px;
+    background-color: var(--bubble-container-border);
+    pointer-events: none;
+  }
+
   .pt-safe-top {
     padding-top: env(safe-area-inset-top);
   }

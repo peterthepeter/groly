@@ -1,6 +1,6 @@
 import { db } from '#lib/db';
 import { barcodeCache, items, itemHistory, sessions, supplementLogs, mealPlanEntries, userInvites } from '#lib/db/schema';
-import { and, eq, lt, or, isNotNull } from 'drizzle-orm';
+import { and, eq, lt, lte, or, isNotNull } from 'drizzle-orm';
 
 const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
 const TWO_MONTHS_S = 60 * 24 * 60 * 60;
@@ -28,5 +28,6 @@ export function cleanupOldData() {
 	db.delete(mealPlanEntries).where(lt(mealPlanEntries.date, cutoffDate)).run();
 	// Invite-/Reset-Tokens löschen: verbrauchte ODER seit 30 Tagen abgelaufene
 	const inviteCutoff = nowS - THIRTY_DAYS_S;
+	db.update(userInvites).set({ tokenValue: null }).where(lte(userInvites.expiresAt, nowS)).run();
 	db.delete(userInvites).where(or(isNotNull(userInvites.usedAt), lt(userInvites.expiresAt, inviteCutoff))).run();
 }

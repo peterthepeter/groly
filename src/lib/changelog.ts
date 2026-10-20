@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '1.0.0-beta.6',
+		de: [
+			'Einstellungen, Adminbereich und Listenbearbeitung übersichtlicher gestaltet.',
+			'Kategoriesortierung und Schnellzugriffe überarbeitet; Tracker und Supplements direkt loggen.',
+			'Artikeleingabe mit häufigen Vorschlägen, Hakenfeedback und Duplikatschutz verbessert.',
+			'Einladungs-/Resetlinks erneut abrufbar; App-Icon-Installation und Listen-/Rezeptansicht verbessert.'
+		],
+		en: [
+			'Redesigned settings, administration, and list editing.',
+			'Improved category sorting and shortcuts; log trackers and supplements directly.',
+			'Improved item entry with frequent suggestions, checkmark feedback, and duplicate prevention.',
+			'Retrieve invitation/reset links again; improved app icon installation and list/recipe views.'
+		]
+	},
+	{
 		version: '1.0.0-beta.5',
 		de: [
 			'Dunkles App-Icon als Standard für neue Installationen.',

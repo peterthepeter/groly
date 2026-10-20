@@ -15,6 +15,8 @@
 			section: 'App & Basics',
 			svg: `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`,
 			items: [
+				{ title: t.settings_help_title, text: t.settings_help_description, link: { href: '/einstellungen', label: t.nav_settings } },
+				{ title: t.admin_page_title, text: t.admin_help_description },
 				{ title: t.icon_settings_title, text: t.icon_help, link: { href: '/einstellungen#app-icon', label: t.icon_settings_title } },
 				{
 					title: 'One-handed use',
@@ -42,8 +44,8 @@
 				},
 				{
 					title: 'Quick access',
-					text: 'Long-press + to show up to four shortcuts. Slide to a shortcut and release to open it.',
-					link: { href: '/einstellungen#schnellzugriff', label: 'Set up shortcuts' }
+					text: t.shortcut_help_details,
+					link: { href: '/einstellungen/schnellzugriff', label: 'Set up shortcuts' }
 				},
 				{
 					title: 'Keep screen on',
@@ -58,11 +60,11 @@
 			items: [
 				{
 					title: 'Open, edit & sort',
-					text: 'Tap a list to open it. Long-press its name to edit it, or long-press the Lists tab to rearrange your lists.'
+					text: 'Tap a list to open it. Long-press its name to edit its name, additional info, icon, category sorting, and location in one grouped surface. Category sorting uses the same drag handles and position picker as Settings. Done returns to the editor; Save applies your edits and Cancel discards them. Long-press the Lists tab to rearrange your lists.'
 				},
 				{
 					title: 'Share & notify',
-					text: 'Long-press a list and use the share icon to invite another user. Notifications for changes to shared lists can be enabled in Settings.'
+					text: 'Long-press a list and open Sharing & members to invite users or manage access. Your unsaved list edits remain available when you return. Invitations and member changes take effect in the sharing dialog. Change notifications for a shared list in the editor and confirm with Save.'
 				},
 				{
 					title: 'Location detection',
@@ -82,7 +84,7 @@
 			items: [
 				{
 					title: 'Add items',
-					text: 'Separate several items with commas, for example “2x Milk, 500g Ground beef, Bread”. Quantities at the start are recognized automatically.'
+					text: 'Separate several items with commas, for example “2x Milk, 500g Ground beef, Bread”. Quantities at the start are recognized automatically. With an empty input, frequently used items that are not on your list appear above it. Typing filters your history. Tap a suggestion to add it with the entered quantity; a brief checkmark confirms it. Search results already on your list have a small checkmark and cannot be added again from suggestions.'
 				},
 				{
 					title: 'Use & edit',
@@ -91,7 +93,7 @@
 				{
 					title: 'Categories',
 					text: 'Groly automatically recognizes items and shows a matching category or product icon. Long-press an item to change its category or return to Automatic. Groly remembers your choice for items with the same name. Set the order globally in Settings or per list in its edit dialog.',
-					link: { href: '/einstellungen#kategorien-sortieren', label: 'Set category sorting' }
+					link: { href: '/einstellungen/kategorien', label: 'Set category sorting' }
 				},
 				{
 					title: 'Favorites',
@@ -169,6 +171,8 @@
 			section: 'App & Grundlagen',
 			svg: `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`,
 			items: [
+				{ title: t.settings_help_title, text: t.settings_help_description, link: { href: '/einstellungen', label: t.nav_settings } },
+				{ title: t.admin_page_title, text: t.admin_help_description },
 				{ title: t.icon_settings_title, text: t.icon_help, link: { href: '/einstellungen#app-icon', label: t.icon_settings_title } },
 				{
 					title: 'Einhandbedienung',
@@ -196,8 +200,8 @@
 				},
 				{
 					title: 'Schnellzugriff',
-					text: 'Halte + gedrückt, um bis zu vier Schnellzugriffe zu öffnen. Schiebe den Finger zum gewünschten Ziel und lasse los.',
-					link: { href: '/einstellungen#schnellzugriff', label: 'Schnellzugriffe einrichten' }
+					text: t.shortcut_help_details,
+					link: { href: '/einstellungen/schnellzugriff', label: 'Schnellzugriffe einrichten' }
 				},
 				{
 					title: 'Bildschirm anlassen',
@@ -212,11 +216,11 @@
 			items: [
 				{
 					title: 'Öffnen, bearbeiten & sortieren',
-					text: 'Tippe eine Liste zum Öffnen an. Halte ihren Namen gedrückt, um sie zu bearbeiten, oder halte den Listen-Tab gedrückt, um deine Listen zu sortieren.'
+					text: 'Tippe eine Liste zum Öffnen an. Halte ihren Namen gedrückt, um Name, Zusatzinfo, Icon, Kategorie-Sortierung und Standort in einer gemeinsamen Fläche zu bearbeiten. Die Kategorie-Sortierung nutzt dieselben Griffe und die Positionsauswahl wie die Einstellungen. Fertig führt zurück zum Editor; Speichern übernimmt deine Änderungen, Abbrechen verwirft sie. Halte den Listen-Tab gedrückt, um deine Listen zu sortieren.'
 				},
 				{
 					title: 'Teilen & Benachrichtigungen',
-					text: 'Halte eine Liste gedrückt und lade über das Teilen-Icon andere Nutzer ein. Benachrichtigungen über Änderungen an geteilten Listen aktivierst du in den Einstellungen.'
+					text: 'Halte eine Liste gedrückt und öffne „Teilen & Mitglieder“, um Nutzer einzuladen oder Zugriffe zu verwalten. Deine ungespeicherten Listeneingaben bleiben bei der Rückkehr erhalten. Einladungen und Mitgliederänderungen gelten direkt im Teilen-Dialog. Benachrichtigungen für eine geteilte Liste änderst du im Editor und bestätigst mit Speichern.'
 				},
 				{
 					title: 'Standorterkennung',
@@ -236,7 +240,7 @@
 			items: [
 				{
 					title: 'Items hinzufügen',
-					text: 'Trenne mehrere Items durch Kommas, zum Beispiel „2x Milch, 500 g Hackfleisch, Brot“. Mengenangaben am Anfang werden automatisch erkannt.'
+					text: 'Trenne mehrere Items durch Kommas, zum Beispiel „2x Milch, 500 g Hackfleisch, Brot“. Mengenangaben am Anfang werden automatisch erkannt. Bei leerer Eingabe erscheinen häufig verwendete Artikel, die noch auf der Liste fehlen. Beim Tippen wird dein Verlauf durchsucht. Tippe einen Vorschlag an, um ihn mit der eingetragenen Menge hinzuzufügen; ein kurzer Haken bestätigt die Aktion. Suchtreffer, die schon auf der Liste stehen, tragen einen kleinen Haken und lassen sich über die Vorschläge nicht erneut hinzufügen.'
 				},
 				{
 					title: 'Verwenden & bearbeiten',
@@ -245,7 +249,7 @@
 				{
 					title: 'Kategorien',
 					text: 'Groly erkennt Items automatisch und zeigt passende Kategorie- oder Produktsymbole. Halte ein Item gedrückt, um die Kategorie zu ändern oder zu „Automatisch“ zurückzukehren. Groly merkt sich deine Auswahl für gleich benannte Items. Die Reihenfolge legst du global in den Einstellungen oder je Liste fest.',
-					link: { href: '/einstellungen#kategorien-sortieren', label: 'Kategoriesortierung festlegen' }
+					link: { href: '/einstellungen/kategorien', label: 'Kategoriesortierung festlegen' }
 				},
 				{
 					title: 'Favoriten',

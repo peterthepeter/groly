@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick, onMount } from 'svelte';
+	import { tick, onMount, onDestroy } from 'svelte';
 	import { t } from '#lib/i18n.svelte';
 	import { watchVisualViewportBottomOffset } from '#lib/visualViewport';
 	import { getCategoryForItem, getCategoryKey, CATEGORIES } from '#lib/categories';
@@ -21,7 +21,13 @@
 	let name = $state('');
 	let quantityInfo = $state('');
 	let nameInput = $state<HTMLInputElement | undefined>(undefined);
-	let showSuggestions = $state(false);
+	let feedbackSuggestions = $state<string[] | null>(null);
+	let pendingSuggestions = $state(new Set<string>());
+	let confirmedSuggestions = $state(new Set<string>());
+	let addError = $state(false);
+	let announcement = $state('');
+	let feedbackTimer: ReturnType<typeof setTimeout> | undefined;
+	let destroyed = false;
 	let remoteSuggestions = $state<string[]>([]);
 	let bottomOffset = $state(0);
 	let scannerOpen = $state(false);
@@ -122,8 +128,7 @@
 
 	$effect(() => {
 		const query = name.trim();
-		remoteSuggestions = [];
-		if (!query || !onSearchSuggestions) return;
+		if (!query || isMultiItem || !onSearchSuggestions) return;
 
 		const controller = new AbortController();
 		const timer = setTimeout(async () => {
@@ -138,47 +143,110 @@
 	});
 
 	const filtered = $derived.by(() => {
+		if (isMultiItem) return [];
 		const query = name.trim().toLowerCase();
-		if (!query) return [];
 		const seen = new Set<string>();
-		return [...remoteSuggestions, ...suggestions]
+		return (query ? [...remoteSuggestions, ...suggestions] : suggestions)
 			.filter((suggestion) => {
-				const normalized = suggestion.toLowerCase();
-				if (normalized === query || !normalized.includes(query) || seen.has(normalized)) return false;
+				const normalized = suggestion.trim().toLowerCase();
+				if (!normalized || seen.has(normalized)) return false;
 				seen.add(normalized);
-				return true;
+				return query ? normalized.includes(query) : !activeItemNames.has(normalized) && !pendingSuggestions.has(normalized);
+			})
+			.sort((a, b) => {
+				if (!query) return 0;
+				const rank = (value: string) => value.toLowerCase() === query ? 0 : value.toLowerCase().startsWith(query) ? 1 : 2;
+				return rank(a) - rank(b);
 			})
 			.slice(0, 5);
 	});
+	const displayedSuggestions = $derived(feedbackSuggestions ?? filtered);
 
-	function enqueueItems(entries: Array<{ name: string; quantityInfo: string }>) {
-		submissionChain = submissionChain
-			.then(async () => {
-				for (const item of entries) await onAdd(item.name, item.quantityInfo);
-			})
-			.catch((error) => {
-				console.error('Could not queue item creation:', error);
-			});
+	function clearFeedback() {
+		clearTimeout(feedbackTimer);
+		feedbackSuggestions = null;
+		confirmedSuggestions = new Set();
 	}
 
-	function handleAdd() {
+	function handleInput() {
+		clearFeedback();
+		addError = false;
+	}
+
+	onDestroy(() => {
+		destroyed = true;
+		clearTimeout(feedbackTimer);
+	});
+
+	function enqueueItems(entries: Array<{ name: string; quantityInfo: string }>, onCreated?: () => void) {
+		const submission = submissionChain.then(async () => {
+			for (const item of entries) {
+				await onAdd(item.name, item.quantityInfo);
+				onCreated?.();
+			}
+		});
+		// Keep the queue usable after a failure; callers handle their own feedback.
+		submissionChain = submission.catch(() => {});
+		return submission;
+	}
+
+	async function handleAdd() {
 		if (!name.trim()) return;
-		showSuggestions = false;
+		clearFeedback();
+		addError = false;
+		let completed = 0;
 		const entries = isMultiItem
 			? parsedItems.filter((item) => item.name).map((item) => ({ ...item }))
 			: [{ name: name.trim(), quantityInfo: quantityInfo.trim() }];
 		name = '';
 		quantityInfo = '';
 		nameInput?.focus({ preventScroll: true });
-		enqueueItems(entries);
+		try {
+			await enqueueItems(entries, () => completed++);
+			if (!destroyed) announcement = t.item_suggestion_added;
+		} catch (error) {
+			console.error('Could not queue item creation:', error);
+			if (destroyed) return;
+			if (!name.trim()) {
+				const remaining = entries.slice(completed);
+				name = remaining.length === 1 ? remaining[0].name : remaining.map(item => `${item.quantityInfo} ${item.name}`.trim()).join(', ');
+				quantityInfo = remaining.length === 1 ? remaining[0].quantityInfo : '';
+			}
+			addError = true;
+		}
 	}
 
-	function pickSuggestion(s: string) {
-		showSuggestions = false;
+	async function pickSuggestion(s: string) {
+		const normalized = s.trim().toLowerCase();
+		if (activeItemNames.has(normalized) || pendingSuggestions.has(normalized)) return;
+		clearTimeout(feedbackTimer);
+		if (!feedbackSuggestions) {
+			feedbackSuggestions = [...filtered];
+		}
+		pendingSuggestions = new Set([...pendingSuggestions, normalized]);
+		addError = false;
+		announcement = '';
+		const pickedQuantity = quantityInfo.trim();
 		name = '';
 		quantityInfo = '';
 		nameInput?.focus({ preventScroll: true });
-		enqueueItems([{ name: s, quantityInfo: '' }]);
+		try {
+			await enqueueItems([{ name: s, quantityInfo: pickedQuantity }]);
+			if (destroyed) return;
+			if (feedbackSuggestions?.includes(s)) confirmedSuggestions = new Set([...confirmedSuggestions, normalized]);
+			announcement = `${s}: ${t.item_suggestion_added}`;
+		} catch (error) {
+			console.error('Could not queue suggested item:', error);
+			if (destroyed) return;
+			if (!name.trim()) { name = s; quantityInfo = pickedQuantity; }
+			clearFeedback();
+			addError = true;
+		} finally {
+			pendingSuggestions = new Set([...pendingSuggestions].filter((item) => item !== normalized));
+			if (!destroyed && pendingSuggestions.size === 0 && feedbackSuggestions) {
+				feedbackTimer = setTimeout(clearFeedback, 650);
+			}
+		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -197,8 +265,8 @@
 
 <!-- Bottom sheet -->
 <div class="fixed left-0 right-0 z-[60] max-w-[430px] mx-auto" style="bottom: {bottomOffset}px">
-	<div class="rounded-t-3xl px-4 pb-3 pt-3 shadow-2xl"
-	     style="background-color: var(--modal-bg)">
+	<div class="add-item-surface rounded-t-3xl px-4 pt-3 shadow-2xl"
+	     style="background-color: var(--modal-bg); --add-item-safe-area: {bottomOffset > 0 ? '0px' : 'env(safe-area-inset-bottom, 0px)'}">
 
 		<!-- Handle -->
 		<div class="flex justify-center mb-3">
@@ -384,21 +452,40 @@
 		{:else}
 			<!-- === Normal-Modus === -->
 
-			<!-- Suggestions -->
-			{#if filtered.length > 0 && showSuggestions}
-				<div class="flex gap-2 flex-wrap mb-3">
-					{#each filtered as s}
-						<button
-							onpointerdown={(e) => e.preventDefault()}
-							onclick={() => pickSuggestion(s)}
-							class="px-3 py-1.5 rounded-full text-xs font-medium"
-							style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary)"
-						>
-							{s}
-						</button>
-					{/each}
+			<!-- Fixed workspace: changing matches never resize the focused input's fixed parent. -->
+			<section class="suggestion-workspace" aria-label={t.item_suggestions}>
+				<div class="suggestion-chips">
+					{#if addError}
+						<p class="suggestion-message suggestion-error" role="alert">{t.item_add_error}</p>
+					{:else}
+						{#each displayedSuggestions as s (s)}
+							{@const normalized = s.trim().toLowerCase()}
+							{@const alreadyAdded = activeItemNames.has(normalized)}
+							{@const confirmed = confirmedSuggestions.has(normalized)}
+							<button
+								type="button"
+								onpointerdown={(e) => e.preventDefault()}
+								onclick={() => pickSuggestion(s)}
+								aria-disabled={alreadyAdded || pendingSuggestions.has(normalized)}
+								aria-label={alreadyAdded ? `${s}: ${t.item_suggestion_on_list}` : s}
+								title={s}
+								class="suggestion-chip"
+								class:on-list={alreadyAdded && !confirmed && !pendingSuggestions.has(normalized)}
+								class:confirmed
+							>
+								<span class="suggestion-chip-label" class:invisible={confirmed}>{s}</span>
+								{#if alreadyAdded && !confirmed && !pendingSuggestions.has(normalized)}
+									<svg class="suggestion-existing-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+								{/if}
+								{#if confirmed}
+									<svg class="suggestion-confirmation" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+								{/if}
+							</button>
+						{/each}
+					{/if}
 				</div>
-			{/if}
+			</section>
+			<span class="sr-only" role="status" aria-live="polite">{announcement}</span>
 
 			<!-- Eingabefelder -->
 			<div class="mb-3">
@@ -408,6 +495,7 @@
 							<input
 								type="text"
 								placeholder={t.item_quantity_placeholder}
+								aria-label={t.item_quantity_placeholder}
 								bind:value={quantityInfo}
 								onkeydown={handleKeydown}
 								autocomplete="off"
@@ -437,10 +525,11 @@
 					<input
 						bind:this={nameInput}
 						data-add-item-name
+						aria-label={t.item_name_label}
 						type="text"
 						placeholder={t.item_name_placeholder}
 						bind:value={name}
-						oninput={() => showSuggestions = true}
+						oninput={handleInput}
 						onkeydown={handleKeydown}
 						autofocus={!autoOpenScanner && !autoOpenFavorites}
 						autocomplete="off"
@@ -530,6 +619,67 @@
 {/if}
 
 <style>
+	.add-item-surface {
+		padding-bottom: max(12px, var(--add-item-safe-area));
+	}
+	.suggestion-workspace {
+		--suggestion-height: 40px;
+		--suggestion-gap: 6px;
+		height: calc(2 * var(--suggestion-height) + var(--suggestion-gap));
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		margin-bottom: 12px;
+	}
+	.suggestion-chips {
+		max-height: calc(2 * var(--suggestion-height) + var(--suggestion-gap));
+		min-height: var(--suggestion-height);
+		flex-shrink: 0;
+		display: flex;
+		flex-wrap: wrap;
+		align-content: flex-start;
+		gap: var(--suggestion-gap);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: none;
+	}
+	.suggestion-chips::-webkit-scrollbar { display: none; }
+	.suggestion-chip {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		height: var(--suggestion-height);
+		max-width: 100%;
+		padding: 0 12px;
+		border-radius: 999px;
+		font-size: 12px;
+		font-weight: 500;
+		background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+		color: var(--color-primary);
+		transition: background-color 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	.suggestion-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.suggestion-chip:active { background: color-mix(in srgb, var(--color-primary) 25%, transparent); }
+	.suggestion-chip:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+	.suggestion-chip.on-list {
+		background: var(--color-surface-high);
+		color: var(--color-on-surface-variant);
+		cursor: default;
+	}
+	.suggestion-existing-check { flex-shrink: 0; }
+	.suggestion-confirmation { position: absolute; left: calc(50% - 10px); }
+	.suggestion-message {
+		margin: 0;
+		align-self: center;
+		font-size: 12px;
+		color: var(--color-on-surface-variant);
+	}
+	.suggestion-error { color: var(--color-error); }
+	@media (prefers-reduced-motion: reduce) {
+		.suggestion-chip { transition: none; }
+	}
+
 	.fav-scroll {
 		scrollbar-width: none;
 		-ms-overflow-style: none;

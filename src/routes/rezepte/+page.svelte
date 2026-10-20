@@ -412,12 +412,13 @@
 				{/if}
 			</div>
 		{:else}
-			{#snippet recipeRow(recipe: Recipe)}
+			{#snippet recipeRow(recipe: Recipe, showBorder: boolean)}
 				{@const metaText = [totalTime(recipe), ...(recipe.tags ?? [])].filter(Boolean).join(' · ')}
 				<a
 					href={`/rezepte/${recipe.id}`}
 					data-recipe-id={recipe.id}
-					class="w-full flex items-center gap-3 px-4 py-1 text-left active:opacity-70 transition-opacity cursor-pointer"
+					class:inset-row-divider={showBorder}
+					class="w-full flex items-center gap-3 px-4 py-2 text-left active:opacity-70 transition-opacity cursor-pointer"
 				>
 					<div class="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
 					     style="background-color: var(--color-surface-container)">
@@ -467,16 +468,16 @@
 			<div bind:this={bubbleContainerEl} data-recipe-card class="rounded-2xl overflow-hidden pb-2" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 				<h2 class="px-4 pt-3 pb-1 text-sm font-semibold" style="color: var(--color-primary)">{t.recipes_title}</h2>
 				{#if otherRecipes.length > 0}
-					{#each otherRecipes as recipe (recipe.id)}
-						{@render recipeRow(recipe)}
+					{#each otherRecipes as recipe, i (recipe.id)}
+						{@render recipeRow(recipe, i < otherRecipes.length - 1)}
 					{/each}
 				{/if}
 				{#if favoriteRecipes.length > 0}
 					{#if otherRecipes.length > 0}
-						<h3 class="mx-4 mt-2 pt-2 pb-1 text-sm font-semibold" style="color: var(--color-primary); border-top: 1px solid var(--bubble-container-border)">{t.recipes_favorites}</h3>
+						<h3 class="mx-4 pt-2 pb-1 text-sm font-semibold" style="color: var(--color-primary)">{t.recipes_favorites}</h3>
 					{/if}
-					{#each favoriteRecipes as recipe (recipe.id)}
-						{@render recipeRow(recipe)}
+					{#each favoriteRecipes as recipe, i (recipe.id)}
+						{@render recipeRow(recipe, i < favoriteRecipes.length - 1)}
 					{/each}
 				{/if}
 			</div>

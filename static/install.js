@@ -26,6 +26,11 @@
 		button.addEventListener('click', () => {
 			const platform = button.dataset.platformButton;
 			document.body.dataset.platform = platform;
+			for (const link of document.querySelectorAll('[data-icon-choice]')) {
+				const url = new URL(link.href);
+				url.searchParams.set('platform', platform);
+				link.href = url.href;
+			}
 			for (const option of document.querySelectorAll('[data-platform-button]')) option.setAttribute('aria-pressed', String(option === button));
 			for (const section of document.querySelectorAll('[data-instructions]')) section.hidden = section.dataset.instructions !== platform;
 			updateInstallButton();

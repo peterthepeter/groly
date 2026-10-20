@@ -1,8 +1,7 @@
 
 import type { RequestHandler } from './$types';
 import { adminGuard } from '#lib/auth/middleware';
-import { db } from '#lib/db';
-import { sql } from 'drizzle-orm';
+import { listAdminUsers } from '#lib/server/adminUsers';
 import { createUser } from '#lib/auth';
 import { createInvite } from '#lib/auth/invites';
 import { randomBytes } from 'crypto';
@@ -11,25 +10,7 @@ export const GET: RequestHandler = async (event) => {
 	const { error } = adminGuard(event);
 	if (error) return error;
 
-	const allUsers = db.all(sql`
-		SELECT
-			u.id,
-			u.username,
-			u.role,
-			u.created_at AS createdAt,
-			u.last_login_at AS lastLoginAt,
-			u.must_change_password AS mustChangePassword,
-			CAST(COUNT(DISTINCT l.id) AS INTEGER) AS listCount,
-			CAST(COUNT(DISTINCT i.id) AS INTEGER) AS itemCount,
-			CAST(COUNT(DISTINCT r.id) AS INTEGER) AS recipeCount,
-			(SELECT inv.type FROM user_invites inv WHERE inv.user_id = u.id AND inv.used_at IS NULL ORDER BY inv.created_at DESC LIMIT 1) AS openInviteType,
-			(SELECT inv.expires_at FROM user_invites inv WHERE inv.user_id = u.id AND inv.used_at IS NULL ORDER BY inv.created_at DESC LIMIT 1) AS openInviteExpiresAt
-		FROM users u
-		LEFT JOIN lists l ON l.owner_id = u.id
-		LEFT JOIN items i ON i.list_id = l.id
-		LEFT JOIN recipes r ON r.user_id = u.id
-		GROUP BY u.id
-	`);
+	const allUsers = listAdminUsers();
 	return Response.json(allUsers);
 };
 

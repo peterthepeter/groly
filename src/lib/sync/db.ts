@@ -7,6 +7,7 @@ export interface AccountCache {
 
 interface OfflineList extends AccountCache {
 	id: string;
+	iconId?: string | null;
 	name: string;
 	description: string | null;
 	ownerId: string;

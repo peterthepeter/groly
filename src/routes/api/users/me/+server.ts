@@ -1,3 +1,4 @@
+import { normalizeShortcuts } from '#lib/shortcutActions';
 
 import type { RequestHandler } from './$types';
 import { authGuard } from '#lib/auth/middleware';
@@ -21,7 +22,18 @@ export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
 	if (error) return error;
 
-	const fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
+	let fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
+	const settings = mergeSettings(fullUser?.settings);
+	if (fullUser && settings.shortcuts !== undefined) {
+		const shortcuts = normalizeShortcuts(settings.shortcuts);
+		if (JSON.stringify(shortcuts) !== JSON.stringify(settings.shortcuts)) {
+			// Lazy data migration; revision checking protects concurrent settings edits.
+			db.update(users).set({ settings: JSON.stringify({ ...settings, shortcuts }), settingsRevision: fullUser.settingsRevision + 1, updatedAt: Math.floor(Date.now() / 1000) })
+				.where(and(eq(users.id, user!.id), eq(users.settingsRevision, fullUser.settingsRevision))).run();
+			fullUser = db.select().from(users).where(eq(users.id, user!.id)).get();
+		}
+	}
+
 	return Response.json({
 		settings: mergeSettings(fullUser?.settings),
 		settingsRevision: fullUser?.settingsRevision ?? 0

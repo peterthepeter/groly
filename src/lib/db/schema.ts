@@ -440,6 +440,8 @@ export const userInvites = sqliteTable('user_invites', {
 	id: text('id').primaryKey(),
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 	tokenHash: text('token_hash').notNull().unique(),
+	// Recoverable only while active, for the admin's Copy/Share actions.
+	tokenValue: text('token_value'),
 	type: text('type', { enum: ['invite', 'reset'] }).notNull(),
 	createdAt: integer('created_at').notNull(),
 	expiresAt: integer('expires_at').notNull(),

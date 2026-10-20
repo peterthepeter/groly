@@ -241,6 +241,7 @@
 				quickLogOpen = true;
 				consume();
 				break;
+			case 'log-tracker':
 			case 'log-water':
 			case 'log-meditation':
 				quickLogInitialTab = 'tracker';

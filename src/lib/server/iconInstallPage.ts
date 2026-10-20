@@ -45,6 +45,9 @@ export function iconInstallPage(icon: AppIcon, lang: 'de' | 'en', android: boole
 		<h1>${t('icon_install_title')}</h1>
 		<p>${t('icon_install_intro')}</p>
 	</section>
+	<div class="icon-choices" role="group" aria-label="${t('icon_settings_title')}">
+		${(['light', 'dark'] as const).map(choice => `<a class="icon-choice" data-icon-choice href="${installPath(choice, lang)}&amp;platform=${platform}" ${choice === icon ? 'aria-current="true"' : ''}><img src="${appIconAssets(choice).preview}" width="28" height="28" alt=""><span>${t(choice === 'light' ? 'theme_light' : 'theme_dark')}</span></a>`).join('')}
+	</div>
 	<div class="platforms" role="group" aria-label="${t('icon_platform_label')}">
 		<button type="button" data-platform-button="ios" aria-pressed="${!android}">iPhone / iPad</button>
 		<button type="button" data-platform-button="android" aria-pressed="${android}">Android</button>

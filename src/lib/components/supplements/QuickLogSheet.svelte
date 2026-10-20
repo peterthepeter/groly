@@ -182,6 +182,8 @@
 		] as (string | null)[]).filter((x): x is string => x !== null)
 	);
 
+	const trackerTabAvailable = $derived(trackerList.length > 0 || initialTab === 'tracker');
+
 	const sortedSupplements = $derived(sortQuickLogItems(
 		supplements,
 		userSettings.supplementSortOrder ?? 'az',
@@ -666,7 +668,10 @@
 						{/if}
 					</div>
 				{/if}
-				{#if (activeSheetTab === 'supplements' || trackerList.length === 0) && sortedSupplements.length === 0}
+				{#if activeSheetTab === 'tracker' && trackerList.length === 0 && trackerTabAvailable}
+					<div class="py-6 text-center"><p class="text-sm" style="color: var(--color-on-surface-variant)">{t.shortcut_trackers_empty}</p><button type="button" class="min-h-11 text-sm font-semibold" style="color: var(--color-primary)" onclick={manageSupplements}>{t.supplement_manage}</button></div>
+				{/if}
+				{#if (activeSheetTab === 'supplements' || !trackerTabAvailable) && sortedSupplements.length === 0}
 					<div class="rounded-2xl px-4 py-6 flex flex-col items-center gap-3 text-center" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_empty_hint}</p>
 					<button
@@ -676,7 +681,7 @@
 						>{t.supplement_manage}</button>
 					</div>
 				{/if}
-				{#if (activeSheetTab === 'supplements' || trackerList.length === 0) && sortedSupplements.length > 0}
+				{#if (activeSheetTab === 'supplements' || !trackerTabAvailable) && sortedSupplements.length > 0}
 					<div class="grid grid-cols-3 gap-2" aria-label={t.supplement_title}>
 						{#each supplementGrid as supplement, index (supplement?.id ?? `empty-${index}`)}
 							{#if supplement}
@@ -766,14 +771,16 @@
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 				</button>
 				<div class="flex-1 min-w-0 flex gap-1.5 p-1 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-					{#if trackerList.length > 0}
+					{#if trackerTabAvailable}
 					<button
 						onclick={() => switchTab('tracker')}
+						aria-pressed={activeSheetTab === 'tracker'}
 						class="flex-1 min-w-0 rounded-xl text-sm font-semibold transition-all active:opacity-70"
 						style="background-color: {activeSheetTab === 'tracker' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeSheetTab === 'tracker' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 					>Tracker</button>
 					<button
 						onclick={() => switchTab('supplements')}
+						aria-pressed={activeSheetTab === 'supplements'}
 						class="flex-1 min-w-0 rounded-xl text-sm font-semibold transition-all active:opacity-70"
 						style="background-color: {activeSheetTab === 'supplements' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeSheetTab === 'supplements' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 					>Supplements</button>

@@ -45,3 +45,8 @@ input { width: 100%; min-width: 0; padding: 8px 0; font-size: 16px; color: var(-
 [role="status"]:empty { margin: 0; }
 [role="status"]:not(:empty) { margin: 8px 0; }
 .open-app { display: block; text-align: center; padding: 16px 0 0; font-size: 13px; }
+
+.icon-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
+.icon-choice { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; font-weight: 600; text-decoration: none; }
+.icon-choice img { border-radius: 22%; }
+.icon-choice[aria-current] { border-color: var(--accent); background: var(--control); color: var(--accent); }

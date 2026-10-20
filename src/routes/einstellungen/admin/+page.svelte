@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import ManageSheetShell from '#lib/components/supplements/ManageSheetShell.svelte';
+	import SettingsSelectRow from '#lib/components/SettingsSelectRow.svelte';
+	import type { AdminUserEntry } from '#lib/adminUsers';
 	import AppHeader from '#lib/components/AppHeader.svelte';
 	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
@@ -8,289 +13,115 @@
 	let { data } = $props();
 
 	// ── Accordion state ──────────────────────────────────────────────────────────
-	let usersOpen = $state(false);
+	let usersOpen = $state(page.url.hash === '#benutzer');
 	let catalogOpen = $state(false);
 	let caffeineDrinksOpen = $state(false);
 	let menuOpen = $state(false);
 
-	// ── Caffeine Drinks ──────────────────────────────────────────────────────────
+	// Compact editors share the same shell and keep failed requests editable.
 	type CaffeineDrinkEntry = { id: string; name: string; defaultMl: number; caffeineMg: number; sortOrder: number; createdAt: number };
 	let caffeineDrinks = $state<CaffeineDrinkEntry[]>([]);
 	let caffeineLoading = $state(false);
-	let caffeineEditId = $state<string | null>(null);
-	let caffeineEditName = $state('');
-	let caffeineEditMl = $state('');
-	let caffeineEditMg = $state('');
-	let caffeineAddName = $state('');
-	let caffeineAddMl = $state('');
-	let caffeineAddMg = $state('');
-	let caffeineAddError = $state('');
-	let caffeineAddSaving = $state(false);
+	let caffeineLoadError = $state(false);
+	let drinkForm = $state<{ id: string | null; name: string; ml: number | undefined; mg: number | undefined } | null>(null);
+	let drinkSaving = $state(false);
+	let drinkError = $state('');
+	const drinkValid = $derived(!!drinkForm?.name.trim() && Number.isSafeInteger(drinkForm?.ml) && Number(drinkForm?.ml) > 0 && Number.isSafeInteger(drinkForm?.mg) && Number(drinkForm?.mg) >= 0);
+	const editorId = $props.id();
+	const drinkFormId = editorId + '-drink';
+	const userFormId = editorId + '-user';
 
 	async function loadCaffeineDrinks() {
-		caffeineLoading = true;
+		caffeineLoading = true; caffeineLoadError = false;
 		try {
-			const res = await fetch('/api/caffeine-drinks');
-			if (res.ok) {
-				const data = await res.json();
-				caffeineDrinks = data.drinks ?? [];
-			}
-		} finally {
-			caffeineLoading = false;
-		}
+			const response = await fetch('/api/caffeine-drinks');
+			if (!response.ok) throw new Error();
+			caffeineDrinks = (await response.json()).drinks ?? [];
+		} catch { caffeineLoadError = true; }
+		finally { caffeineLoading = false; }
 	}
-
-	async function saveCaffeineDrink(id: string) {
-		const name = caffeineEditName.trim();
-		const ml = Math.round(Number(caffeineEditMl));
-		const mg = Math.round(Number(caffeineEditMg));
-		if (!name || !ml || ml <= 0 || mg < 0) return;
-		await fetch(`/api/caffeine-drinks/${id}`, {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name, defaultMl: ml, caffeineMg: mg })
-		});
-		caffeineEditId = null;
-		await loadCaffeineDrinks();
+	function openDrink(drink: CaffeineDrinkEntry | null = null) {
+		drinkError = '';
+		drinkForm = { id: drink?.id ?? null, name: drink?.name ?? '', ml: drink?.defaultMl, mg: drink?.caffeineMg };
 	}
-
-	async function deleteCaffeineDrink(id: string) {
-		await fetch(`/api/caffeine-drinks/${id}`, { method: 'DELETE' });
-		await loadCaffeineDrinks();
-	}
-
-	async function addCaffeineDrink() {
-		const name = caffeineAddName.trim();
-		const ml = Math.round(Number(caffeineAddMl));
-		const mg = Math.round(Number(caffeineAddMg));
-		if (!name || !ml || ml <= 0 || mg < 0) { caffeineAddError = 'Alle Felder ausfüllen'; return; }
-		caffeineAddSaving = true;
-		caffeineAddError = '';
+	function closeDrink() { if (!drinkSaving) drinkForm = null; }
+	async function saveDrink(event: SubmitEvent) {
+		event.preventDefault();
+		if (!drinkForm || !drinkValid || drinkSaving) return;
+		drinkSaving = true; drinkError = '';
+		const id = drinkForm.id;
+		const payload = { name: drinkForm.name.trim(), defaultMl: Number(drinkForm.ml), caffeineMg: Number(drinkForm.mg) };
 		try {
-			const res = await fetch('/api/caffeine-drinks', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, defaultMl: ml, caffeineMg: mg })
-			});
-			if (!res.ok) throw new Error();
-			caffeineAddName = '';
-			caffeineAddMl = '';
-			caffeineAddMg = '';
-			await loadCaffeineDrinks();
-		} catch {
-			caffeineAddError = 'Fehler beim Speichern';
-		}
-		caffeineAddSaving = false;
+			const response = await fetch(id ? `/api/caffeine-drinks/${id}` : '/api/caffeine-drinks', { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+			if (!response.ok) throw new Error();
+			if (id) caffeineDrinks = caffeineDrinks.map(drink => drink.id === id ? { ...drink, ...payload } : drink);
+			else { const result = await response.json(); caffeineDrinks = [...caffeineDrinks, { id: result.id, ...payload, sortOrder: caffeineDrinks.length, createdAt: Date.now() }]; }
+			drinkForm = null;
+		} catch { drinkError = t.admin_request_failed; }
+		finally { drinkSaving = false; }
+	}
+	async function deleteDrink() {
+		if (!drinkForm?.id || drinkSaving) return;
+		drinkSaving = true; drinkError = '';
+		const id = drinkForm.id;
+		try {
+			const response = await fetch(`/api/caffeine-drinks/${id}`, { method: 'DELETE' });
+			if (!response.ok) throw new Error();
+			caffeineDrinks = caffeineDrinks.filter(drink => drink.id !== id);
+			drinkForm = null;
+		} catch { drinkError = t.admin_request_failed; }
+		finally { drinkSaving = false; }
 	}
 
-	// ── User management ──────────────────────────────────────────────────────────
-	type UserEntry = {
-		id: string; username: string; role: string;
-		createdAt: number; lastLoginAt: number | null;
-		listCount: number; itemCount: number; recipeCount: number;
-		openInviteType: 'invite' | 'reset' | null;
-		openInviteExpiresAt: number | null;
-	};
-
-	type CreatedInvite = {
-		username: string;
-		inviteUrl: string;
-		expiresAt: number;
-		type: 'invite' | 'reset';
-	};
-
-	let users = $state<UserEntry[]>([]);
+	let users = $state<AdminUserEntry[]>([]);
+	let usersError = $state(false);
 	let showCreateForm = $state(false);
 	let newUsername = $state('');
 	let newRole = $state<'user' | 'admin'>('user');
 	let userError = $state('');
-	let createdInvite = $state<CreatedInvite | null>(null);
-	let copyFeedback = $state(false);
-	let editUser = $state<UserEntry | null>(null);
-	let editError = $state('');
-	let editSuccess = $state('');
 	let creating = $state(false);
-
-	const bootstrapId = $derived(
-		users.length > 0 ? [...users].sort((a, b) => a.createdAt - b.createdAt)[0].id : null
-	);
-	const adminCount = $derived(users.filter(u => u.role === 'admin').length);
-
-	function canDelete(user: UserEntry): boolean {
-		if (user.id === data.user?.id) return false;
-		if (user.id === bootstrapId) return false;
-		if (user.role === 'admin' && adminCount <= 1) return false;
-		return true;
+	function userStatusLabel(user: AdminUserEntry): { text: string; tone: 'active' | 'pending' | 'expired' } {
+		if (!user.openInviteType) return { text: t.admin_status_active, tone: 'active' };
+		const expired = user.openInviteExpiresAt != null && user.openInviteExpiresAt < Date.now() / 1000;
+		return { text: user.openInviteType === 'invite' ? expired ? t.admin_status_invite_expired : t.admin_status_invite_pending : expired ? t.admin_status_reset_expired : t.admin_status_reset_pending, tone: expired ? 'expired' : 'pending' };
 	}
-
-	function canChangeRole(user: UserEntry): boolean {
-		if (user.id === data.user?.id) return false;
-		if (user.id === bootstrapId) return false;
-		if (user.role === 'admin' && adminCount <= 1) return false;
-		return true;
-	}
-
-	function nowSec(): number { return Math.floor(Date.now() / 1000); }
-
-	function userStatusLabel(u: UserEntry): { text: string; tone: 'active' | 'pending' | 'expired' } {
-		if (!u.openInviteType) return { text: t.admin_status_active, tone: 'active' };
-		const expired = u.openInviteExpiresAt != null && u.openInviteExpiresAt < nowSec();
-		if (u.openInviteType === 'invite') {
-			return expired
-				? { text: t.admin_status_invite_expired, tone: 'expired' }
-				: { text: t.admin_status_invite_pending, tone: 'pending' };
-		}
-		return expired
-			? { text: t.admin_status_reset_expired, tone: 'expired' }
-			: { text: t.admin_status_reset_pending, tone: 'pending' };
-	}
-
 	function formatExpiresIn(expiresAt: number): string {
-		const diff = expiresAt - nowSec();
-		if (diff <= 0) return '';
-		const hours = Math.floor(diff / 3600);
-		if (hours >= 1) return `${hours}h`;
-		return `${Math.max(1, Math.floor(diff / 60))}m`;
+		return `${Math.max(1, Math.ceil((expiresAt - Date.now() / 1000) / 3600))}h`;
 	}
-
-	function formatExpiry(ts: number): string {
-		return new Date(ts * 1000).toLocaleString(currentLang() === 'de' ? 'de-DE' : 'en-US', {
-			day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-		});
-	}
-
-	async function changeRole() {
-		if (!editUser) return;
-		editError = '';
-		const newRole = editUser.role === 'admin' ? 'user' : 'admin';
-		const res = await fetch(`/api/users/${editUser.id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ role: newRole })
-		});
-		if (res.ok) {
-			editSuccess = t.admin_role_changed;
-			editUser = { ...editUser, role: newRole };
-			await loadUsers();
-		} else {
-			const d = await res.json();
-			editError = d.error ?? 'Fehler';
-		}
-	}
-
 	async function loadUsers() {
-		const res = await fetch('/api/users');
-		if (res.ok) users = await res.json();
-	}
-
-	async function createUser(e: SubmitEvent) {
-		e.preventDefault();
-		userError = '';
-		creating = true;
-		const usernameToCreate = newUsername.trim();
+		usersError = false;
 		try {
-			const res = await fetch('/api/users', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ username: usernameToCreate, role: newRole })
-			});
-			if (res.ok) {
-				const data = await res.json();
-				createdInvite = {
-					username: usernameToCreate,
-					inviteUrl: data.inviteUrl,
-					expiresAt: nowSec() + 48 * 3600,
-					type: 'invite'
-				};
-				newUsername = '';
-				newRole = 'user';
-				showCreateForm = false;
-				loadUsers();
-			} else {
-				const d = await res.json();
-				userError = d.error ?? 'Fehler';
-			}
-		} finally {
-			creating = false;
-		}
+			const response = await fetch('/api/users');
+			if (!response.ok) throw new Error();
+			users = await response.json();
+		} catch { usersError = true; }
 	}
-
-	async function copyToClipboard(text: string): Promise<void> {
-		if (navigator.clipboard && window.isSecureContext) {
-			await navigator.clipboard.writeText(text);
-			return;
-		}
-		const textarea = document.createElement('textarea');
-		textarea.value = text;
-		textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none;top:0;left:0';
-		document.body.appendChild(textarea);
-		textarea.focus();
-		textarea.select();
-		document.execCommand('copy');
-		document.body.removeChild(textarea);
+	function closeCreate() { if (!creating) showCreateForm = false; }
+	async function createUser(event: SubmitEvent) {
+		event.preventDefault();
+		if (creating || !newUsername.trim()) return;
+		userError = ''; creating = true;
+		try {
+			const response = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: newUsername.trim(), role: newRole }) });
+			if (!response.ok) { userError = response.status === 409 ? t.admin_username_taken : t.admin_request_failed; return; }
+			const result = await response.json();
+			showCreateForm = false; newUsername = ''; newRole = 'user';
+			await goto(`/einstellungen/admin/benutzer/${result.id}`);
+		} catch { userError = t.admin_request_failed; }
+		finally { creating = false; }
 	}
-
-	function buildShareMessage(invite: CreatedInvite): string {
-		return `${t.admin_invite_share_text}\n${invite.inviteUrl}`;
-	}
-
-	async function copyInvite() {
-		if (!createdInvite) return;
-		await copyToClipboard(buildShareMessage(createdInvite));
-		copyFeedback = true;
-		setTimeout(() => (copyFeedback = false), 2000);
-	}
-
-	async function shareInvite() {
-		if (!createdInvite) return;
-		const text = buildShareMessage(createdInvite);
-		if (navigator.share) {
-			try { await navigator.share({ text }); }
-			catch { /* user cancelled */ }
-		} else {
-			await copyToClipboard(text);
-			copyFeedback = true;
-			setTimeout(() => (copyFeedback = false), 2000);
-		}
-	}
-
-	async function generateInviteFor(userId: string): Promise<void> {
-		editError = '';
-		const res = await fetch(`/api/users/${userId}/invite`, { method: 'POST' });
-		if (res.ok) {
-			const target = users.find(u => u.id === userId);
-			const data = await res.json();
-			createdInvite = {
-				username: target?.username ?? '',
-				inviteUrl: data.inviteUrl,
-				expiresAt: nowSec() + 48 * 3600,
-				type: data.type
-			};
-			editUser = null;
-			await loadUsers();
-		} else {
-			const d = await res.json();
-			editError = d.error ?? 'Fehler';
-		}
-	}
-
-	async function deleteUser() {
-		if (!editUser) return;
-		if (!confirm(t.admin_confirm_delete_user)) return;
-		const res = await fetch(`/api/users/${editUser.id}`, { method: 'DELETE' });
-		if (res.ok) {
-			users = users.filter(u => u.id !== editUser!.id);
-			editUser = null;
-		} else {
-			const d = await res.json();
-			editError = d.error ?? 'Fehler';
-		}
-	}
-
-	function openEdit(user: UserEntry) {
-		editUser = user;
-		editError = '';
-		editSuccess = '';
+	function focusDialog(node: HTMLElement) {
+		const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		void tick().then(() => { if (node.isConnected) node.focus({ preventScroll: true }); });
+		const keydown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') { event.preventDefault(); if (drinkForm) closeDrink(); else closeCreate(); }
+			if (event.key !== 'Tab') return;
+			const controls = [...node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]')].filter(element => element.getClientRects().length > 0);
+			if (event.shiftKey && (document.activeElement === controls[0] || document.activeElement === node)) { event.preventDefault(); controls.at(-1)?.focus(); }
+			else if (!event.shiftKey && document.activeElement === controls.at(-1)) { event.preventDefault(); controls[0]?.focus(); }
+		};
+		node.addEventListener('keydown', keydown);
+		return { destroy() { node.removeEventListener('keydown', keydown); if (previous?.isConnected) previous.focus({ preventScroll: true }); } };
 	}
 
 	// ── Supplement Catalog ───────────────────────────────────────────────────────
@@ -638,13 +469,14 @@
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader title={t.admin_page_title} onMenuOpen={() => menuOpen = true} />
 
-	<div class="flex-1 overflow-y-auto pb-8 px-4" style="padding-top: calc(env(safe-area-inset-top) + 6rem)">
+	<div class="admin-content flex-1 overflow-y-auto px-4" style="padding-top: calc(env(safe-area-inset-top) + 6rem)">
 
-	<div class="rounded-2xl overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+	<div class="admin-groups">
 		<!-- ── Users Accordion ─────────────────────────────────────────────────── -->
-		<div>
+		<div id="benutzer">
 			<!-- Header -->
 			<button
+				aria-expanded={usersOpen}
 				onclick={() => usersOpen = !usersOpen}
 				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
 			>
@@ -674,13 +506,13 @@
 			{#if usersOpen}
 				<div class="px-3 pb-3 space-y-2">
 					<!-- User List -->
-					<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+					<div class="admin-list user-list">
 						{#each users as user (user.id)}
 							{@const status = userStatusLabel(user)}
 							{@const expiresIn = status.tone === 'pending' && user.openInviteExpiresAt
 								? formatExpiresIn(user.openInviteExpiresAt) : ''}
-							<button
-								onclick={() => openEdit(user)}
+							<a
+								href={`/einstellungen/admin/benutzer/${user.id}`}
 								class="w-full flex items-center gap-3 px-4 py-2.5 text-left active:opacity-70 transition-opacity"
 							>
 								<div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
@@ -688,9 +520,9 @@
 									{user.username[0].toUpperCase()}
 								</div>
 								<div class="flex-1 min-w-0">
-									<div class="flex items-center gap-2">
+									<div class="user-name-line">
 										<div class="text-sm font-semibold truncate" style="color: var(--color-on-surface)">{user.username}</div>
-										<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+										<span class="user-status text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
 										      style="background-color: {status.tone === 'active'
 										        ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
 										        : status.tone === 'pending'
@@ -703,126 +535,17 @@
 									</div>
 									<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">
 										{user.role === 'admin' ? t.admin_role_admin : t.admin_role_user}
-										· {user.listCount} {user.listCount === 1 ? 'Liste' : 'Listen'}, {user.itemCount} Items, {user.recipeCount} {user.recipeCount === 1 ? 'Rezept' : 'Rezepte'}
+										· {t.nav_lists}: {user.listCount} · {t.admin_user_items}: {user.itemCount} · {t.nav_recipes}: {user.recipeCount}
 									</div>
 								</div>
 								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<polyline points="9 18 15 12 9 6"/>
 								</svg>
-							</button>
+							</a>
 						{/each}
+						<button type="button" class="admin-add-row" onclick={() => { userError = ''; showCreateForm = true; }}><span aria-hidden="true">+</span>{t.admin_add_user}</button>
 					</div>
-
-					<!-- Invite-Link card after creation/regeneration -->
-					{#if createdInvite}
-						<div class="rounded-xl px-4 py-4 space-y-3" style="background-color: var(--color-surface-container)">
-							<div class="flex items-center gap-2">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-									<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-								</svg>
-								<span class="text-xs font-semibold" style="color: var(--color-primary)">
-									{t.admin_invite_link_label} · {createdInvite.username}
-								</span>
-							</div>
-							<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-low)">
-								<p class="text-[11px] font-mono break-all" style="color: var(--color-on-surface)">{createdInvite.inviteUrl}</p>
-							</div>
-							<p class="text-[10px] px-1" style="color: var(--color-on-surface-variant)">
-								{t.admin_invite_send_hint}
-							</p>
-							<p class="text-[10px] px-1" style="color: var(--color-on-surface-variant)">
-								{t.admin_invite_expires_at}: {formatExpiry(createdInvite.expiresAt)}
-							</p>
-							<div class="flex gap-2">
-								<button
-									onclick={copyInvite}
-									class="flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-xs font-semibold"
-									style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-								>
-									{#if copyFeedback}
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-										{t.admin_invite_copied}
-									{:else}
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-											<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-											<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-										</svg>
-										{t.admin_invite_copy}
-									{/if}
-								</button>
-								<button
-									onclick={shareInvite}
-									class="flex-1 flex items-center justify-center gap-2 py-2 rounded-full text-xs font-semibold"
-									style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-								>
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-										<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-									</svg>
-									{t.admin_invite_share}
-								</button>
-							</div>
-							<button
-								onclick={() => { createdInvite = null; }}
-								class="w-full py-2 rounded-full text-xs font-semibold"
-								style="background-color: var(--color-surface-low); color: var(--color-on-surface-variant)"
-							>
-								{t.list_cancel}
-							</button>
-						</div>
-					{/if}
-
-					<!-- Add User -->
-					{#if !showCreateForm && !createdInvite}
-						<button
-							onclick={() => { showCreateForm = true; }}
-							class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left active:opacity-70"
-							style="background-color: var(--color-surface-container)"
-						>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" class="shrink-0">
-								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-							</svg>
-							<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.admin_add_user}</span>
-						</button>
-					{:else if showCreateForm}
-						<div class="rounded-xl px-4 py-4" style="background-color: var(--color-surface-container)">
-							<h3 class="text-xs font-semibold mb-1" style="color: var(--color-on-surface-variant)">{t.admin_create_user_title}</h3>
-							<p class="text-[10px] mb-3" style="color: var(--color-on-surface-variant); opacity: 0.8">{t.admin_create_user_hint}</p>
-							<form onsubmit={createUser} class="space-y-2">
-								{#if userError}
-									<div class="rounded-lg px-3 py-2 text-xs"
-									     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
-										{userError}
-									</div>
-								{/if}
-								<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-low)">
-									<input type="text" placeholder={t.admin_username_label} bind:value={newUsername}
-									       autocomplete="off" autocapitalize="none" required
-									       class="w-full bg-transparent outline-none" style="color: var(--color-on-surface); font-size: 16px" />
-								</div>
-								<div class="rounded-lg px-3 py-2.5 flex items-center gap-3" style="background-color: var(--color-surface-low)">
-									<span style="color: var(--color-on-surface-variant); font-size: 16px">{t.admin_role_label}:</span>
-									<select bind:value={newRole} class="flex-1 bg-transparent outline-none" style="color: var(--color-on-surface); font-size: 16px">
-										<option value="user">{t.admin_role_user}</option>
-										<option value="admin">{t.admin_role_admin}</option>
-									</select>
-								</div>
-								<div class="flex gap-2 pt-1">
-									<button type="button" onclick={() => showCreateForm = false}
-									        class="flex-1 py-2 rounded-full text-xs font-semibold"
-									        style="background-color: var(--color-surface-low); color: var(--color-on-surface-variant)">
-										{t.list_cancel}
-									</button>
-									<button type="submit" disabled={creating || !newUsername.trim()}
-									        class="flex-1 py-2 rounded-full text-xs font-semibold disabled:opacity-40"
-									        style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)">
-										{creating ? '…' : t.create}
-									</button>
-								</div>
-							</form>
-						</div>
-					{/if}
+					{#if usersError}<div class="admin-load-error"><p role="status">{t.admin_load_failed}</p><button type="button" onclick={loadUsers}>{t.offline_retry}</button></div>{/if}
 				</div>
 			{/if}
 		</div>
@@ -831,6 +554,7 @@
 		<div>
 			<!-- Header -->
 			<button
+				aria-expanded={catalogOpen}
 				onclick={() => { catalogOpen = !catalogOpen; if (catalogOpen) loadCatalog(); }}
 				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
 			>
@@ -857,54 +581,30 @@
 			<!-- Content -->
 			{#if catalogOpen}
 				<div class="px-3 pb-3 space-y-2">
-					<!-- Add button -->
-					{#if !catalogForm}
-						<button
-							onclick={openCatalogNew}
-							class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left active:opacity-70"
-							style="background-color: var(--color-surface-container)"
-						>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" class="shrink-0">
-								<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-							</svg>
-							<span class="text-sm font-medium" style="color: var(--color-on-surface)">{t.admin_catalog_add}</span>
-						</button>
-					{/if}
-
-					<!-- Catalog list grouped by brand -->
+					<div class="admin-list catalog-tools">
+						<button type="button" class="admin-add-row" onclick={openCatalogNew}><span aria-hidden="true">+</span>{t.admin_catalog_add}</button>
+						<div class="catalog-search-row">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+							<input type="search" value={catalogSearch} oninput={(event) => onCatalogSearchInput(event.currentTarget.value)} aria-label={t.admin_catalog_search_placeholder} placeholder={t.admin_catalog_search_placeholder} />
+						</div>
+					</div>
 					{#if catalog.length === 0}
 						<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_empty}</p>
 					{:else}
-						<!-- Search -->
-						<div class="relative">
-							<svg class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-								<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-							</svg>
-							<input
-								type="search"
-								value={catalogSearch}
-								oninput={(e) => onCatalogSearchInput((e.currentTarget as HTMLInputElement).value)}
-								placeholder={t.admin_catalog_search_placeholder}
-								class="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm outline-none"
-								style="background-color: var(--color-surface-container); color: var(--color-on-surface); border: 1.5px solid transparent;"
-								onfocus={(e) => (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--color-primary)'}
-								onblur={(e) => (e.currentTarget as HTMLInputElement).style.borderColor = 'transparent'}
-							/>
-						</div>
-
-						<!-- Brands bubble -->
+						<!-- Flat brand rows -->
 						<div>
 							<p class="text-xs font-semibold px-1 pb-1.5 pt-0.5" style="color: var(--color-on-surface-variant)">{t.admin_catalog_brands_label}</p>
 							{#if catalogGrouped.length === 0}
 								<p class="text-xs text-center py-4" style="color: var(--color-on-surface-variant)">{t.admin_catalog_no_results}</p>
 							{:else}
-							<div class="rounded-xl overflow-hidden space-y-0" style="background-color: var(--color-surface-container)">
-							<div class="space-y-0">
+							<div class="admin-list admin-brand-list">
+							<div>
 							{#each catalogGrouped as [brand, entries] (brand)}
 								{@const isOpen = openBrands.has(brand)}
-								<div class="overflow-hidden">
+								<div class="admin-brand-group">
 									<!-- Brand header -->
 									<button
+										aria-expanded={isOpen}
 										onclick={() => toggleBrand(brand)}
 										class="w-full flex items-center gap-3 px-4 py-3 text-left active:opacity-70 transition-opacity"
 									>
@@ -958,6 +658,7 @@
 		<!-- ── Caffeine Drinks Accordion ──────────────────────────────────────── -->
 		<div>
 			<button
+				aria-expanded={caffeineDrinksOpen}
 				onclick={() => { caffeineDrinksOpen = !caffeineDrinksOpen; if (caffeineDrinksOpen) loadCaffeineDrinks(); }}
 				class="w-full flex items-center gap-3 px-4 py-4 text-left active:opacity-70 transition-opacity"
 			>
@@ -979,140 +680,15 @@
 			</button>
 
 			{#if caffeineDrinksOpen}
-				<div class="px-3 pb-3 space-y-2">
-					{#if caffeineLoading}
-						<div class="flex justify-center py-4">
-							<div class="w-5 h-5 rounded-full border-2 animate-spin" style="border-color: #C8956C; border-top-color: transparent"></div>
-						</div>
-					{:else}
+				<div class="px-3 pb-3">
+					{#if caffeineLoading}<p class="admin-loading" role="status">{t.admin_loading}</p>{/if}
+					<div class="admin-list drink-list">
 						{#each caffeineDrinks as drink (drink.id)}
-							<div class="rounded-xl px-3 py-2.5" style="background-color: var(--color-surface-container)">
-								{#if caffeineEditId === drink.id}
-									<div class="space-y-2">
-										<input
-											type="text"
-											bind:value={caffeineEditName}
-											placeholder={t.caffeine_drink_name}
-											class="w-full h-9 px-3 rounded-xl border-0 outline-none text-sm"
-											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-										/>
-										<div class="flex gap-2">
-											<div class="flex-1 flex items-center gap-1.5">
-												<input
-													type="number"
-													inputmode="numeric"
-													bind:value={caffeineEditMl}
-													placeholder="ml"
-													class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
-													style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-												/>
-												<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">ml</span>
-											</div>
-											<div class="flex-1 flex items-center gap-1.5">
-												<input
-													type="number"
-													inputmode="numeric"
-													bind:value={caffeineEditMg}
-													placeholder="mg"
-													class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
-													style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-												/>
-												<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">mg</span>
-											</div>
-										</div>
-										<div class="flex gap-2">
-											<button
-												onclick={() => caffeineEditId = null}
-												class="flex-1 py-2 rounded-xl text-xs font-semibold active:opacity-70"
-												style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-											>{t.close}</button>
-											<button
-												onclick={() => saveCaffeineDrink(drink.id)}
-												class="flex-1 py-2 rounded-xl text-xs font-semibold active:opacity-80"
-												style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
-											>{t.supplement_save}</button>
-										</div>
-									</div>
-								{:else}
-									<div class="flex items-center gap-2">
-										<div class="flex-1 min-w-0">
-											<p class="text-sm font-semibold" style="color: var(--color-on-surface)">{drink.name}</p>
-											<p class="text-xs" style="color: var(--color-on-surface-variant)">{drink.defaultMl} ml · {drink.caffeineMg} mg</p>
-										</div>
-										<button
-											onclick={() => { caffeineEditId = drink.id; caffeineEditName = drink.name; caffeineEditMl = String(drink.defaultMl); caffeineEditMg = String(drink.caffeineMg); }}
-											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
-											style="color: var(--color-on-surface-variant)"
-											aria-label={t.edit}
-										>
-											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-												<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-											</svg>
-										</button>
-										<button
-											onclick={() => deleteCaffeineDrink(drink.id)}
-											class="p-1.5 rounded-xl active:opacity-60 shrink-0"
-											style="color: var(--color-error)"
-											aria-label={t.a11y_delete}
-										>
-											<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<polyline points="3 6 5 6 21 6"/>
-												<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-												<path d="M10 11v6M14 11v6"/>
-												<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-											</svg>
-										</button>
-									</div>
-								{/if}
-							</div>
+							<button type="button" class="drink-row" onclick={() => openDrink(drink)}><span><span class="drink-name">{drink.name}</span><span class="drink-meta">{drink.defaultMl} ml · {drink.caffeineMg} mg</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
 						{/each}
-
-						<!-- Add new drink -->
-						<div class="rounded-xl px-3 py-3 space-y-2" style="background-color: var(--color-surface-container)">
-							<p class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{t.caffeine_add}</p>
-							<input
-								type="text"
-								bind:value={caffeineAddName}
-								placeholder={t.caffeine_drink_name}
-								class="w-full h-9 px-3 rounded-xl border-0 outline-none text-sm"
-								style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-							/>
-							<div class="flex gap-2">
-								<div class="flex-1 flex items-center gap-1.5">
-									<input
-										type="number"
-										inputmode="numeric"
-										bind:value={caffeineAddMl}
-										placeholder="ml"
-										class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
-										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-									/>
-									<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">ml</span>
-								</div>
-								<div class="flex-1 flex items-center gap-1.5">
-									<input
-										type="number"
-										inputmode="numeric"
-										bind:value={caffeineAddMg}
-										placeholder="mg"
-										class="flex-1 h-9 px-2 rounded-xl border-0 outline-none text-sm text-center"
-										style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"
-									/>
-									<span class="text-xs shrink-0" style="color: var(--color-on-surface-variant)">mg</span>
-								</div>
-							</div>
-							{#if caffeineAddError}
-								<p class="text-xs" style="color: var(--color-error)">{caffeineAddError}</p>
-							{/if}
-							<button
-								onclick={addCaffeineDrink}
-								disabled={caffeineAddSaving}
-								class="w-full py-2.5 rounded-xl text-sm font-semibold active:opacity-80 disabled:opacity-50"
-								style="background: linear-gradient(135deg, #C8956C, #A0714F); color: white"
-							>{caffeineAddSaving ? '…' : '+ ' + t.caffeine_title}</button>
-						</div>
-					{/if}
+						<button type="button" class="admin-add-row" onclick={() => openDrink()}><span aria-hidden="true">+</span>{t.caffeine_admin_add}</button>
+					</div>
+					{#if caffeineLoadError}<div class="admin-load-error"><p role="status">{t.admin_load_failed}</p><button type="button" onclick={loadCaffeineDrinks}>{t.offline_retry}</button></div>{/if}
 				</div>
 			{/if}
 		</div>
@@ -1124,104 +700,41 @@
 <HamburgerMenu bind:open={menuOpen} user={data.user} />
 <AppBottomNav activeTab="none" />
 
-<!-- ── Edit User Bottom Sheet ──────────────────────────────────────────────── -->
-{#if editUser}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)" onclick={() => editUser = null}></div>
-	<div class="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto rounded-t-3xl px-6 pb-8 pt-4"
-	     style="background-color: var(--modal-bg)">
-		<div class="flex justify-center mb-4">
-			<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
-		</div>
-		<div class="flex items-center gap-3 mb-5">
-			<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold"
-			     style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)">
-				{editUser.username[0].toUpperCase()}
-			</div>
-			<div>
-				<div class="font-bold" style="color: var(--color-on-surface)">{editUser.username}</div>
-				<div class="text-xs" style="color: var(--color-on-surface-variant)">{editUser.role === 'admin' ? t.admin_role_admin : t.admin_role_user}</div>
-			</div>
-		</div>
-		{#if editError}
-			<div class="rounded-lg px-3 py-2 text-xs mb-2"
-			     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
-				{editError}
-			</div>
-		{/if}
-		{#if editSuccess}
-			<div class="rounded-lg px-3 py-2 text-xs mb-2"
-			     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
-				{editSuccess}
-			</div>
-		{/if}
-		<!-- Invite / Reset action — hidden for the bootstrap admin (recovery via container env) -->
-		{#if editUser.id !== bootstrapId}
-			<button
-				onclick={() => generateInviteFor(editUser!.id)}
-				class="w-full mb-2 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
-				style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
-			>
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-					<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-				</svg>
-				{editUser.openInviteType != null
-					? t.admin_invite_generate_new
-					: editUser.lastLoginAt
-						? t.admin_reset_password_btn
-						: t.admin_invite_generate_new}
-			</button>
-		{:else}
-			<div class="rounded-xl px-4 py-3 mb-3"
-			     style="background-color: color-mix(in srgb, #C8956C 12%, transparent)">
-				<div class="flex items-center gap-2 mb-1.5">
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8956C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<circle cx="12" cy="12" r="10"/>
-						<line x1="12" y1="16" x2="12" y2="12"/>
-						<line x1="12" y1="8" x2="12.01" y2="8"/>
-					</svg>
-					<span class="text-xs font-semibold" style="color: #C8956C">{t.admin_bootstrap_admin_title}</span>
-				</div>
-				<p class="text-[11px] leading-relaxed" style="color: var(--color-on-surface-variant)">
-					{t.admin_bootstrap_admin_hint}
-				</p>
-			</div>
-		{/if}
-		{#if canChangeRole(editUser)}
-			<button
-				onclick={changeRole}
-				class="w-full mb-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
-				style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
-			>
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-					<circle cx="9" cy="7" r="4"/>
-					<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-					<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-				</svg>
-				{editUser.role === 'admin' ? t.admin_make_user : t.admin_make_admin}
-			</button>
-		{/if}
-		<div class="flex gap-2">
-			{#if canDelete(editUser)}
-				<button
-					onclick={deleteUser}
-					class="px-3 py-2 rounded-full text-xs font-semibold"
-					style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)"
-				>
-					{t.admin_delete_user}
-				</button>
-			{/if}
-			<button
-				onclick={() => editUser = null}
-				class="flex-1 py-2 rounded-full text-xs font-semibold"
-				style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
-			>
-				{t.list_cancel}
-			</button>
-		</div>
+{#if showCreateForm}
+	<div role="dialog" aria-modal="true" aria-label={t.admin_create_user_title} tabindex="-1" use:focusDialog>
+		<ManageSheetShell accent="var(--color-primary)" title={t.admin_create_user_title} onclose={closeCreate}>
+			{#snippet body()}
+				<form id={userFormId} onsubmit={createUser}>
+					<p class="admin-sheet-hint">{t.admin_create_user_hint}</p>
+					<fieldset disabled={creating} class="manage-settings-surface admin-fields">
+						<div class="manage-settings-row"><label class="manage-settings-label" for={userFormId + '-name'}>{t.admin_username_label}</label><input id={userFormId + '-name'} class="manage-settings-input" bind:value={newUsername} required autocomplete="off" autocapitalize="none" /></div>
+						<SettingsSelectRow label={t.admin_role_label} value={newRole} options={[{value:'user',label:t.admin_role_user},{value:'admin',label:t.admin_role_admin}]} onchange={(role) => newRole = role as 'user' | 'admin'} />
+					</fieldset>
+					{#if userError}<p class="admin-form-error" role="alert">{userError}</p>{/if}
+				</form>
+			{/snippet}
+			{#snippet footer()}<button type="button" class="manage-secondary" disabled={creating} onclick={closeCreate}>{t.list_cancel}</button><button type="submit" form={userFormId} class="manage-primary" disabled={creating || !newUsername.trim()}>{creating ? '…' : t.create}</button>{/snippet}
+		</ManageSheetShell>
+	</div>
+{/if}
+{#if drinkForm}
+	<div role="dialog" aria-modal="true" aria-label={drinkForm.id ? t.caffeine_admin_edit : t.caffeine_admin_add} tabindex="-1" use:focusDialog>
+		<ManageSheetShell accent="#C8956C" title={drinkForm.id ? t.caffeine_admin_edit : t.caffeine_admin_add} onclose={closeDrink}>
+			{#snippet body()}
+				{#if drinkForm}
+				<form id={drinkFormId} onsubmit={saveDrink}>
+					<fieldset disabled={drinkSaving} class="manage-settings-surface admin-fields">
+						<div class="manage-settings-row"><label for={drinkFormId + '-name'} class="manage-settings-label">{t.caffeine_drink_name}</label><input id={drinkFormId + '-name'} class="manage-settings-input" bind:value={drinkForm.name} required autocomplete="off" /></div>
+						<div class="manage-settings-row"><label for={drinkFormId + '-ml'} class="manage-settings-label">{t.caffeine_admin_portion}</label><div class="admin-unit-input"><input id={drinkFormId + '-ml'} class="manage-settings-input" type="number" inputmode="numeric" min="1" step="1" required bind:value={drinkForm.ml} /><span class="manage-settings-unit">ml</span></div></div>
+						<div class="manage-settings-row"><label for={drinkFormId + '-mg'} class="manage-settings-label">{t.act_caffeine}</label><div class="admin-unit-input"><input id={drinkFormId + '-mg'} class="manage-settings-input" type="number" inputmode="numeric" min="0" step="1" required bind:value={drinkForm.mg} /><span class="manage-settings-unit">mg</span></div></div>
+					</fieldset>
+					{#if drinkError}<p class="admin-form-error" role="alert">{drinkError}</p>{/if}
+					{#if drinkForm.id}<button type="button" class="admin-drink-delete" disabled={drinkSaving} onclick={deleteDrink}>{t.caffeine_admin_delete}</button>{/if}
+				</form>
+				{/if}
+			{/snippet}
+			{#snippet footer()}<button type="button" class="manage-secondary" disabled={drinkSaving} onclick={closeDrink}>{t.list_cancel}</button><button type="submit" form={drinkFormId} class="manage-primary" disabled={drinkSaving || !drinkValid}>{drinkSaving ? '…' : t.list_save}</button>{/snippet}
+		</ManageSheetShell>
 	</div>
 {/if}
 
@@ -1512,3 +1025,40 @@
 		{/if}
 	</div>
 {/if}
+
+<style>
+	.admin-content { padding-bottom: calc(env(safe-area-inset-bottom) + 6rem); scroll-padding-top: calc(env(safe-area-inset-top) + 6rem); }
+	#benutzer { scroll-margin-top: calc(env(safe-area-inset-top) + 6rem); }
+	.admin-groups { overflow: hidden; border: 1px solid var(--bubble-container-border); border-radius: 16px; background: var(--bubble-container-bg); }
+	.admin-groups > div + div { border-top: 1px solid var(--bubble-container-border); }
+	.admin-list { overflow: hidden; border: 0; border-radius: 0; background: transparent; }
+	.admin-brand-group + .admin-brand-group, .admin-brand-group > button + button { border-top: 1px solid var(--bubble-container-border); }
+	.user-name-line { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+	.user-status { max-width: 100%; overflow-wrap: anywhere; }
+	.user-list > a + a, .user-list > .admin-add-row, .catalog-search-row, .drink-list > button + button { border-top: 1px solid var(--bubble-container-border); }
+	.admin-add-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 10px 16px; font-size: 14px; font-weight: 550; color: var(--color-on-surface); text-align: left; }
+	.admin-add-row > span { color: var(--color-primary); font-size: 22px; line-height: 1; }
+	.drink-list .admin-add-row > span { color: #C8956C; }
+	.catalog-search-row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; color: var(--color-on-surface-variant); }
+	.catalog-search-row svg { flex: none; }
+	.catalog-search-row input { width: 100%; min-width: 0; min-height: 48px; outline: none; background: transparent; color: var(--color-on-surface); font-size: 16px; }
+	.catalog-search-row:focus-within { background: color-mix(in srgb,var(--color-primary) 6%,transparent); }
+	.drink-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 8px 16px; text-align: left; color: var(--color-on-surface-variant); }
+	.drink-row > span { min-width: 0; }
+	.drink-row svg { flex: none; }
+	.drink-name { display: block; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--color-on-surface); overflow-wrap: anywhere; }
+	.drink-meta { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+	.admin-list button:focus-visible, .admin-list a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; }
+	.admin-list button:active { background: var(--bubble-interactive-bg); }
+	.admin-fields { min-width: 0; padding: 0; margin: 0; }
+	.admin-fields .manage-settings-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr); align-items: center; gap: 12px; padding-inline: 16px; }
+	.admin-fields :global(.settings-select-row) { padding-inline: 16px; border-top: 1px solid var(--bubble-container-border); }
+	.admin-unit-input { display: flex; align-items: center; gap: 8px; }
+	.admin-sheet-hint { margin: 0 2px 10px; font-size: 12px; line-height: 1.5; color: var(--color-on-surface-variant); }
+	.admin-form-error { margin: 10px 2px 0; color: var(--color-error); font-size: 12px; line-height: 1.5; }
+	.admin-drink-delete { display: block; width: 100%; min-height: 44px; margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--color-error); }
+	.admin-load-error, .admin-loading { margin: 12px 4px; font-size: 12px; line-height: 1.5; color: var(--color-on-surface-variant); }
+	.admin-load-error p { margin: 0; }
+	.admin-load-error button { min-height: 44px; color: var(--color-primary); font-weight: 600; }
+	button:disabled { opacity: 0.5; }
+</style>

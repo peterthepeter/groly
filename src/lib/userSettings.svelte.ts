@@ -1,3 +1,4 @@
+import { normalizeShortcuts, MAX_SHORTCUTS } from '#lib/shortcutActions';
 import { browser } from '$app/env';
 import { type UserSettings, type ListCategorySettings, type Shortcut, DEFAULT_SETTINGS } from '#lib/userSettingsTypes';
 import { DEFAULT_CATEGORY_ORDER } from '#lib/categories';
@@ -232,6 +233,11 @@ export const userSettings = {
 	set categorySortEnabled(v: boolean) { _categorySortEnabled = v; scheduleSave({ categorySortEnabled: v }); },
 
 	get categoryOrder() { return _categoryOrder; },
+	setCategoryOrder(order: string[]) {
+		if (order.length !== _categoryOrder.length || new Set(order).size !== order.length || order.some(key => !_categoryOrder.includes(key))) return;
+		_categoryOrder = [...order];
+		scheduleSave({ categoryOrder: [...order] });
+	},
 	moveUp(index: number) {
 		if (index <= 0) return;
 		const arr = [..._categoryOrder];
@@ -383,12 +389,12 @@ export const userSettings = {
 	// Shortcuts
 	get shortcuts() { return _shortcuts; },
 	addShortcut(s: Shortcut) {
-		if (_shortcuts.length >= 4) return;
-		_shortcuts = [..._shortcuts, s];
+		if (_shortcuts.length >= MAX_SHORTCUTS) return;
+		_shortcuts = normalizeShortcuts([..._shortcuts, s]);
 		scheduleSave({ shortcuts: _shortcuts });
 	},
 	updateShortcut(id: string, changes: Partial<Omit<Shortcut, 'id'>>) {
-		_shortcuts = _shortcuts.map(s => s.id === id ? { ...s, ...changes } : s);
+		_shortcuts = normalizeShortcuts(_shortcuts.map(s => s.id === id ? { ...s, ...changes } : s));
 		scheduleSave({ shortcuts: _shortcuts });
 	},
 	removeShortcut(id: string) {
@@ -404,7 +410,7 @@ function applySettings(settings: UserSettings) {
 	_categorySortEnabled = merged.categorySortEnabled;
 	_categoryOrder = merged.categoryOrder;
 	_listCategorySettings = settings.listCategorySettings ?? {};
-	_shortcuts = settings.shortcuts ?? [];
+	_shortcuts = normalizeShortcuts(settings.shortcuts);
 	_locationNavEnabled = settings.locationNavEnabled ?? false;
 	_listLocationDisabled = settings.listLocationDisabled ?? [];
 	_itemLayout = settings.itemLayout ?? 'grid';

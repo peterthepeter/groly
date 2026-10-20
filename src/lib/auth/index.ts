@@ -93,7 +93,7 @@ export function changePassword(userId: string, newPassword: string, keepSessionI
 			.run();
 		db.delete(sessions).where(and(eq(sessions.userId, userId), keepSessionId ? ne(sessions.id, keepSessionId) : undefined)).run();
 		db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.userId, userId), keepPushDeviceId ? ne(pushSubscriptions.id, keepPushDeviceId) : undefined)).run();
-		db.update(userInvites).set({ usedAt: now() }).where(eq(userInvites.userId, userId)).run();
+		db.update(userInvites).set({ usedAt: now(), tokenValue: null }).where(eq(userInvites.userId, userId)).run();
 	});
 	closeUserStreams(userId, keepSessionId);
 }

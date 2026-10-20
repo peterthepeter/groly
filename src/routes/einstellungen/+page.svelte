@@ -1,21 +1,49 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { tick } from 'svelte';
+	import { goto, snapshot } from '$app/navigation';
 	import { page } from '$app/state';
 	import * as publicEnv from '$app/env/public';
 	import AppHeader from '#lib/components/AppHeader.svelte';
 	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
 	import AppIconSettings from '#lib/components/AppIconSettings.svelte';
+	import SettingsToggleRow from '#lib/components/SettingsToggleRow.svelte';
+	import SettingsSelectRow from '#lib/components/SettingsSelectRow.svelte';
+	import SettingsGroup from '#lib/components/SettingsGroup.svelte';
 	import { t, currentLang, setLang } from '#lib/i18n.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
-	import { CATEGORY_LABELS } from '#lib/categories';
 	import { validatePasswordRule, getPasswordHint } from '#lib/password';
-	import { shortcuts, type Shortcut, type ShortcutAction } from '#lib/shortcuts.svelte';
 	import { logoutDevice, syncDevicePush } from '#lib/deviceSession';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
 	let { data } = $props();
+
+	let openedGroups = $state({ general: false, visibility: false, display: false, shopping: false, notifications: false, account: false });
+	snapshot({
+		id: 'settings-groups',
+		capture: () => ({ ...openedGroups }),
+		restore: value => { openedGroups = { ...value }; }
+	});
+	$effect(() => {
+		const hash = page.url.hash;
+		const target = hash.slice(1);
+		const anchors: Record<string, keyof typeof openedGroups> = {
+			'schnellzugriff': 'general', 'general-title': 'general',
+			'visibility-title': 'visibility', 'app-icon': 'display', 'display-title': 'display',
+			'kategorien-sortieren': 'shopping', 'shopping-lists-title': 'shopping',
+			'notifications-location-title': 'notifications', 'account-title': 'account'
+		};
+		const locationRequested = page.url.searchParams.get('expand') === 'location';
+		const group = locationRequested ? 'notifications' : anchors[target];
+		if (!group) return;
+		openedGroups[group] = true;
+		void tick().then(() => {
+			if (page.url.hash !== hash) return;
+			document.getElementById(locationRequested ? 'notifications-location-title' : target)?.scrollIntoView({ block: 'nearest' });
+		});
+	});
+
 
 	let currentPassword = $state('');
 	let newPassword = $state('');
@@ -121,18 +149,7 @@
 		exportLogs ? 'supplement-logs.csv' :
 		'supplement-catalog.csv'
 	);
-	let langOpen = $state(false);
-	let themeOpen = $state(false);
-	let colorSchemeOpen = $state(false);
-	let categorySortOpen = $state(false);
-	let layoutOpen = $state(false);
-	let checkedItemsOpen = $state(false);
-	let favIndicatorOpen = $state(false);
-	let greetingOpen = $state(false);
 	let wakeLockOpen = $state(false);
-	let supplementTabOpen = $state(false);
-	let recipesTabOpen = $state(false);
-	let pushOpen = $state(false);
 	let sharedListsOpen = $state(false);
 	let showPushPrompt = $state(false);
 
@@ -270,7 +287,6 @@
 	}
 
 	$effect(() => { initPushState(); });
-	$effect(() => { if (shortcutsOpen) void loadAllLists(); });
 
 	const mustChange = false;
 
@@ -291,100 +307,6 @@
 		if (!data.user?.id) return;
 		const res = await fetch(`/api/lists/${listId}/members/${data.user.id}`, { method: 'DELETE' });
 		if (res.ok) sharedLists = sharedLists.filter(l => l.id !== listId);
-	}
-
-	// ── Shortcuts ──────────────────────────────────────────────────────────────
-	let shortcutsOpen = $state(page.url.searchParams.get('expand') === 'shortcuts');
-	let locationOpen = $state(page.url.searchParams.get('expand') === 'location');
-	let allLists = $state<{ id: string; name: string }[]>([]);
-	let allListsLoaded = $state(false);
-
-	type ShortcutDraft = { name: string; listId: string; action: ShortcutAction };
-	let editingId = $state<string | null>(null);   // null = adding new
-	let showShortcutForm = $state(false);
-	let draft = $state<ShortcutDraft>({ name: '', listId: '', action: 'go' });
-
-	const draftNeedsList = $derived(draft.action !== 'recipes' && draft.action !== 'mealplan');
-
-	async function loadAllLists() {
-		if (allListsLoaded) return;
-		try {
-			const res = await fetch('/api/lists');
-			if (!res.ok) return;
-			const json = await res.json();
-			const raw = json?.lists ?? json;
-			allLists = raw.map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }));
-			allListsLoaded = true;
-			if (!draft.listId && allLists.length > 0) draft.listId = allLists[0].id;
-		} catch { /* ignore */ }
-	}
-
-	function openShortcutsSection() {
-		shortcutsOpen = !shortcutsOpen;
-		if (shortcutsOpen) void loadAllLists();
-	}
-
-	// Ensure draft.listId is set once allLists loads (async race condition fix)
-	$effect(() => {
-		if (showShortcutForm && allLists.length > 0 && !draft.listId) {
-			draft.listId = allLists[0].id;
-		}
-	});
-
-	function startAdd() {
-		editingId = null;
-		draft = { name: '', listId: allLists[0]?.id ?? '', action: 'go' };
-		showShortcutForm = true;
-	}
-
-	function startEdit(sc: Shortcut) {
-		editingId = sc.id;
-		draft = { name: sc.name, listId: sc.listId ?? '', action: sc.action };
-		showShortcutForm = true;
-	}
-
-	function cancelShortcutForm() {
-		showShortcutForm = false;
-		editingId = null;
-	}
-
-	function generateId(): string {
-		// crypto.randomUUID() is only available in secure contexts (HTTPS/localhost).
-		// Use a simple fallback that works on plain HTTP (local dev via IP).
-		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-			return crypto.randomUUID();
-		}
-		return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
-	}
-
-	function saveShortcut() {
-		const needsList = draft.action !== 'recipes' && draft.action !== 'mealplan';
-		if (!draft.name.trim() || (needsList && !draft.listId)) return;
-		const listName = allLists.find(l => l.id === draft.listId)?.name ?? '';
-		const listId = needsList ? draft.listId : undefined;
-		const resolvedListName = needsList ? listName : undefined;
-		if (editingId) {
-			shortcuts.update(editingId, { name: draft.name.trim(), listId, listName: resolvedListName, action: draft.action });
-		} else {
-			shortcuts.add({ id: generateId(), name: draft.name.trim(), listId, listName: resolvedListName, action: draft.action });
-		}
-		showShortcutForm = false;
-		editingId = null;
-	}
-
-	function actionLabel(action: ShortcutAction): string {
-		if (currentLang() === 'en') {
-			if (action === 'scanner') return 'Scanner';
-			if (action === 'add') return 'Add item';
-			if (action === 'recipes') return 'Recipes';
-			if (action === 'mealplan') return 'Meal plan';
-			return 'Open';
-		}
-		if (action === 'scanner') return 'Scanner';
-		if (action === 'add') return 'Artikel hinzufügen';
-		if (action === 'recipes') return 'Rezepte';
-		if (action === 'mealplan') return 'Wochenplan';
-		return 'Öffnen';
 	}
 
 	$effect(() => { loadSharedLists(); });
@@ -457,7 +379,7 @@
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader title={mustChange ? t.settings_change_password : t.settings_title} onMenuOpen={() => { if (!mustChange) menuOpen = true; }} />
 
-	<div class="flex-1 overflow-y-auto px-4" style="padding-top: calc(env(safe-area-inset-top) + 6rem); padding-bottom: calc(env(safe-area-inset-bottom) + 6rem)">
+	<div class="settings-content flex-1 overflow-y-auto px-4" style="padding-top: calc(env(safe-area-inset-top) + 6rem); padding-bottom: calc(env(safe-area-inset-bottom) + 6rem)">
 
 	{#if mustChange}
 		<!-- ── Fokus-Modus: Nur Passwort ändern ───────────────────────── -->
@@ -515,1114 +437,485 @@
 		</div>
 	{:else}
 
-		<!-- ── Gruppe: Darstellung ───────────────────────────────────────── -->
-		<p class="text-xs font-semibold tracking-widest uppercase px-2 mb-2"
-		   style="color: var(--color-on-surface-variant); opacity: 0.5">
-			{currentLang() === 'en' ? 'Display' : 'Darstellung'}
-		</p>
-		<div class="rounded-2xl mb-6 overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+		<div class="settings-groups">
+		<SettingsGroup id="general" label={t.settings_group_general} bind:open={openedGroups.general}>
+			{#snippet icon()}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v5m0 4v7M12 4v9m0 4v3M20 4v1m0 4v11M1 9h6m2 4h6m2-8h6"/></svg>{/snippet}
+			<div class="settings-surface">
+				<SettingsSelectRow label={t.language} value={currentLang()} options={[{ value: 'de', label: t.language_de }, { value: 'en', label: t.language_en }]} onchange={(value) => setLang(value as 'de' | 'en')}>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>{/snippet}
+				</SettingsSelectRow>
 
-			<!-- Erledigte Items -->
-			<div>
-				<button
-					onclick={() => checkedItemsOpen = !checkedItemsOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_show_all_checked_section}</span>
-					</div>
-					<div class="flex items-center gap-3">
-						<div
-							role="switch"
-							aria-checked={userSettings.showAllCheckedItems}
-							onclick={(e) => { e.stopPropagation(); userSettings.showAllCheckedItems = !userSettings.showAllCheckedItems; }}
-							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.showAllCheckedItems = !userSettings.showAllCheckedItems; } }}
-							tabindex="0"
-							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-							style="background-color: {userSettings.showAllCheckedItems ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						>
-						</div>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-						     style="transform: rotate({checkedItemsOpen ? 90 : 0}deg); transition: transform 0.2s">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</div>
-				</button>
-				{#if checkedItemsOpen}
-					<div class="px-5 pb-5">
-						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_show_all_checked_desc}</p>
-					</div>
-				{/if}
-			</div>
+				<div id="schnellzugriff">
+					<a href="/einstellungen/schnellzugriff" class="settings-quick-access">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m13 2-10 12h9l-1 8 10-12h-9z" /></svg>
+						<span>{t.settings_quick_access}</span>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+					</a>
+				</div>
 
-			<!-- Listen-Ansicht -->
-			<div>
-				<button
-					onclick={() => layoutOpen = !layoutOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_layout_section}</span>
-					</div>
-					<div class="flex items-center gap-3">
-						<div
-							role="switch"
-							aria-checked={userSettings.itemLayout === 'list'}
-							onclick={(e) => { e.stopPropagation(); userSettings.itemLayout = userSettings.itemLayout === 'list' ? 'grid' : 'list'; }}
-							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.itemLayout = userSettings.itemLayout === 'list' ? 'grid' : 'list'; } }}
-							tabindex="0"
-							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-							style="background-color: {userSettings.itemLayout === 'list' ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						>
-						</div>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-						     style="transform: rotate({layoutOpen ? 90 : 0}deg); transition: transform 0.2s">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</div>
-				</button>
-				{#if layoutOpen}
-					<div class="px-5 pb-5">
-						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_layout_list_view_desc}</p>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Favoriten-Punkt -->
-			<div>
-				<button
-					onclick={() => favIndicatorOpen = !favIndicatorOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-						</svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_favorite_indicator}</span>
-					</div>
-					<div class="flex items-center gap-3">
-						<div
-							role="switch"
-							aria-checked={userSettings.showFavoriteIndicator}
-							onclick={(e) => { e.stopPropagation(); userSettings.showFavoriteIndicator = !userSettings.showFavoriteIndicator; }}
-							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.showFavoriteIndicator = !userSettings.showFavoriteIndicator; } }}
-							tabindex="0"
-							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-							style="background-color: {userSettings.showFavoriteIndicator ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						>
-						</div>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-						     style="transform: rotate({favIndicatorOpen ? 90 : 0}deg); transition: transform 0.2s">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</div>
-				</button>
-				{#if favIndicatorOpen}
-					<div class="px-5 pb-5">
-						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_favorite_indicator_desc}</p>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Begrüßung -->
-			<div>
-				<button
-					onclick={() => greetingOpen = !greetingOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-						</svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Greeting' : 'Begrüßung'}</span>
-					</div>
-					<div class="flex items-center gap-3">
-						<div
-							role="switch"
-							aria-checked={userSettings.greetingEnabled}
-							onclick={(e) => { e.stopPropagation(); userSettings.greetingEnabled = !userSettings.greetingEnabled; }}
-							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.greetingEnabled = !userSettings.greetingEnabled; } }}
-							tabindex="0"
-							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-							style="background-color: {userSettings.greetingEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						>
-						</div>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-						     style="transform: rotate({greetingOpen ? 90 : 0}deg); transition: transform 0.2s">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</div>
-				</button>
-				{#if greetingOpen}
-					<div class="px-5 pb-5">
-						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">
-							{currentLang() === 'en'
-								? 'Shows a personalized greeting with date and summary on the Lists, Tracker, and Recipes screens.'
-								: 'Zeigt eine persönliche Begrüßung mit Datum und Zusammenfassung auf den Listen-, Tracker- und Rezepte-Seiten.'}
-						</p>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Bildschirm anlassen -->
-			<div>
-				<button
-					onclick={() => wakeLockOpen = !wakeLockOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<rect x="2" y="4" width="20" height="14" rx="2" ry="2"/>
-							<line x1="8" y1="22" x2="16" y2="22"/>
-							<line x1="12" y1="18" x2="12" y2="22"/>
-						</svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Keep screen on' : 'Bildschirm anlassen'}</span>
-					</div>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({wakeLockOpen ? 90 : 0}deg); transition: transform 0.2s">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				{#if wakeLockOpen}
-					<div class="px-5 pb-5 space-y-3">
-						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">
-							{currentLang() === 'en'
-								? 'Prevents the screen from turning off automatically when these pages are open.'
-								: 'Verhindert dass der Bildschirm automatisch ausgeht solange diese Seiten geöffnet sind.'}
-						</p>
-						<div class="flex items-center justify-between pt-1">
-							<span class="text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Shopping lists' : 'Einkaufslisten'}</span>
-							<div
-								role="switch"
-								aria-checked={userSettings.wakeLockLists}
-								onclick={() => userSettings.wakeLockLists = !userSettings.wakeLockLists}
-								onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') userSettings.wakeLockLists = !userSettings.wakeLockLists; }}
-								tabindex="0"
-								class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-								style="background-color: {userSettings.wakeLockLists ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-							>
-							</div>
-						</div>
-						<div class="flex items-center justify-between">
-							<span class="text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Recipes' : 'Rezepte'}</span>
-							<div
-								role="switch"
-								aria-checked={userSettings.wakeLockRecipes}
-								onclick={() => userSettings.wakeLockRecipes = !userSettings.wakeLockRecipes}
-								onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') userSettings.wakeLockRecipes = !userSettings.wakeLockRecipes; }}
-								tabindex="0"
-								class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-								style="background-color: {userSettings.wakeLockRecipes ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-							>
-							</div>
-						</div>
-						<div class="flex items-center justify-between">
-							<span class="text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Meditation' : 'Meditation'}</span>
-							<div
-								role="switch"
-								aria-checked={userSettings.wakeLockMeditation}
-								onclick={() => userSettings.wakeLockMeditation = !userSettings.wakeLockMeditation}
-								onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') userSettings.wakeLockMeditation = !userSettings.wakeLockMeditation; }}
-								tabindex="0"
-								class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-								style="background-color: {userSettings.wakeLockMeditation ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-							>
-							</div>
-						</div>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Nahrungsergänzung Tab -->
-			<div>
-				<button
-					onclick={() => supplementTabOpen = !supplementTabOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/>
-							<line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/>
-						</svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_supplement_section}</span>
-					</div>
-					<div class="flex items-center gap-3">
-						<div
-							role="switch"
-							aria-checked={userSettings.showSupplementTracker}
-							onclick={(e) => { e.stopPropagation(); userSettings.showSupplementTracker = !userSettings.showSupplementTracker; }}
-							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.showSupplementTracker = !userSettings.showSupplementTracker; } }}
-							tabindex="0"
-							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-							style="background-color: {userSettings.showSupplementTracker ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						>
-						</div>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-						     style="transform: rotate({supplementTabOpen ? 90 : 0}deg); transition: transform 0.2s">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</div>
-				</button>
-				{#if supplementTabOpen}
-					<div class="px-5 pb-5">
-						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_supplement_tab_desc}</p>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Rezepte Tab -->
-			<div>
-				<button
-					onclick={() => recipesTabOpen = !recipesTabOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
-						</svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_recipes_section}</span>
-					</div>
-					<div class="flex items-center gap-3">
-						<div
-							role="switch"
-							aria-checked={userSettings.showRecipes}
-							onclick={(e) => { e.stopPropagation(); userSettings.showRecipes = !userSettings.showRecipes; }}
-							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.showRecipes = !userSettings.showRecipes; } }}
-							tabindex="0"
-							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-							style="background-color: {userSettings.showRecipes ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						>
-						</div>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-						     style="transform: rotate({recipesTabOpen ? 90 : 0}deg); transition: transform 0.2s">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</div>
-				</button>
-				{#if recipesTabOpen}
-					<div class="px-5 pb-5">
-						<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_recipes_tab_desc}</p>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Schnellzugriff -->
-			<div id="schnellzugriff">
-				<button
-					onclick={openShortcutsSection}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Quick access' : 'Schnellzugriff'}</span>
-					</div>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({shortcutsOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				{#if shortcutsOpen}
-					<div class="px-5 pb-5">
-						<p class="text-xs mb-4" style="color: var(--color-on-surface-variant)">
-							{currentLang() === 'en'
-								? 'Long-press the + button to access up to 4 shortcuts.'
-								: 'Lange auf den + Button drücken um bis zu 4 Schnellzugriffe zu öffnen.'}
-						</p>
-						{#if shortcuts.list.length > 0}
-							<div class="space-y-2 mb-3">
-								{#each shortcuts.list as sc (sc.id)}
-									<div class="flex items-center gap-2 rounded-xl px-3 py-2.5"
-									     style="background-color: var(--color-surface-container)">
-										<div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-										     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent)">
-											{#if sc.action === 'scanner'}
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-													<path d="M3 9V6a2 2 0 0 1 2-2h2"/>
-													<path d="M3 15v3a2 2 0 0 0 2 2h2"/>
-													<path d="M21 9V6a2 2 0 0 0-2-2h-2"/>
-													<path d="M21 15v3a2 2 0 0 1-2 2h-2"/>
-													<line x1="10" y1="9" x2="10" y2="15"/>
-													<line x1="13" y1="9" x2="13" y2="15"/>
-													<line x1="16" y1="9" x2="16" y2="15"/>
-												</svg>
-											{:else if sc.action === 'add'}
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round">
-													<line x1="12" y1="5" x2="12" y2="19"/>
-													<line x1="5" y1="12" x2="19" y2="12"/>
-												</svg>
-											{:else if sc.action === 'recipes'}
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-													<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-													<path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-												</svg>
-											{:else if sc.action === 'mealplan'}
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-													<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-													<line x1="16" y1="2" x2="16" y2="6"/>
-													<line x1="8" y1="2" x2="8" y2="6"/>
-													<line x1="3" y1="10" x2="21" y2="10"/>
-													<line x1="8" y1="14" x2="16" y2="14"/>
-												</svg>
-											{:else}
-												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-													<polyline points="9 18 15 12 9 6"/>
-												</svg>
-											{/if}
-										</div>
-										<div class="flex-1 min-w-0">
-											<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{sc.name}</div>
-											<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">
-												{sc.action === 'recipes' || sc.action === 'mealplan'
-													? actionLabel(sc.action)
-													: `${sc.listName} · ${actionLabel(sc.action)}`}
-											</div>
-										</div>
-										<button
-											onclick={() => startEdit(sc)}
-											class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 active:opacity-60"
-											style="color: var(--color-on-surface-variant)"
-											aria-label={t.edit}
-										>
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-												<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-											</svg>
-										</button>
-										<button
-											onclick={() => shortcuts.remove(sc.id)}
-											class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 active:opacity-60"
-											style="color: var(--color-error)"
-											aria-label={t.a11y_delete}
-										>
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-												<line x1="18" y1="6" x2="6" y2="18"/>
-												<line x1="6" y1="6" x2="18" y2="18"/>
-											</svg>
-										</button>
-									</div>
-								{/each}
-							</div>
-						{/if}
-						{#if showShortcutForm}
-							<div class="rounded-xl px-4 py-4 mb-3 space-y-3"
-							     style="background-color: var(--color-surface-container)">
-								<input
-									type="text"
-									placeholder={currentLang() === 'en' ? 'Shortcut name' : 'Name des Schnellzugriffs'}
-									bind:value={draft.name}
-									class="w-full rounded-xl px-4 py-3 text-base outline-none"
-									style="background-color: var(--color-surface-card); color: var(--color-on-surface)"
-								/>
-								{#if draftNeedsList && allLists.length > 0}
-									<div class="rounded-xl px-4 py-3" style="background-color: var(--color-surface-card)">
-										<select
-											bind:value={draft.listId}
-											class="w-full bg-transparent outline-none text-sm"
-											style="color: var(--color-on-surface)"
-										>
-											{#each allLists as l (l.id)}
-												<option value={l.id}>{l.name}</option>
-											{/each}
-										</select>
-									</div>
-								{/if}
-								<div class="flex gap-2">
-									{#each (['go', 'add', 'scanner'] as ShortcutAction[]) as action}
-										<button
-											onclick={() => draft.action = action}
-											class="flex-1 py-2.5 rounded-full text-xs font-semibold transition-colors"
-											style="background-color: {draft.action === action ? 'var(--color-primary)' : 'var(--color-surface-card)'}; color: {draft.action === action ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-										>
-											{actionLabel(action)}
-										</button>
-									{/each}
-								</div>
-								<div class="flex gap-2">
-									{#each (['recipes', 'mealplan'] as ShortcutAction[]) as action}
-										<button
-											onclick={() => draft.action = action}
-											class="flex-1 py-2.5 rounded-full text-xs font-semibold transition-colors"
-											style="background-color: {draft.action === action ? 'var(--color-primary)' : 'var(--color-surface-card)'}; color: {draft.action === action ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-										>
-											{actionLabel(action)}
-										</button>
-									{/each}
-								</div>
-								<div class="flex gap-2">
-									<button
-										onclick={cancelShortcutForm}
-										class="flex-1 py-3 rounded-full text-sm font-semibold"
-										style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-									>
-										{t.list_cancel}
-									</button>
-									<button
-										onclick={saveShortcut}
-										disabled={!draft.name.trim() || (draftNeedsList && !draft.listId)}
-										class="flex-1 py-3 rounded-full text-sm font-semibold disabled:opacity-40"
-										style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-									>
-										{t.list_save}
-									</button>
-								</div>
-							</div>
-						{:else if shortcuts.list.length < 4}
-							<button
-								onclick={startAdd}
-								class="w-full py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2"
-								style="background-color: var(--color-surface-container); color: var(--color-primary)"
-							>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-									<line x1="12" y1="5" x2="12" y2="19"/>
-									<line x1="5" y1="12" x2="19" y2="12"/>
-								</svg>
-								{currentLang() === 'en' ? 'Add shortcut' : 'Schnellzugriff hinzufügen'}
-							</button>
-						{/if}
-					</div>
-				{/if}
-			</div>
-
-			<!-- Kategorie-Sortierung -->
-			<div id="kategorien-sortieren">
-				<button
-					onclick={() => categorySortOpen = !categorySortOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Category sorting' : 'Kategorien sortieren'}</span>
-					</div>
-					<div class="flex items-center gap-3">
-						<div
-							role="switch"
-							aria-checked={userSettings.categorySortEnabled}
-							onclick={(e) => { e.stopPropagation(); userSettings.categorySortEnabled = !userSettings.categorySortEnabled; }}
-							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.categorySortEnabled = !userSettings.categorySortEnabled; } }}
-							tabindex="0"
-							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-							style="background-color: {userSettings.categorySortEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						>
-						</div>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-						     style="transform: rotate({categorySortOpen ? 90 : 0}deg); transition: transform 0.2s">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</div>
-				</button>
-				{#if categorySortOpen && userSettings.categorySortEnabled}
-					<div class="px-5 pb-5">
-						<p class="text-xs mb-4" style="color: var(--color-on-surface-variant)">
-							{currentLang() === 'en'
-								? 'First category appears at the bottom of the grid.'
-								: 'Erste Kategorie erscheint unten im Raster.'}
-						</p>
-						<div class="space-y-1.5">
-							{#each userSettings.categoryOrder as key, i}
-								<div class="flex items-center gap-3 rounded-xl px-3 py-2.5"
-								     style="background-color: var(--color-surface-container)">
-									<span class="flex-1 text-sm font-medium" style="color: var(--color-on-surface)">
-										{i + 1}. {CATEGORY_LABELS[key]?.[currentLang()] ?? key}
-									</span>
-									<button
-										onclick={() => userSettings.moveUp(i)}
-										disabled={i === 0}
-										aria-label={t.a11y_move_up}
-										class="p-1 rounded-lg disabled:opacity-20"
-										style="color: var(--color-on-surface-variant)"
-									>
-										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-											<polyline points="18 15 12 9 6 15"/>
-										</svg>
-									</button>
-									<button
-										onclick={() => userSettings.moveDown(i)}
-										disabled={i === userSettings.categoryOrder.length - 1}
-										aria-label={t.a11y_move_down}
-										class="p-1 rounded-lg disabled:opacity-20"
-										style="color: var(--color-on-surface-variant)"
-									>
-										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-											<polyline points="6 9 12 15 18 9"/>
-										</svg>
-									</button>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{:else if categorySortOpen && !userSettings.categorySortEnabled}
-					<div class="px-5 pb-5">
-						<p class="text-xs" style="color: var(--color-on-surface-variant)">
-							{currentLang() === 'en'
-								? 'Enable the toggle above to configure category order.'
-								: 'Aktiviere den Schalter oben, um die Kategoriereihenfolge festzulegen.'}
-						</p>
-					</div>
-				{/if}
-			</div>
-
-		</div>
-
-		<!-- ── Gruppe: Benachrichtigungen & Standort ─────────────────────── -->
-		<p class="text-xs font-semibold tracking-widest uppercase px-2 mb-2"
-		   style="color: var(--color-on-surface-variant); opacity: 0.5">
-			{currentLang() === 'en' ? 'Notifications & Location' : 'Benachrichtigungen & Standort'}
-		</p>
-		<div class="rounded-2xl mb-6 overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-
-			<!-- Standorterkennung -->
-			<div>
-				<button
-					onclick={() => locationOpen = !locationOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Location detection' : 'Standorterkennung'}</span>
-					</div>
-					<div class="flex items-center gap-3">
-						<div
-							role="switch"
-							aria-checked={userSettings.locationNavEnabled}
-							onclick={(e) => { e.stopPropagation(); userSettings.locationNavEnabled = !userSettings.locationNavEnabled; }}
-							onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.stopPropagation(); userSettings.locationNavEnabled = !userSettings.locationNavEnabled; } }}
-							tabindex="0"
-							class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-							style="background-color: {userSettings.locationNavEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-						>
-						</div>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-						     style="transform: rotate({locationOpen ? 90 : 0}deg); transition: transform 0.2s">
-							<polyline points="9 18 15 12 9 6"/>
-						</svg>
-					</div>
-				</button>
-				{#if locationOpen}
-					<div class="px-5 pb-5">
-						<p class="text-xs mb-3 leading-relaxed" style="color: var(--color-on-surface-variant)">
-							{currentLang() === 'en'
-								? 'Automatically opens a list when you open the app at a saved location (within 100 m). Works when resuming from background too.'
-								: 'Öffnet eine Liste automatisch, wenn du die App an einem gespeicherten Standort öffnest (innerhalb von 100 m). Funktioniert auch beim Wechsel aus dem Hintergrund.'}
-						</p>
-						<div class="rounded-xl px-4 py-3 text-xs leading-relaxed mb-2"
-						     style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)">
-							{currentLang() === 'en'
-								? '🔒 Your GPS location never leaves your device. Only the search query is sent to OpenStreetMap once during setup — not linked to your identity.'
-								: '🔒 Dein GPS-Standort verlässt nie dein Gerät. Nur der Suchbegriff wird einmalig beim Einrichten an OpenStreetMap gesendet – ohne Verbindung zu deiner Identität.'}
-						</div>
-						<div class="text-xs px-1 leading-relaxed space-y-1" style="color: var(--color-on-surface-variant)">
-							<p>{currentLang() === 'en' ? '1. Enable the toggle above — activates the feature globally.' : '1. Schalter oben aktivieren — schaltet die Funktion global ein.'}</p>
-							<p>{currentLang() === 'en' ? '2. Set a location per list: long-press a list → Edit.' : '2. Standort pro Liste hinterlegen: langer Druck auf eine Liste → Bearbeiten.'}</p>
-						</div>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Push-Benachrichtigungen (conditional) -->
-			{#if pushSupported}
+				<!-- Bildschirm anlassen -->
 				<div>
 					<button
-						onclick={() => pushOpen = !pushOpen}
+						aria-expanded={wakeLockOpen}
+						aria-controls="screen-on-options"
+						onclick={() => wakeLockOpen = !wakeLockOpen}
 						class="w-full flex items-center justify-between px-5 py-2.5"
 					>
 						<div class="flex items-center gap-3">
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-							<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Push Notifications' : 'Push-Benachrichtigungen'}</span>
-						</div>
-						<div class="flex items-center gap-3">
-							{#if pushPermission === 'denied'}
-								<span class="text-xs" style="color: var(--color-error)">
-									{currentLang() === 'en' ? 'Blocked' : 'Blockiert'}
-								</span>
-							{:else}
-								<div
-									role="switch"
-									aria-checked={pushSubscribed}
-									aria-disabled={pushLoading}
-									onclick={(e) => { e.stopPropagation(); if (!pushLoading) pushSubscribed ? unsubscribePush() : subscribePush(); }}
-									onkeydown={(e) => { if ((e.key === ' ' || e.key === 'Enter') && !pushLoading) { e.stopPropagation(); pushSubscribed ? unsubscribePush() : subscribePush(); } }}
-									tabindex="0"
-									class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-									style="background-color: {pushSubscribed ? 'var(--color-primary)' : 'var(--color-surface-container)'}; opacity: {pushLoading ? 0.5 : 1}"
-								>
-								</div>
-							{/if}
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-							     style="transform: rotate({pushOpen ? 90 : 0}deg); transition: transform 0.2s">
-								<polyline points="9 18 15 12 9 6"/>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="2" y="4" width="20" height="14" rx="2" ry="2"/>
+								<line x1="8" y1="22" x2="16" y2="22"/>
+								<line x1="12" y1="18" x2="12" y2="22"/>
 							</svg>
+							<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_keep_screen_on}</span>
 						</div>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						     style="transform: rotate({wakeLockOpen ? 90 : 0}deg); transition: transform 0.2s">
+							<polyline points="9 18 15 12 9 6"/>
+						</svg>
 					</button>
-					{#if pushOpen}
-						<div class="px-5 pb-5 space-y-3">
-							<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">
-								{currentLang() === 'en'
-									? 'Receive notifications when other users add or change items in a shared list.'
-									: 'Erhalte Benachrichtigungen, wenn andere Nutzer Items in einer geteilten Liste hinzufügen oder ändern.'}
-							</p>
-							{#if pushSubscribed}
-								<button
-									onclick={sendTestNotification}
-									disabled={testNotifCooldown > 0 || testNotifLoading}
-									class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium active:opacity-70 disabled:opacity-40 transition-opacity"
-									style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
-								>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-									</svg>
-									{#if testNotifLoading}
-										{currentLang() === 'en' ? 'Sending…' : 'Wird gesendet…'}
-									{:else if testNotifCooldown > 0}
-										{currentLang() === 'en' ? `Wait ${testNotifCooldown}s` : `Warten (${testNotifCooldown}s)`}
-									{:else}
-										{currentLang() === 'en' ? 'Send test notification' : 'Test-Benachrichtigung senden'}
-									{/if}
-								</button>
-							{/if}
-							{#if pushError}
-								<p class="text-xs" style="color: var(--color-error)">{pushError}</p>
-							{/if}
-							{#if testNotifError}
-								<p class="text-xs" style="color: var(--color-error)">{testNotifError}</p>
+					{#if wakeLockOpen}
+						<div id="screen-on-options" class="pb-2">
+							<p class="px-5 pb-2 text-xs leading-relaxed" style="color: var(--color-on-surface-variant)">{t.settings_keep_screen_on_desc}</p>
+							<SettingsToggleRow label={t.settings_group_shopping_lists} checked={userSettings.wakeLockLists} onchange={() => userSettings.wakeLockLists = !userSettings.wakeLockLists} />
+							<SettingsToggleRow label={t.settings_recipes_section} checked={userSettings.wakeLockRecipes} onchange={() => userSettings.wakeLockRecipes = !userSettings.wakeLockRecipes} />
+							<SettingsToggleRow label={t.meditation_title} checked={userSettings.wakeLockMeditation} onchange={() => userSettings.wakeLockMeditation = !userSettings.wakeLockMeditation} />
+						</div>
+					{/if}
+				</div>
+			</div>
+		</SettingsGroup>
+
+		<SettingsGroup id="visibility" label={t.settings_group_visibility} bind:open={openedGroups.visibility}>
+			{#snippet icon()}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>{/snippet}
+			<div class="settings-surface">
+				<SettingsToggleRow
+					label={t.settings_recipes_section}
+					description={t.settings_recipes_tab_desc}
+					checked={userSettings.showRecipes}
+					onchange={() => { userSettings.showRecipes = !userSettings.showRecipes; }}
+				>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>{/snippet}
+				</SettingsToggleRow>
+
+				<SettingsToggleRow
+					label={t.settings_supplement_section}
+					description={t.settings_supplement_tab_desc}
+					checked={userSettings.showSupplementTracker}
+					onchange={() => { userSettings.showSupplementTracker = !userSettings.showSupplementTracker; }}
+				>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 8.4L19.2 8.4A3.6 3.6 0 0 1 19.2 15.6L4.8 15.6A3.6 3.6 0 0 1 4.8 8.4Z" fill="none" stroke-width="1.8" stroke-linejoin="round"/><line x1="12" y1="8.4" x2="12" y2="15.6" stroke-width="0.85" stroke-linecap="round"/></svg>{/snippet}
+				</SettingsToggleRow>
+
+				<SettingsToggleRow
+					label={t.settings_show_greeting}
+					description={t.settings_greeting_desc}
+					checked={userSettings.greetingEnabled}
+					onchange={() => { userSettings.greetingEnabled = !userSettings.greetingEnabled; }}
+				>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{/snippet}
+				</SettingsToggleRow>
+			</div>
+		</SettingsGroup>
+
+		<SettingsGroup id="display" label={t.settings_group_display} bind:open={openedGroups.display}>
+			{#snippet icon()}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>{/snippet}
+			<div class="settings-surface">
+				<SettingsSelectRow label={t.theme} value={userSettings.theme} options={[{ value: 'system', label: t.theme_system }, { value: 'light', label: t.theme_light }, { value: 'dark', label: t.theme_dark }]} onchange={(value) => userSettings.theme = value as typeof userSettings.theme}>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>{/snippet}
+				</SettingsSelectRow>
+				<SettingsSelectRow label={t.color_scheme} value={userSettings.colorScheme} options={[{ value: 'forest', label: t.color_scheme_forest }, { value: 'classic', label: t.color_scheme_classic }, { value: 'indigo', label: t.color_scheme_indigo }]} onchange={(value) => userSettings.colorScheme = value as typeof userSettings.colorScheme}>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 1 1 0-20 5 5 0 0 1 5 5c0 1.5-.5 2.5-1.5 3.5S14 12 14 13.5s.5 2.5 1.5 3.5c1 1 1.5 2 1.5 3.5a2 2 0 0 1-5 1.5z"/></svg>{/snippet}
+					{#snippet preview()}<span class="h-3 w-3 rounded-full" style="background: {userSettings.colorScheme === 'forest' ? '#2E7D32' : userSettings.colorScheme === 'classic' ? '#006c54' : '#535CBA'}"></span>{/snippet}
+					{#snippet optionPreview(value: string)}<span class="h-3 w-3 rounded-full" style="background: {value === 'forest' ? '#2E7D32' : value === 'classic' ? '#006c54' : '#535CBA'}"></span>{/snippet}
+				</SettingsSelectRow>
+				<AppIconSettings currentIcon={data.appIcon} />
+			</div>
+		</SettingsGroup>
+
+		<SettingsGroup id="shopping-lists" label={t.settings_group_shopping_lists} bind:open={openedGroups.shopping}>
+			{#snippet icon()}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3h6v2m-6 6h6m-6 4h6m-6 4h3"/></svg>{/snippet}
+			<div class="settings-surface">
+				<SettingsToggleRow
+					label={t.settings_layout_section}
+					description={t.settings_list_view_summary}
+					checked={userSettings.itemLayout === 'list'}
+					onchange={() => { userSettings.itemLayout = userSettings.itemLayout === 'list' ? 'grid' : 'list'; }}
+				>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>{/snippet}
+				</SettingsToggleRow>
+
+				<div id="kategorien-sortieren">
+					<div class="settings-category-header">
+						<a class="settings-category-open" href="/einstellungen/kategorien">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+							<span class="settings-category-label">{t.settings_category_sorting}</span>
+							<span class="settings-category-affordance" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg></span>
+						</a>
+						<button type="button" role="switch" aria-checked={userSettings.categorySortEnabled} aria-label={t.settings_category_sorting} class="settings-category-switch" onclick={() => userSettings.categorySortEnabled = !userSettings.categorySortEnabled}>
+							<span class="h-5 w-10 rounded-full border" style="border-color: {userSettings.categorySortEnabled ? 'var(--color-primary)' : 'var(--color-outline-variant)'}; background-color: {userSettings.categorySortEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}" aria-hidden="true"></span>
+						</button>
+					</div>
+				</div>
+
+				<SettingsToggleRow
+					label={t.settings_favorite_indicator}
+					description={t.settings_favorite_indicator_desc}
+					checked={userSettings.showFavoriteIndicator}
+					onchange={() => { userSettings.showFavoriteIndicator = !userSettings.showFavoriteIndicator; }}
+				>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>{/snippet}
+				</SettingsToggleRow>
+
+				<SettingsToggleRow
+					label={t.settings_show_all_checked_section}
+					description={t.settings_checked_items_summary}
+					checked={userSettings.showAllCheckedItems}
+					onchange={() => { userSettings.showAllCheckedItems = !userSettings.showAllCheckedItems; }}
+				>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>{/snippet}
+				</SettingsToggleRow>
+			</div>
+		</SettingsGroup>
+
+		<SettingsGroup id="notifications-location" label={t.settings_group_notifications_location} bind:open={openedGroups.notifications}>
+			{#snippet icon()}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M10 21h4"/></svg>{/snippet}
+			<div class="settings-surface">
+
+				<SettingsToggleRow label={t.settings_location_detection} infoInitiallyOpen={page.url.searchParams.get('expand') === 'location'} description={t.settings_location_description} checked={userSettings.locationNavEnabled} onchange={() => userSettings.locationNavEnabled = !userSettings.locationNavEnabled}>
+					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>{/snippet}
+				</SettingsToggleRow>
+
+				{#if pushSupported}
+					<div>
+						<SettingsToggleRow label={t.settings_push_notifications} description={t.settings_push_description} checked={pushSubscribed} disabled={pushLoading || pushPermission === 'denied'} onchange={() => { if (!pushLoading) void (pushSubscribed ? unsubscribePush() : subscribePush()); }}>
+							{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>{/snippet}
+						</SettingsToggleRow>
+						{#if pushPermission === 'denied'}<p class="settings-inline-status" style="color: var(--color-error)">{t.settings_push_blocked}</p>{/if}
+						<div class="settings-push-actions">
+								{#if pushSubscribed}
+									<button
+										onclick={sendTestNotification}
+										disabled={testNotifCooldown > 0 || testNotifLoading}
+										class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium active:opacity-70 disabled:opacity-40 transition-opacity"
+										style="background-color: var(--color-surface-container); color: var(--color-on-surface-variant)"
+									>
+										<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+										</svg>
+										{#if testNotifLoading}
+											{currentLang() === 'en' ? 'Sending…' : 'Wird gesendet…'}
+										{:else if testNotifCooldown > 0}
+											{currentLang() === 'en' ? `Wait ${testNotifCooldown}s` : `Warten (${testNotifCooldown}s)`}
+										{:else}
+											{currentLang() === 'en' ? 'Send test notification' : 'Test-Benachrichtigung senden'}
+										{/if}
+									</button>
+								{/if}
+						</div>
+						{#if pushError}<p class="settings-inline-status" style="color: var(--color-error)">{pushError}</p>{/if}
+						{#if testNotifError}<p class="settings-inline-status" style="color: var(--color-error)">{testNotifError}</p>{/if}
+					</div>
+				{/if}
+
+				<!-- Geteilte Listen -->
+				<div>
+					<button
+						onclick={() => sharedListsOpen = !sharedListsOpen}
+						class="w-full flex items-center justify-between px-5 py-2.5"
+					>
+						<div class="flex items-center gap-3">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+							<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Shared with me' : 'Geteilte Listen'}</span>
+						</div>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
+						     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						     style="transform: rotate({sharedListsOpen ? 90 : 0}deg); transition: transform 0.2s">
+							<polyline points="9 18 15 12 9 6"/>
+						</svg>
+					</button>
+					{#if sharedListsOpen}
+						<div class="px-5 pb-5">
+							{#if sharedLists.length === 0}
+								<p class="text-sm" style="color: var(--color-on-surface-variant)">
+									{currentLang() === 'en' ? 'No lists shared with you.' : 'Keine Listen mit dir geteilt.'}
+								</p>
+							{:else}
+								<div class="settings-shared-lists">
+									{#each sharedLists as sl (sl.id)}
+										<div class="settings-shared-row flex items-center gap-3 py-2.5">
+											<div class="flex-1 min-w-0">
+												<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{sl.name}</div>
+												{#if sl.ownerUsername}
+													<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{sl.ownerUsername}</div>
+												{/if}
+											</div>
+											<button
+												onclick={() => leaveList(sl.id)}
+												class="text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
+												style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)"
+											>
+												{currentLang() === 'en' ? 'Leave' : 'Verlassen'}
+											</button>
+										</div>
+									{/each}
+								</div>
 							{/if}
 						</div>
 					{/if}
 				</div>
-			{/if}
-
-			<!-- Geteilte Listen -->
-			<div>
-				<button
-					onclick={() => sharedListsOpen = !sharedListsOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{currentLang() === 'en' ? 'Shared with me' : 'Geteilte Listen'}</span>
-					</div>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)"
-					     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({sharedListsOpen ? 90 : 0}deg); transition: transform 0.2s">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				{#if sharedListsOpen}
-					<div class="px-5 pb-5">
-						{#if sharedLists.length === 0}
-							<p class="text-sm" style="color: var(--color-on-surface-variant)">
-								{currentLang() === 'en' ? 'No lists shared with you.' : 'Keine Listen mit dir geteilt.'}
-							</p>
-						{:else}
-							<div class="space-y-2">
-								{#each sharedLists as sl (sl.id)}
-									<div class="flex items-center gap-3 rounded-xl px-3 py-2.5"
-									     style="background-color: var(--color-surface-container)">
-										<div class="flex-1 min-w-0">
-											<div class="text-sm font-medium truncate" style="color: var(--color-on-surface)">{sl.name}</div>
-											{#if sl.ownerUsername}
-												<div class="text-xs truncate" style="color: var(--color-on-surface-variant)">{sl.ownerUsername}</div>
-											{/if}
-										</div>
-										<button
-											onclick={() => leaveList(sl.id)}
-											class="text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
-											style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)"
-										>
-											{currentLang() === 'en' ? 'Leave' : 'Verlassen'}
-										</button>
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				{/if}
 			</div>
+		</SettingsGroup>
 
-		</div>
+		<SettingsGroup id="account" label={t.settings_group_account} bind:open={openedGroups.account}>
+			{#snippet icon()}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/></svg>{/snippet}
+			<div class="settings-surface">
 
-		<!-- ── Gruppe: Konto ─────────────────────────────────────────────── -->
-		<p class="text-xs font-semibold tracking-widest uppercase px-2 mb-2"
-		   style="color: var(--color-on-surface-variant); opacity: 0.5">
-			{currentLang() === 'en' ? 'Account' : 'Konto'}
-		</p>
-
-		<div class="rounded-2xl mb-6 overflow-hidden divide-y divide-white/[0.08]" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-
-			<!-- Daten exportieren & importieren -->
-			<div>
-				<button
-					onclick={() => { exportOpen = !exportOpen; importResult = null; importError = false; }}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+				<!-- Daten exportieren & importieren -->
+				<div>
+					<button
+						onclick={() => { exportOpen = !exportOpen; importResult = null; importError = false; }}
+						class="w-full flex items-center justify-between px-5 py-2.5"
+					>
+						<div class="flex items-center gap-3">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+							</svg>
+							<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.supplement_data_title}</span>
+						</div>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						     style="transform: rotate({exportOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+							<polyline points="9 18 15 12 9 6"/>
 						</svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.supplement_data_title}</span>
-					</div>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({exportOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				{#if exportOpen}
-					<div class="px-5 pb-4 space-y-4">
-						<!-- Export -->
-						<div class="space-y-2">
-							<p class="text-xs font-semibold uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.supplement_export_title}</p>
-							<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.supplement_export_desc}</p>
-							<div class="flex items-center justify-between">
-								<span class="text-sm" style="color: var(--color-on-surface)">{t.supplement_export_logs}</span>
-								<div
-									role="switch"
-									aria-checked={exportLogs}
-									onclick={() => exportLogs = !exportLogs}
-									onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') exportLogs = !exportLogs; }}
-									tabindex="0"
-									class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-									style="background-color: {exportLogs ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-								>
+					</button>
+					{#if exportOpen}
+						<div class="px-5 pb-4 space-y-4">
+							<!-- Export -->
+							<div class="space-y-2">
+								<p class="text-xs font-semibold uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.supplement_export_title}</p>
+								<p class="text-sm leading-relaxed" style="color: var(--color-on-surface-variant)">{t.supplement_export_desc}</p>
+								<div class="flex items-center justify-between">
+									<span class="text-sm" style="color: var(--color-on-surface)">{t.supplement_export_logs}</span>
+									<div
+										role="switch"
+										aria-checked={exportLogs}
+										onclick={() => exportLogs = !exportLogs}
+										onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') exportLogs = !exportLogs; }}
+										tabindex="0"
+										class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+										style="background-color: {exportLogs ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+									>
+									</div>
 								</div>
-							</div>
-							<div class="flex items-center justify-between">
-								<span class="text-sm" style="color: var(--color-on-surface)">{t.supplement_export_catalog}</span>
-								<div
-									role="switch"
-									aria-checked={exportCatalog}
-									onclick={() => exportCatalog = !exportCatalog}
-									onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') exportCatalog = !exportCatalog; }}
-									tabindex="0"
-									class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
-									style="background-color: {exportCatalog ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
-								>
+								<div class="flex items-center justify-between">
+									<span class="text-sm" style="color: var(--color-on-surface)">{t.supplement_export_catalog}</span>
+									<div
+										role="switch"
+										aria-checked={exportCatalog}
+										onclick={() => exportCatalog = !exportCatalog}
+										onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') exportCatalog = !exportCatalog; }}
+										tabindex="0"
+										class="relative w-10 h-5 rounded-full overflow-hidden transition-colors flex-shrink-0"
+										style="background-color: {exportCatalog ? 'var(--color-primary)' : 'var(--color-surface-container)'}"
+									>
+									</div>
 								</div>
-							</div>
-							<!-- Zeitraum Toggle -->
-							{#if exportLogs}
-								<div class="rounded-xl overflow-hidden p-1 flex gap-1" style="background-color: var(--color-surface-container)">
-									<button
-										onclick={() => exportRangeMode = false}
-										class="flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors"
-										style="background-color: {!exportRangeMode ? 'var(--color-surface-high)' : 'transparent'}; color: {!exportRangeMode ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
-									>{currentLang() === 'en' ? 'Complete' : 'Komplett'}</button>
-									<button
-										onclick={() => exportRangeMode = true}
-										class="flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors"
-										style="background-color: {exportRangeMode ? 'var(--color-surface-high)' : 'transparent'}; color: {exportRangeMode ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
-									>{currentLang() === 'en' ? 'Date range' : 'Zeitraum'}</button>
-								</div>
-								{#if exportRangeMode}
-									<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
-										<div class="flex">
-											<div class="flex-1 px-3 py-2 flex flex-col gap-0.5">
-												<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'From' : 'Von'}</span>
-												<input
-													type="date"
-													bind:value={exportFrom}
-													class="border-0 outline-none w-full"
-													style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
-												/>
-											</div>
-											<div class="flex-1 px-3 py-2 flex flex-col gap-0.5" style="border-left: 1px solid var(--color-surface-high)">
-												<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'To' : 'Bis'}</span>
-												<input
-													type="date"
-													bind:value={exportTo}
-													class="border-0 outline-none w-full"
-													style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
-												/>
+								<!-- Zeitraum Toggle -->
+								{#if exportLogs}
+									<div class="rounded-xl overflow-hidden p-1 flex gap-1" style="background-color: var(--color-surface-container)">
+										<button
+											onclick={() => exportRangeMode = false}
+											class="flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors"
+											style="background-color: {!exportRangeMode ? 'var(--color-surface-high)' : 'transparent'}; color: {!exportRangeMode ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+										>{currentLang() === 'en' ? 'Complete' : 'Komplett'}</button>
+										<button
+											onclick={() => exportRangeMode = true}
+											class="flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors"
+											style="background-color: {exportRangeMode ? 'var(--color-surface-high)' : 'transparent'}; color: {exportRangeMode ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}"
+										>{currentLang() === 'en' ? 'Date range' : 'Zeitraum'}</button>
+									</div>
+									{#if exportRangeMode}
+										<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+											<div class="flex">
+												<div class="flex-1 px-3 py-2 flex flex-col gap-0.5">
+													<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'From' : 'Von'}</span>
+													<input
+														type="date"
+														bind:value={exportFrom}
+														class="border-0 outline-none w-full"
+														style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
+													/>
+												</div>
+												<div class="flex-1 px-3 py-2 flex flex-col gap-0.5" style="border-left: 1px solid var(--color-surface-high)">
+													<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'To' : 'Bis'}</span>
+													<input
+														type="date"
+														bind:value={exportTo}
+														class="border-0 outline-none w-full"
+														style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
+													/>
+												</div>
 											</div>
 										</div>
-									</div>
+									{/if}
 								{/if}
-							{/if}
-							{#if exportLogs || exportCatalog}
-								<a
-									href={exportHref}
-									download={exportFilename}
-									class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity"
+								{#if exportLogs || exportCatalog}
+									<a
+										href={exportHref}
+										download={exportFilename}
+										class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity"
+										style="background-color: var(--color-surface-container); color: var(--color-primary)"
+									>
+										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+										</svg>
+										{t.supplement_export_btn}
+									</a>
+								{/if}
+							</div>
+
+							<!-- Import -->
+							<div class="space-y-3">
+								<p class="text-xs font-semibold uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.supplement_import_title}</p>
+
+								<!-- Hilfe-Akkordeon -->
+								<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
+									<button
+										onclick={() => importHelpOpen = !importHelpOpen}
+										class="w-full flex items-center justify-between px-3 py-2.5 active:opacity-70"
+									>
+										<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'Format & hints' : 'Format & Hinweise'}</span>
+										<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+										     style="transform: rotate({importHelpOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+											<polyline points="9 18 15 12 9 6"/>
+										</svg>
+									</button>
+									{#if importHelpOpen}
+										<div class="px-3 pb-3 space-y-2">
+											<p class="text-xs leading-relaxed" style="color: var(--color-on-surface-variant)">
+												{currentLang() === 'en'
+													? 'The CSV must have these columns. Times are interpreted in your device timezone. Supplements that don\'t exist in your list will be skipped — create them first.'
+													: 'Die CSV muss folgende Spalten haben. Uhrzeiten werden in der Gerätezeitzone interpretiert. Supplements die nicht in deiner Liste existieren werden übersprungen — lege sie vorher an.'}
+											</p>
+											<div class="rounded-lg px-3 py-2 overflow-x-auto" style="background-color: var(--color-surface-high)">
+												<pre class="text-xs" style="color: var(--color-primary); font-family: monospace; white-space: pre">datetime,supplement,brand,amount,unit,log_note
+	2026-04-28T07:15:00,Vitamin C,,1000,mg,Mit Frühstück
+	2026-04-28T08:00:00,Magnesium,Brand,400,mg,</pre>
+											</div>
+											<p class="text-xs" style="color: var(--color-on-surface-variant)">
+												{currentLang() === 'en'
+													? 'brand and log_note are optional.'
+													: 'brand und log_note sind optional.'}
+											</p>
+										</div>
+									{/if}
+								</div>
+
+								<input
+									bind:this={importFileInput}
+									type="file"
+									accept=".csv"
+									onchange={handleImport}
+									class="hidden"
+								/>
+								<button
+									onclick={() => importFileInput?.click()}
+									disabled={importing}
+									class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity disabled:opacity-50"
 									style="background-color: var(--color-surface-container); color: var(--color-primary)"
 								>
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+										<polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
 									</svg>
-									{t.supplement_export_btn}
-								</a>
-							{/if}
-						</div>
-
-						<!-- Import -->
-						<div class="space-y-3">
-							<p class="text-xs font-semibold uppercase tracking-wide" style="color: var(--color-on-surface-variant)">{t.supplement_import_title}</p>
-
-							<!-- Hilfe-Akkordeon -->
-							<div class="rounded-xl overflow-hidden" style="background-color: var(--color-surface-container)">
-								<button
-									onclick={() => importHelpOpen = !importHelpOpen}
-									class="w-full flex items-center justify-between px-3 py-2.5 active:opacity-70"
-								>
-									<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'Format & hints' : 'Format & Hinweise'}</span>
-									<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-									     style="transform: rotate({importHelpOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-										<polyline points="9 18 15 12 9 6"/>
-									</svg>
+									{importing ? '…' : t.supplement_import_btn}
 								</button>
-								{#if importHelpOpen}
-									<div class="px-3 pb-3 space-y-2">
-										<p class="text-xs leading-relaxed" style="color: var(--color-on-surface-variant)">
-											{currentLang() === 'en'
-												? 'The CSV must have these columns. Times are interpreted in your device timezone. Supplements that don\'t exist in your list will be skipped — create them first.'
-												: 'Die CSV muss folgende Spalten haben. Uhrzeiten werden in der Gerätezeitzone interpretiert. Supplements die nicht in deiner Liste existieren werden übersprungen — lege sie vorher an.'}
-										</p>
-										<div class="rounded-lg px-3 py-2 overflow-x-auto" style="background-color: var(--color-surface-high)">
-											<pre class="text-xs" style="color: var(--color-primary); font-family: monospace; white-space: pre">datetime,supplement,brand,amount,unit,log_note
-2026-04-28T07:15:00,Vitamin C,,1000,mg,Mit Frühstück
-2026-04-28T08:00:00,Magnesium,Brand,400,mg,</pre>
+								{#if importError}
+									<p class="text-sm" style="color: var(--color-error)">{t.supplement_import_error}</p>
+								{/if}
+								{#if importResult}
+									<p class="text-sm font-semibold" style="color: var(--color-primary)">{importResult.imported} {importResult.imported === 1 ? 'Eintrag' : 'Einträge'} importiert</p>
+									{#if importResult.skipped.length > 0}
+										<div>
+											<p class="text-xs font-medium mb-1" style="color: var(--color-on-surface-variant)">{t.supplement_import_skipped}</p>
+											<p class="text-xs" style="color: var(--color-on-surface-variant)">{importResult.skipped.join(', ')}</p>
 										</div>
-										<p class="text-xs" style="color: var(--color-on-surface-variant)">
-											{currentLang() === 'en'
-												? 'brand and log_note are optional.'
-												: 'brand und log_note sind optional.'}
-										</p>
-									</div>
+									{/if}
 								{/if}
 							</div>
-
-							<input
-								bind:this={importFileInput}
-								type="file"
-								accept=".csv"
-								onchange={handleImport}
-								class="hidden"
-							/>
-							<button
-								onclick={() => importFileInput?.click()}
-								disabled={importing}
-								class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold active:opacity-70 transition-opacity disabled:opacity-50"
-								style="background-color: var(--color-surface-container); color: var(--color-primary)"
-							>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-								</svg>
-								{importing ? '…' : t.supplement_import_btn}
-							</button>
-							{#if importError}
-								<p class="text-sm" style="color: var(--color-error)">{t.supplement_import_error}</p>
-							{/if}
-							{#if importResult}
-								<p class="text-sm font-semibold" style="color: var(--color-primary)">{importResult.imported} {importResult.imported === 1 ? 'Eintrag' : 'Einträge'} importiert</p>
-								{#if importResult.skipped.length > 0}
-									<div>
-										<p class="text-xs font-medium mb-1" style="color: var(--color-on-surface-variant)">{t.supplement_import_skipped}</p>
-										<p class="text-xs" style="color: var(--color-on-surface-variant)">{importResult.skipped.join(', ')}</p>
-									</div>
-								{/if}
-							{/if}
 						</div>
-					</div>
-				{/if}
-			</div>
+					{/if}
+				</div>
 
-			<!-- Passwort ändern -->
-			<div>
-				<button
-					onclick={() => passwordOpen = !passwordOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_change_password}</span>
-					</div>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({passwordOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				{#if passwordOpen}
-					<div class="px-5 pb-4">
-						{#if mustChange}
-							<div class="rounded-lg px-3 py-2 mb-2 text-xs"
-							     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
-								{t.must_change_password}
-							</div>
-						{/if}
-						<form onsubmit={changePassword} class="space-y-2">
-							{#if error}
-								<div class="rounded-lg px-3 py-2 text-xs"
-								     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
-									{error}
-								</div>
-							{/if}
-							{#if success}
-								<div class="rounded-lg px-3 py-2 text-xs"
+				<!-- Passwort ändern -->
+				<div>
+					<button
+						onclick={() => passwordOpen = !passwordOpen}
+						class="w-full flex items-center justify-between px-5 py-2.5"
+					>
+						<div class="flex items-center gap-3">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+							<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.settings_change_password}</span>
+						</div>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+						     style="transform: rotate({passwordOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
+							<polyline points="9 18 15 12 9 6"/>
+						</svg>
+					</button>
+					{#if passwordOpen}
+						<div class="px-5 pb-4">
+							{#if mustChange}
+								<div class="rounded-lg px-3 py-2 mb-2 text-xs"
 								     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
-									{success}
+									{t.must_change_password}
 								</div>
 							{/if}
-							<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
-								<input type="password" placeholder={t.settings_current_password} bind:value={currentPassword} required
-								       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface)" />
-							</div>
-							<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
-								<input type="password" placeholder={t.settings_new_password} bind:value={newPassword} required
-								       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface)" />
-							</div>
-							<div>
+							<form onsubmit={changePassword} class="space-y-2">
+								{#if error}
+									<div class="rounded-lg px-3 py-2 text-xs"
+									     style="background-color: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error)">
+										{error}
+									</div>
+								{/if}
+								{#if success}
+									<div class="rounded-lg px-3 py-2 text-xs"
+									     style="background-color: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)">
+										{success}
+									</div>
+								{/if}
 								<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
-									<input type="password" placeholder={t.settings_confirm_password} bind:value={confirmPassword} required
+									<input type="password" placeholder={t.settings_current_password} bind:value={currentPassword} required
 									       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface)" />
 								</div>
-								<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
-							</div>
-							<button
-								type="submit"
-								disabled={loading}
-								class="w-full py-2.5 rounded-full text-xs font-semibold mt-1 disabled:opacity-50"
-								style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-							>
-								{loading ? '...' : t.settings_save_password}
-							</button>
-						</form>
-					</div>
-				{/if}
-			</div>
-
-			<!-- Sprache -->
-			<div>
-				<button
-					onclick={() => langOpen = !langOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.language}</span>
-					</div>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({langOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				{#if langOpen}
-					<div class="px-5 pb-4">
-						<div class="flex gap-2">
-							<button
-								onclick={() => setLang('de')}
-								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity"
-								style="background-color: {currentLang() === 'de' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {currentLang() === 'de' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-							>
-								{t.language_de}
-							</button>
-							<button
-								onclick={() => setLang('en')}
-								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity"
-								style="background-color: {currentLang() === 'en' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {currentLang() === 'en' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-							>
-								{t.language_en}
-							</button>
+								<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
+									<input type="password" placeholder={t.settings_new_password} bind:value={newPassword} required
+									       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface)" />
+								</div>
+								<div>
+									<div class="rounded-lg px-3 py-2.5" style="background-color: var(--color-surface-container)">
+										<input type="password" placeholder={t.settings_confirm_password} bind:value={confirmPassword} required
+										       class="w-full bg-transparent outline-none text-xs" style="color: var(--color-on-surface)" />
+									</div>
+									<p class="text-[10px] mt-1 px-1" style="color: var(--color-on-surface-variant)">{getPasswordHint(currentLang())}</p>
+								</div>
+								<button
+									type="submit"
+									disabled={loading}
+									class="w-full py-2.5 rounded-full text-xs font-semibold mt-1 disabled:opacity-50"
+									style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+								>
+									{loading ? '...' : t.settings_save_password}
+								</button>
+							</form>
 						</div>
-					</div>
-				{/if}
-			</div>
+					{/if}
+				</div>
 
-			<!-- Erscheinungsbild -->
-			<div>
-				<button
-					onclick={() => themeOpen = !themeOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.theme}</span>
-					</div>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({themeOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				{#if themeOpen}
-					<div class="px-5 pb-4">
-						<div class="flex gap-2">
-							<button
-								onclick={() => userSettings.theme = 'system'}
-								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity"
-								style="background-color: {userSettings.theme === 'system' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.theme === 'system' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-							>
-								{t.theme_system}
-							</button>
-							<button
-								onclick={() => userSettings.theme = 'light'}
-								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity"
-								style="background-color: {userSettings.theme === 'light' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.theme === 'light' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-							>
-								{t.theme_light}
-							</button>
-							<button
-								onclick={() => userSettings.theme = 'dark'}
-								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity"
-								style="background-color: {userSettings.theme === 'dark' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.theme === 'dark' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-							>
-								{t.theme_dark}
-							</button>
-						</div>
-					</div>
-				{/if}
-			</div>
 
-			<AppIconSettings />
-
-			<!-- Color scheme -->
-			<div>
-				<button
-					onclick={() => colorSchemeOpen = !colorSchemeOpen}
-					class="w-full flex items-center justify-between px-5 py-2.5"
-				>
-					<div class="flex items-center gap-3">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 1 1 0-20 5 5 0 0 1 5 5c0 1.5-.5 2.5-1.5 3.5S14 12 14 13.5s.5 2.5 1.5 3.5c1 1 1.5 2 1.5 3.5a2 2 0 0 1-5 1.5z"/></svg>
-						<span class="font-medium text-sm" style="color: var(--color-on-surface)">{t.color_scheme}</span>
-					</div>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-					     style="transform: rotate({colorSchemeOpen ? 90 : 0}deg); transition: transform 0.2s; flex-shrink: 0">
-						<polyline points="9 18 15 12 9 6"/>
-					</svg>
-				</button>
-				{#if colorSchemeOpen}
-					<div class="px-5 pb-4">
-						<div class="flex gap-2">
-							<button
-								onclick={() => userSettings.colorScheme = 'forest'}
-								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity flex items-center justify-center gap-1.5"
-								style="background-color: {userSettings.colorScheme === 'forest' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.colorScheme === 'forest' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-							>
-								<span class="inline-block w-3 h-3 rounded-full" style="background-color: #2E7D32"></span>
-								{t.color_scheme_forest}
-							</button>
-							<button
-								onclick={() => userSettings.colorScheme = 'classic'}
-								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity flex items-center justify-center gap-1.5"
-								style="background-color: {userSettings.colorScheme === 'classic' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.colorScheme === 'classic' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-							>
-								<span class="inline-block w-3 h-3 rounded-full" style="background-color: #006c54"></span>
-								{t.color_scheme_classic}
-							</button>
-							<button
-								onclick={() => userSettings.colorScheme = 'indigo'}
-								class="flex-1 py-2 rounded-full text-xs font-semibold transition-opacity flex items-center justify-center gap-1.5"
-								style="background-color: {userSettings.colorScheme === 'indigo' ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {userSettings.colorScheme === 'indigo' ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-							>
-								<span class="inline-block w-3 h-3 rounded-full" style="background-color: #283593"></span>
-								{t.color_scheme_indigo}
-							</button>
-						</div>
-					</div>
-				{/if}
 			</div>
+		</SettingsGroup>
 
 		</div>
-
-
 	{/if}<!-- end mustChange else -->
 
 	</div>
@@ -1678,3 +971,37 @@
 <AppBottomNav activeTab="none" />
 
 <HamburgerMenu bind:open={menuOpen} user={data.user} />
+
+
+<style>
+	.settings-quick-access { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 20px; font-size: 14px; font-weight: 550; color: var(--color-on-surface); }
+	.settings-quick-access span { flex: 1; }
+	.settings-quick-access svg { flex: none; }
+	.settings-quick-access:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: 12px; }
+	.settings-category-header { display: flex; align-items: center; padding: 0 18px 0 20px; }
+	.settings-category-open { display: flex; flex: 1; align-items: center; gap: 12px; min-width: 0; min-height: 44px; text-align: left; font-size: 14px; font-weight: 550; color: var(--color-on-surface); }
+	.settings-category-open > svg { flex: none; color: var(--color-on-surface-variant); }
+	.settings-category-open:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: 12px; }
+	.settings-category-label { flex: 1; }
+	.settings-category-affordance { display: flex; align-items: center; justify-content: center; width: 40px; flex: none; color: var(--color-on-surface-variant); }
+	.settings-category-switch { display: flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; flex: none; }
+	.settings-shared-row + .settings-shared-row { border-top: 1px solid var(--bubble-container-border); }
+	.settings-inline-status { margin: 0; padding: 0 20px 8px; font-size: 12px; line-height: 1.5; }
+	.settings-push-actions { padding: 0 20px; }
+	.settings-push-actions:has(button) { padding-bottom: 10px; }
+	.settings-content { scroll-padding-top: calc(env(safe-area-inset-top) + 6rem); }
+	.settings-groups { overflow: hidden; border: 1px solid var(--bubble-container-border); border-radius: 16px; background: var(--bubble-container-bg); }
+	.settings-surface {
+		overflow: hidden;
+		border: 0;
+		border-radius: 0;
+		background: transparent;
+	}
+	.settings-surface > :global(* + *) { border-top: 1px solid var(--bubble-container-border); }
+	.settings-surface :global(button.w-full) { min-height: 44px; gap: 12px; text-align: left; }
+	.settings-surface :global(button > .flex.items-center.gap-3:first-child) { min-width: 0; }
+	.settings-surface :global(button > .flex > svg),
+	.settings-surface :global(button > svg:first-child) { flex-shrink: 0; stroke: var(--color-on-surface-variant); }
+	.settings-surface :global(button:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: 12px; }
+	.settings-surface :global([id]) { scroll-margin-top: 12px; }
+</style>
