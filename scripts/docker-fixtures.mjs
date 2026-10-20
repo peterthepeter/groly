@@ -1,7 +1,7 @@
 // These functions run inside the image under test, using that image's SQLite driver.
 export async function seedUpgradeFixture() {
 	const { default: Database } = await import('better-sqlite3');
-	const { scryptSync } = await import('node:crypto');
+	const { scryptSync, createHash } = await import('node:crypto');
 	const { mkdirSync, writeFileSync } = await import('node:fs');
 	const db = new Database('/app/data/groly.db');
 	db.pragma('foreign_keys = ON');
@@ -17,6 +17,7 @@ export async function seedUpgradeFixture() {
 		for (const [id, lang] of [['upgrade-owner', 'de'], ['upgrade-member', 'en']]) {
 			insert('users', { id, username: id, password_hash: password, role: 'user', must_change_password: 0, settings: JSON.stringify({ lang, timeZone: 'Europe/Moscow', showSupplementTracker: true, waterTrackerEnabled: true, caffeineTrackerEnabled: true, meditationTrackerEnabled: true, moodTrackerEnabled: true, nutritionTrackerEnabled: true }), settings_revision: 7, created_at: seconds, updated_at: seconds });
 		}
+		insert('user_invites', { id: 'upgrade-legacy-invite', user_id: 'upgrade-member', token_hash: createHash('sha256').update('upgrade-legacy-token').digest('hex'), type: 'invite', created_at: seconds, expires_at: seconds + 86400 * 7 });
 		insert('sessions', { id: 'upgrade-existing-session', user_id: 'upgrade-owner', expires_at: seconds + 86400 * 30, created_at: seconds });
 		insert('lists', { id: 'upgrade-list', owner_id: 'upgrade-owner', name: 'Familie 🥦', description: 'Preserve Unicode and relations', created_at: seconds, updated_at: seconds });
 		insert('list_members', { list_id: 'upgrade-list', user_id: 'upgrade-member', permission: 'write', status: 'accepted', notifications_enabled: 0 });
@@ -45,20 +46,28 @@ export async function seedUpgradeFixture() {
 	return { cookie: 'session=upgrade-existing-session', date };
 }
 
-export async function snapshotUpgradeData() {
+/** @param {Record<string, string[]>} originalColumns */
+export async function snapshotUpgradeData(originalColumns = {}, databasePath = '/app/data/groly.db', uploadDirectory = '/app/data/uploads') {
 	const { default: Database } = await import('better-sqlite3');
 	const { createHash } = await import('node:crypto');
 	const { existsSync, readdirSync, readFileSync } = await import('node:fs');
-	const db = new Database('/app/data/groly.db', { readonly: true });
+	const db = new Database(databasePath, { readonly: true });
 	/** @param {string | Uint8Array} value */
 	const hash = value => createHash('sha256').update(value).digest('hex');
-	/** @type {Record<string, { count: number; sha256: string; schema: string }>} */
+	/** @typedef {{cid: number; name: string; type: string; notnull: number; dflt_value: string | null; pk: number}} Column */
+	/** @type {Record<string, {count: number; sha256: string; schema: string; columns: Column[]; originalColumnsSha256?: string; addedColumnsAreNull?: boolean}>} */
 	const tables = {};
 	const inventory = /** @type {Array<{name: string; sql: string}>} */ (db.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all());
 	for (const { name, sql } of inventory) {
 		const rows = /** @type {Array<Record<string, unknown>>} */ (db.prepare(`SELECT * FROM "${name.replaceAll('"', '""')}"`).all())
 			.filter(row => name !== 'app_meta' || !['last_push_version', 'last_successful_start_version', 'upgrade_backup_in_progress'].includes(String(row.key)));
-		tables[name] = { count: rows.length, sha256: hash(rows.map(row => JSON.stringify(row)).sort().join('\n')), schema: sql };
+		const columns = /** @type {Column[]} */ (db.prepare(`PRAGMA table_info("${name.replaceAll('"', '""')}")`).all());
+		tables[name] = { count: rows.length, sha256: hash(rows.map(row => JSON.stringify(row)).sort().join('\n')), schema: sql, columns };
+		if (originalColumns[name]) {
+			const keys = originalColumns[name];
+			tables[name].originalColumnsSha256 = hash(rows.map(row => JSON.stringify(Object.fromEntries(keys.map(key => [key, row[key]])))).sort().join('\n'));
+			tables[name].addedColumnsAreNull = columns.filter(column => !keys.includes(column.name)).every(column => rows.every(row => row[column.name] === null));
+		}
 	}
 	/** @type {Record<string, string>} */
 	const images = {};
@@ -70,9 +79,10 @@ export async function snapshotUpgradeData() {
 			else images[prefix + entry.name] = hash(readFileSync(`${directory}/${entry.name}`));
 		}
 	}
-	walk('/app/data/uploads');
+	walk(uploadDirectory);
 	const foreignKeys = /** @type {unknown[]} */ (db.pragma('foreign_key_check')).map(row => JSON.stringify(row)).sort();
 	const integrity = db.pragma('integrity_check', { simple: true });
+	const migrations = db.prepare('SELECT * FROM __drizzle_migrations ORDER BY id').all();
 	db.close();
-	return { tables, images, foreignKeys, integrity };
+	return { tables, images, foreignKeys, integrity, migrations };
 }

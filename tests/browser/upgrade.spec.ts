@@ -186,9 +186,10 @@ test('the published latest PWA upgrades directly with its session and unsynced c
 		await page.screenshot({ path: `test-results/${test.info().project.name}-meal-plan.png`, fullPage: true });
 		await page.goto('/einstellungen');
 		await settled();
-		await page.getByRole('button', { name: de.language, exact: true }).click();
+		await page.getByRole('button', { name: de.settings_group_general, exact: true }).click();
+		await page.getByRole('button', { name: `${de.language}: ${de.language_de}`, exact: true }).click();
 		const languageSaved = page.waitForResponse(response => response.url().endsWith('/api/users/me') && response.request().method() === 'PATCH' && response.ok() && response.request().postDataJSON()?.settings?.lang === 'en');
-		await page.getByRole('button', { name: de.language_en, exact: true }).click();
+		await page.getByRole('dialog', { name: de.language, exact: true }).getByRole('button', { name: de.language_en, exact: true }).click();
 		expect((await (await languageSaved).json()).settings.lang).toBe('en');
 		await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 		await expect(page.getByText(en.language, { exact: true })).toBeVisible();
