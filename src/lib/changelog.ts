@@ -1,100 +1,40 @@
 // Neuesten Eintrag immer oben einfügen.
 // Diese Änderungen werden im Update-Popup angezeigt.
-export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
-	{
-		version: '1.0.0-beta.8',
-		de: [
-			'Einheitliche Navigation für Tracker, Ernährung, Rezepte und Wochenplan.',
-			'Supplement-Erinnerungen zeigen die ganze Woche und bereits erledigte Einnahmen.',
-			'Verlauf für Tag, Woche und Monat übersichtlicher zusammengefasst und optisch beruhigt.',
-			'Neutrale Makrowerte in der Heute-Ansicht.'
-		],
-		en: [
-			'Unified navigation for trackers, nutrition, recipes, and meal planning.',
-			'Supplement reminders show the entire week and completed intakes.',
-			'Grouped and visually simplified day, week, and month history.',
-			'Neutral macro values in the Today view.'
-		]
+export type ChangelogEntry = { version: string; intro?: { de: string; en: string }; de: string[]; en: string[] };
+export const CHANGELOG: ChangelogEntry[] = [
+{
+	"version": "1.0.0",
+	"intro": {
+		"de": "Groly 1.0 ist da! Nach vielen Ideen, Umbauten und Tests.",
+		"en": "Groly 1.0 is here! After many ideas, redesigns, and tests."
 	},
-	{
-		version: '1.0.0-beta.7',
-		de: [
-			'Push-Erinnerungen haben Vorrang vor der Standortnavigation.',
-			'iPhone-Hilfe zur Standortfreigabe ergänzt.'
-		],
-		en: [
-			'Push reminders take priority over location-based navigation.',
-			'Added iPhone location permission help.'
-		]
-	},
-	{
-		version: '1.0.0-beta.6',
-		de: [
-			'Einstellungen, Adminbereich und Listenbearbeitung übersichtlicher gestaltet.',
-			'Kategoriesortierung und Schnellzugriffe überarbeitet; Tracker und Supplements direkt loggen.',
-			'Artikeleingabe mit häufigen Vorschlägen, Hakenfeedback und Duplikatschutz verbessert.',
-			'Einladungs-/Resetlinks erneut abrufbar; App-Icon-Installation und Listen-/Rezeptansicht verbessert.'
-		],
-		en: [
-			'Redesigned settings, administration, and list editing.',
-			'Improved category sorting and shortcuts; log trackers and supplements directly.',
-			'Improved item entry with frequent suggestions, checkmark feedback, and duplicate prevention.',
-			'Retrieve invitation/reset links again; improved app icon installation and list/recipe views.'
-		]
-	},
-	{
-		version: '1.0.0-beta.5',
-		de: [
-			'Dunkles App-Icon als Standard für neue Installationen.',
-			'Helles oder dunkles Icon in den Einstellungen auswählbar, mit Installationshinweisen für iOS und Android.'
-		],
-		en: [
-			'Dark app icon is now the default for new installations.',
-			'Choose a light or dark icon in settings, with installation instructions for iOS and Android.'
-		]
-	},
-	{
-		version: '1.0.0-beta.4',
-		de: ['Kontowechsel und Offline-Daten besser geschützt; Anmeldung und Rezeptimport abgesichert; Rezeptansicht und Einkaufsliste verbessert.'],
-		en: ['Improved account switching and offline data protection; hardened sign-in and recipe import; improved recipe views and shopping lists.']
-	},
-	{
-		version: '1.0.0-beta.3',
-		de: [
-			'Offline angelegte und abgehakte Artikel bleiben nach der Synchronisierung abgehakt.',
-			'Favoriten sind auch offline verfügbar; Änderungen werden beim Wiederverbinden synchronisiert.',
-			'Rezepte zeigen bei fehlenden Offline-Daten einen Hinweis mit Rückkehr und erneutem Laden. Der PDF-Export wurde zusätzlich abgesichert.'
-		],
-		en: [
-			'Items created and checked offline remain checked after synchronization.',
-			'Favorites are available offline; changes sync when reconnecting.',
-			'Recipes missing offline data show a message with navigation and retry controls. PDF export has also been hardened.'
-		]
-	},
-	{
-		version: '1.0.0-beta.2',
-		de: [
-			'Überarbeitete Vorschau auf Groly 1.0: Der aktualisierte technische Unterbau wurde weiter bereinigt und erneut auf sichere Versionswechsel geprüft.',
-			'Der PDF-Export meldet Verbindungsfehler verständlich. Deine Auswahl bleibt erhalten, damit du den Export erneut starten kannst.'
-		],
-		en: [
-			'An updated preview of Groly 1.0: Core dependencies have been further cleaned up and safe version upgrades verified again.',
-			'PDF export now explains connection failures. Your selection is preserved so you can retry the export.'
-		]
-	},
-	{
-		version: '1.0.0-beta.1',
-		de: [
-			'Vorschau auf Groly 1.0: Nach langer Entwicklung ist es Zeit für Version 1. Ich hätte nie gedacht, dass so viele Menschen Groly nutzen – danke euch!',
-			'Der technische Unterbau wurde umfassend aktualisiert. Automatische Sicherungen schützen Datenbank und Bilder vor Versionswechseln.',
-			'Der Datumsfehler aus GitHub-Issue #17 wurde behoben. Bereits falsch gespeicherte Essenspläne können einen Tag früher erscheinen und lassen sich auf den gewünschten Tag verschieben.'
-		],
-		en: [
-			'A preview of Groly 1.0: After a long development journey, it’s time for version 1. I never expected so many people to use Groly — thank you!',
-			'Core dependencies have been comprehensively updated. Automatic backups protect the database and uploaded images before version upgrades.',
-			'The date bug from GitHub issue #17 has been fixed. Previously affected meal plans may appear one day earlier; move them to the intended day.'
-		]
-	},
+	"de": [
+		"Einheitliche Navigation für Tracker, Ernährung, Rezepte und Wochenplan; übersichtlicherer Tages-, Wochen- und Monatsverlauf.",
+		"Supplement-Erinnerungen zeigen die ganze Woche und bereits erledigte Einnahmen.",
+		"Einstellungen, Adminbereich und Listenbearbeitung überarbeitet; Einladungs- und Resetlinks erneut abrufbar.",
+		"Listen alphabetisch, nach letzter Änderung oder manuell sortieren. Deine manuelle Reihenfolge bleibt gespeichert.",
+		"Optionale Listenansicht für Einkaufslisten und Favoriten mit gemeinsamen Zeilen und Trennlinien. Favoriten per Langdruck bearbeiten: Name, Menge und Kategorie ändern oder nach Rückfrage entfernen, auch offline. Kacheln bleiben die Standardansicht.",
+		"Artikeleingabe mit häufigen Vorschlägen, Duplikatschutz und Hakenfeedback verbessert; Tracker und Supplements direkt über Schnellzugriffe loggen.",
+		"Zuverlässigere Offline-Synchronisierung: abgehakte Artikel bleiben abgehakt, Favoriten funktionieren offline und Rezepte zeigen verständliche Hinweise.",
+		"Kontowechsel, Anmeldung und Rezeptimport besser geschützt. Push-Erinnerungen öffnen zuverlässig ihr Ziel vor der Standortnavigation.",
+		"Dunkles App-Icon als Standard; helles oder dunkles Icon mit Installationshilfe auswählbar.",
+		"Aktualisierter technischer Unterbau und kleineres Docker-Image. Automatische Sicherungen schützen Datenbank und Bilder vor Versionswechseln.",
+		"Datumsfehler im Wochenplan behoben. Bereits betroffene Einträge können einen Tag früher erscheinen und lassen sich auf den gewünschten Tag verschieben."
+	],
+	"en": [
+		"Unified navigation for trackers, nutrition, recipes, and meal planning; clearer daily, weekly, and monthly history.",
+		"Supplement reminders show the entire week and completed intakes.",
+		"Redesigned settings, administration, and list editing; invitation and password reset links can be retrieved again.",
+		"Sort lists alphabetically, by last update, or manually. Your manual order stays saved.",
+		"Optional List view for shopping lists and favorites with shared rows and dividers. Long-press favorites to edit their name, quantity, and category, or remove them after confirmation, also offline. Tiles remain the default view.",
+		"Improved item entry with frequent suggestions, duplicate prevention, and checkmark feedback; log trackers and supplements directly from shortcuts.",
+		"More reliable offline sync: checked items stay checked, favorites work offline, and recipes show clear recovery messages.",
+		"Better protection for account switching, sign-in, and recipe imports. Push reminders reliably open their destination before location-based navigation.",
+		"Dark app icon by default; choose a light or dark icon with installation guidance.",
+		"Updated core dependencies and a smaller Docker image. Automatic backups protect the database and images before version upgrades.",
+		"Fixed meal-planning dates. Previously affected entries may appear one day earlier; move them to the intended day."
+	]
+},
 	{
 		version: '0.9.10',
 		de: ['Englische Übersetzungen bei Einladungen, Meldungen und Bedienelementen ergänzt; Sprachwechsel nach dem Login korrigiert.'],

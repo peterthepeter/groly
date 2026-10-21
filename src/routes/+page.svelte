@@ -12,7 +12,9 @@
 	import MemberListModal from '#lib/components/MemberListModal.svelte';
 	import { t, currentLang, lists_active } from '#lib/i18n.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
-	import { getListIcon } from '#lib/listIcons';
+	import ListSortSheet from '#lib/components/ListSortSheet.svelte';
+	import ReorderableListRows from '#lib/components/ReorderableListRows.svelte';
+	import { sortLists, parseListOrder, parseListSort, LIST_SORT_KEY, LIST_ORDER_KEY, type ListSortOrder } from '#lib/listSorting';
 	import * as publicEnv from '$app/env/public';
 	import PwaInstallModal from '#lib/components/PwaInstallModal.svelte';
 	import FabWithShortcuts from '#lib/components/FabWithShortcuts.svelte';
@@ -25,7 +27,7 @@
 	type ListItem = { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; openCount: number; memberCount: number; updatedAt: number; isOwner: boolean; ownerUsername: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null };
 	type PendingInvitation = { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; ownerUsername: string | null; openCount: number; updatedAt: number };
 
-	const STORAGE_KEY = 'groly_list_order';
+
 
 	let lists = $state<ListItem[]>([]);
 	let pendingInvitations = $state<PendingInvitation[]>([]);
@@ -37,7 +39,9 @@
 	let loading = $state(true);
 	let sortMode = $state(false);
 	let customOrder = $state<string[]>([]);
-	let dragId = $state<string | null>(null);
+	let listSort = $state<ListSortOrder>('updated');
+	let sortSheetOpen = $state(false);
+	let editingOrder = $state<string[]>([]);
 	let showPushPrompt = $state(false);
 	let pushPromptLoading = $state(false);
 	let showInstallBanner = $state(false);
@@ -145,78 +149,50 @@
 
 	const openCount = $derived(lists.length);
 
-	// Sortierte Listen: entweder custom oder API-Reihenfolge
-	const displayedLists = $derived(
-		customOrder.length > 0
-			? (() => {
-				const listsById = new Map(lists.map((list) => [list.id, list]));
-				const mapped = customOrder.map(id => listsById.get(id)).filter(Boolean) as ListItem[];
-				// Neu hinzugekommene Listen ans Ende
-				const missing = lists.filter(l => !customOrder.includes(l.id));
-				return [...mapped, ...missing];
-			})()
-			: lists
-	);
+	const displayedLists = $derived(sortLists(lists, sortMode ? 'manual' : listSort, sortMode ? editingOrder : customOrder, currentLang()));
 
 	function loadCustomOrder() {
 		try {
-			const stored = localStorage.getItem(STORAGE_KEY);
-			customOrder = stored ? JSON.parse(stored) : [];
-		} catch { customOrder = []; }
+			customOrder = parseListOrder(localStorage.getItem(LIST_ORDER_KEY));
+			listSort = parseListSort(localStorage.getItem(LIST_SORT_KEY), customOrder);
+		} catch { customOrder = []; listSort = 'updated'; }
 	}
 
-	function saveCustomOrder() {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(customOrder));
+	function saveSort() {
+		try {
+			localStorage.setItem(LIST_ORDER_KEY, JSON.stringify(customOrder));
+			localStorage.setItem(LIST_SORT_KEY, listSort);
+		} catch { /* Sorting remains usable when browser storage is unavailable. */ }
 	}
 
 	function enterSortMode() {
-		// Startet mit aktueller Reihenfolge
-		customOrder = displayedLists.map(l => l.id);
+		// Preserve a previous manual arrangement when returning from an automatic mode.
+		editingOrder = (customOrder.length ? sortLists(lists, 'manual', customOrder, currentLang()) : displayedLists).map(list => list.id);
 		sortMode = true;
+		sortSheetOpen = false;
 	}
 
 	function exitSortMode() {
-		saveCustomOrder();
+		customOrder = displayedLists.map(list => list.id);
+		listSort = 'manual';
 		sortMode = false;
+		saveSort();
 	}
 
-	function moveUp(index: number) {
-		if (index === 0) return;
-		const next = [...customOrder];
-		[next[index - 1], next[index]] = [next[index], next[index - 1]];
-		customOrder = next;
+	function selectSort(mode: ListSortOrder) {
+		sortSheetOpen = false;
+		if (mode === 'manual') enterSortMode();
+		else { listSort = mode; saveSort(); }
 	}
 
-	function moveDown(index: number) {
-		if (index === customOrder.length - 1) return;
-		const next = [...customOrder];
-		[next[index], next[index + 1]] = [next[index + 1], next[index]];
-		customOrder = next;
-	}
-
-	function startDrag(e: PointerEvent, id: string) {
-		e.preventDefault();
-		(e.target as HTMLElement).setPointerCapture(e.pointerId);
-		dragId = id;
-		let lastY = e.clientY;
-
-		const onMove = (ev: PointerEvent) => {
-			const delta = ev.clientY - lastY;
-			if (Math.abs(delta) >= 34) {
-				const idx = customOrder.indexOf(id);
-				if (delta < 0 && idx > 0) { moveUp(idx); lastY = ev.clientY; }
-				else if (delta > 0 && idx < customOrder.length - 1) { moveDown(idx); lastY = ev.clientY; }
-			}
-		};
-		const onEnd = () => {
-			dragId = null;
-			document.removeEventListener('pointermove', onMove);
-			document.removeEventListener('pointerup', onEnd);
-			document.removeEventListener('pointercancel', onEnd);
-		};
-		document.addEventListener('pointermove', onMove);
-		document.addEventListener('pointerup', onEnd);
-		document.addEventListener('pointercancel', onEnd);
+	function applyListActivity(listId: string, updatedAt: unknown, countDelta = 0) {
+		lists = lists.map(list => list.id === listId ? {
+			...list,
+			openCount: Math.max(0, list.openCount + countDelta),
+			updatedAt: typeof updatedAt === 'number' ? Math.max(list.updatedAt, updatedAt) : list.updatedAt
+		} : list);
+		const list = lists.find(list => list.id === listId);
+		if (list) void updateOfflineList(listId, { updatedAt: list.updatedAt, openCount: list.openCount });
 	}
 
 	async function loadLists() {
@@ -283,8 +259,8 @@
 			}).then(r => { if (!r.ok) throw new Error(); }),
 			{ type: 'update_list', payload: { id, name, description, iconId, locationLat, locationLng, locationName }, createdAt: Date.now() },
 			() => {
-				lists = lists.map(l => l.id === id ? { ...l, name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null } : l);
-				void updateOfflineList(id, { name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null });
+				lists = lists.map(l => l.id === id ? { ...l, updatedAt: Math.floor(Date.now() / 1000), name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null } : l);
+				void updateOfflineList(id, { updatedAt: Math.floor(Date.now() / 1000), name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null });
 			}
 		);
 		editList = null;
@@ -329,26 +305,6 @@
 		if (res.ok) pendingInvitations = pendingInvitations.filter(i => i.id !== listId);
 	}
 
-	// Long-press auf Listen-Tab → Sortier-Modus
-	let listsTabPressTimer: ReturnType<typeof setTimeout> | null = null;
-	let listsTabLongFired = false;
-
-	function handleListsTabPointerDown() {
-		listsTabLongFired = false;
-		listsTabPressTimer = setTimeout(() => {
-			listsTabLongFired = true;
-			listsTabPressTimer = null;
-			if (sortMode) exitSortMode(); else enterSortMode();
-		}, 500);
-	}
-	function handleListsTabPointerUp() {
-		if (listsTabPressTimer) { clearTimeout(listsTabPressTimer); listsTabPressTimer = null; }
-	}
-	function handleListsTabClick() {
-		if (listsTabLongFired) { listsTabLongFired = false; return; }
-		// short tap on lists tab: go to / (already there)
-	}
-
 	// Geofence-Logik ist in resumeOrchestrator + locationNav verlagert (greift jetzt
 	// Layout-weit auf allen Seiten, nicht nur auf der Listen-Übersicht).
 
@@ -387,6 +343,7 @@
 		on('list_updated', (ev) => {
 			const update = ev.list as Partial<ListItem>;
 			lists = lists.map(l => l.id === ev.listId ? { ...l, ...update } : l);
+			applyListActivity(ev.listId as string, update.updatedAt);
 		}),
 		on('list_deleted', (ev) => {
 			lists = lists.filter(l => l.id !== ev.listId);
@@ -394,18 +351,13 @@
 			customOrder = customOrder.filter(id => id !== ev.listId);
 		}),
 		on('item_added', (ev) => {
-			lists = lists.map(l => l.id === ev.listId ? { ...l, openCount: l.openCount + 1 } : l);
+			applyListActivity(ev.listId as string, ev.listUpdatedAt ?? (ev.item as { updatedAt?: number })?.updatedAt, 1);
 		}),
 		on('item_updated', (ev) => {
-			const delta = (ev.openCountDelta as number) ?? 0;
-			if (delta !== 0) {
-				lists = lists.map(l => l.id === ev.listId ? { ...l, openCount: Math.max(0, l.openCount + delta) } : l);
-			}
+			applyListActivity(ev.listId as string, ev.listUpdatedAt ?? (ev.item as { updatedAt?: number })?.updatedAt, (ev.openCountDelta as number) ?? 0);
 		}),
 		on('item_deleted', (ev) => {
-			if (!ev.wasChecked) {
-				lists = lists.map(l => l.id === ev.listId ? { ...l, openCount: Math.max(0, l.openCount - 1) } : l);
-			}
+			applyListActivity(ev.listId as string, ev.listUpdatedAt, ev.wasChecked ? 0 : -1);
 		}),
 	];
 
@@ -414,29 +366,26 @@
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
 	<AppHeader
-		title={sortMode ? t.sort_mode_title : t.lists_title}
-		subtitle={sortMode ? t.sort_mode_subtitle : lists_active(openCount)}
+		title={t.lists_title}
+		subtitle={lists_active(openCount)}
 		onMenuOpen={() => { if (!sortMode) menuOpen = true; }}
 	>
 		{#snippet actions()}
 			{#if sortMode}
 				<button
 					onclick={exitSortMode}
-					class="px-4 py-1.5 rounded-full text-sm font-semibold"
-					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
+					class="min-h-10 px-3 text-[11px] font-semibold active:opacity-60 transition-opacity"
+					style="color: var(--color-primary)"
 				>
 					{t.sort_mode_done}
 				</button>
 			{:else}
-				<button
-					onclick={enterSortMode}
-					class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
-					aria-label={t.sort_mode_title}
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<line x1="3" y1="6" x2="21" y2="6"/>
-						<line x1="3" y1="12" x2="15" y2="12"/>
-						<line x1="3" y1="18" x2="9" y2="18"/>
+				<button type="button" onclick={() => sortSheetOpen = true} aria-label={t.sort_mode_title} aria-haspopup="dialog" aria-expanded={sortSheetOpen}
+					class="w-10 h-10 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<line x1="3" y1="6" x2="21" y2="6" />
+						<line x1="3" y1="12" x2="15" y2="12" />
+						<line x1="3" y1="18" x2="9" y2="18" />
 					</svg>
 				</button>
 			{/if}
@@ -519,85 +468,18 @@
 			</div>
 		{:else}
 			<div class="space-y-1" style="touch-action: pan-y">
-				{#if sortMode}
-					{#each displayedLists as list, i (list.id)}
-						<div class="flex items-center gap-2 transition-opacity" style="user-select: none; -webkit-user-select: none; {dragId === list.id ? 'opacity: 0.45' : ''}">
-							<!-- Sort controls -->
-							<div class="flex flex-col gap-0.5 flex-shrink-0">
-								<button
-									onclick={() => moveUp(i)}
-									disabled={i === 0}
-									class="w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-20 active:opacity-60"
-									style="color: var(--color-on-surface-variant)"
-									aria-label={t.a11y_move_up}
-								>
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-										<polyline points="18 15 12 9 6 15"/>
-									</svg>
-								</button>
-								<button
-									onclick={() => moveDown(i)}
-									disabled={i === displayedLists.length - 1}
-									class="w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-20 active:opacity-60"
-									style="color: var(--color-on-surface-variant)"
-									aria-label={t.a11y_move_down}
-								>
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-										<polyline points="6 9 12 15 18 9"/>
-									</svg>
-								</button>
-							</div>
-
-							<!-- Card (nicht navigierbar im Sort-Modus) -->
-							<div class="flex-1 min-w-0 flex items-center gap-4 px-4 py-4 rounded-2xl transition-all"
-							     style="background-color: var(--color-surface-card); {dragId === list.id ? 'box-shadow: 0 6px 20px rgba(0,0,0,0.25)' : ''}">
-								{#if getListIcon(list.iconId)}
-									{@const icon = getListIcon(list.iconId)!}
-									<svg class="flex-shrink-0" width="28" height="28" viewBox="0 0 24 24" fill="none"
-									     stroke={icon.color} stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-										{@html icon.svgContent}
-									</svg>
-								{:else}
-									<span class="flex-shrink-0 w-7 h-7 flex items-center justify-center font-bold text-xl"
-									      style="color: var(--color-primary)">
-										{list.name[0]?.toUpperCase() ?? '?'}
-									</span>
-								{/if}
-								<div class="flex-1 min-w-0">
-									<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{list.name}</div>
-									{#if list.description}
-										<div class="text-xs truncate mt-0.5" style="color: var(--color-on-surface-variant)">{list.description}</div>
-									{/if}
-								</div>
-								<!-- Drag handle -->
-								<div
-									onpointerdown={(e) => startDrag(e, list.id)}
-									class="flex-shrink-0 flex items-center justify-center w-8 h-8 -mr-1 rounded-lg"
-									style="touch-action: none; cursor: grab"
-									role="button"
-									tabindex="-1"
-									aria-label={t.a11y_reorder}
-								>
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<line x1="3" y1="8" x2="21" y2="8"/>
-										<line x1="3" y1="16" x2="21" y2="16"/>
-									</svg>
-								</div>
-							</div>
-						</div>
-					{/each}
-				{:else}
-					<div bind:this={bubbleContainerEl} role="group" aria-label={t.nav_lists} class="rounded-2xl overflow-hidden py-1" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-						{#each displayedLists as list, i (list.id)}
-							<ListCard
-								{list}
+				<div bind:this={bubbleContainerEl} role="group" aria-label={t.nav_lists} class="rounded-2xl overflow-hidden py-1" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+					<ReorderableListRows items={displayedLists} enabled={sortMode} onreorder={(ids) => editingOrder = ids}>
+						{#snippet row(list, controls)}
+							<ListCard {list} reorderControls={controls}
 								onClick={() => goto(`/listen/${list.id}`)}
 								onLongPress={list.isOwner ? () => { editList = list; } : () => { memberOptions = list; }}
 								onShare={list.isOwner && list.memberCount > 0 ? () => { shareList = list; } : null}
-								showBorder={i < displayedLists.length - 1}
 							/>
-						{/each}
-					</div>
+						{/snippet}
+					</ReorderableListRows>
+				</div>
+				{#if !sortMode}
 					{#each pendingInvitations as invitation (invitation.id)}
 						<InvitationCard
 							{invitation}
@@ -705,4 +587,8 @@
 			</button>
 		</div>
 	</div>
+{/if}
+
+{#if sortSheetOpen}
+	<ListSortSheet value={listSort} onselect={selectSort} onclose={() => sortSheetOpen = false} />
 {/if}

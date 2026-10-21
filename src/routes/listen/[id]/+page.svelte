@@ -279,6 +279,11 @@
 		favorites = await setFavoriteOffline(data.user.id, { name, quantityInfo: quantityInfo || null, categoryOverride: null });
 	}
 
+	async function editFavorite(previousName: string, name: string, quantityInfo: string, categoryOverride: string | null) {
+		if (!data.user?.id) return;
+		favorites = await setFavoriteOffline(data.user.id, { name, quantityInfo: quantityInfo || null, categoryOverride }, false, previousName);
+	}
+
 	async function toggleFavorite(name: string, makeFavorite: boolean) {
 		if (!data.user?.id) return;
 		const item = items.find(i => i.name === name);
@@ -598,9 +603,9 @@
 
 				{#if userSettings.itemLayout === 'list'}
 					<!-- Listen-Ansicht: vertikale Zeilen, von unten nach oben -->
-					<div class="flex flex-col gap-1 mt-2">
-						{#each displayItems as item (item.id)}
-							<div class="rounded-2xl overflow-hidden">
+					<div class="shopping-items-surface mt-2">
+						{#each displayItems as item, index (item.id)}
+							<div class:inset-row-divider={index < displayItems.length - 1}>
 								<ItemRow
 									{item}
 									onTap={() => toggleItem(item)}
@@ -667,6 +672,7 @@
 		onSearchSuggestions={searchItemSuggestions}
 		onRemoveFavorite={(name) => toggleFavorite(name, false)}
 		onAddFavorite={addFavorite}
+		onEditFavorite={editFavorite}
 	/>
 {/if}
 

@@ -1,7 +1,7 @@
 # Groly
 
 <p align="center">
-  <img src="static/icons/icon.svg" width="96" alt="Groly" />
+  <img src="static/icons/dark/icon.svg" width="96" alt="Groly" />
 </p>
 
 Groly is a self-hosted app for **grocery lists, recipes, meal planning, and health and nutrition tracking**. The mobile interface puts navigation and main actions at the bottom of the screen, within thumb reach, so you can quickly add and check off shopping items.
@@ -356,11 +356,11 @@ Install via **Community Applications** (search for "Groly") or add the template 
 
 The volume `/app/data` contains the SQLite database. An admin user is created on first start with the credentials from `ADMIN_USERNAME` and `ADMIN_PASSWORD`. After the first start both variables can be safely deleted from the container — `ADMIN_PASSWORD` is never re-applied. If you ever forget your admin password, see [Admin password recovery](#admin-password-recovery) below.
 
-> **File permissions:** The container runs as user `groly` (UID 1000, GID 1000). Make sure the host data directory is owned by this user:
+> **File permissions:** The application runs as user `node` (UID 1000, GID 1000). The container entrypoint adjusts ownership of `/app/data` before starting the application. If your host prevents this adjustment, set ownership on the host:
 > ```bash
 > chown -R 1000:1000 /path/to/your/appdata/groly
 > ```
-> Existing installations upgrading from an older version must run this command once before restarting the container.
+> Keep the existing directory and its contents when upgrading. The application needs write access to create its pre-upgrade backup and open the database.
 
 > **Architecture:** The Docker image is built for `linux/amd64`.
 

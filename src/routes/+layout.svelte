@@ -182,6 +182,7 @@
 	<WhatsNewModal
 		version={LATEST_CHANGES.version}
 		items={currentLang() === 'en' ? LATEST_CHANGES.en : LATEST_CHANGES.de}
+		intro={LATEST_CHANGES.intro?.[currentLang()]}
 		onClose={() => {
 			whatsNewOpen = false;
 			localStorage.setItem('groly_last_version', LATEST_CHANGES.version);

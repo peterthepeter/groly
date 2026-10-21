@@ -93,7 +93,7 @@ export const POST: RequestHandler = async (event) => {
 	const creator = db.select({ username: users.username }).from(users).where(eq(users.id, user!.id)).get();
 	const newItem = toAddedItemEventPayload(persisted.item, creator?.username ?? null);
 
-	emitToListMembers(event.params.id, { type: 'item_added', listId: event.params.id, item: newItem, byUserId: user!.id });
+	emitToListMembers(event.params.id, { type: 'item_added', listId: event.params.id, item: newItem, listUpdatedAt: ts, byUserId: user!.id });
 
 	schedulePushForItemAdded({
 		listId: event.params.id,

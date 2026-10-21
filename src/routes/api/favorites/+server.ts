@@ -26,22 +26,27 @@ export const POST: RequestHandler = async (event) => {
 	const name = body.name?.trim();
 	if (!name) return Response.json({ error: 'Name required' }, { status: 400 });
 
-	db.insert(favorites)
-		.values({
-			userId: user!.id,
-			name,
-			quantityInfo: body.quantityInfo?.trim() ?? null,
-			categoryOverride: body.categoryOverride ?? null,
-			createdAt: now()
-		})
-		.onConflictDoUpdate({
-			target: [favorites.userId, favorites.name],
-			set: {
+	db.transaction(tx => {
+		const previousName = typeof body.previousName === 'string' ? body.previousName.trim() : name;
+		const previous = tx.select().from(favorites).where(and(eq(favorites.userId, user!.id), eq(favorites.name, previousName))).get();
+		if (previousName !== name) tx.delete(favorites).where(and(eq(favorites.userId, user!.id), eq(favorites.name, previousName))).run();
+		tx.insert(favorites)
+			.values({
+				userId: user!.id,
+				name,
 				quantityInfo: body.quantityInfo?.trim() ?? null,
-				categoryOverride: body.categoryOverride ?? null
-			}
-		})
-		.run();
+				categoryOverride: body.categoryOverride ?? null,
+				createdAt: previous?.createdAt ?? now()
+			})
+			.onConflictDoUpdate({
+				target: [favorites.userId, favorites.name],
+				set: {
+					quantityInfo: body.quantityInfo?.trim() ?? null,
+					categoryOverride: body.categoryOverride ?? null
+				}
+			})
+			.run();
+	});
 
 	return Response.json({ ok: true });
 };

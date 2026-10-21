@@ -64,7 +64,7 @@ export const PUT: RequestHandler = async (event) => {
 	const openCountDelta = body.isChecked !== undefined
 		? (body.isChecked && !item.isChecked ? -1 : !body.isChecked && item.isChecked ? 1 : 0)
 		: 0;
-	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: toUpdatedItemEventPayload(updated, createdByUsername), openCountDelta, byUserId: user!.id });
+	emitToListMembers(item.listId, { type: 'item_updated', listId: item.listId, item: toUpdatedItemEventPayload(updated, createdByUsername), openCountDelta, listUpdatedAt: ts, byUserId: user!.id });
 
 	return Response.json({ ok: true, updatedAt: ts });
 };
@@ -76,7 +76,11 @@ export const DELETE: RequestHandler = async (event) => {
 	const item = await getWritableItem(event.params.id, user!.id);
 	if (!item) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 
-	db.delete(items).where(eq(items.id, item.id)).run();
-	emitToListMembers(item.listId, { type: 'item_deleted', listId: item.listId, id: item.id, wasChecked: item.isChecked, byUserId: user!.id });
+	const ts = now();
+	db.transaction(tx => {
+		tx.delete(items).where(eq(items.id, item.id)).run();
+		tx.update(lists).set({ updatedAt: ts }).where(eq(lists.id, item.listId)).run();
+	});
+	emitToListMembers(item.listId, { type: 'item_deleted', listId: item.listId, id: item.id, wasChecked: item.isChecked, listUpdatedAt: ts, byUserId: user!.id });
 	return Response.json({ ok: true });
 };

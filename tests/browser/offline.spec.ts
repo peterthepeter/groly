@@ -9,7 +9,7 @@ const image = process.env.GROLY_TEST_IMAGE;
 test.skip(!image, 'Set GROLY_TEST_IMAGE to a locally built production image');
 const docker = (...args: string[]) => execFileSync('docker', args, { encoding: 'utf8', timeout: 120_000 }).trim();
 
-type CachedRow = { id?: string; name?: string; quantityInfo?: string | null; isChecked?: boolean; favorites?: Array<{ name: string }> };
+type CachedRow = { id?: string; name?: string; quantityInfo?: string | null; isChecked?: boolean; favorites?: Array<{ name: string; quantityInfo?: string | null }> };
 async function rows(page: Page, store: string): Promise<CachedRow[]> {
 	return page.evaluate(store => new Promise<CachedRow[]>((resolve, reject) => {
 		const open = indexedDB.open('groly');
@@ -92,8 +92,16 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await page.getByPlaceholder(de.item_name_label, { exact: true }).press('Enter');
 		await expect.poll(async () => (await rows(page, 'userSettings')).some(row => row.favorites?.some((fav: { name: string }) => fav.name === 'Offline favorite'))).toBe(true);
 		await page.getByRole('button', { name: de.close, exact: true }).last().click();
+		await page.locator('.fav-scroll').getByRole('button', { name: /Offline favorite/ }).click({ button: 'right' });
+		const favoriteEditor = page.getByRole('dialog', { name: de.favorites_edit, exact: true });
+		await favoriteEditor.getByPlaceholder(de.item_name_label, { exact: true }).fill('Edited offline favorite');
+		await favoriteEditor.getByPlaceholder(de.item_quantity_placeholder, { exact: true }).fill('2 packs');
+		await favoriteEditor.getByRole('button', { name: de.item_save, exact: true }).click();
+		await expect(favoriteEditor).toHaveCount(0);
+		await expect.poll(async () => (await rows(page, 'userSettings')).some(row => row.favorites?.some(fav => fav.name === 'Edited offline favorite' && fav.quantityInfo === '2 packs'))).toBe(true);
 		await page.locator('.fav-scroll').getByRole('button', { name: /Äpfel/ }).click({ button: 'right' });
-		await page.getByRole('button', { name: de.favorites_remove, exact: true }).click();
+		await page.getByRole('button', { name: de.favorites_remove_action, exact: true }).click();
+		await page.getByRole('dialog', { name: 'Äpfel', exact: true }).getByRole('button', { name: de.favorites_remove_action, exact: true }).click();
 		await expect.poll(async () => (await rows(page, 'userSettings')).some(row => row.favorites?.some((fav: { name: string }) => fav.name === 'Äpfel'))).toBe(false);
 		await page.getByRole('button', { name: de.close, exact: true }).click();
 		await page.getByRole('button', { name: de.items_checked_label, exact: true }).click();
@@ -146,7 +154,8 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await desktopPage.getByRole('button', { name: de.items_checked_label, exact: true }).click();
 		await expect(desktopPage.getByText('Offline checked item', { exact: true })).toHaveClass(/line-through/);
 		const favorites = await (await page.request.get('/api/favorites')).json();
-		expect(favorites.filter((row: { name: string }) => row.name === 'Offline favorite')).toHaveLength(1);
+		expect(favorites.filter((row: { name: string; quantityInfo: string }) => row.name === 'Edited offline favorite' && row.quantityInfo === '2 packs')).toHaveLength(1);
+		expect(favorites.some((row: { name: string }) => row.name === 'Offline favorite')).toBe(false);
 		expect(favorites.some((row: { name: string }) => row.name === 'Äpfel')).toBe(false);
 		expect(errors).toEqual([]);
 	} finally {

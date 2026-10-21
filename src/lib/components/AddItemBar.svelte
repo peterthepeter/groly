@@ -4,8 +4,11 @@
 	import { watchVisualViewportBottomOffset } from '#lib/visualViewport';
 	import { getCategoryForItem, getCategoryKey, CATEGORIES } from '#lib/categories';
 	import BarcodeScanner from './BarcodeScanner.svelte';
+	import ItemRow from './ItemRow.svelte';
+	import AddItemModal from './AddItemModal.svelte';
+	import { userSettings } from '#lib/userSettings.svelte';
 
-	let { onAdd, onClose, suggestions = [], onSearchSuggestions = null, autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null }: {
+	let { onAdd, onClose, suggestions = [], onSearchSuggestions = null, autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null, onEditFavorite = null }: {
 		onAdd: (name: string, quantityInfo: string, favoriteCategoryOverride?: string | null) => Promise<void>;
 		onClose: () => void;
 		suggestions?: string[];
@@ -14,6 +17,7 @@
 		autoOpenFavorites?: boolean;
 		favorites?: Array<{ name: string; quantityInfo: string | null; categoryOverride: string | null }>;
 		activeItemNames?: Set<string>;
+		onEditFavorite?: ((previousName: string, name: string, quantityInfo: string, categoryOverride: string | null) => Promise<void>) | null;
 		onRemoveFavorite?: ((name: string) => void) | null;
 		onAddFavorite?: ((name: string, quantityInfo: string) => void) | null;
 	} = $props();
@@ -34,6 +38,11 @@
 	let favoritesOpen = $state(false);
 	let addedName = $state<string | null>(null);
 	let removeTarget = $state<string | null>(null);
+	let editFavorite = $state<(typeof favorites)[number] | null>(null);
+	let favoriteSaving = $state(false);
+	let favoriteSaveError = $state<string | null>(null);
+	let favLongPressFired = false;
+	const removeDialogId = $props.id();
 	let addFavOpen = $state(false);
 	let newFavName = $state('');
 	let newFavQty = $state('');
@@ -70,14 +79,41 @@
 		setTimeout(() => { favAddedFeedback = false; }, 1200);
 	}
 
+	function openFavoriteEditor(favoriteName: string) {
+		editFavorite = favorites.find(favorite => favorite.name === favoriteName) ?? null;
+		favoriteSaveError = null;
+	}
+
+	async function saveFavorite(name: string, quantityInfo: string, categoryOverride: string | null) {
+		if (!editFavorite || !onEditFavorite || favoriteSaving) return;
+		if (favorites.some(favorite => favorite.name !== editFavorite!.name && favorite.name.toLowerCase() === name.toLowerCase())) {
+			favoriteSaveError = t.favorites_name_exists;
+			return;
+		}
+		favoriteSaving = true;
+		favoriteSaveError = null;
+		try {
+			await onEditFavorite(editFavorite.name, name, quantityInfo, categoryOverride);
+			editFavorite = null;
+		} catch {
+			favoriteSaveError = t.list_save_error;
+		} finally {
+			favoriteSaving = false;
+		}
+	}
+
 	function startLongPress(name: string) {
-		pressTimer = setTimeout(() => { pressTimer = null; removeTarget = name; }, 500);
+		endLongPress();
+		favLongPressFired = false;
+		pressTimer = setTimeout(() => { pressTimer = null; favLongPressFired = true; openFavoriteEditor(name); }, 500);
 	}
 	function endLongPress() {
 		if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 	}
 
 	async function handleFavAdd(fav: { name: string; quantityInfo: string | null; categoryOverride: string | null }) {
+		if (favLongPressFired) { favLongPressFired = false; return; }
+		if (editFavorite) return;
 		addedName = fav.name;
 		await onAdd(fav.name, fav.quantityInfo ?? '', fav.categoryOverride);
 		setTimeout(() => { if (addedName === fav.name) addedName = null; }, 1000);
@@ -175,6 +211,7 @@
 
 	onDestroy(() => {
 		destroyed = true;
+		endLongPress();
 		clearTimeout(feedbackTimer);
 	});
 
@@ -274,10 +311,24 @@
 		</div>
 
 		{#if favoritesOpen}
-			<!-- === Favoriten-Modus: nur Grid + Add Item + Close === -->
+			<!-- Favorites follow the shopping list layout preference. -->
 			<div class="fav-scroll overflow-y-auto mb-3" style="max-height: calc(80vh - 140px)" bind:this={favScrollEl}>
 				{#if sortedFavorites.length === 0}
 					<p class="text-sm text-center py-8" style="color: var(--color-on-surface-variant)">{t.favorites_empty}</p>
+				{:else if userSettings.itemLayout === 'list'}
+					<div class="shopping-items-surface">
+						{#each sortedFavorites as fav, index (fav.name)}
+							<div class:inset-row-divider={index < sortedFavorites.length - 1}>
+								<ItemRow
+									item={{ ...fav, id: fav.name }}
+									onTap={() => handleFavAdd(fav)}
+									onLongPress={() => openFavoriteEditor(fav.name)}
+									alreadyOnList={activeItemNames.has(fav.name.toLowerCase())}
+									added={addedName === fav.name}
+									/>
+							</div>
+						{/each}
+					</div>
 				{:else}
 					{@const gridPrefix = sortedFavorites.length % 3 === 0 ? 0 : 3 - (sortedFavorites.length % 3)}
 					<div class="grid grid-cols-3 gap-2" style="direction: rtl">
@@ -286,14 +337,14 @@
 						{/each}
 						{#each sortedFavorites as fav}
 							{@const cat = getCategoryForItem(fav.name, fav.categoryOverride)}
-							<div class="relative aspect-square">
+							<div class="relative aspect-square" style="direction: ltr">
 								<button
 									type="button"
 									onpointerdown={(e) => { e.preventDefault(); startLongPress(fav.name); }}
 									onpointerup={endLongPress}
 									onpointerleave={endLongPress}
 									onpointercancel={endLongPress}
-									oncontextmenu={(e) => { e.preventDefault(); removeTarget = fav.name; }}
+									oncontextmenu={(e) => { e.preventDefault(); openFavoriteEditor(fav.name); }}
 									onclick={() => handleFavAdd(fav)}
 									class="w-full h-full rounded-3xl relative overflow-hidden active:scale-95 transition-transform select-none"
 									style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); touch-action: pan-y;"
@@ -355,32 +406,43 @@
 				</button>
 			</div>
 
-			<!-- Long-Press Remove-Dialog -->
+			{#if editFavorite}
+				<div class="fixed inset-0 z-[65]" role="dialog" aria-modal="true" aria-label={t.favorites_edit}>
+					<AddItemModal
+						item={editFavorite}
+						title={t.favorites_edit}
+						deleteLabel={t.favorites_remove_action}
+						saving={favoriteSaving}
+						error={favoriteSaveError}
+						onSave={saveFavorite}
+						onClose={() => { if (!favoriteSaving) editFavorite = null; }}
+						onDelete={() => { if (!favoriteSaving) removeTarget = editFavorite!.name; }}
+					/>
+				</div>
+			{/if}
+
+			<!-- Favorite removal confirmation -->
 			{#if removeTarget}
-				<div class="fixed inset-0 z-[70] flex items-end justify-center pb-6 px-4"
-				     style="background-color: rgba(0,0,0,0.5)"
-				     role="dialog" aria-modal="true">
-					<div class="w-full max-w-[400px] rounded-3xl overflow-hidden shadow-2xl"
-					     style="background-color: var(--color-surface-low)">
-						<div class="px-5 pt-5 pb-2 text-center">
-							<p class="text-sm font-semibold" style="color: var(--color-on-surface)">{removeTarget}</p>
+				<div class="favorite-remove-overlay"
+				     role="dialog" aria-modal="true" aria-labelledby={`${removeDialogId}-title`} aria-describedby={`${removeDialogId}-description`}>
+					<div class="favorite-remove-dialog">
+						<div class="favorite-remove-heading inset-row-divider">
+							<h2 id={`${removeDialogId}-title`}>{removeTarget}</h2>
+							<p id={`${removeDialogId}-description`}>{t.favorites_remove_confirm}</p>
 						</div>
-						<div class="flex flex-col gap-1 p-3">
+						<div class="favorite-remove-actions">
 							<button
-								onpointerdown={(e) => e.preventDefault()}
-								onclick={() => { onRemoveFavorite?.(removeTarget!); removeTarget = null; }}
-								class="w-full py-3.5 rounded-2xl text-sm font-semibold"
-								style="background-color: color-mix(in srgb, #ef4444 15%, transparent); color: #ef4444"
-							>
-								{t.favorites_remove}
-							</button>
-							<button
-								onpointerdown={(e) => e.preventDefault()}
+								type="button"
 								onclick={() => removeTarget = null}
-								class="w-full py-3.5 rounded-2xl text-sm font-semibold"
-								style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
 							>
 								{t.item_cancel}
+							</button>
+							<button
+								type="button"
+								onclick={() => { onRemoveFavorite?.(removeTarget!); removeTarget = null; editFavorite = null; }}
+								class="favorite-remove-confirm"
+							>
+								{t.favorites_remove_action}
 							</button>
 						</div>
 					</div>
@@ -619,6 +681,34 @@
 {/if}
 
 <style>
+	.favorite-remove-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 70;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+		background: rgba(0, 0, 0, 0.5);
+	}
+	.favorite-remove-dialog {
+		width: 100%;
+		max-width: 400px;
+		max-height: 100%;
+		overflow-y: auto;
+		border: 1px solid var(--bubble-container-border);
+		border-radius: var(--radius-xl);
+		background: var(--modal-bg);
+	}
+	.favorite-remove-heading { padding: 16px 20px 12px; }
+	.favorite-remove-heading h2 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 650; color: var(--color-on-surface); overflow-wrap: anywhere; }
+	.favorite-remove-heading p { margin: 4px 0 0; font-size: 14px; line-height: 20px; color: var(--color-on-surface-variant); }
+	.favorite-remove-actions { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; }
+	.favorite-remove-actions button { min-height: 44px; padding: 8px 12px; background: transparent; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--color-on-surface-variant); }
+	.favorite-remove-actions .favorite-remove-confirm { color: var(--color-error); }
+	.favorite-remove-actions button:active { background: var(--bubble-interactive-bg); }
+	.favorite-remove-actions button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
 	.add-item-surface {
 		padding-bottom: max(12px, var(--add-item-safe-area));
 	}

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import type { Locale } from '#lib/paraglide/runtime';
+	import type { ChangelogEntry } from '#lib/changelog';
 
 	let { entries, lang, onClose }: {
-		entries: { version: string; de: string[]; en: string[] }[];
+		entries: ChangelogEntry[];
 		lang: Locale;
 		onClose: () => void;
 	} = $props();
@@ -66,6 +67,7 @@
 					</span>
 				</div>
 
+				{#if entry.intro}<p class="text-sm leading-relaxed mb-4" style="color: var(--color-on-surface)">{entry.intro[lang === 'en' ? 'en' : 'de']}</p>{/if}
 				<!-- Items -->
 				<ul class="space-y-2">
 					{#each (lang === 'en' ? entry.en : entry.de) as item}

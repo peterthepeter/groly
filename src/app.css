@@ -280,6 +280,13 @@
     background: var(--color-bg);
   }
 
+  .shopping-items-surface {
+    overflow: hidden;
+    border: 1px solid var(--bubble-container-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--bubble-container-bg);
+  }
+
   /* Shared dividers for rows inside list and recipe overview surfaces. */
   .inset-row-divider {
     position: relative;

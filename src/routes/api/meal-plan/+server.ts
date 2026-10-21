@@ -209,7 +209,7 @@ export const POST: RequestHandler = async (event) => {
 				.run();
 
 			const newItem = toAddedItemEventPayload({ id, listId, name: item.name, quantityInfo: item.quantityInfo, isChecked: false, checkedAt: null, categoryOverride, createdBy: user!.id, createdAt: ts, updatedAt: ts }, creator?.username ?? null);
-			emitToListMembers(listId, { type: 'item_added', listId, item: newItem, byUserId: user!.id });
+			emitToListMembers(listId, { type: 'item_added', listId, item: newItem, listUpdatedAt: ts, byUserId: user!.id });
 			added++;
 		}
 

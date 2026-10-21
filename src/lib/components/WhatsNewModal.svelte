@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { t, currentLang } from '#lib/i18n.svelte';
 
-	let { version, items, onClose }: {
+	let { version, items, intro, onClose }: {
 		version: string;
 		items: string[];
+		intro?: string;
 		onClose: () => void;
 	} = $props();
 </script>
@@ -12,16 +13,16 @@
 <div class="fixed inset-0 z-40" style="background-color: rgba(0,0,0,0.6)"></div>
 
 <!-- Modal -->
-<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 pb-6"
-     style="background-color: var(--modal-bg)">
+<div class="fixed left-0 right-0 bottom-0 z-50 max-w-[430px] mx-auto rounded-t-3xl pt-4 flex flex-col"
+     style="background-color: var(--modal-bg); max-height: 85dvh; padding-bottom: max(24px, env(safe-area-inset-bottom))">
 
 	<!-- Handle -->
-	<div class="flex justify-center mb-4">
+	<div class="flex justify-center mb-4 flex-shrink-0">
 		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
 	</div>
 
 	<!-- Icon + Header -->
-	<div class="px-6 mb-5 flex items-start gap-4">
+	<div class="px-6 mb-5 flex items-start gap-4 flex-shrink-0">
 		<div class="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center"
 		     style="background-color: color-mix(in srgb, var(--color-primary) 15%, transparent)">
 			<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -47,7 +48,8 @@
 	</div>
 
 	<!-- Changelog items -->
-	<div class="px-6 mb-6">
+	<div class="px-6 mb-6 min-h-0 overflow-y-auto">
+		{#if intro}<p class="text-sm leading-relaxed mb-4" style="color: var(--color-on-surface)">{intro}</p>{/if}
 		<ul class="space-y-2">
 			{#each items as item}
 				<li class="flex items-start gap-3">
@@ -60,7 +62,7 @@
 	</div>
 
 	<!-- Button -->
-	<div class="px-4">
+	<div class="px-4 flex-shrink-0">
 		<button
 			onclick={onClose}
 			class="w-full py-3.5 rounded-full text-sm font-semibold active:opacity-80 transition-opacity"

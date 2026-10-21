@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { getListIcon } from '#lib/listIcons';
 	import { list_items_open, t } from '#lib/i18n.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
@@ -11,12 +12,13 @@
 		return COLORS[Math.abs(hash) % COLORS.length];
 	}
 
-	let { list, onClick, onLongPress, onShare = null, showBorder = false }: {
+	let { list, onClick, onLongPress, onShare = null, showBorder = false, reorderControls = null }: {
 		list: { id: string; name: string; description: string | null; openCount: number; iconId?: string | null; ownerUsername?: string | null; locationLat?: number | null };
 		onClick: () => void;
 		onLongPress: () => void;
 		onShare?: (() => void) | null;
 		showBorder?: boolean;
+		reorderControls?: Snippet | null;
 	} = $props();
 
 	const showLocationBadge = $derived(
@@ -45,16 +47,7 @@
 	}
 </script>
 
-<button
-	onclick={handleClick}
-	onpointerdown={startPress}
-	onpointerup={endPress}
-	onpointerleave={endPress}
-	onpointercancel={endPress}
-	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
-	class="w-full flex items-center gap-3 px-3 py-1.5 transition-colors active:opacity-80 text-left select-none"
-	class:inset-row-divider={showBorder}
->
+{#snippet contents()}
 	<!-- Icon -->
 	<div class="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center">
 		{#if icon}
@@ -79,9 +72,9 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			onclick={(e) => { e.stopPropagation(); onShare!(); }}
+			onclick={(e) => { e.stopPropagation(); if (!reorderControls) onShare!(); }}
 			onpointerdown={(e) => e.stopPropagation()}
-			role="button"
+			role={reorderControls ? undefined : 'button'}
 			tabindex="-1"
 			class="flex-shrink-0 p-1.5 -mr-1 rounded-lg active:opacity-60"
 			aria-label={t.a11y_share_list}
@@ -115,4 +108,24 @@
 	{/if}
 
 
+{/snippet}
+
+{#if reorderControls}
+	<div class="w-full min-h-14 flex items-center gap-3 px-3 py-1.5 text-left select-none" class:inset-row-divider={showBorder}>
+		{@render contents()}
+		{@render reorderControls()}
+	</div>
+{:else}
+<button
+	onclick={handleClick}
+	onpointerdown={startPress}
+	onpointerup={endPress}
+	onpointerleave={endPress}
+	onpointercancel={endPress}
+	oncontextmenu={(e) => { e.preventDefault(); onLongPress(); }}
+	class="w-full min-h-14 flex items-center gap-3 px-3 py-1.5 transition-colors active:opacity-80 text-left select-none"
+	class:inset-row-divider={showBorder}
+>
+	{@render contents()}
 </button>
+{/if}

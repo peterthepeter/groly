@@ -13,7 +13,7 @@
   <Keywords>shopping list,grocery,nutrition tracker,calorie tracker,macro tracker,food diary,calorie counter,supplement tracker,meal planner,water tracker,caffeine tracker,meditation,mood tracker,PWA,self-hosted,family,offline,push notifications,recipes,health tracker</Keywords>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/peterthepeter/groly/main/unraid/groly.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/peterthepeter/groly/main/static/icons/icon-512.png</Icon>
+  <Icon>https://raw.githubusercontent.com/peterthepeter/groly/main/static/icons/dark/icon-512.png</Icon>
   <ExtraParams></ExtraParams>
   <PostArgs></PostArgs>
   <DonateText></DonateText>

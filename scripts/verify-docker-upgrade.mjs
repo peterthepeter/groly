@@ -8,7 +8,7 @@ import { baselineImage, resolveLatestImage } from './upgrade-baselines.mjs';
 
 const image = process.env.GROLY_TEST_IMAGE;
 assert(image, 'Set GROLY_TEST_IMAGE to the candidate image or immutable registry digest');
-const baselines = (process.env.GROLY_BASELINES ?? '1.0.0-beta.5,0.9.10,0.9.9,0.9.8-hotfix.2').split(',').filter(Boolean);
+const baselines = (process.env.GROLY_BASELINES ?? '1.0.0-beta.8,1.0.0-beta.5,0.9.10,0.9.9,0.9.8-hotfix.2').split(',').filter(Boolean);
 const latestImage = process.env.GROLY_LATEST_IMAGE ?? resolveLatestImage();
 baselines.unshift(latestImage);
 if (process.env.GROLY_DATA_COPY) assert(statSync(`${process.env.GROLY_DATA_COPY}/groly.db`).size > 0, 'Real-data copy must contain a nonempty groly.db');

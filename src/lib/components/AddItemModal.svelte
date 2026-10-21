@@ -3,7 +3,11 @@
 	import { MANUAL_CATEGORIES, CATEGORY_LABELS, getCategoryForItem } from '#lib/categories';
 	import { userSettings } from '#lib/userSettings.svelte';
 
-	let { item = null, onSave, onClose, onDelete = null, isFavorite = false, onToggleFavorite = null }: {
+	let { item = null, onSave, onClose, onDelete = null, isFavorite = false, onToggleFavorite = null, title, deleteLabel, saving = false, error = null }: {
+		title?: string;
+		deleteLabel?: string;
+		saving?: boolean;
+		error?: string | null;
 		item?: { name: string; quantityInfo: string | null; categoryOverride?: string | null } | null;
 		onSave: (name: string, quantityInfo: string, categoryOverride: string | null, categoryPickerUsed: boolean) => void;
 		onClose: () => void;
@@ -62,14 +66,14 @@
 	</div>
 
 	<div class="flex items-center justify-between mb-3">
-		<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{item ? t.item_edit_title : t.items_add}</h2>
+		<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{title ?? (item ? t.item_edit_title : t.items_add)}</h2>
 		{#if item && onDelete}
 			<button
 				type="button"
 				onclick={onDelete}
 				class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors active:scale-95"
 				style="color: #ef4444"
-				aria-label={t.a11y_delete_item}
+				aria-label={deleteLabel ?? t.a11y_delete_item}
 			>
 				<svg width="17" height="17" viewBox="0 0 24 24" fill="none"
 				     stroke="currentColor" stroke-width="2"
@@ -158,7 +162,7 @@
 			placeholder={t.item_name_label}
 			bind:value={name}
 			autofocus
-			onfocus={(e) => { const el = e.target as HTMLInputElement; setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0); }}
+			onfocus={(e) => { const el = e.currentTarget; el.setSelectionRange(el.value.length, el.value.length); }}
 			class="w-full px-4 bg-transparent outline-none text-base font-medium"
 			style="color: var(--color-on-surface); height: 44px"
 		/>
@@ -188,6 +192,7 @@
 		</div>
 	</div>
 
+	{#if error}<p role="alert" class="text-sm mb-3" style="color: var(--color-error)">{error}</p>{/if}
 	<div class="flex items-center gap-2">
 		{#if onToggleFavorite}
 			<button
@@ -217,7 +222,7 @@
 		</button>
 		<button
 			onclick={() => name.trim() && onSave(name.trim(), quantityInfo.trim(), categoryOverride, categoryPickerUsed)}
-			disabled={!name.trim()}
+			disabled={!name.trim() || saving}
 			class="flex-1 py-3 rounded-full text-sm font-semibold disabled:opacity-40"
 			style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 		>

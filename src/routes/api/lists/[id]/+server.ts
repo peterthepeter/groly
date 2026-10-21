@@ -40,6 +40,7 @@ export const PUT: RequestHandler = async (event) => {
 	const { name, description, iconId, locationLat, locationLng, locationName } = await event.request.json();
 	if (!name?.trim()) return Response.json({ error: 'Name erforderlich' }, { status: 400 });
 
+	const ts = now();
 	const trimmedName = name.trim();
 	const trimmedDesc = description?.trim() ?? null;
 	db.update(lists).set({
@@ -49,9 +50,9 @@ export const PUT: RequestHandler = async (event) => {
 		locationLat: locationLat ?? null,
 		locationLng: locationLng ?? null,
 		locationName: locationName ?? null,
-		updatedAt: now()
+		updatedAt: ts
 	}).where(eq(lists.id, list.id)).run();
-	emitToListMembers(list.id, { type: 'list_updated', listId: list.id, list: { name: trimmedName, description: trimmedDesc, iconId: iconId ?? null } });
+	emitToListMembers(list.id, { type: 'list_updated', listId: list.id, list: { name: trimmedName, description: trimmedDesc, iconId: iconId ?? null, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null, updatedAt: ts } });
 	return Response.json({ ok: true });
 };
 

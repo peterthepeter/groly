@@ -511,6 +511,14 @@ type CreateItemMutationPayload = {
 	categoryOverride: string | null;
 };
 
+async function touchCachedList(userId: string, listId: string) {
+	const list = await offlineDb.accountLists.get([userId, listId]);
+	const updatedAt = Math.max(list?.updatedAt ?? 0, Math.floor(Date.now() / 1000));
+	if (list) await offlineDb.accountLists.update([userId, listId], { updatedAt });
+	const legacy = await offlineDb.lists.get(listId);
+	if (legacy && cachedForUser(legacy, userId)) await offlineDb.lists.update(listId, { updatedAt });
+}
+
 /**
  * Item creation is local-first: the visible item and its mutation are committed
  * in one IndexedDB transaction before server sync starts. This removes the data
@@ -521,7 +529,8 @@ export async function queueItemCreate(
 	item: OfflineItem,
 	payload: CreateItemMutationPayload
 ): Promise<void> {
-	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, offlineDb.lists, offlineDb.accountLists, async () => {
+		await touchCachedList(userId, item.listId);
 		await offlineDb.items.put({ ...item, cacheUserId: userId });
 		await offlineDb.accountItems.put({ ...item, cacheUserId: userId });
 		await offlineDb.pendingMutations.add({
@@ -551,10 +560,11 @@ export async function getPendingCreateItems(userId: string, listId: string, requ
 }
 
 export async function queueItemUpdate(userId: string, id: string, changes: Partial<OfflineItem>): Promise<void> {
-	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, offlineDb.lists, offlineDb.accountLists, async () => {
 		const item = await offlineDb.accountItems.get([userId, id]) ?? await offlineDb.items.get(id);
 		if (!item) throw new Error('Local item missing');
 		if (item.cacheUserId && item.cacheUserId !== userId) throw new Error('Local item belongs to another account');
+		await touchCachedList(userId, item.listId);
 		const { updatedAt: _updatedAt, id: _id, listId: _listId, ...patch } = changes;
 		await offlineDb.items.update(id, { ...patch, cacheUserId: userId });
 		await offlineDb.accountItems.put({ ...item, ...patch, cacheUserId: userId });
@@ -566,7 +576,10 @@ export async function queueItemUpdate(userId: string, id: string, changes: Parti
 }
 
 export async function queueItemDelete(userId: string, id: string): Promise<void> {
-	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
+	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, offlineDb.lists, offlineDb.accountLists, async () => {
+		const item = await offlineDb.accountItems.get([userId, id]) ?? await offlineDb.items.get(id);
+		if (item?.cacheUserId && item.cacheUserId !== userId) throw new Error('Local item belongs to another account');
+		if (item) await touchCachedList(userId, item.listId);
 		await offlineDb.items.delete(id);
 		await offlineDb.accountItems.delete([userId, id]);
 		await offlineDb.pendingMutations.add({ type: 'delete_item', userId, payload: { id }, createdAt: Date.now() });
@@ -586,9 +599,10 @@ export async function getOfflineFavorites(userId: string): Promise<OfflineFavori
 	return (await offlineDb.userSettings.get(userId))?.favorites ?? null;
 }
 
-function applyFavorite(favorites: OfflineFavorite[], favorite: OfflineFavorite, remove: boolean): OfflineFavorite[] {
-	const rest = favorites.filter(entry => entry.name !== favorite.name);
-	return remove ? rest : [favorite, ...rest];
+function applyFavorite(favorites: OfflineFavorite[], favorite: OfflineFavorite & { previousName?: string }, remove: boolean): OfflineFavorite[] {
+	const rest = favorites.filter(entry => entry.name !== favorite.name && entry.name !== favorite.previousName);
+	const { previousName, ...value } = favorite;
+	return remove ? rest : [value, ...rest];
 }
 
 export async function cacheFavorites(userId: string, favorites: OfflineFavorite[], requestStartedAt = Date.now()): Promise<OfflineFavorite[]> {
@@ -605,8 +619,8 @@ export async function cacheFavorites(userId: string, favorites: OfflineFavorite[
 	});
 }
 
-export async function setFavoriteOffline(userId: string, favorite: OfflineFavorite, remove = false): Promise<OfflineFavorite[]> {
-	const plain = { name: favorite.name.trim(), quantityInfo: favorite.quantityInfo, categoryOverride: favorite.categoryOverride };
+export async function setFavoriteOffline(userId: string, favorite: OfflineFavorite, remove = false, previousName?: string): Promise<OfflineFavorite[]> {
+	const plain = { name: favorite.name.trim(), quantityInfo: favorite.quantityInfo, categoryOverride: favorite.categoryOverride, ...(previousName && previousName !== favorite.name.trim() ? { previousName } : {}) };
 	const favorites = await offlineDb.transaction('rw', offlineDb.userSettings, offlineDb.pendingMutations, async () => {
 		const row = (await offlineDb.userSettings.get(userId)) ?? { userId, settings: {}, revision: 0, updatedAt: Date.now() };
 		const effective = applyFavorite(row.favorites ?? [], plain, remove);

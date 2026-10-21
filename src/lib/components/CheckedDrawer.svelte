@@ -2,6 +2,7 @@
 	import { tick } from 'svelte';
 	import { t } from '#lib/i18n.svelte';
 	import { getCategoryForItem } from '#lib/categories';
+	import ItemRow from '#lib/components/ItemRow.svelte';
 
 	type Item = { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number };
 
@@ -14,6 +15,7 @@
 
 	let expanded = $state(false);
 	let toggleBtn = $state<HTMLButtonElement | null>(null);
+	const contentId = $props.id();
 
 	// Deduplicate by name+quantity — keep most recent (first, sorted desc) as representative
 	const dedupedItems = $derived.by(() => {
@@ -40,32 +42,14 @@
 	}
 </script>
 
-<div class="mb-3">
+<div class="mb-3" class:shopping-items-surface={layout === 'list'}>
 	{#if expanded}
 		{#if layout === 'list'}
-			<div class="mb-1">
+			<div id={contentId}>
 				{#each dedupedItems as { item } (item.id)}
-					{@const category = getCategoryForItem(item.name, item.categoryOverride)}
-					<button
-						onclick={() => onUncheck(item)}
-						class="w-full flex items-center h-[50px] px-3.5 gap-2.5 opacity-40 active:opacity-25 transition-opacity select-none border-t"
-						style="background-color: var(--color-surface-card); border-color: var(--color-outline-variant)"
-					>
-						<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-						     stroke={category.color} stroke-width="1.3"
-						     stroke-linecap="round" stroke-linejoin="round"
-						     class="flex-shrink-0" style="color: {category.color}">
-							{@html category.svgContent}
-						</svg>
-						<div class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-							<span class="text-sm font-bold leading-none truncate line-through"
-							      style="color: var(--color-on-surface)">{item.name}</span>
-							{#if item.quantityInfo}
-								<span class="text-[10px] font-semibold leading-none flex-shrink-0 line-through"
-								      style="color: {category.color}">{item.quantityInfo}</span>
-							{/if}
-						</div>
-					</button>
+					<div class="inset-row-divider">
+						<ItemRow {item} onTap={() => onUncheck(item)} checked />
+					</div>
 				{/each}
 			</div>
 		{:else}
@@ -76,7 +60,7 @@
 				Empty slots always end up at top-right.
 				Item width: (100% - 2 gaps) / 3 columns.
 			-->
-			<div class="mb-3" style="display: flex; flex-wrap: wrap-reverse; gap: 0.75rem;">
+			<div id={contentId} class="mb-3" style="display: flex; flex-wrap: wrap-reverse; gap: 0.75rem;">
 				{#each dedupedItems as { item } (item.id)}
 					{@const category = getCategoryForItem(item.name, item.categoryOverride)}
 					<button
@@ -106,12 +90,15 @@
 	{/if}
 
 	<button
+		type="button"
 		bind:this={toggleBtn}
 		onclick={toggle}
-		class="w-full flex items-center justify-between px-4 py-3 rounded-2xl"
-		style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
+		aria-expanded={expanded}
+		aria-controls={expanded ? contentId : undefined}
+		class="checked-toggle"
+		class:list-toggle={layout === 'list'}
 	>
-		<span class="text-xs font-bold tracking-widest uppercase" style="color: var(--color-primary)">{t.items_checked_label}</span>
+		<span class={layout === 'list' ? 'text-sm font-semibold' : 'text-xs font-bold tracking-widest uppercase'} style:color={layout === 'list' ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}>{t.items_checked_label}</span>
 		<svg
 			width="16" height="16" viewBox="0 0 24 24" fill="none"
 			stroke="var(--color-on-surface-variant)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -122,3 +109,20 @@
 		</svg>
 	</button>
 </div>
+
+<style>
+	.checked-toggle {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		min-height: 44px;
+		padding: 12px 16px;
+		border-radius: var(--radius-lg);
+		background: var(--bubble-interactive-bg);
+		border: 1px solid var(--bubble-interactive-border);
+	}
+	.list-toggle { padding: 8px 16px; border: 0; border-radius: 0; background: transparent; }
+	.list-toggle:active { background: var(--bubble-interactive-bg); }
+	.checked-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; }
+</style>

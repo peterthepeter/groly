@@ -108,8 +108,11 @@ test('cooking stays readable; shopping selections persist and failed additions r
 		await page.route('**/api/lists/upgrade-list/items', async route => { if (route.request().method() === 'POST') { await route.fetch(); await route.abort(); } else await route.continue(); }, { times: 1 });
 		await add.click();
 		await expect(dialog.getByRole('alert')).toContainText(de.recipe_shopping_add_error);
+		const categoryPreferencesLoaded = page.waitForResponse(response => response.url().endsWith('/api/category-preferences') && response.request().method() === 'GET');
 		await add.click();
 		await expect(page).toHaveURL(/\/listen\/upgrade-list$/);
+		// Let the new page finish its refresh before a forced document navigation.
+		await (await categoryPreferencesLoaded).finished();
 		const items = await (await page.request.get('/api/lists/upgrade-list/items')).json();
 		for (const name of names.slice(0, 2)) expect(items.filter((item: { name: string }) => item.name === name)).toHaveLength(1);
 		expect(items.find((item: { name: string }) => item.name === names[0]).quantityInfo).toBe('1 kg');

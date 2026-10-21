@@ -58,9 +58,10 @@
 			section: 'Lists',
 			svg: `<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>`,
 			items: [
+				{ title: t.sort_mode_title, text: t.lists_sort_help },
 				{
 					title: 'Open, edit & sort',
-					text: 'Tap a list to open it. Long-press its name to edit its name, additional info, icon, category sorting, and location in one grouped surface. Category sorting uses the same drag handles and position picker as Settings. Done returns to the editor; Save applies your edits and Cancel discards them. Long-press the Lists tab to rearrange your lists.'
+					text: 'Tap a list to open it. Long-press its name to edit its name, additional info, icon, category sorting, and location in one grouped surface. Category sorting uses the same drag handles and position picker as Settings. Done returns to the editor; Save applies your edits and Cancel discards them.'
 				},
 				{
 					title: 'Share & notify',
@@ -77,7 +78,7 @@
 				},
 				{
 					title: 'List view',
-					text: 'Prefer compact rows to tiles? Switch to List view in Settings to show icon, name, and quantity on one line.',
+					text: 'Prefer compact rows to tiles? Switch to List view in Settings. Items share one card with fine dividers, category icons on the left, and quantities on the right. Long names wrap. Tap a row to check it off; long-press to edit. Completed items stay in a separate collapsible group above.',
 					link: { href: '/einstellungen', label: 'Choose a list view' }
 				}
 			]
@@ -101,7 +102,7 @@
 				},
 				{
 					title: 'Favorites',
-					text: 'Long-press an item and tap the star beside its quantity to save it. Open + → Favorites to add saved items quickly; long-press a favorite to remove it. Once loaded on this device, favorites also work offline. Additions and removals sync when you reconnect.'
+					text: 'Long-press an item and tap the star beside its quantity to save it. Open + → Favorites to add saved items quickly; long-press a favorite to edit its name, quantity, and category. Save or cancel your changes; Remove opens a separate confirmation. Editing a favorite does not change existing shopping items. Favorites follow your shopping list layout: tiles or compact rows with fine dividers. A green dot marks items already on the list; a brief checkmark confirms adding an item. Once loaded on this device, favorites also work offline. Additions, edits, and removals sync when you reconnect.'
 				}
 			]
 		},
@@ -218,9 +219,10 @@
 			section: 'Listen',
 			svg: `<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>`,
 			items: [
+				{ title: t.sort_mode_title, text: t.lists_sort_help },
 				{
 					title: 'Öffnen, bearbeiten & sortieren',
-					text: 'Tippe eine Liste zum Öffnen an. Halte ihren Namen gedrückt, um Name, Zusatzinfo, Icon, Kategorie-Sortierung und Standort in einer gemeinsamen Fläche zu bearbeiten. Die Kategorie-Sortierung nutzt dieselben Griffe und die Positionsauswahl wie die Einstellungen. Fertig führt zurück zum Editor; Speichern übernimmt deine Änderungen, Abbrechen verwirft sie. Halte den Listen-Tab gedrückt, um deine Listen zu sortieren.'
+					text: 'Tippe eine Liste zum Öffnen an. Halte ihren Namen gedrückt, um Name, Zusatzinfo, Icon, Kategorie-Sortierung und Standort in einer gemeinsamen Fläche zu bearbeiten. Die Kategorie-Sortierung nutzt dieselben Griffe und die Positionsauswahl wie die Einstellungen. Fertig führt zurück zum Editor; Speichern übernimmt deine Änderungen, Abbrechen verwirft sie.'
 				},
 				{
 					title: 'Teilen & Benachrichtigungen',
@@ -237,7 +239,7 @@
 				},
 				{
 					title: 'Listenansicht',
-					text: 'Du bevorzugst kompakte Zeilen statt Kacheln? Aktiviere die Listenansicht, um Icon, Name und Menge in einer Zeile zu sehen.',
+					text: 'Du bevorzugst kompakte Zeilen statt Kacheln? Aktiviere die Listenansicht in den Einstellungen. Artikel stehen in einer gemeinsamen Karte mit feinen Trennlinien, Kategorie-Icons links und Mengen rechts. Lange Namen werden umgebrochen. Antippen hakt einen Artikel ab, langes Drücken öffnet die Bearbeitung. Erledigte Artikel bleiben in einer eigenen einklappbaren Gruppe darüber.',
 					link: { href: '/einstellungen', label: 'Listenansicht auswählen' }
 				}
 			]
@@ -261,7 +263,7 @@
 				},
 				{
 					title: 'Favoriten',
-					text: 'Halte ein Item gedrückt und tippe auf den Stern neben der Menge. Über + → Favoriten fügst du gespeicherte Items schnell hinzu; langer Druck entfernt einen Favoriten. Einmal auf diesem Gerät geladene Favoriten funktionieren auch offline. Änderungen werden beim Wiederverbinden synchronisiert.'
+					text: 'Halte ein Item gedrückt und tippe auf den Stern neben der Menge. Über + → Favoriten fügst du gespeicherte Items schnell hinzu; langer Druck öffnet die Bearbeitung für Name, Menge und Kategorie. Speichere deine Änderungen oder brich ab; Entfernen öffnet eine separate Rückfrage. Bereits vorhandene Einkaufsartikel bleiben unverändert. Favoriten folgen deiner Einkaufslistenansicht: Kacheln oder kompakte Zeilen mit feinen Trennlinien. Ein grüner Punkt markiert Artikel, die bereits auf der Liste stehen; ein kurzer Haken bestätigt das Hinzufügen. Einmal auf diesem Gerät geladene Favoriten funktionieren auch offline. Änderungen werden beim Wiederverbinden synchronisiert.'
 				}
 			]
 		},

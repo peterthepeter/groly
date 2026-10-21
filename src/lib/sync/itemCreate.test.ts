@@ -49,6 +49,22 @@ describe('local-first item creation', () => {
 		await offlineDb.delete();
 	});
 
+	it('keeps offline list activity current for create, check and delete without touching another account', async () => {
+		const row = { id: 'list-1', cacheUserId: 'user-1', ownerId: 'user-1', name: 'List', description: null, openCount: 1, updatedAt: 1 };
+		await offlineDb.lists.put(row);
+		await offlineDb.accountLists.put(row);
+		await offlineDb.accountLists.put({ ...row, cacheUserId: 'user-2', updatedAt: 2 });
+		await queue('item-1', 'Milk');
+		expect((await offlineDb.accountLists.get(['user-1', 'list-1']))!.updatedAt).toBeGreaterThan(1);
+		await offlineDb.accountLists.update(['user-1', 'list-1'], { updatedAt: 1 });
+		await queueItemUpdate('user-1', 'item-1', { isChecked: true });
+		expect((await offlineDb.accountLists.get(['user-1', 'list-1']))!.updatedAt).toBeGreaterThan(1);
+		await offlineDb.accountLists.update(['user-1', 'list-1'], { updatedAt: 1 });
+		await queueItemDelete('user-1', 'item-1');
+		expect((await offlineDb.accountLists.get(['user-1', 'list-1']))!.updatedAt).toBeGreaterThan(1);
+		expect((await offlineDb.accountLists.get(['user-2', 'list-1']))!.updatedAt).toBe(2);
+	});
+
 	it('commits the item and mutation together before a network retry', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
 		initSync('user-1');

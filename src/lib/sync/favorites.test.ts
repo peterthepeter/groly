@@ -39,6 +39,21 @@ describe('offline favorites', () => {
 		expect(await offlineDb.pendingMutations.count()).toBe(1);
 		expect(await getOfflineFavorites('a')).toEqual([favorite]);
 	});
+	it('renames a favorite atomically offline and keeps the rename through reload and a stale server read', async () => {
+		await cacheFavorites('a', [favorite]);
+		const edited = { name: 'Hafermilch', quantityInfo: '2 l', categoryOverride: 'getraenke' };
+		await setFavoriteOffline('a', edited, false, favorite.name);
+		offlineDb.close(); await offlineDb.open();
+		expect(await getOfflineFavorites('a')).toEqual([edited]);
+		expect(await cacheFavorites('a', [favorite])).toEqual([edited]);
+		const request = vi.fn(async (_url: string, _options?: RequestInit) => new Response('{"ok":true}'));
+		vi.stubGlobal('fetch', request);
+		initSync('a'); await drainPendingMutations();
+		expect(request).toHaveBeenCalledTimes(1);
+		expect(JSON.parse(String(request.mock.calls[0][1]?.body))).toEqual({ ...edited, previousName: 'Milch' });
+		expect(await offlineDb.pendingMutations.count()).toBe(0);
+		expect(await getOfflineFavorites('a')).toEqual([edited]);
+	});
 	it('keeps confirmed favorites when an earlier server read completes after queue acknowledgement', async () => {
 		await setFavoriteOffline('a', favorite);
 		const started = Date.now();
