@@ -68,8 +68,12 @@
 				},
 				{
 					title: 'Location detection',
-					text: 'Assign a location while editing a list and Groly can open it automatically when you arrive. Your GPS location stays on your device; only address searches are sent to OpenStreetMap.',
-					link: { href: '/einstellungen', label: 'Enable location detection' }
+					text: 'Assign a location while editing a list and Groly can open it automatically when you open the app or return from the background within 100 m. Tapping a push reminder opens its destination instead, such as the matching tracker. Your GPS location stays on your device; only address searches are sent to OpenStreetMap.',
+					link: { href: '/einstellungen?expand=location', label: 'Enable location detection' }
+				},
+				{
+					title: 'Location access on iPhone',
+					text: 'If your installed Groly app repeatedly asks for location access, open the same Groly address in Safari. In Page Menu → Website Settings, set Location to Allow. Also check iPhone Settings → Privacy & Security → Location Services → Safari Websites (or Groly, if listed): choose While Using the App. If prompts continue, reinstalling the home screen app after granting access may help. Before removing it, go online and wait until all pending changes have synced; unsynced changes can be lost. Then remove the home screen app and add it again from the same Safari address. Permission behavior can vary with the iOS version.'
 				},
 				{
 					title: 'List view',
@@ -224,8 +228,12 @@
 				},
 				{
 					title: 'Standorterkennung',
-					text: 'Hinterlege beim Bearbeiten einer Liste einen Standort und Groly kann sie bei deiner Ankunft automatisch öffnen. Dein GPS-Standort bleibt auf dem Gerät; nur Adresssuchen werden an OpenStreetMap gesendet.',
-					link: { href: '/einstellungen', label: 'Standorterkennung aktivieren' }
+					text: 'Hinterlege beim Bearbeiten einer Liste einen Standort und Groly kann sie beim Öffnen der App oder bei der Rückkehr aus dem Hintergrund innerhalb von 100 m automatisch öffnen. Beim Antippen einer Push-Erinnerung öffnet sich stattdessen deren Ziel, zum Beispiel der passende Tracker. Dein GPS-Standort bleibt auf dem Gerät; nur Adresssuchen werden an OpenStreetMap gesendet.',
+					link: { href: '/einstellungen?expand=location', label: 'Standorterkennung aktivieren' }
+				},
+				{
+					title: 'Standortfreigabe auf dem iPhone',
+					text: 'Wenn die installierte Groly-App wiederholt nach deinem Standort fragt, öffne dieselbe Groly-Adresse in Safari. Stelle im Seitenmenü unter „Website-Einstellungen“ → „Standort“ → „Erlauben“ ein. Prüfe auch in den iPhone-Einstellungen unter „Datenschutz & Sicherheit“ → „Ortungsdienste“ → „Safari-Websites“ (oder Groly, falls aufgeführt), ob „Beim Verwenden der App“ aktiviert ist. Falls die Nachfragen bleiben, kann eine erneute Installation der Home-Bildschirm-App nach der Freigabe helfen. Gehe vor dem Entfernen online und warte, bis alle ausstehenden Änderungen synchronisiert sind; nicht synchronisierte Änderungen können verloren gehen. Entferne anschließend die Home-Bildschirm-App und füge sie über dieselbe Safari-Adresse wieder hinzu. Das Berechtigungsverhalten kann je nach iOS-Version abweichen.'
 				},
 				{
 					title: 'Listenansicht',

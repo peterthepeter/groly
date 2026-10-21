@@ -81,7 +81,7 @@
 	"settings_category_order_hint": "Die erste Kategorie erscheint unten im Raster.",
 	"settings_category_drag_hint": "Am Griff ziehen oder antippen, um die Position zu wählen. Mit Tastatur: Pfeiltasten.",
 	"settings_location_detection": "Standorterkennung",
-	"settings_location_description": "Öffnet die passende Liste automatisch, wenn du Groly an einem gespeicherten Standort öffnest oder aus dem Hintergrund zurückkehrst (innerhalb von 100 m).\n\nDein GPS-Standort bleibt auf deinem Gerät. Nur Adresssuchen werden an OpenStreetMap gesendet.\n\nAktiviere den Schalter und hinterlege den Standort über „Liste bearbeiten“.",
+	"settings_location_description": "Öffnet die passende Liste automatisch, wenn du Groly an einem gespeicherten Standort öffnest oder aus dem Hintergrund zurückkehrst (innerhalb von 100 m). Beim Antippen einer Push-Mitteilung hat deren Ziel Vorrang.\n\nDein GPS-Standort bleibt auf deinem Gerät. Nur Adresssuchen werden an OpenStreetMap gesendet.\n\nAktiviere den Schalter und hinterlege den Standort über „Liste bearbeiten“.\n\niPhone fragt wiederholt nach deinem Standort? Öffne dieselbe Groly-Adresse in Safari und wähle im Seitenmenü unter „Website-Einstellungen“ → „Standort“ → „Erlauben“. Weitere Schritte findest du in der Bedienungsanleitung unter „Listen → Standortfreigabe auf dem iPhone“.",
 	"settings_push_notifications": "Push-Benachrichtigungen",
 	"settings_push_description": "Erhalte Benachrichtigungen, wenn andere Nutzer Items in einer geteilten Liste hinzufügen oder ändern.",
 	"settings_push_blocked": "Im Browser blockiert. Erlaube Benachrichtigungen in den Website-Einstellungen, um sie hier zu aktivieren.",

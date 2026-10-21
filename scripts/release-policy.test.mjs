@@ -1,9 +1,32 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { releasePolicy } from './release-policy.mjs';
+import { releasePolicy, releaseVerification } from './release-policy.mjs';
 
 const repository = 'peterthepeter/groly';
 const published = (version, prerelease) => ({ action: 'published', release: { tag_name: `v${version}`, prerelease, draft: false } });
+
+test('uses the configured verification level for both beta and stable releases', () => {
+	for (const verification of ['standard', 'full']) {
+		assert.equal(releaseVerification({ verification }), verification);
+		assert.equal(releaseVerification({ verification }, ''), verification);
+		for (const [version, prerelease] of [['1.0.0-beta.7', true], ['1.0.0', false]]) {
+			const policy = releasePolicy('release', published(version, prerelease), version, repository);
+			assert.equal(policy.channelTag, `ghcr.io/${repository}:${prerelease ? 'beta' : 'latest'}`);
+		}
+	}
+});
+
+test('manual verification can explicitly select either level', () => {
+	assert.equal(releaseVerification({ verification: 'standard' }, 'full'), 'full');
+	assert.equal(releaseVerification({ verification: 'full' }, 'standard'), 'standard');
+});
+
+test('rejects missing or misspelled verification levels instead of skipping checks silently', () => {
+	for (const config of [null, {}, { verification: 'mini' }, { verification: 'FULL' }]) {
+		assert.throws(() => releaseVerification(config), /verification must be/);
+	}
+	assert.throws(() => releaseVerification({ verification: 'standard' }, 'unknown'), /override must be/);
+});
 
 test('manual verification never derives public tags, even with release-like event data', () => {
 	for (const version of ['1.0.0-beta.1', '1.0.0']) {

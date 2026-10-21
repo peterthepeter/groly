@@ -2,6 +2,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
+/** Select the explicitly configured verification level, never from the version. */
+export function releaseVerification(config, override) {
+	const valid = value => value === 'standard' || value === 'full';
+	assert(config && valid(config.verification), 'Release verification must be standard or full');
+	if (override === undefined || override === '') return config.verification;
+	assert(valid(override), 'Release verification override must be standard or full');
+	return override;
+}
+
 /** Derive the only permitted public tags; manual verification has none. */
 export function releasePolicy(eventName, event, version, repository) {
 	assert(['workflow_dispatch', 'release'].includes(eventName), 'Unsupported workflow event');
@@ -34,6 +43,9 @@ export function releasePolicy(eventName, event, version, repository) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
 	const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+	const config = JSON.parse(readFileSync('.github/release.json', 'utf8'));
+	const verification = releaseVerification(config, process.env.GITHUB_EVENT_NAME === 'workflow_dispatch'
+		? process.env.GROLY_VERIFICATION_INPUT : undefined);
 	const policy = releasePolicy(process.env.GITHUB_EVENT_NAME, event, version, process.env.GITHUB_REPOSITORY);
-	for (const [key, value] of Object.entries(policy)) process.stdout.write(`${key}=${value}\n`);
+	for (const [key, value] of Object.entries({ ...policy, verification })) process.stdout.write(`${key}=${value}\n`);
 }

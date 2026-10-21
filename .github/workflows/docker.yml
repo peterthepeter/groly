@@ -1,9 +1,18 @@
-name: Verify & Publish Docker Image
+name: Build & Publish Docker Image
 
 on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      verification:
+        description: 'Verification: standard builds only; full also runs all release checks'
+        type: choice
+        required: true
+        default: standard
+        options:
+          - standard
+          - full
 
 concurrency:
   group: groly-docker-${{ github.event_name == 'workflow_dispatch' && format('verify-{0}', github.ref) || (github.event.release.prerelease && 'beta' || 'stable') }}
@@ -31,9 +40,12 @@ jobs:
 
       - name: Resolve release policy
         id: policy
+        env:
+          GROLY_VERIFICATION_INPUT: ${{ inputs.verification }}
         run: node scripts/release-policy.mjs >> "$GITHUB_OUTPUT"
 
       - name: Install and check application
+        if: steps.policy.outputs.verification == 'full'
         run: |
           npm ci --ignore-scripts
           npm run prepare
@@ -66,7 +78,7 @@ jobs:
           cache-from: type=gha,scope=groly-amd64
 
       - name: Select the immutable local image
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && steps.policy.outputs.verification == 'full'
         env:
           LOCAL_IMAGE: ${{ steps.policy.outputs.localImage }}
         run: |
@@ -90,7 +102,7 @@ jobs:
           cache-to: type=gha,scope=groly-amd64,mode=min
 
       - name: Pull the immutable release candidate
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' && steps.policy.outputs.verification == 'full'
         env:
           IMAGE_REPOSITORY: ${{ steps.policy.outputs.repository }}
           CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
@@ -101,6 +113,7 @@ jobs:
           docker pull --platform linux/amd64 "${IMAGE_REPOSITORY}@${CANDIDATE_DIGEST}"
 
       - name: Scan the shipped image
+        if: steps.policy.outputs.verification == 'full'
         env:
           TRIVY_VERSION: '0.76.0'
         run: |
@@ -112,24 +125,28 @@ jobs:
           ./trivy image --scanners vuln --format json --output image-security.json --exit-code 1 "$GROLY_TEST_IMAGE"
 
       - name: Verify fresh installation, direct upgrades and restore
+        if: steps.policy.outputs.verification == 'full'
         env:
           GROLY_TEST_REPORT: docker-upgrade-report.json
         run: npm run test:docker
 
       - name: Cache browser test engines
+        if: steps.policy.outputs.verification == 'full'
         uses: actions/cache@v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-26.04-${{ hashFiles('package-lock.json') }}
 
       - name: Install browser test engines
+        if: steps.policy.outputs.verification == 'full'
         run: npx --no-install playwright install --with-deps chromium webkit
 
       - name: Verify existing browser and offline PWA upgrade
+        if: steps.policy.outputs.verification == 'full'
         run: npm run test:browser
 
       - name: Save verification evidence
-        if: always()
+        if: always() && steps.policy.outputs.verification == 'full'
         uses: actions/upload-artifact@v7.0.2
         with:
           name: docker-release-verification
@@ -139,19 +156,20 @@ jobs:
             playwright-report/
             test-results/
 
-      - name: Promote the verified digest to version and channel
+      - name: Publish the digest to version and channel
         if: github.event_name == 'release'
         env:
           VERSION_TAG: ${{ steps.policy.outputs.versionTag }}
           CHANNEL_TAG: ${{ steps.policy.outputs.channelTag }}
           CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+          IMAGE_REPOSITORY: ${{ steps.policy.outputs.repository }}
         run: |
           set -eu
           test -n "$VERSION_TAG"
           test -n "$CHANNEL_TAG"
           # Confirm the version tag first, then update exactly one channel.
           for tag in "$VERSION_TAG" "$CHANNEL_TAG"; do
-            docker buildx imagetools create --prefer-index=false --tag "$tag" "$GROLY_TEST_IMAGE"
+            docker buildx imagetools create --prefer-index=false --tag "$tag" "${IMAGE_REPOSITORY}@${CANDIDATE_DIGEST}"
             promoted=$(docker buildx imagetools inspect "$tag" --format '{{.Manifest.Digest}}')
             test "$promoted" = "$CANDIDATE_DIGEST"
           done

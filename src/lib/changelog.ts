@@ -2,6 +2,17 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '1.0.0-beta.7',
+		de: [
+			'Push-Erinnerungen haben Vorrang vor der Standortnavigation.',
+			'iPhone-Hilfe zur Standortfreigabe ergänzt.'
+		],
+		en: [
+			'Push reminders take priority over location-based navigation.',
+			'Added iPhone location permission help.'
+		]
+	},
+	{
 		version: '1.0.0-beta.6',
 		de: [
 			'Einstellungen, Adminbereich und Listenbearbeitung übersichtlicher gestaltet.',

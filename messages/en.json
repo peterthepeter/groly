@@ -81,7 +81,7 @@
 	"settings_category_order_hint": "The first category appears at the bottom of the grid.",
 	"settings_category_drag_hint": "Drag the handle or tap it to choose a position. With a keyboard: use the arrow keys.",
 	"settings_location_detection": "Location detection",
-	"settings_location_description": "Automatically opens the matching list when you open Groly at a saved location or return from the background (within 100 m).\n\nYour GPS location stays on your device. Only address searches are sent to OpenStreetMap.\n\nEnable the switch and set the location in Edit list.",
+	"settings_location_description": "Automatically opens the matching list when you open Groly at a saved location or return from the background (within 100 m). Tapping a push notification gives its destination priority.\n\nYour GPS location stays on your device. Only address searches are sent to OpenStreetMap.\n\nEnable the switch and set the location in Edit list.\n\niPhone repeatedly asks for your location? Open the same Groly address in Safari and choose Page Menu → Website Settings → Location → Allow. For further steps, see Lists → Location access on iPhone in the user guide.",
 	"settings_push_notifications": "Push notifications",
 	"settings_push_description": "Receive notifications when other users add or change items in a shared list.",
 	"settings_push_blocked": "Blocked in your browser. Allow notifications in the site settings to enable them here.",

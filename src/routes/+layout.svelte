@@ -42,11 +42,14 @@
 	onNavigate((navigation) => {
 		if (typeof document === 'undefined' || !('startViewTransition' in document)) return;
 		return new Promise((resolve) => {
-			(document as Document & { startViewTransition: (cb: () => Promise<void>) => unknown })
-				.startViewTransition(async () => {
-					resolve();
-					await navigation.complete;
-				});
+			const transition = document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+			// Opening a push action immediately replaces its query URL. That can
+			// skip the previous animation, which WebKit reports through ready.
+			// Navigation still completes normally when only the animation is skipped.
+			void transition.ready.catch(() => {});
 		});
 	});
 
