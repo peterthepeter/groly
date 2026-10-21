@@ -1,6 +1,6 @@
 {
   "date": "2026-10-21",
-  "published": false,
+  "published": true,
   "verificationMode": "full",
   "matrixCandidate": "sha256:b9ae542b8fe267cdc59324cb1857f5a73ac0d32ad3d5bc65c3e79c6ed9dad557",
   "uiCandidate": "sha256:28d886bde715a5bff9d1600e6adb4e793e3c071515677e7ec020699260ad2e50",
@@ -371,5 +371,6 @@
     "fullMatrixRepeated": false
   },
   "screenshotsApprovedByUser": true,
-  "favoriteEditingApprovedByUser": true
+  "favoriteEditingApprovedByUser": true,
+  "publicationReceipt": "1.0.0-published.json"
 }

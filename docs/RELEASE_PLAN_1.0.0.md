@@ -1,7 +1,11 @@
 # Groly 1.0.0 – Release- und Upgrade-Plan
 
 Stand: 21. Oktober 2026. Vorbereitung lokal auf `codex/groly-1.0`.
-**Version und Changelogs bestätigt; App-PDF-Punkt auf Nutzerwunsch entfernt.**
+**Abgeschlossen: Stable 1.0.0 veröffentlicht; vollständiger Workflow erfolgreich.**
+`:1.0.0` und `:latest` zeigen auf denselben geprüften Digest, `:beta` ist
+unverändert. [Veröffentlichungsnachweis](verification/1.0.0-published.md).
+
+Version und Changelogs bestätigt; App-PDF-Punkt auf Nutzerwunsch entfernt.
 Screenshots und Favoritenbearbeitung sind ebenfalls bestätigt. Kein erneuter
 lokaler Upgrade-Lauf wegen der Favoritenänderung: bestehende Ergebnisse verwenden.
 
