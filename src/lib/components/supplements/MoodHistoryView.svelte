@@ -22,12 +22,14 @@
 		onreload,
 		fixedView = null as 'today' | 'week' | 'month' | null,
 		parentDate = null as string | null,
-		hasDayEntry = $bindable(false)
+		hasDayEntry = $bindable(false),
+		embedded = false
 	}: {
 		onreload: () => void;
 		fixedView?: 'today' | 'week' | 'month' | null;
 		parentDate?: string | null;
 		hasDayEntry?: boolean;
+		embedded?: boolean;
 	} = $props();
 
 	type View = 'week' | 'month';
@@ -288,17 +290,17 @@
 	{@const dayEntry = logMap.get(viewedDate)}
 	{#if dayEntry}
 		{@const level = getMoodLevel(dayEntry.mood)}
-		<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-			<div class="w-full flex items-center gap-2 px-4 py-3">
+		<div class={embedded ? 'history-section' : 'rounded-2xl overflow-hidden'} style={embedded ? undefined : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}>
+			<div class={embedded ? 'history-section-header w-full flex items-center gap-2' : 'w-full flex items-center gap-2 px-4 py-3'}>
 				<button
 					onclick={() => dayCardExpanded = !dayCardExpanded}
+					aria-expanded={dayCardExpanded}
 					class="flex items-center gap-2 flex-1 min-w-0 active:opacity-60 text-left"
 					aria-label={dayCardExpanded ? 'Einklappen' : 'Aufklappen'}
 				>
-					<span class="rounded-full shrink-0" style="width: 6px; height: 6px; background-color: #F472B6"></span>
-					<p class="font-semibold text-sm" style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
+					<p class={embedded ? 'history-section-title' : 'font-semibold text-sm'} style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
 				</button>
-				<span class="flex items-center gap-1.5 text-xs font-semibold shrink-0" style="color: {level.color}">
+				<span class="flex items-center gap-1.5 text-xs font-semibold shrink-0" style="color: var(--color-on-surface-variant)">
 					<MoodIcon value={level.value} size={15}/>
 					<span>{(t[level.labelKey as keyof typeof t] as string) ?? ''}</span>
 				</span>
@@ -316,6 +318,7 @@
 				</button>
 				<button
 					onclick={() => dayCardExpanded = !dayCardExpanded}
+					aria-expanded={dayCardExpanded}
 					class="shrink-0 active:opacity-60"
 					aria-label={dayCardExpanded ? 'Einklappen' : 'Aufklappen'}
 				>
@@ -326,7 +329,7 @@
 				</button>
 			</div>
 			{#if dayCardExpanded && (dayEntry.activities.length > 0 || dayEntry.note || dayEntry.gratitude)}
-				<div class="px-4 pb-3 space-y-2">
+				<div class={embedded ? 'history-section-content space-y-2' : 'px-4 pb-3 space-y-2'}>
 					{#if dayEntry.activities.length > 0}
 						<div class="flex flex-wrap gap-1">
 							{#each dayEntry.activities as key}
@@ -349,15 +352,15 @@
 
 <!-- ── Fixed week/month (History week/month view): no toggle, no own nav ── -->
 {:else if logs.length > 0}
-<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+<div class={embedded ? 'history-section' : 'rounded-2xl overflow-hidden'} style={embedded ? undefined : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}>
 	<button
 		onclick={() => expanded = !expanded}
-		class="w-full flex items-center gap-2 px-4 py-3 active:opacity-70"
+		aria-expanded={expanded}
+		class={embedded ? 'history-section-header w-full flex items-center gap-2 active:opacity-70' : 'w-full flex items-center gap-2 px-4 py-3 active:opacity-70'}
 		style=""
 	>
 		<div class="flex items-center gap-2 shrink-0">
-			<span class="rounded-full" style="width: 6px; height: 6px; background-color: #F472B6"></span>
-			<p class="font-semibold text-sm" style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
+			<p class={embedded ? 'history-section-title' : 'font-semibold text-sm'} style="color: var(--color-on-surface)">{t.mood_tracker_label}</p>
 		</div>
 		<div class="flex-1 flex items-center flex-wrap gap-x-2 gap-y-0.5">
 			{#each MOOD_LEVELS.slice().reverse() as level}
@@ -371,8 +374,7 @@
 			{/each}
 		</div>
 		{#if moodSummary}
-			{@const avgLevel = getMoodLevel(Math.round(moodSummary.avg))}
-			<div class="flex items-center gap-1 shrink-0 text-xs font-semibold tabular-nums" style="color: {avgLevel.color}">
+			<div class="flex items-center gap-1 shrink-0 text-xs font-semibold tabular-nums" style="color: var(--color-on-surface-variant)">
 				<span>Ø {moodSummary.avg.toFixed(1)}<span style="opacity: 0.6">/5</span></span>
 				{#if moodSummary.trend === 'up'}
 					<svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><polygon points="5,1 9,8 1,8"/></svg>
@@ -388,7 +390,7 @@
 		</svg>
 	</button>
 	{#if expanded}
-		<div class="px-4 pb-4 pt-3">
+		<div class={embedded ? 'history-section-content' : 'px-4 pb-4 pt-3'}>
 			{@render calendarContent()}
 			{#if fixedView === 'week'}
 				{@const range = getDateRange()}

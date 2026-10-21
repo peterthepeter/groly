@@ -2,7 +2,9 @@
 	import { onMount, tick } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/state';
-	import AppHeader from '#lib/components/AppHeader.svelte';
+	import TrackerHeader from '#lib/components/supplements/TrackerHeader.svelte';
+	import TrackerDateNav from '#lib/components/supplements/TrackerDateNav.svelte';
+	import { measureHeight } from '#lib/measureHeight';
 	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs, onSupplementLogSynced } from '#lib/sync/manager';
@@ -22,7 +24,6 @@
 	import MoodEntrySheet from '#lib/components/supplements/MoodEntrySheet.svelte';
 	import MoodWeeklyReview from '#lib/components/supplements/MoodWeeklyReview.svelte';
 	import EatTrackerCard from '#lib/components/supplements/EatTrackerCard.svelte';
-	import TrackerSectionNav from '#lib/components/supplements/TrackerSectionNav.svelte';
 	import HistoryTab from '#lib/components/supplements/HistoryTab.svelte';
 	import ExportSheet from '#lib/components/supplements/ExportSheet.svelte';
 	import { exportReport, type ReportSections } from '#lib/pdfExport';
@@ -131,7 +132,6 @@
 		const opacity = Math.max(0, Math.min(1, (gap + 8) / 48));
 		greetingEl.style.opacity = String(opacity);
 	}
-	const headerOffsetRem = $derived(headerHidden ? '0rem' : '5.25rem');
 	function onScroll() {
 		if (!scrollContainer || scrollRaf) return;
 		scrollRaf = requestAnimationFrame(() => {
@@ -1137,8 +1137,8 @@
 	}
 </script>
 
-<div class="h-[100dvh] relative overflow-hidden" style="background-color: var(--color-bg)">
-	<AppHeader title={t.supplement_title} onMenuOpen={() => menuOpen = true} actions={activeTab === 'history' ? headerExportAction : null} hidden={headerHidden} />
+<div class="tracker-workspace" class:with-date={activeTab === 'history'}
+	style:--tracker-header-height={overlayHeight > 0 ? `${overlayHeight}px` : undefined}>
 
 	{#snippet headerExportAction()}
 		<button
@@ -1155,12 +1155,13 @@
 	{/snippet}
 
 	{#snippet trackerHistoryControls()}
-		<div class="flex gap-1 p-1">
+		<div class="flex px-2">
 			{#each (['day', 'week', 'month'] as const) as period}
 				<button
 					onclick={() => { historyPeriod = period; if (period !== 'day') scrollContainer?.scrollTo({ top: 0 }); }}
-					class="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all"
-					style="background-color: {historyPeriod === period ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {historyPeriod === period ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
+					class="flex-1 min-h-10 py-2 text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-[-3px]"
+					aria-pressed={historyPeriod === period}
+					style="color: {historyPeriod === period ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
 				>
 					{period === 'day' ? t.supplement_stats_day : period === 'week' ? t.supplement_stats_week : t.supplement_stats_month}
 				</button>
@@ -1168,34 +1169,26 @@
 		</div>
 	{/snippet}
 
-	<!-- Sticky overlay: tab bar + date row, with backdrop blur so scrolling content shows through -->
-	<div bind:clientHeight={overlayHeight}
-	     class="absolute left-0 right-0 z-30 pb-3"
-	     style="top: calc(env(safe-area-inset-top) + {headerOffsetRem}); transition: top 0.25s ease; background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
-
-	<!-- Tab Bar + Manage row — unified card -->
-	<div class="px-4 pt-1">
-		<TrackerSectionNav
+	<!-- One measured header keeps the workspace clear as the brand row or reminders change height. -->
+	<div use:measureHeight={(height) => overlayHeight = height}
+	     class="tracker-header-overlay">
+		<TrackerHeader
+			title={t.supplement_title}
+			onMenuOpen={() => menuOpen = true}
+			actions={activeTab === 'history' ? headerExportAction : null}
+			collapsed={headerHidden}
 			activeSection={activeTab}
 			nutritionEnabled={userSettings.nutritionTrackerEnabled}
 			todayLogs={todayLogs}
 			historyControls={trackerHistoryControls}
 		/>
-	</div>
 
 	<!-- Date navigation — only on History tab -->
 	{#if activeTab === 'history'}
-		<div class="px-4 mt-3 flex items-center justify-between">
-			<button
-				onclick={() => navigateHistory(-1)}
-				aria-label={t.a11y_previous_period}
-				class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
-				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
-			>
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<polyline points="15 18 9 12 15 6"/>
-				</svg>
-			</button>
+		<TrackerDateNav
+			onPrevious={() => navigateHistory(-1)} onNext={() => navigateHistory(1)}
+			previousLabel={t.a11y_previous_period} nextLabel={t.a11y_next_period}
+		>
 			{#if historyPeriod === 'day'}
 				<div style="position:relative; display:inline-block">
 					<span class="text-sm font-semibold select-none" style="color:var(--color-on-surface); pointer-events:none">{formatPeriodLabel()}</span>
@@ -1210,17 +1203,7 @@
 			{:else}
 				<span class="text-sm font-semibold" style="color:var(--color-on-surface)">{formatPeriodLabel()}</span>
 			{/if}
-			<button
-				onclick={() => navigateHistory(1)}
-				aria-label={t.a11y_next_period}
-				class="w-9 h-9 rounded-full flex items-center justify-center active:opacity-60"
-				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border)"
-			>
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<polyline points="9 18 15 12 9 6"/>
-				</svg>
-			</button>
-		</div>
+		</TrackerDateNav>
 	{/if}
 	</div><!-- end sticky overlay -->
 
@@ -1229,7 +1212,7 @@
 			{@const todayGreeting = hour < 12 ? t.greeting_morning : hour < 18 ? t.greeting_day : hour < 22 ? t.greeting_evening : t.greeting_night}
 			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(now)}
 			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(now)}
-			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; transition: opacity 0.15s ease;">
+			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: var(--tracker-header-height); height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; transition: opacity 0.15s ease;">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user.username}</p>
 				{#if trackerInfoLine}
@@ -1241,7 +1224,7 @@
 		<div bind:this={scrollContainer}
 		     onscroll={onScroll}
 		     class="absolute inset-0 overflow-y-auto"
-		     style="padding-top: calc(env(safe-area-inset-top) + {headerOffsetRem} + {overlayHeight}px); padding-bottom: 5.5rem; transition: padding-top 0.25s ease; overscroll-behavior: none;">
+		     style="padding-top: var(--tracker-header-height); padding-bottom: 5.5rem; overscroll-behavior: none;">
 
 	{#if loading}
 		<div class="flex justify-center py-16">

@@ -13,6 +13,7 @@
     --color-surface-elevated: #ffffff;
 
     --color-primary: #2E7D32;
+    --color-tracker-nutrition: #C2410C;
     --color-primary-container: #C8E6C9;
     --color-primary-dim: #1B5E20;
     --color-on-primary: #ffffff;
@@ -60,6 +61,7 @@
     --color-surface-elevated: #282c2a;
 
     --color-primary: #81C784;
+    --color-tracker-nutrition: #FB923C;
     --color-primary-container: #1B3920;
     --color-primary-dim: #66BB6A;
     --color-on-primary: #0F2010;
@@ -98,6 +100,7 @@
       --color-surface-elevated: #282c2a;
 
       --color-primary: #81C784;
+      --color-tracker-nutrition: #FB923C;
       --color-primary-container: #1B3920;
       --color-primary-dim: #66BB6A;
       --color-on-primary: #0F2010;
@@ -254,6 +257,29 @@
 }
 
 @layer utilities {
+  /* Shared viewport and initial header reserve prevent jumps between tracker routes.
+     Base: 16 top + 52 brand + 44 tabs + 40 actions + 2 border + 12 bottom.
+     Date navigation adds 12 spacing + 36 controls. Live measurements handle expansion. */
+  .tracker-workspace {
+    --tracker-header-height: calc(env(safe-area-inset-top) + 166px);
+    position: relative;
+    height: 100dvh;
+    overflow: hidden;
+    background-color: var(--color-bg);
+  }
+
+  .tracker-workspace.with-date {
+    --tracker-header-height: calc(env(safe-area-inset-top) + 214px);
+  }
+
+  .tracker-header-overlay {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 40;
+    padding: calc(env(safe-area-inset-top) + 1rem) 16px 12px;
+    background: var(--color-bg);
+  }
+
   /* Shared dividers for rows inside list and recipe overview surfaces. */
   .inset-row-divider {
     position: relative;

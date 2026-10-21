@@ -2,13 +2,14 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import AppHeader from '#lib/components/AppHeader.svelte';
+	import TrackerHeader from '#lib/components/supplements/TrackerHeader.svelte';
+	import TrackerDateNav from '#lib/components/supplements/TrackerDateNav.svelte';
+	import { measureHeight } from '#lib/measureHeight';
 	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
 	import MealEditSheet from '#lib/components/supplements/MealEditSheet.svelte';
 	import NutritionGoalSheet from '#lib/components/supplements/NutritionGoalSheet.svelte';
 	import NutritionMacroStrip from '#lib/components/supplements/NutritionMacroStrip.svelte';
-	import TrackerSectionNav from '#lib/components/supplements/TrackerSectionNav.svelte';
 	import { toLocalDateKey } from '#lib/dates';
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { t, currentLang, nutrition_kcal_over, nutrition_kcal_remaining, nutrition_of_goal } from '#lib/i18n.svelte';
@@ -44,6 +45,7 @@
 	let { data } = $props();
 
 	let menuOpen = $state(false);
+	let headerHeight = $state(0);
 	let dateStr = $state(
 		(() => {
 			const param = page.url.searchParams.get('date');
@@ -198,154 +200,142 @@
 	}
 </script>
 
-<AppHeader title={t.nutrition_label} onMenuOpen={() => (menuOpen = true)} onBack={() => goto('/tracker')}>
-	{#snippet actions()}
-		<button
-			onclick={() => goto('/tracker/nutrition/favorites')}
-			class="min-h-10 flex-shrink-0 px-2 flex items-center justify-center text-xs font-semibold active:opacity-60 transition-opacity"
-			style="color: var(--color-on-surface-variant)"
-			aria-label={t.nutrition_favorites_manage}
-		>
-			{t.nutrition_favorites_label}
-		</button>
-	{/snippet}
-</AppHeader>
-<HamburgerMenu bind:open={menuOpen} user={data?.user ?? null} />
-
-<div class="px-4 pb-3" style="padding-top: 5.25rem">
-	<TrackerSectionNav activeSection="nutrition" nutritionEnabled={userSettings.nutritionTrackerEnabled} />
-</div>
-
-<main class="px-4 pb-32">
-	<!-- Datums-Navigation -->
-	<div class="flex items-center justify-between mb-4">
-		<button onclick={() => shiftDate(-1)} class="w-9 h-9 flex items-center justify-center active:opacity-50"
-		        style="color: var(--color-on-surface-variant)" aria-label={t.nutrition_prev_day}>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="15 18 9 12 15 6"/>
-			</svg>
-		</button>
-		<div class="text-center">
-			<div style="position: relative; display: inline-block">
-				<span class="text-sm font-semibold select-none" style="color: var(--color-on-surface); pointer-events: none">{formatDate(dateStr)}</span>
-				<input type="date" bind:value={dateStr} max={todayStr}
-				       style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.001; cursor: pointer; border: none; padding: 0; background: transparent"
-				       aria-label={t.nutrition_pick_date} />
-			</div>
-			{#if !isToday}
-				<button onclick={() => (dateStr = todayStr)} class="block mx-auto text-xs underline mt-0.5" style="color: #FB923C">
-					{t.nutrition_jump_today}
+<div class="tracker-workspace with-date"
+	style:--tracker-header-height={headerHeight > 0 ? `${headerHeight}px` : undefined}>
+	<div use:measureHeight={(height) => headerHeight = height} class="tracker-header-overlay">
+		<TrackerHeader title={t.nutrition_label} onMenuOpen={() => (menuOpen = true)}
+			activeSection="nutrition" nutritionEnabled={userSettings.nutritionTrackerEnabled}>
+			{#snippet actions()}
+				<button
+					onclick={() => goto('/tracker/nutrition/favorites')}
+					class="h-9 flex-shrink-0 px-1 flex items-center justify-center text-xs font-semibold active:opacity-60 transition-opacity"
+					style="color: var(--color-on-surface-variant)"
+					aria-label={t.nutrition_favorites_manage}
+				>
+					{t.nutrition_favorites_label}
 				</button>
-			{/if}
-		</div>
-		<button onclick={() => shiftDate(1)} disabled={isToday}
-		        class="w-9 h-9 flex items-center justify-center active:opacity-50 disabled:opacity-25"
-		        style="color: var(--color-on-surface-variant)" aria-label={t.nutrition_next_day}>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="9 18 15 12 9 6"/>
-			</svg>
-		</button>
+			{/snippet}
+		</TrackerHeader>
+		<TrackerDateNav onPrevious={() => shiftDate(-1)} onNext={() => shiftDate(1)}
+			previousLabel={t.nutrition_prev_day} nextLabel={t.nutrition_next_day} nextDisabled={isToday}>
+				<div style="position: relative; display: inline-block">
+					<span class="text-sm font-semibold select-none" style="color: var(--color-on-surface); pointer-events: none">{formatDate(dateStr)}</span>
+					<input type="date" bind:value={dateStr} max={todayStr}
+					       style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.001; cursor: pointer; border: none; padding: 0; background: transparent"
+					       aria-label={t.nutrition_pick_date} />
+				</div>
+				{#if !isToday}
+					<button onclick={() => (dateStr = todayStr)} class="block mx-auto text-xs leading-none underline mt-0.5" style="color: #FB923C">
+						{t.nutrition_jump_today}
+					</button>
+				{/if}
+		</TrackerDateNav>
 	</div>
 
-	<!-- Tagesbilanz -->
-	<section class="nutrition-summary">
-		<div class="nutrition-summary-head">
-			<div class="min-w-0">
-				<div class="nutrition-kcal-value">
-					{fmtKcal(totals.kcal)} <span>kcal</span>
-				</div>
-				{#if goalKcal}
-					<p class="nutrition-goal-copy">{nutrition_of_goal(`${fmtKcal(goalKcal)} kcal`)}</p>
-				{:else}
-					<p class="nutrition-goal-copy">{t.nutrition_no_goal_set}</p>
-				{/if}
-			</div>
-			<div class="nutrition-summary-actions">
-				{#if kcalStatus}<span class="nutrition-kcal-status" data-over={totals.kcal > (goalKcal ?? 0)}>{kcalStatus}</span>{/if}
-				<button onclick={() => (goalSheetOpen = true)}>{t.nutrition_goals_button}</button>
-			</div>
-		</div>
-		{#if goalKcal}
-			<div class="nutrition-kcal-track">
-				<div style="width: {percentKcal()}%; background-color: {totals.kcal > goalKcal ? 'var(--color-error)' : '#FB923C'}"></div>
-			</div>
-		{/if}
-		{#if !goalKcal && !goalProtein && !goalFat && !goalCarbs && !goalFiber}
-			<button onclick={() => (goalSheetOpen = true)}
-			        class="nutrition-empty-goal-action">
-				+ {t.nutrition_set_goal_cta}
-			</button>
-		{:else}
-			<NutritionMacroStrip items={macroItems} />
-		{/if}
-	</section>
+	<main class="absolute inset-0 overflow-y-auto px-4 pb-32" style="padding-top: var(--tracker-header-height); overscroll-behavior: none;">
 
-	<!-- Mahlzeiten -->
-	{#if loading}
-		<div class="flex justify-center py-12">
-			<div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-			     style="border-color: var(--color-primary); border-top-color: transparent"></div>
-		</div>
-	{:else if meals.length === 0}
-		<div class="text-center py-12">
-			<p class="text-sm" style="color: var(--color-on-surface-variant)">
-				{t.nutrition_no_meals}
-			</p>
-		</div>
-	{:else}
-		<section class="nutrition-day-log" aria-label={t.nutrition_meals_section}>
-			{#each meals as m (m.id)}
-				{@const mealKcal = m.components.reduce((s, c) => s + (c.kcal ?? 0), 0)}
-				{@const mealP = m.components.reduce((s, c) => s + (c.protein ?? 0), 0)}
-				{@const mealF = m.components.reduce((s, c) => s + (c.fat ?? 0), 0)}
-				{@const mealC = m.components.reduce((s, c) => s + (c.carbs ?? 0), 0)}
-				{@const singleImg = !m.favoriteName && m.components.length === 1 ? m.components[0].imageUrl : null}
-				<button type="button" class="nutrition-meal-entry" onclick={() => openEditMeal(m)}>
-					<span class="nutrition-meal-time">{m.time}</span>
-					<span class="nutrition-meal-content">
-						<span class="nutrition-meal-heading">
-							<span>{m.name}</span>
-							<strong>{fmtKcal(mealKcal)} kcal</strong>
-						</span>
-						<span class="nutrition-meal-macros">
-							{t.nutrition_protein.charAt(0)} {fmtG(mealP)} g · {t.nutrition_fat.charAt(0)} {fmtG(mealF)} g · {t.nutrition_carbs.charAt(0)} {fmtG(mealC)} g
-						</span>
-					{#if m.favoriteName}
-						<span class="nutrition-meal-favorite">
-							{#if m.imageUrl}
-								<img src={m.imageUrl} alt="" />
-							{/if}
-							<span>{m.favoriteName}</span>
-						</span>
+		<!-- Tagesbilanz -->
+		<section class="nutrition-summary">
+			<div class="nutrition-summary-head">
+				<div class="min-w-0">
+					<div class="nutrition-kcal-value">
+						{fmtKcal(totals.kcal)} <span>kcal</span>
+					</div>
+					{#if goalKcal}
+						<p class="nutrition-goal-copy">{nutrition_of_goal(`${fmtKcal(goalKcal)} kcal`)}</p>
+					{:else}
+						<p class="nutrition-goal-copy">{t.nutrition_no_goal_set}</p>
 					{/if}
-					{#if singleImg}
-						<span class="nutrition-component-row nutrition-component-row-image">
-							<img src={singleImg} alt="" />
-							<span>
-								{m.components[0].displayName}
-								<small>· {m.components[0].amount}{m.components[0].unit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : m.components[0].unit}</small>
-							</span>
-							<strong>{fmtKcal(m.components[0].kcal)} kcal</strong>
-						</span>
-					{:else if m.components.length > 0}
-						<span class="nutrition-component-list">
-							{#each m.components as c (c.id)}
-								<span class="nutrition-component-row">
-									<span>
-										{c.displayName}
-										<small>· {c.amount}{c.unit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : c.unit}</small>
-									</span>
-									<strong>{fmtKcal(c.kcal)} kcal</strong>
-								</span>
-							{/each}
-						</span>
-					{/if}
-					</span>
+				</div>
+				<div class="nutrition-summary-actions">
+					{#if kcalStatus}<span class="nutrition-kcal-status" data-over={totals.kcal > (goalKcal ?? 0)}>{kcalStatus}</span>{/if}
+					<button onclick={() => (goalSheetOpen = true)}>{t.nutrition_goals_button}</button>
+				</div>
+			</div>
+			{#if goalKcal}
+				<div class="nutrition-kcal-track">
+					<div style="width: {percentKcal()}%; background-color: {totals.kcal > goalKcal ? 'var(--color-error)' : '#FB923C'}"></div>
+				</div>
+			{/if}
+			{#if !goalKcal && !goalProtein && !goalFat && !goalCarbs && !goalFiber}
+				<button onclick={() => (goalSheetOpen = true)}
+				        class="nutrition-empty-goal-action">
+					+ {t.nutrition_set_goal_cta}
 				</button>
-			{/each}
+			{:else}
+				<NutritionMacroStrip items={macroItems} />
+			{/if}
 		</section>
-	{/if}
-</main>
+
+		<!-- Mahlzeiten -->
+		{#if loading}
+			<div class="flex justify-center py-12">
+				<div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+				     style="border-color: var(--color-primary); border-top-color: transparent"></div>
+			</div>
+		{:else if meals.length === 0}
+			<div class="text-center py-12">
+				<p class="text-sm" style="color: var(--color-on-surface-variant)">
+					{t.nutrition_no_meals}
+				</p>
+			</div>
+		{:else}
+			<section class="nutrition-day-log" aria-label={t.nutrition_meals_section}>
+				{#each meals as m (m.id)}
+					{@const mealKcal = m.components.reduce((s, c) => s + (c.kcal ?? 0), 0)}
+					{@const mealP = m.components.reduce((s, c) => s + (c.protein ?? 0), 0)}
+					{@const mealF = m.components.reduce((s, c) => s + (c.fat ?? 0), 0)}
+					{@const mealC = m.components.reduce((s, c) => s + (c.carbs ?? 0), 0)}
+					{@const singleImg = !m.favoriteName && m.components.length === 1 ? m.components[0].imageUrl : null}
+					<button type="button" class="nutrition-meal-entry" onclick={() => openEditMeal(m)}>
+						<span class="nutrition-meal-time">{m.time}</span>
+						<span class="nutrition-meal-content">
+							<span class="nutrition-meal-heading">
+								<span>{m.name}</span>
+								<strong>{fmtKcal(mealKcal)} kcal</strong>
+							</span>
+							<span class="nutrition-meal-macros">
+								{t.nutrition_protein.charAt(0)} {fmtG(mealP)} g · {t.nutrition_fat.charAt(0)} {fmtG(mealF)} g · {t.nutrition_carbs.charAt(0)} {fmtG(mealC)} g
+							</span>
+						{#if m.favoriteName}
+							<span class="nutrition-meal-favorite">
+								{#if m.imageUrl}
+									<img src={m.imageUrl} alt="" />
+								{/if}
+								<span>{m.favoriteName}</span>
+							</span>
+						{/if}
+						{#if singleImg}
+							<span class="nutrition-component-row nutrition-component-row-image">
+								<img src={singleImg} alt="" />
+								<span>
+									{m.components[0].displayName}
+									<small>· {m.components[0].amount}{m.components[0].unit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : m.components[0].unit}</small>
+								</span>
+								<strong>{fmtKcal(m.components[0].kcal)} kcal</strong>
+							</span>
+						{:else if m.components.length > 0}
+							<span class="nutrition-component-list">
+								{#each m.components as c (c.id)}
+									<span class="nutrition-component-row">
+										<span>
+											{c.displayName}
+											<small>· {c.amount}{c.unit === 'piece' ? ` ${t.nutrition_unit_short_piece}` : c.unit}</small>
+										</span>
+										<strong>{fmtKcal(c.kcal)} kcal</strong>
+									</span>
+								{/each}
+							</span>
+						{/if}
+						</span>
+					</button>
+				{/each}
+			</section>
+		{/if}
+	</main>
+</div>
+
+<HamburgerMenu bind:open={menuOpen} user={data?.user ?? null} />
 
 <AppBottomNav activeTab="tracker" trackerBack onFabTap={fabClick} fabLabel={t.nutrition_add_meal} fabColor="#FB923C" />
 

@@ -7,6 +7,25 @@ Für **jeden Docker-Release** (Beta/Stable, Normal/Vollständig) aus den tatsäc
 und dem Nutzer vor dem Push einmal zeigen. Den Nutzer nicht bitten, die Texte
 selbst zu schreiben. Bereits genannte Wünsche übernehmen.
 
+### Bestätigung abwarten
+
+Vor Release-Commit, Push, Tag oder GitHub-Release die konkrete Version und die
+**vollständigen** vorgesehenen Texte zeigen: App Deutsch + Englisch und GitHub
+technisch ausschließlich Englisch. Die Vorschau muss den vorgesehenen Dateien
+entsprechen; eine verkürzte Wiedergabe des GitHub-Changelogs reicht nicht.
+
+Dann fragen: **„Sind Version und beide Changelogs so korrekt? Normaler Release
+oder vollständige Release-Prüfung?“** Erst fortfahren, wenn der Nutzer die
+Version/Changelogs ausdrücklich bestätigt und den Modus ausdrücklich gewählt oder
+die Modusauswahl ausdrücklich delegiert hat. Bereits für diesen Release
+beantwortete Fragen nicht wiederholen. Spätere inhaltliche Änderungen erneut zur
+Bestätigung vorlegen.
+
+„Git push“ allein ersetzt keine noch fehlende Entscheidung. Weder Kritik an
+langen Tests noch der gespeicherte Konfigurationswert gilt als Moduswahl.
+
+### Getrennte Texte
+
 - **App:** kurz, knapp, informativ und nutzerorientiert, jeweils Deutsch und
   Englisch. In `src/lib/changelog.ts` speichern; wenige konkrete Stichpunkte,
   keine internen Implementierungs- oder Testberichte.

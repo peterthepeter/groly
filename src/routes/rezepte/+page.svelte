@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/state';
-	import AppHeader from '#lib/components/AppHeader.svelte';
+	import RecipeHeader from '#lib/components/recipe/RecipeHeader.svelte';
+	import { measureHeight } from '#lib/measureHeight';
 	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
 	import FabWithShortcuts from '#lib/components/FabWithShortcuts.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
@@ -242,77 +243,77 @@
 	});
 </script>
 
-<div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
-	<AppHeader
-		title={activeTab === 'mealplan' ? t.meal_plan_tab : t.recipes_title}
-		subtitle={activeTab === 'recipes' ? `${recipes.length} / ${limit}` : ''}
-		onMenuOpen={() => menuOpen = true}
-		onSearch={activeTab === 'recipes' && !searchOpen ? () => searchOpen = true : null}
-	>
-		{#snippet actions()}
-			{#if activeTab === 'recipes'}
-				<button
-					onclick={() => sortSheetOpen = true}
-					class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
-					aria-label={t.recipes_sort_label}
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<line x1="3" y1="6" x2="21" y2="6"/>
-						<line x1="3" y1="12" x2="15" y2="12"/>
-						<line x1="3" y1="18" x2="9" y2="18"/>
-					</svg>
-				</button>
-			{/if}
-		{/snippet}
-	</AppHeader>
-
-	<!-- Search bar (fixed, below header, only when open) -->
-	{#if searchOpen && activeTab === 'recipes'}
-		<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto px-4 py-2"
-		     style="top: calc(env(safe-area-inset-top) + 5.25rem); background-color: var(--color-bg)">
-			<div class="flex items-center gap-2 px-4 rounded-2xl"
-			     style="background-color: var(--color-surface-container); height: 44px">
-				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
-					<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+<div class="recipe-workspace" style:--recipe-header-height={overlayHeight > 0 ? `${overlayHeight}px` : undefined}>
+	{#snippet headerActions()}
+		{#if activeTab === 'recipes'}
+			<button
+				onclick={() => sortSheetOpen = true}
+				class="w-9 h-9 flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
+				aria-label={t.recipes_sort_label}
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="3" y1="6" x2="21" y2="6"/>
+					<line x1="3" y1="12" x2="15" y2="12"/>
+					<line x1="3" y1="18" x2="9" y2="18"/>
 				</svg>
-				<!-- svelte-ignore a11y_autofocus -->
-				<input
-					type="search"
-					placeholder={t.recipes_search_placeholder}
-					bind:value={searchQuery}
-					onkeydown={(e) => e.key === 'Escape' && closeSearch()}
-					autofocus
-					class="flex-1 bg-transparent outline-none text-sm"
-					style="color: var(--color-on-surface); font-size: 16px"
-				/>
-				<button onclick={closeSearch} class="w-7 h-7 flex items-center justify-center rounded-lg active:opacity-60 flex-shrink-0"
-				        style="background-color: var(--color-surface-high)" aria-label={t.a11y_close_search}>
-					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round">
-						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-					</svg>
-				</button>
-			</div>
-			{#if allTags.length > 0}
-				<div class="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1" style="scrollbar-width: none">
-					{#each allTags as tag (tag)}
-						{@const active = activeTagFilters.includes(tag)}
-						<button
-							onclick={() => toggleTagFilter(tag)}
-							class="flex-shrink-0 h-7 px-3 rounded-full text-xs font-semibold active:opacity-60 transition-colors"
-							style="background-color: {active ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {active ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
-						>{tag}</button>
-					{/each}
-				</div>
-			{/if}
+			</button>
+		{/if}
+	{/snippet}
+	{#snippet searchControls()}
+		<div class="flex items-center gap-2 px-4 rounded-2xl"
+		     style="background-color: var(--color-surface-container); height: 44px">
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-outline)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
+				<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+			</svg>
+			<!-- svelte-ignore a11y_autofocus -->
+			<input
+				type="search"
+				placeholder={t.recipes_search_placeholder}
+				bind:value={searchQuery}
+				onkeydown={(e) => e.key === 'Escape' && closeSearch()}
+				autofocus
+				class="min-w-0 flex-1 bg-transparent outline-none text-sm"
+				style="color: var(--color-on-surface); font-size: 16px"
+			/>
+			<button onclick={closeSearch} class="w-9 h-9 flex items-center justify-center active:opacity-60 flex-shrink-0" aria-label={t.a11y_close_search}>
+				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round">
+					<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+				</svg>
+			</button>
 		</div>
-	{/if}
+		{#if allTags.length > 0}
+			<div class="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1" style="scrollbar-width: none">
+				{#each allTags as tag (tag)}
+					{@const active = activeTagFilters.includes(tag)}
+					<button
+						onclick={() => toggleTagFilter(tag)}
+						aria-pressed={active}
+						class="flex-shrink-0 h-7 px-3 rounded-full text-xs font-semibold active:opacity-60 transition-colors"
+						style="background-color: {active ? 'var(--color-primary)' : 'var(--color-surface-container)'}; color: {active ? 'var(--color-on-primary)' : 'var(--color-on-surface-variant)'}"
+					>{tag}</button>
+				{/each}
+			</div>
+		{/if}
+	{/snippet}
 
-
-	<!-- Hero header + sticky tab overlay + scroll area -->
+	<!-- The measured header keeps greeting and scrolling content aligned. -->
 	<div class="relative flex-1 min-h-0">
+		<div class="recipe-header-overlay" use:measureHeight={(height) => overlayHeight = height}>
+			<RecipeHeader {activeTab} count={recipes.length} {limit}
+				onMenuOpen={() => menuOpen = true}
+				onSearch={activeTab === 'recipes' && !searchOpen ? () => searchOpen = true : null}
+				onTabChange={(tab) => {
+					if (tab === activeTab) return;
+					closeSearch();
+					goto(tab === 'mealplan' ? `${page.url.pathname}?tab=mealplan` : page.url.pathname, { reset: false });
+				}}
+				actions={headerActions}
+				search={searchOpen && activeTab === 'recipes' ? searchControls : undefined}
+			/>
+		</div>
 		<!-- Greeting hero (background, peeks through above bottom-anchored content) -->
 		{#if activeTab === 'recipes' && !searchOpen && userSettings.greetingEnabled}
-			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: calc(env(safe-area-inset-top) + 5.25rem + 3.5rem); height: 22vh; min-height: 100px; max-height: 160px; z-index: 0; transition: opacity 0.15s ease">
+			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: var(--recipe-header-height); height: 22vh; min-height: 100px; max-height: 160px; z-index: 0; transition: opacity 0.15s ease">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user?.username ?? ''}</p>
 				{#if recipeInfoLine}
@@ -321,34 +322,16 @@
 			</div>
 		{/if}
 
-		<!-- Sticky overlay: tab switcher, always visible at top, content scrolls under -->
-		<div class="absolute left-0 right-0 z-10 px-4 pb-3"
-		     bind:clientHeight={overlayHeight}
-		     style="top: calc(env(safe-area-inset-top) + 5.25rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
-			<div class="flex gap-1 p-1 rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-				<button
-					onclick={() => goto(page.url.pathname, { reset: false })}
-					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all active:opacity-70"
-					style="background-color: {activeTab === 'recipes' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'recipes' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
-				>{t.recipes_title}</button>
-				<button
-					onclick={() => { goto(`${page.url.pathname}?tab=mealplan`, { reset: false }); closeSearch(); }}
-					class="flex-1 py-2 rounded-xl text-sm font-semibold transition-all active:opacity-70"
-					style="background-color: {activeTab === 'mealplan' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {activeTab === 'mealplan' ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
-				>{t.meal_plan_tab}</button>
-			</div>
-		</div>
-
 
 	<!-- Meal plan -->
 	{#if activeTab === 'mealplan'}
-		<div class="absolute inset-0 overflow-y-auto px-4" style="z-index: 1; padding-top: calc(env(safe-area-inset-top) + 5.25rem + {overlayHeight}px); padding-bottom: 5.5rem">
+		<div class="absolute inset-0 overflow-y-auto px-4" style="z-index: 1; padding-top: var(--recipe-header-height); padding-bottom: 5.5rem">
 			<MealPlanner {recipes} bind:editMode={mealPlanEditMode} />
 		</div>
 
 	<!-- Recipes: content scrolls under sticky overlay -->
 	{:else}
-		<div onscroll={updateGreetingOpacity} class="absolute inset-0 overflow-y-auto px-4" style="z-index: 1; padding-top: calc(env(safe-area-inset-top) + 5.25rem + {overlayHeight}px); padding-bottom: 5.5rem">
+		<div onscroll={updateGreetingOpacity} class="absolute inset-0 overflow-y-auto px-4" style="z-index: 1; padding-top: var(--recipe-header-height); padding-bottom: 5.5rem">
 		<div class="min-h-full flex flex-col justify-end">
 
 		<!-- Pending Shares -->
@@ -583,3 +566,21 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.recipe-workspace {
+		--recipe-header-height: calc(env(safe-area-inset-top) + 130px);
+		display: flex;
+		flex-direction: column;
+		height: 100dvh;
+		overflow: hidden;
+		background-color: var(--color-bg);
+	}
+	.recipe-header-overlay {
+		position: absolute;
+		inset: 0 0 auto;
+		z-index: 40;
+		padding: calc(env(safe-area-inset-top) + 1rem) 16px 12px;
+		background-color: var(--color-bg);
+	}
+</style>

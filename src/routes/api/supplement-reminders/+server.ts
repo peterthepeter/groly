@@ -2,10 +2,11 @@
 import type { RequestHandler } from './$types';
 import { authGuard } from '#lib/auth/middleware';
 import { db } from '#lib/db';
-import { supplementReminderSchedules, supplements, supplementReminderOverrides } from '#lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { supplementReminderSchedules, supplements, supplementReminderOverrides, supplementLogs } from '#lib/db/schema';
+import { eq, and, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getZonedDateTimeParts, resolveTimeZone } from '#lib/timeZones';
+import { supplementWeekDates } from '#lib/supplementWeekPlan';
+import { getZonedDateTimeParts, resolveTimeZone, zonedDateTimeToTimestamp } from '#lib/timeZones';
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -97,7 +98,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 
 	// ?all=1 → return all active reminder schedules of active supplements (for the week plan view)
-	if (event.url.searchParams.get('all') === '1') {
+	if (event.url.searchParams.get('all') === '1' || event.url.searchParams.get('week') === '1') {
 		const rows = db
 			.select({
 				id: supplementReminderSchedules.id,
@@ -114,6 +115,18 @@ export const GET: RequestHandler = async (event) => {
 				eq(supplementReminderSchedules.active, true)
 			))
 			.all();
+		if (event.url.searchParams.get('week') === '1') {
+			const timeZone = resolveTimeZone(event.url.searchParams.get('timeZone'));
+			const today = getZonedDateTimeParts(new Date(), timeZone).dateKey;
+			const dates = supplementWeekDates(today);
+			const from = zonedDateTimeToTimestamp(dates[0], '00:00', timeZone);
+			const to = zonedDateTimeToTimestamp(dates[6], '23:59', timeZone) + 59_999;
+			const logs = db.select({ supplementId: supplementLogs.supplementId, loggedAt: supplementLogs.loggedAt })
+				.from(supplementLogs).where(and(eq(supplementLogs.userId, user!.id), gte(supplementLogs.loggedAt, from), lte(supplementLogs.loggedAt, to))).all();
+			const overrides = db.select({ date: supplementReminderOverrides.date, reminderTime: supplementReminderOverrides.reminderTime, done: supplementReminderOverrides.done })
+				.from(supplementReminderOverrides).where(and(eq(supplementReminderOverrides.userId, user!.id), gte(supplementReminderOverrides.date, dates[0]), lte(supplementReminderOverrides.date, dates[6]))).all();
+			return Response.json({ schedules: rows, logs, overrides });
+		}
 		return Response.json({ schedules: rows });
 	}
 

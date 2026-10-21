@@ -4,7 +4,7 @@
 
 	import type { Snippet } from 'svelte';
 
-	let { title = 'Meine Listen', subtitle = '', eyebrow = '', onMenuOpen, onSearch = null, actions = null, hidden = false, onBack = null }: {
+	let { title = 'Meine Listen', subtitle = '', eyebrow = '', onMenuOpen, onSearch = null, actions = null, hidden = false, onBack = null, embedded = false }: {
 		title?: string;
 		subtitle?: string;
 		eyebrow?: string;
@@ -13,13 +13,14 @@
 		actions?: Snippet | null;
 		hidden?: boolean;
 		onBack?: (() => void) | null;
+		embedded?: boolean;
 	} = $props();
 </script>
 
-<header class="fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
-        style="padding-top: calc(env(safe-area-inset-top) + 1rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transform: translateY({hidden ? '-110%' : '0'}); transition: transform 0.25s ease;">
-	<div class="flex items-center justify-between rounded-2xl px-4 py-2"
-	     style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+<header class:embedded class="app-header fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
+        style={embedded ? undefined : `padding-top: calc(env(safe-area-inset-top) + 1rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transform: translateY(${hidden ? '-110%' : '0'}); transition: transform 0.25s ease;`}>
+	<div class="app-header-row flex items-center justify-between rounded-2xl px-4 py-2"
+	     style={embedded ? undefined : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}>
 		<!-- Left: Hamburger + App Name -->
 		<div class="flex items-center gap-3 min-w-0">
 			{#if onBack}
@@ -97,3 +98,7 @@
 	</div>
 </header>
 
+<style>
+	.app-header.embedded { position: static; max-width: none; padding: 0; }
+	.app-header.embedded .app-header-row { border-radius: 0; }
+</style>

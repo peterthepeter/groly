@@ -75,7 +75,7 @@
 					{#each macros as macro}
 						{@const ratio = macro.goal && macro.goal > 0 ? macro.value / macro.goal : 0}
 						{@const over = macro.goal && ratio > 1}
-						{@const color = macro.goalType === 'max' && over ? '#EF4444' : macro.color}
+						{@const color = macro.goalType === 'max' && over ? 'var(--color-error)' : 'var(--color-on-surface)'}
 						<div class="min-w-0 flex flex-col justify-center gap-0.5 text-left">
 							<p class="text-[8px] leading-none truncate" style="color: var(--color-on-surface-variant)">{macro.label}</p>
 							<p class="text-[10px] leading-none font-semibold tabular-nums truncate" style="color: {color}">{fmtG(macro.value)}g</p>

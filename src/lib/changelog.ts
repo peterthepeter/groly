@@ -2,6 +2,21 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export const CHANGELOG: { version: string; de: string[]; en: string[] }[] = [
 	{
+		version: '1.0.0-beta.8',
+		de: [
+			'Einheitliche Navigation für Tracker, Ernährung, Rezepte und Wochenplan.',
+			'Supplement-Erinnerungen zeigen die ganze Woche und bereits erledigte Einnahmen.',
+			'Verlauf für Tag, Woche und Monat übersichtlicher zusammengefasst und optisch beruhigt.',
+			'Neutrale Makrowerte in der Heute-Ansicht.'
+		],
+		en: [
+			'Unified navigation for trackers, nutrition, recipes, and meal planning.',
+			'Supplement reminders show the entire week and completed intakes.',
+			'Grouped and visually simplified day, week, and month history.',
+			'Neutral macro values in the Today view.'
+		]
+	},
+	{
 		version: '1.0.0-beta.7',
 		de: [
 			'Push-Erinnerungen haben Vorrang vor der Standortnavigation.',

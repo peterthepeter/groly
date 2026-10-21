@@ -471,6 +471,7 @@
 	"supplement_view_list": "Liste",
 	"supplement_view_weekplan": "Wochenplan",
 	"supplement_weekplan_empty": "Noch keine Alarme eingestellt. Tippe bei einem Supplement auf die Glocke.",
+	"supplement_weekplan_load_error": "Der Wochenplan konnte nicht geladen werden.",
 	"supplement_log_edit_title": "Eintrag bearbeiten",
 	"supplement_log_add_title": "Eintrag hinzufügen",
 	"supplement_log_date": "Datum",

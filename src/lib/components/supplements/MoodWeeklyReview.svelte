@@ -31,11 +31,11 @@
 	}
 </script>
 
-{#snippet content()}
-	<div class="grid grid-cols-3 divide-x" style="border-color: var(--color-outline-variant)">
-		<div class="px-2 text-center"><p class="text-lg font-bold" style="color:#F472B6">{summary.mood?.toFixed(1) ?? '–'}</p><p class="text-[10px]" style="color:var(--color-on-surface-variant)">{t.mood_weekly_avg_mood}</p></div>
-		<div class="px-2 text-center"><p class="text-lg font-bold" style="color:#F472B6">{summary.energy?.toFixed(1) ?? '–'}</p><p class="text-[10px]" style="color:var(--color-on-surface-variant)">{summary.energy === null ? t.mood_not_recorded : t.mood_weekly_avg_energy}</p></div>
-		<div class="px-2 text-center"><p class="text-lg font-bold" style="color:#F472B6">{logs.length}/7</p><p class="text-[10px]" style="color:var(--color-on-surface-variant)">{t.mood_weekly_logged_days}</p></div>
+{#snippet content(quiet = false)}
+	<div class={quiet ? 'grid grid-cols-3' : 'grid grid-cols-3 divide-x'} style="border-color: var(--color-outline-variant)" style:--review-value-color={quiet ? 'var(--color-on-surface)' : '#F472B6'}>
+		<div class="px-2 text-center"><p class={quiet ? 'text-lg font-semibold tabular-nums' : 'text-lg font-bold'} style="color:var(--review-value-color)">{summary.mood?.toFixed(1) ?? '–'}</p><p class="text-[10px]" style="color:var(--color-on-surface-variant)">{t.mood_weekly_avg_mood}</p></div>
+		<div class="px-2 text-center"><p class={quiet ? 'text-lg font-semibold tabular-nums' : 'text-lg font-bold'} style="color:var(--review-value-color)">{summary.energy?.toFixed(1) ?? '–'}</p><p class="text-[10px]" style="color:var(--color-on-surface-variant)">{summary.energy === null ? t.mood_not_recorded : t.mood_weekly_avg_energy}</p></div>
+		<div class="px-2 text-center"><p class={quiet ? 'text-lg font-semibold tabular-nums' : 'text-lg font-bold'} style="color:var(--review-value-color)">{logs.length}/7</p><p class="text-[10px]" style="color:var(--color-on-surface-variant)">{t.mood_weekly_logged_days}</p></div>
 	</div>
 	{#if summary.feelings.length || summary.factors.length}
 		<div class="pt-3 space-y-2">
@@ -56,7 +56,7 @@
 		<button onclick={() => detailOpen = true} class="w-full px-4 py-3 text-left active:opacity-70">{@render content()}</button>
 	</div>
 {:else}
-	<div class="mt-4 pt-4" style="border-top:1px solid var(--color-outline-variant)"><p class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:#F472B6">{t.mood_weekly_title}</p>{@render content()}</div>
+	<div class="review-inline"><p class="text-xs font-medium mb-2" style="color:var(--color-on-surface-variant)">{t.mood_weekly_title}</p>{@render content(true)}</div>
 {/if}
 
 {#if detailOpen}
@@ -65,3 +65,11 @@
 		{#snippet body()}<div class="py-2">{@render content()}</div>{/snippet}
 	</ManageSheetShell>
 {/if}
+
+<style>
+	.review-inline {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid color-mix(in srgb, var(--bubble-container-border) 60%, transparent);
+	}
+</style>

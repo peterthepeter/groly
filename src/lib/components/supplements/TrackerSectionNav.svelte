@@ -2,8 +2,10 @@
 	import { onMount, type Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { t, today_reminders_label } from '#lib/i18n.svelte';
-	import { toLocalDateKey } from '#lib/dates';
+	import { toLocalDateKey, tsToDateKey } from '#lib/dates';
+	import type { WeekOverride } from '#lib/supplementWeekPlan';
 	import { matchSupplementReminderLogs } from '#lib/supplementReminderMatching';
+	import SupplementWeekPlan, { type WeekSchedule } from './SupplementWeekPlan.svelte';
 
 	type Section = 'today' | 'history' | 'nutrition';
 	type ReminderEntry = { scheduleId: string; supplementId: string; name: string };
@@ -26,8 +28,84 @@
 	let overrides = $state<Record<string, boolean>>({});
 	let loadedLogs = $state<LogRef[]>([]);
 	let remindersExpanded = $state(false);
+	let weekLogs = $state<LogRef[]>([]);
+	let weekOverrides = $state<WeekOverride[]>([]);
+	let scrollTail = $state(0);
+	let weekSchedules = $state<WeekSchedule[] | null>(null);
+	let weekLoading = $state(false);
+	let weekError = $state(false);
+	let reminderBody = $state<HTMLDivElement | null>(null);
+	const hasReminderPlan = $derived(reminders.length > 0 || (weekSchedules?.length ?? 0) > 0 || weekError);
+
+	function toggleReminders() {
+		if (!remindersExpanded) void loadWeekPlan();
+		remindersExpanded = !remindersExpanded;
+	}
+
+	async function loadWeekPlan() {
+		if (weekLoading) return;
+		weekLoading = true;
+		weekError = false;
+		try {
+			const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			const response = await fetch(`/api/supplement-reminders?week=1&timeZone=${encodeURIComponent(timeZone)}`);
+			if (!response.ok) throw new Error('Week plan unavailable');
+			const data = await response.json();
+			weekSchedules = data.schedules ?? [];
+			weekLogs = data.logs ?? [];
+			weekOverrides = data.overrides ?? [];
+			const today = toLocalDateKey(new Date());
+			overrides = Object.fromEntries(weekOverrides.filter(override => override.date === today).map(override => [override.reminderTime, override.done]));
+			if (todayLogs === null) loadedLogs = weekLogs.filter(log => tsToDateKey(log.loggedAt) === today);
+		} catch {
+			weekError = true;
+		} finally {
+			weekLoading = false;
+		}
+	}
+
+	// Anchor once on opening, then release immediately when the user scrolls or interacts.
+	$effect(() => {
+		if (!remindersExpanded || weekLoading || weekError || !weekSchedules?.length || !reminderBody) return;
+		const body = reminderBody;
+		let stopped = false;
+		let frame = 0;
+		function anchorToday() {
+			if (stopped) return;
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(() => {
+				if (stopped) return;
+				const days = body.querySelectorAll<HTMLElement>('.week-day');
+				const today = body.querySelector<HTMLElement>('.week-day.today');
+				const last = days[days.length - 1];
+				if (!today || !last) return;
+				// Leave enough scroll space to place even Sunday at the top.
+				scrollTail = Math.max(0, body.clientHeight - last.offsetHeight);
+				frame = requestAnimationFrame(() => {
+					if (!stopped) body.scrollTop += today.getBoundingClientRect().top - body.getBoundingClientRect().top;
+				});
+			});
+		}
+		function stopAnchoring() { stopped = true; cancelAnimationFrame(frame); }
+		const observer = new ResizeObserver(anchorToday);
+		observer.observe(body);
+		const plan = body.querySelector('.supplement-week-plan');
+		if (plan) observer.observe(plan);
+		for (const type of ['pointerdown', 'wheel', 'keydown']) body.addEventListener(type, stopAnchoring, { passive: true });
+		anchorToday();
+		void document.fonts?.ready.then(anchorToday);
+		return () => {
+			stopAnchoring(); observer.disconnect();
+			for (const type of ['pointerdown', 'wheel', 'keydown']) body.removeEventListener(type, stopAnchoring);
+		};
+	});
 
 	const effectiveLogs = $derived(todayLogs ?? loadedLogs);
+	const weekCompletion = $derived({
+		logs: [...weekLogs.filter(log => tsToDateKey(log.loggedAt) !== toLocalDateKey(new Date())), ...effectiveLogs],
+		overrides: [...weekOverrides.filter(override => override.date !== toLocalDateKey(new Date())),
+			...Object.entries(overrides).map(([reminderTime, done]) => ({ date: toLocalDateKey(new Date()), reminderTime, done }))]
+	});
 
 	function todayAtTime(time: string): number {
 		const [hours, minutes] = time.split(':').map(Number);
@@ -75,6 +153,8 @@
 				const data = await reminderResponse.json();
 				reminders = data.todayReminders ?? [];
 				overrides = data.overrides ?? {};
+				// Keep the weekly plan accessible on days with no scheduled intake.
+				if (reminders.length === 0) void loadWeekPlan();
 			}
 			if (todayLogs === null) {
 				const response = responses[index];
@@ -109,25 +189,25 @@
 
 	function accent(section: Section): string {
 		if (activeSection !== section) return 'var(--color-on-surface-variant)';
-		return section === 'nutrition' ? '#FB923C' : 'var(--color-primary)';
+		return section === 'nutrition' ? 'var(--color-tracker-nutrition)' : 'var(--color-primary)';
 	}
 
 	onMount(loadReminderState);
 </script>
 
 <div class="tracker-section-nav">
-	<nav class:two-tabs={!nutritionEnabled} class="tracker-section-tabs" aria-label={t.supplement_title}>
+	<nav class:two-tabs={!nutritionEnabled} class="tracker-section-tabs inset-row-divider" aria-label={t.supplement_title}>
 		<button type="button" onclick={() => navigate('today')} aria-current={activeSection === 'today' ? 'page' : undefined}
-			style="background-color: {activeSection === 'today' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {accent('today')}">
+			style="color: {accent('today')}">
 			{t.supplement_tab_today}
 		</button>
 		<button type="button" onclick={() => navigate('history')} aria-current={activeSection === 'history' ? 'page' : undefined}
-			style="background-color: {activeSection === 'history' ? 'rgba(255,255,255,0.06)' : 'transparent'}; color: {accent('history')}">
+			style="color: {accent('history')}">
 			{t.supplement_tab_history}
 		</button>
 		{#if nutritionEnabled}
 			<button type="button" onclick={() => navigate('nutrition')} aria-current={activeSection === 'nutrition' ? 'page' : undefined}
-				style="background-color: {activeSection === 'nutrition' ? 'color-mix(in srgb, #FB923C 9%, transparent)' : 'transparent'}; color: {accent('nutrition')}">
+				style="color: {accent('nutrition')}">
 				{t.nutrition_label}
 			</button>
 		{/if}
@@ -136,7 +216,7 @@
 	{#if activeSection === 'history' && historyControls}
 		<div class="tracker-section-history">{@render historyControls()}</div>
 	{:else}
-		<div class="tracker-section-actions">
+		<div class="tracker-section-actions" class:inset-row-divider={remindersExpanded && hasReminderPlan}>
 			<button type="button" onclick={() => goto('/tracker/verwalten')}>
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 					<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -144,8 +224,8 @@
 				</svg>
 				{t.supplement_manage}
 			</button>
-			{#if reminders.length > 0}
-				<button type="button" onclick={() => (remindersExpanded = !remindersExpanded)} class="reminder-action"
+			{#if hasReminderPlan}
+				<button type="button" onclick={toggleReminders} class="reminder-action"
 					aria-expanded={remindersExpanded}>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -157,42 +237,43 @@
 			{/if}
 		</div>
 
-		{#if remindersExpanded && reminders.length > 0}
-			<div class="tracker-reminder-list">
-				{#each reminders as reminder (reminder.time)}
-					{@const done = doneMap.get(reminder.time) ?? false}
-					<button type="button" onclick={() => toggleReminder(reminder)} class:done>
-						<span class="tracker-reminder-check">
-							{#if done}<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--color-surface-low)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{/if}
-						</span>
-						<strong>{reminder.time}</strong>
-						<span>{reminder.names.join(' · ')}</span>
-					</button>
-				{/each}
+		{#if remindersExpanded && hasReminderPlan}
+			<div bind:this={reminderBody} class="tracker-reminder-body" aria-label={t.supplement_view_weekplan}>
+				{#if weekLoading}
+					<p class="tracker-reminder-message" role="status">{t.admin_loading}</p>
+				{:else if weekError}
+					<div class="tracker-reminder-message" role="alert">
+						<p>{t.supplement_weekplan_load_error}</p>
+						<button type="button" class="tracker-reminder-retry" onclick={loadWeekPlan}>{t.offline_retry}</button>
+					</div>
+				{:else if weekSchedules !== null}
+					<SupplementWeekPlan schedules={weekSchedules} compact completion={weekCompletion}
+						onToggleTime={(time) => { const reminder = reminders.find(reminder => reminder.time === time); if (reminder) void toggleReminder(reminder); }} />
+					<div style:height={`${scrollTail}px`} aria-hidden="true"></div>
+				{/if}
 			</div>
 		{/if}
 	{/if}
 </div>
 
 <style>
-	.tracker-section-nav { overflow: hidden; border: 1px solid var(--bubble-container-border); border-radius: 16px; background: var(--bubble-container-bg); }
-	.tracker-section-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; }
+	.tracker-section-nav { min-width: 0; }
+	.tracker-section-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0 8px; }
 	.tracker-section-tabs.two-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-	.tracker-section-tabs button { min-width: 0; min-height: 36px; padding: 6px 4px; border-radius: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; transition: background-color 160ms cubic-bezier(0.2, 0.8, 0.2, 1), color 160ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+	.tracker-section-tabs button { min-width: 0; min-height: 44px; padding: 8px 4px; background: transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; transition: color 160ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 	.tracker-section-tabs button:active { opacity: .7; }
-	.tracker-section-actions { display: flex; min-height: 40px; align-items: stretch; border-top: 1px solid var(--bubble-container-border); }
-	.tracker-section-actions > button { display: flex; min-width: 0; flex: 1; align-items: center; justify-content: center; gap: 7px; padding: 6px 10px; color: var(--color-primary); font-size: 13px; font-weight: 650; }
+	.tracker-section-actions { display: flex; min-height: 40px; align-items: stretch; }
+	.tracker-section-actions > button { display: flex; min-width: 0; flex: 1; align-items: center; justify-content: center; gap: 7px; padding: 6px 10px; color: var(--color-on-surface-variant); font-size: 13px; font-weight: 550; }
 	.tracker-section-actions > button:active { opacity: .7; }
 	.tracker-section-actions .reminder-action { color: var(--color-on-surface); font-weight: 550; }
 	.reminder-action span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.reminder-action svg:last-child { flex: none; color: var(--color-on-surface-variant); transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
-	.tracker-section-history { border-top: 1px solid var(--bubble-container-border); }
-	.tracker-reminder-list { display: flex; flex-direction: column; gap: 0; padding: 8px 16px 10px; border-top: 1px solid var(--bubble-container-border); }
-	.tracker-reminder-list button { display: grid; grid-template-columns: 16px auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 27px; text-align: left; }
-	.tracker-reminder-list button.done { opacity: .5; }
-	.tracker-reminder-check { display: flex; width: 16px; height: 16px; align-items: center; justify-content: center; border: 1.5px solid var(--color-primary); border-radius: 999px; }
-	.done .tracker-reminder-check { border-color: var(--color-on-surface-variant); background: var(--color-on-surface-variant); }
-	.tracker-reminder-list strong { color: var(--color-primary); font-size: 14px; font-variant-numeric: tabular-nums; }
-	.tracker-reminder-list button.done strong, .tracker-reminder-list button.done > span:last-child { color: var(--color-on-surface-variant); text-decoration: line-through; }
-	.tracker-reminder-list button > span:last-child { overflow: hidden; color: var(--color-on-surface); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+	.tracker-section-history { min-height: 40px; }
+	.tracker-reminder-body { position: relative; height: min(40dvh, 18rem); overflow-y: auto; overscroll-behavior: contain; }
+	.tracker-reminder-message { padding: 12px 16px 18px; font-size: 13px; text-align: center; color: var(--color-on-surface-variant); }
+	.tracker-reminder-retry { min-height: 36px; padding: 6px 8px; color: var(--color-primary); }
+	.tracker-section-nav button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; }
+	@media (prefers-reduced-motion: reduce) {
+		.tracker-section-tabs button, .reminder-action svg:last-child { transition: none; }
+	}
 </style>

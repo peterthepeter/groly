@@ -471,6 +471,7 @@
 	"supplement_view_list": "List",
 	"supplement_view_weekplan": "Week plan",
 	"supplement_weekplan_empty": "No reminders set yet. Tap the bell on a supplement.",
+	"supplement_weekplan_load_error": "The week plan could not be loaded.",
 	"supplement_log_edit_title": "Edit log entry",
 	"supplement_log_add_title": "Add log entry",
 	"supplement_log_date": "Date",

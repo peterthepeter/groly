@@ -6,6 +6,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import MoodHistoryView from './MoodHistoryView.svelte';
+	import HistorySurface from './HistorySurface.svelte';
 	import type { CaffeineLog, MeditationLog } from '#lib/db/schema';
 	import { computeAdherence, computeTrackerStats, eachDayInRange, parseDaysMask, type ScheduleLite, type SupplementMeta } from '#lib/trackerStats';
 	import { tsToDateKey, todayKey } from '#lib/dates';
@@ -251,6 +252,15 @@
 			{ from: rangeFrom, to: rangeTo }
 		);
 	});
+	const hasVisibleTrackers = $derived(period === 'day'
+		? (userSettings.caffeineTrackerEnabled && caffeineTotalMg > 0)
+			|| (userSettings.meditationTrackerEnabled && meditationTotalSeconds > 0)
+			|| (userSettings.waterTrackerEnabled && waterTotal > 0)
+			|| (userSettings.nutritionTrackerEnabled && meals.length > 0)
+		: (userSettings.caffeineTrackerEnabled && (caffeineStats?.activeDays ?? 0) > 0)
+			|| (userSettings.meditationTrackerEnabled && (meditationStats?.activeDays ?? 0) > 0)
+			|| (userSettings.waterTrackerEnabled && (waterStats?.activeDays ?? 0) > 0)
+			|| (userSettings.nutritionTrackerEnabled && (nutritionStats?.activeDays ?? 0) > 0));
 
 	let nutritionSelectedIdx = $state<number | null>(null);
 
@@ -343,37 +353,29 @@
 	{/if}
 {/snippet}
 
-<div class="px-4 space-y-4">
+<div class="px-4">
 	{#if loading}
 		<div class="flex justify-center py-8">
 			<div class="w-6 h-6 rounded-full border-2 animate-spin" style="border-color: var(--color-primary); border-top-color: transparent"></div>
 		</div>
 	{:else}
-		{@const suppsForCheck = period === 'day' ? dayCombinedSupplements.length : adherence.length || supplementStatEntries.length}
-		{@const nutritionEmpty = !userSettings.nutritionTrackerEnabled || (meals.length === 0 && rangeMeals.length === 0)}
-		{@const otherEmpty = nutrientEntries.length === 0 && suppsForCheck === 0 && waterTotal === 0 && caffeineTotalMg === 0 && meditationTotalSeconds === 0 && nutritionEmpty}
+		{@const suppsForCheck = period === 'day' ? dayCombinedSupplements.length : adherence.length}
+		{@const otherEmpty = nutrientEntries.length === 0 && suppsForCheck === 0 && !hasVisibleTrackers}
+		<HistorySurface>
 		{#if userSettings.moodTrackerEnabled}
-			<MoodHistoryView bind:hasDayEntry={moodHasDayEntry} onreload={onMoodReload} fixedView={period === 'day' ? 'today' : period} parentDate={date} />
-		{/if}
-		{#if otherEmpty && (!userSettings.moodTrackerEnabled || !moodHasDayEntry)}
-			<div class="px-4 py-10 text-center">
-				<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3" style="opacity: 0.5">
-					<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-				</svg>
-				<p class="text-sm font-medium" style="color: var(--color-on-surface-variant)">{t.supplement_stats_empty}</p>
-			</div>
+			<MoodHistoryView embedded bind:hasDayEntry={moodHasDayEntry} onreload={onMoodReload} fixedView={period === 'day' ? 'today' : period} parentDate={date} />
 		{/if}
 		{#if !otherEmpty}
 		<!-- Week/Month: stat-style tracker card with Ø/Min-Max/active + sparkline -->
-		{#if period !== 'day' && (caffeineStats || meditationStats || waterStats || nutritionStats)}
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+		{#if period !== 'day' && hasVisibleTrackers}
+			<div class="history-section">
 				<button
 					onclick={() => trackerCardExpanded = !trackerCardExpanded}
-					class="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
+					aria-expanded={trackerCardExpanded}
+					class="history-section-header w-full flex items-center justify-between active:opacity-60"
 				>
 					<div class="flex items-center gap-2">
-						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
-						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Tracker</p>
+						<p class="history-section-title">Tracker</p>
 					</div>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
 					     style="transition: transform 0.2s; transform: rotate({trackerCardExpanded ? '90' : '0'}deg)">
@@ -381,13 +383,13 @@
 					</svg>
 				</button>
 				{#if trackerCardExpanded}
-				<div class="px-4 pb-3 space-y-3">
+				<div class="history-section-content space-y-3">
 					{#if dayLabels.length > 0}
 						<!-- Shared day-header (Mo Di Mi … or 1 5 10 … for month) -->
 						{@const selAny = caffeineSelectedIdx ?? meditationSelectedIdx ?? waterSelectedIdx}
 						<div class="flex" style="gap: {period === 'month' ? 2 : 3}px">
 							{#each dayLabels as label, i}
-								<span class="flex-1 text-center text-[9px] uppercase tabular-nums" style="color: {i === selAny || i === todayIdx ? '#C8956C' : 'var(--color-on-surface-variant)'}; font-weight: {i === selAny || i === todayIdx ? '700' : '500'}">{label}</span>
+								<span class="flex-1 text-center text-[9px] uppercase tabular-nums" style="color: {i === selAny || i === todayIdx ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}; font-weight: {i === selAny || i === todayIdx ? '700' : '500'}">{label}</span>
 							{/each}
 						</div>
 					{/if}
@@ -398,9 +400,9 @@
 						{@const selDate = selIdx !== null ? rangeDays[selIdx] : null}
 						<div>
 							<div class="flex items-center justify-between text-sm mb-1.5">
-								<span class="font-semibold" style="color: #C8956C">{t.caffeine_title}</span>
+								<span class="font-medium" style="color: var(--color-on-surface)">{t.caffeine_title}</span>
 								{#if selDate}
-									<span class="text-xs tabular-nums" style="color: #C8956C">
+									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
 										{new Date(selDate + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {cs.daily[selIdx!]} mg
 									</span>
 								{:else}
@@ -456,9 +458,9 @@
 							.sort((x, y) => x.loggedAt - y.loggedAt) : []}
 						<div>
 							<div class="flex items-center justify-between text-sm mb-1.5">
-								<span class="font-semibold" style="color: #9F7AEA">{t.meditation_title}</span>
+								<span class="font-medium" style="color: var(--color-on-surface)">{t.meditation_title}</span>
 								{#if selDateM}
-									<span class="text-xs tabular-nums" style="color: #9F7AEA">
+									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
 										{new Date(selDateM + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ms.daily[selIdxM!]} min
 										{#if selMedLogs.length > 0}
 											<span style="color: var(--color-on-surface-variant)"> · {selMedLogs.map(l => formatTime(l.loggedAt)).join(', ')}</span>
@@ -499,9 +501,9 @@
 							.sort((x, y) => x.loggedAt - y.loggedAt) : []}
 						<div>
 							<div class="flex items-center justify-between text-sm mb-1.5">
-								<span class="font-semibold" style="color: #60A5FA">{t.water_title}</span>
+								<span class="font-medium" style="color: var(--color-on-surface)">{t.water_title}</span>
 								{#if selDateW}
-									<span class="text-xs tabular-nums" style="color: #60A5FA">
+									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
 										{new Date(selDateW + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ws.daily[selIdxW!]} ml
 									</span>
 								{:else}
@@ -545,9 +547,9 @@
 							.sort((a, b) => a.time.localeCompare(b.time)) : []}
 						<div>
 							<div class="flex items-center justify-between text-sm mb-1.5">
-								<span class="font-semibold" style="color: #FB923C">{t.nutrition_label}</span>
+								<span class="font-medium" style="color: var(--color-on-surface)">{t.nutrition_label}</span>
 								{#if selDateN}
-									<span class="text-xs tabular-nums" style="color: #FB923C">
+									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
 										{new Date(selDateN + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ns.daily[selIdxN!]} kcal
 									</span>
 								{:else}
@@ -603,18 +605,12 @@
 			</div>
 		{/if}
 
-		{@const visibleHistoryTrackers = [
-			userSettings.caffeineTrackerEnabled && caffeineTotalMg > 0 ? 'caffeine' : null,
-			userSettings.meditationTrackerEnabled && meditationTotalSeconds > 0 ? 'meditation' : null,
-			userSettings.waterTrackerEnabled && period === 'day' && waterTotal > 0 ? 'water' : null,
-			userSettings.nutritionTrackerEnabled && period === 'day' && meals.length > 0 ? 'nutrition' : null
-		].filter(Boolean)}
-		{#if period === 'day' && visibleHistoryTrackers.length > 0}
-			<div class="rounded-2xl px-4 py-3" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-				<div class="flex items-center gap-2 mb-2">
-					<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
-					<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Tracker</p>
+		{#if period === 'day' && hasVisibleTrackers}
+			<div class="history-section">
+				<div class="history-section-header flex items-center gap-2">
+					<p class="history-section-title">Tracker</p>
 				</div>
+				<div class="history-section-content">
 				<!-- Shared hour scale -->
 				<div class="relative text-[9px] tabular-nums mb-2" style="color: var(--color-on-surface-variant); height: 12px">
 					<span class="absolute" style="left: 0">0</span>
@@ -633,11 +629,11 @@
 						<div>
 							<div class="flex items-center justify-between text-sm">
 								<div class="flex items-baseline gap-1.5 min-w-0 flex-1">
-									<span class="font-semibold shrink-0" style="color: #FB923C">{t.nutrition_label}</span>
+									<span class="font-medium shrink-0" style="color: var(--color-on-surface)">{t.nutrition_label}</span>
 									<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">({meals.length})</span>
 								</div>
 								<div class="flex items-center gap-1.5 shrink-0">
-									<span class="font-semibold" style="color: {nOver ? '#EF4444' : '#FB923C'}">
+									<span class="font-semibold" style="color: {nOver ? 'var(--color-error)' : 'var(--color-on-surface-variant)'}">
 										{Math.round(totalKcal).toLocaleString(currentLang())}{goal > 0 ? ` / ${goal.toLocaleString(currentLang())}` : ''} kcal
 									</span>
 									<button onclick={() => nutritionHistoryCardExpanded = !nutritionHistoryCardExpanded}
@@ -675,7 +671,7 @@
 										        class="w-full flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5 active:opacity-60">
 											<span class="tabular-nums shrink-0" style="color: var(--color-on-surface-variant); min-width: 38px">{m.time}</span>
 											<span class="flex-1 truncate text-left" style="color: var(--color-on-surface)">{m.name}</span>
-											<span class="font-semibold shrink-0" style="color: #FB923C">{mKcal} kcal</span>
+											<span class="font-semibold shrink-0" style="color: var(--color-on-surface-variant)">{mKcal} kcal</span>
 										</button>
 									{/each}
 								</div>
@@ -691,13 +687,13 @@
 						<div>
 							<div class="flex items-center justify-between text-sm">
 								<div class="flex items-baseline gap-1.5 min-w-0 flex-1">
-									<span class="font-semibold shrink-0" style="color: #C8956C">{t.caffeine_title}</span>
+									<span class="font-medium shrink-0" style="color: var(--color-on-surface)">{t.caffeine_title}</span>
 									<span class="text-xs truncate" style="color: var(--color-on-surface-variant)">
 										{caffeineTotalMl} ml{period !== 'day' ? ` · ${caffeineLogs.length}×` : ''}
 									</span>
 								</div>
 								<div class="flex items-center gap-1.5 shrink-0">
-									<span class="font-semibold" style="color: {cOver && period === 'day' ? '#EF4444' : '#C8956C'}">
+									<span class="font-semibold" style="color: {cOver && period === 'day' ? 'var(--color-error)' : 'var(--color-on-surface-variant)'}">
 										{caffeineTotalMg}{period === 'day' ? ` / ${cLimit}` : ''} mg
 									</span>
 									<button onclick={() => caffeineHistoryCardExpanded = !caffeineHistoryCardExpanded} class="active:opacity-60" aria-label={caffeineHistoryCardExpanded ? 'Einklappen' : 'Aufklappen'}>
@@ -733,7 +729,7 @@
 											<div class="flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
 											     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, #C8956C 18%, transparent)' : ''}>
 												<span class="flex-1 min-w-0" style="color: var(--color-on-surface)">{log.drinkName} · {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-												<span class="font-semibold shrink-0" style="color: #C8956C">{log.caffeineMg} mg</span>
+												<span class="font-semibold shrink-0" style="color: var(--color-on-surface-variant)">{log.caffeineMg} mg</span>
 												{#if onEditCaffeineLog}
 													<button
 														onclick={() => onEditCaffeineLog?.(log)}
@@ -758,7 +754,7 @@
 													<span class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">
 														{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
 													</span>
-													<span class="text-xs font-semibold" style="color: #C8956C">{dayData.totalMg} mg</span>
+													<span class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">{dayData.totalMg} mg</span>
 												</div>
 												<div class="space-y-0.5">
 													{#each dayData.drinks as drink}
@@ -790,11 +786,11 @@
 						<div>
 							<div class="flex items-center justify-between text-sm">
 								<div class="flex items-baseline gap-1.5 min-w-0 flex-1">
-									<span class="font-semibold shrink-0" style="color: #9F7AEA">{t.meditation_title}</span>
+									<span class="font-medium shrink-0" style="color: var(--color-on-surface)">{t.meditation_title}</span>
 									<span class="text-xs" style="color: var(--color-on-surface-variant)">{meditationLogs.length}×</span>
 								</div>
 								<div class="flex items-center gap-1.5 shrink-0">
-									<span class="font-semibold" style="color: #9F7AEA">{Math.floor(meditationTotalSeconds / 60)} min</span>
+									<span class="font-semibold" style="color: var(--color-on-surface-variant)">{Math.floor(meditationTotalSeconds / 60)} min</span>
 									<button onclick={() => meditationHistoryCardExpanded = !meditationHistoryCardExpanded} class="active:opacity-60" aria-label={meditationHistoryCardExpanded ? 'Einklappen' : 'Aufklappen'}>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
 										     style="transition: transform 0.2s; transform: rotate({meditationHistoryCardExpanded ? '90' : '0'}deg)">
@@ -833,7 +829,7 @@
 												<span style="color: var(--color-on-surface)">
 													{new Date(startTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(endTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 												</span>
-												<span class="font-semibold" style="color: #9F7AEA">{Math.round(log.durationSeconds / 60)} min</span>
+												<span class="font-semibold" style="color: var(--color-on-surface-variant)">{Math.round(log.durationSeconds / 60)} min</span>
 											</div>
 										{/each}
 									</div>
@@ -844,7 +840,7 @@
 												<span style="color: var(--color-on-surface)">
 													{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
 												</span>
-												<span class="font-semibold" style="color: #9F7AEA">{Math.floor(dayData.totalSeconds / 60)} min</span>
+												<span class="font-semibold" style="color: var(--color-on-surface-variant)">{Math.floor(dayData.totalSeconds / 60)} min</span>
 											</div>
 										{/each}
 									</div>
@@ -869,11 +865,11 @@
 						<div>
 							<div class="flex items-center justify-between text-sm">
 								<div class="flex items-baseline gap-1.5 min-w-0 flex-1">
-									<span class="font-semibold shrink-0" style="color: #60A5FA">{t.water_title}</span>
+									<span class="font-medium shrink-0" style="color: var(--color-on-surface)">{t.water_title}</span>
 									<span class="text-xs" style="color: var(--color-on-surface-variant)">{waterLogs.length}×</span>
 								</div>
 								<div class="flex items-center gap-1.5 shrink-0">
-									<span class="font-semibold" style="color: #60A5FA">{waterTotal} / {wGoal} ml</span>
+									<span class="font-semibold" style="color: var(--color-on-surface-variant)">{waterTotal} / {wGoal} ml</span>
 									<button onclick={() => waterHistoryCardExpanded = !waterHistoryCardExpanded} class="active:opacity-60" aria-label={waterHistoryCardExpanded ? 'Einklappen' : 'Aufklappen'}>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
 										     style="transition: transform 0.2s; transform: rotate({waterHistoryCardExpanded ? '90' : '0'}deg)">
@@ -904,7 +900,7 @@
 										<div class="flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
 										     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, #60A5FA 18%, transparent)' : ''}>
 											<span class="flex-1 min-w-0" style="color: var(--color-on-surface)">{new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-											<span class="font-semibold shrink-0" style="color: #60A5FA">{log.amountMl} ml</span>
+											<span class="font-semibold shrink-0" style="color: var(--color-on-surface-variant)">{log.amountMl} ml</span>
 											{#if onEditWaterLog}
 												<button
 													onclick={() => onEditWaterLog?.(log)}
@@ -925,18 +921,19 @@
 						</div>
 					{/if}
 				</div>
+				</div>
 			</div>
 		{/if}
 		<!-- Supplements taken -->
 		{#if period !== 'day' && adherence.length > 0}
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+			<div class="history-section">
 				<button
 					onclick={() => supplementsCardExpanded = !supplementsCardExpanded}
-					class="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
+					aria-expanded={supplementsCardExpanded}
+					class="history-section-header w-full flex items-center justify-between active:opacity-60"
 				>
 					<div class="flex items-center gap-2">
-						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
-						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Supplements</p>
+						<p class="history-section-title">Supplements</p>
 					</div>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
 					     style="transition: transform 0.2s; transform: rotate({supplementsCardExpanded ? '90' : '0'}deg)">
@@ -944,12 +941,12 @@
 					</svg>
 				</button>
 				{#if supplementsCardExpanded}
-					<div class="px-4 pb-3">
+					<div class="history-section-content">
 						{#if dayLabels.length > 0}
 							<!-- Shared day-header (Mo Di Mi … or 1 5 10 … for month) -->
 							<div class="flex mb-2">
 								{#each dayLabels as label, i}
-									<span class="flex-1 text-center text-[9px] uppercase tabular-nums" style="color: {i === supplementSelectedIdx || i === todayIdx ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}; font-weight: {i === supplementSelectedIdx || i === todayIdx ? '700' : '500'}">{label}</span>
+									<span class="flex-1 text-center text-[9px] uppercase tabular-nums" style="color: {i === supplementSelectedIdx || i === todayIdx ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)'}; font-weight: {i === supplementSelectedIdx || i === todayIdx ? '700' : '500'}">{label}</span>
 								{/each}
 							</div>
 						{/if}
@@ -967,7 +964,7 @@
 								<div class="flex items-center justify-between text-sm mb-1.5">
 									<span class="truncate pr-2" style="color: var(--color-on-surface)">{a.name}</span>
 									{#if selDate}
-										<span class="text-xs tabular-nums shrink-0" style="color: var(--color-primary)">
+										<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">
 											{new Date(selDate + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })}
 											·
 											{#if selFill === 'full'}✓{:else if selFill === 'partial'}◐{:else if selFill === 'none'}✗{:else}—{/if}
@@ -979,7 +976,7 @@
 										<div class="flex items-baseline gap-1 shrink-0 tabular-nums text-xs">
 											<span style="color: var(--color-on-surface-variant)">{a.taken}/{denom}</span>
 											<span style="color: var(--color-on-surface-variant)">·</span>
-											<span class="font-semibold" style="color: var(--color-primary)">{a.percent}%</span>
+											<span class="font-medium" style="color: var(--color-on-surface-variant)">{a.percent}%</span>
 										</div>
 									{/if}
 								</div>
@@ -1030,14 +1027,14 @@
 				{/if}
 			</div>
 		{:else if period === 'day' && dayCombinedSupplements.length > 0}
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+			<div class="history-section">
 				<button
 					onclick={() => supplementsCardExpanded = !supplementsCardExpanded}
-					class="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
+					aria-expanded={supplementsCardExpanded}
+					class="history-section-header w-full flex items-center justify-between active:opacity-60"
 				>
 					<div class="flex items-center gap-2">
-						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
-						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">Supplements</p>
+						<p class="history-section-title">Supplements</p>
 					</div>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
 					     style="transition: transform 0.2s; transform: rotate({supplementsCardExpanded ? '90' : '0'}deg)">
@@ -1045,7 +1042,7 @@
 					</svg>
 				</button>
 				{#if supplementsCardExpanded}
-					<div class="px-4 pb-3 space-y-2.5">
+					<div class="history-section-content space-y-2.5">
 						<!-- Hour scale (shared) -->
 						<div class="relative text-[9px] tabular-nums" style="color: var(--color-on-surface-variant); padding-top: 2px; height: 14px">
 							<span class="absolute" style="left: 0; top: 2px">0</span>
@@ -1062,10 +1059,10 @@
 							{@const isPending = suppLogs.length === 0 && scheduledTimes.length > 0}
 							<div style={isPending ? 'opacity: 0.7' : ''}>
 								<div class="flex justify-between items-center text-sm">
-									<span class="truncate pr-2 font-semibold" style="color: var(--color-on-surface)">{sup.name}</span>
+									<span class="truncate pr-2 font-medium" style="color: var(--color-on-surface)">{sup.name}</span>
 									<div class="flex items-center gap-1.5 shrink-0">
 										{#if sup.total > 0}
-											<span class="font-semibold tabular-nums text-xs" style="color: var(--color-primary)">{sup.total} {displayUnit(sup.unit, currentLang())}</span>
+											<span class="font-medium tabular-nums text-xs" style="color: var(--color-on-surface-variant)">{sup.total} {displayUnit(sup.unit, currentLang())}</span>
 										{:else}
 											<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">{scheduledTimes.length}× {currentLang() === 'en' ? 'planned' : 'geplant'}</span>
 										{/if}
@@ -1107,7 +1104,7 @@
 													<span class="tabular-nums" style="color: var(--color-on-surface-variant)">
 														{formatTime(log.loggedAt)} ·
 													</span>
-													<span class="font-medium" style="color: var(--color-primary)">{log.amount} {displayUnit(sup.unit, currentLang())}</span>
+													<span class="font-medium" style="color: var(--color-on-surface-variant)">{log.amount} {displayUnit(sup.unit, currentLang())}</span>
 													{#if log.note}
 														<span class="italic ml-1" style="color: var(--color-on-surface-variant)">{log.note}</span>
 													{/if}
@@ -1136,14 +1133,14 @@
 
 		<!-- Nutrients (at the bottom — informational total per period) -->
 		{#if nutrientEntries.length > 0}
-			<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+			<div class="history-section">
 				<button
 					onclick={() => nutrientsCardExpanded = !nutrientsCardExpanded}
-					class="w-full flex items-center justify-between px-4 py-3 active:opacity-60"
+					aria-expanded={nutrientsCardExpanded}
+					class="history-section-header w-full flex items-center justify-between active:opacity-60"
 				>
 					<div class="flex items-center gap-2">
-						<span class="rounded-full" style="width: 6px; height: 6px; background-color: var(--color-primary)"></span>
-						<p class="text-sm font-semibold" style="color: var(--color-on-surface)">{t.supplement_stats_nutrients}</p>
+						<p class="history-section-title">{t.supplement_stats_nutrients}</p>
 					</div>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
 					     style="transition: transform 0.2s; transform: rotate({nutrientsCardExpanded ? '90' : '0'}deg)">
@@ -1151,12 +1148,12 @@
 					</svg>
 				</button>
 				{#if nutrientsCardExpanded}
-					<div class="px-4 pb-3 space-y-0.5">
+					<div class="history-section-content space-y-0.5">
 						{#each nutrientEntriesVisible as entry}
 							<div class="relative flex justify-between items-center text-sm overflow-hidden rounded-md" style="padding: 4px 8px; margin: 0 -8px">
 								<div class="absolute left-0 pointer-events-none" style="top: 3px; bottom: 3px; width: {nutrientPct(entry.total, entry.unit)}%; background-color: color-mix(in srgb, var(--color-primary) 9%, transparent); border-radius: 4px"></div>
 								<span class="relative z-10 truncate pr-2" style="color: var(--color-on-surface)">{entry.name}</span>
-								<span class="relative z-10 font-semibold tabular-nums shrink-0" style="color: var(--color-primary)">{formatNutrientValue(entry.total, entry.unit)}</span>
+								<span class="relative z-10 font-medium tabular-nums shrink-0" style="color: var(--color-on-surface)">{formatNutrientValue(entry.total, entry.unit)}</span>
 							</div>
 						{/each}
 						{#if nutrientsExpanded}
@@ -1164,7 +1161,7 @@
 								<div class="relative flex justify-between items-center text-sm overflow-hidden rounded-md" style="padding: 4px 8px; margin: 0 -8px">
 									<div class="absolute left-0 pointer-events-none" style="top: 3px; bottom: 3px; width: {nutrientPct(entry.total, entry.unit)}%; background-color: color-mix(in srgb, var(--color-primary) 9%, transparent); border-radius: 4px"></div>
 									<span class="relative z-10 truncate pr-2" style="color: var(--color-on-surface)">{entry.name}</span>
-									<span class="relative z-10 font-semibold tabular-nums shrink-0" style="color: var(--color-primary)">{formatNutrientValue(entry.total, entry.unit)}</span>
+									<span class="relative z-10 font-medium tabular-nums shrink-0" style="color: var(--color-on-surface)">{formatNutrientValue(entry.total, entry.unit)}</span>
 								</div>
 							{/each}
 						{/if}
@@ -1181,6 +1178,15 @@
 				{/if}
 			</div>
 		{/if}
+		{/if}
+		</HistorySurface>
+		{#if otherEmpty && (!userSettings.moodTrackerEnabled || !moodHasDayEntry)}
+			<div class="px-4 py-10 text-center">
+				<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3" style="opacity: 0.5">
+					<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+				</svg>
+				<p class="text-sm font-medium" style="color: var(--color-on-surface-variant)">{t.supplement_stats_empty}</p>
+			</div>
 		{/if}
 	{/if}
 </div>

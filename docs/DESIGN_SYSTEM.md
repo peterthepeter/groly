@@ -20,6 +20,10 @@ Reuse these components and their global classes before writing new one-off UI:
 | Purpose | Canonical implementation |
 | --- | --- |
 | Tracker/supplement settings, edit sheets, and reminder sheets | `src/lib/components/supplements/ManageSheetShell.svelte` |
+| Tracker date navigation | `src/lib/components/supplements/TrackerDateNav.svelte` |
+| Supplement week plan in Manage and the header | `src/lib/components/supplements/SupplementWeekPlan.svelte` |
+| Recipe overview and meal-plan header | `src/lib/components/recipe/RecipeHeader.svelte` |
+| Shared tracker header | `src/lib/components/supplements/TrackerHeader.svelte` |
 | Tracker section navigation for Today, History, and Nutrition | `src/lib/components/supplements/TrackerSectionNav.svelte` |
 | Today and quick-log tracker cards | `src/lib/components/supplements/TrackerTileShell.svelte` |
 | Supplement quick-log cards | `src/lib/components/supplements/SupplementQuickLogTile.svelte` |
@@ -137,16 +141,24 @@ Use `font-variant-numeric: tabular-nums` or Tailwind `tabular-nums` for times, a
 
 ### Tracker section navigation
 
-The global `AppHeader` is shared with lists, recipes, and shopping and must not absorb tracker-specific navigation. Directly beneath it, `TrackerSectionNav` provides one compact, reusable section surface:
+The tracker uses `TrackerHeader` to group an embedded `AppHeader` and `TrackerSectionNav` in one surface. Tracker logic stays in the tracker components; standalone app headers on lists retain their existing appearance. Recipes use `RecipeHeader` with the same flat grouped surface, inset divider, 14 px text-only active tabs, and theme primary accent. Its brand row reserves the same height with or without the recipe counter. Search and tag filters expand below the tabs within that surface; switching to Meal Plan closes search and resets the filters. Measure the complete opaque header overlay for both recipe content and greeting offsets, with an initial CSS height reserve. The shared tracker header follows these rules:
 
 - The first row switches between Today, History, and Nutrition. Nutrition is shown only when the nutrition tracker is enabled.
-- Today and History use the primary green active state; Nutrition uses its orange tracker accent.
+- Active tabs use colored text only, with no selected background or underline. Today and History use the current theme’s `--color-primary`; Nutrition uses `--color-tracker-nutrition` (darker orange in light mode for contrast).
+- Use one outer border and radius. Separate the brand row, navigation, and actions with the shared 1 px `inset-row-divider`, inset 16 px. Use 14 px labels and 44 px touch targets for the main tabs; secondary actions and Day/Week/Month controls use a more compact 40 px row.
+- Reminder details expand inside the same surface beneath the unchanged reminder-status button. Show the complete current calendar week with compact 28 px time groups and 4 px vertical day padding, without a Today / Week plan switch. Opening scrolls today to the top; all days then scroll freely under the fixed status row. Include enough trailing scroll space to align Sunday as well. Release initial scroll anchoring on user interaction.
+- Reuse `SupplementWeekPlan` in Manage and the expanded header. Show the complete seven-day schedule, with no day accordions; the header version crosses out completed supplements by their actual local date, using the existing reminder matcher and date-specific overrides. Only today’s time groups can be toggled; earlier and future days remain read-only. Keep the plan reachable on days without scheduled intake, and show loading, retry, and empty states explicitly.
+- Today, History, and Nutrition share the same `tracker-workspace` viewport and `tracker-header-overlay` positioning. The overlay uses an opaque theme page background so scrolling cards cannot show through the header text. Reserve the base header height in CSS before measurement so route changes never start with a zero content offset. Header actions must fit the same 36 px brand-row controls; Nutrition uses the menu button like its sibling tabs.
+- Use `TrackerDateNav` for History and Nutrition: neutral 20 px chevrons in transparent 36 px buttons, with no bubble background or border. Keep the date row and its spacing inside the measured overlay.
+- Measure the complete header height for content offsets, including safe-area padding and expanded reminders. In History, the brand row may collapse while section navigation stays visible; respect reduced motion.
 - On Today and Nutrition, the second row contains Manage and today's reminder status.
 - On History, the second row is replaced by the Day, Week, and Month controls. Never add a third navigation row for these controls.
 - Keep translated labels short enough for equal-width tabs: `Heute / Verlauf / Ernährung` and `Today / History / Nutrition`.
-- The Manage navigation link uses the primary green because it still belongs to the normal tracker workspace. The dedicated teal manage accent begins only after entering Manage mode. Reminder status stays neutral except for its semantic bell accent.
+- The Manage action and reminder-status text stay neutral. The bell uses the current theme’s primary accent. The dedicated teal manage accent begins only after entering Manage mode.
 
 Do not create empty tracker cards merely to provide navigation. In particular, Nutrition does not appear as an empty Today card when nothing has been logged.
+
+History uses `HistorySurface` for one shared container in Day, Week, and Month. Mood, trackers, supplements, and nutrient totals render as flat `history-section` rows without their own borders or backgrounds. Inset 1 px dividers separate only rendered sections; an empty group has no visible shell. Preserve existing section expand/collapse controls, and show the tracker heading only when an enabled tracker has relevant data. History section headings use 15 px neutral primary text at weight 650, with 16 px above and 12 px below the header and 16 px below its content. Tracker names use neutral 14 px medium text; dates, averages, counts, and totals stay neutral. Keep tracker colors in chart fills, selected markers, and meaningful warning states. The inline mood weekly review uses a neutral sentence-case label and neutral metrics, with a quieter internal divider and no vertical metric separators. Nutrition keeps its separate daily summary and already grouped meal log.
 
 Today and Quick Log use the same coordinate system through `TrackerTileShell`.
 

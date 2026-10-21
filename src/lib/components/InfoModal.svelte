@@ -111,7 +111,7 @@
 			items: [
 				{
 					title: 'Today & history',
-					text: 'Switch between Today, History, and—when enabled—Nutrition in the section bar below the header. Use + to open Quick Log. Tap a tracker card to expand it and manage its entries. History summarizes your data by day, week, or month.'
+					text: 'The shared tracker header combines Today, History, and—when enabled—Nutrition. The active tab uses your theme accent; Nutrition uses orange. The menu stays available in all three views; use the arrows below the header to change the date in History and Nutrition. Use + to open Quick Log. Tap a tracker card to expand it and manage its entries. History summarizes your data by day, week, or month in one shared card. Neutral section headings and fine dividers organize the history; tracker colors identify the charts. Existing expand/collapse controls remain available, and sections without relevant data are hidden.'
 				},
 				{
 					title: 'PDF export',
@@ -119,7 +119,7 @@
 				},
 				{
 					title: 'Supplements & reminders',
-					text: 'Create supplements under Manage with a name, unit, and optional nutrients. Use the bell to schedule reminders; logging a supplement up to 45 minutes early completes its closest reminder. Week plan shows the complete reminder schedule.',
+					text: 'Create supplements under Manage with a name, unit, and optional nutrients. Use the bell to schedule reminders; logging a supplement up to 45 minutes early completes its closest reminder. Tap today’s reminder status in the header to expand compact intake rows. The complete current week opens scrolled to today. All days scroll freely while the reminder-status row stays visible. Taken supplements are crossed out on their actual date; tap a time group today to change its reminder status. The same week plan is also available under Manage.',
 					link: { href: '/tracker/verwalten', label: 'Open Manage' }
 				},
 				{
@@ -162,7 +162,7 @@
 				},
 				{
 					title: 'Organize & remember',
-					text: 'Recipes share one card with favorites at the bottom. The overview shows ratings, total preparation and cooking time, and tags as a compact text line; descriptions remain in recipe details. Use favorites, ratings, and tags to organize recipes. “Cooked today” updates the cooking history; use the sort menu to change the recipe order.'
+					text: 'The shared header contains Recipes and Meal Plan. Search opens below the tabs; switching to Meal Plan closes the search and resets its filters. Recipes share one card with favorites at the bottom. The overview shows ratings, total preparation and cooking time, and tags as a compact text line; descriptions remain in recipe details. Use favorites, ratings, and tags to organize recipes. “Cooked today” updates the cooking history; use the sort menu to change the recipe order.'
 				},
 				{
 					title: 'Offline recipes',
@@ -271,7 +271,7 @@
 			items: [
 				{
 					title: 'Heute & Verlauf',
-					text: 'Über die Bereichsleiste unter dem Header wechselst du zwischen Heute, Verlauf und – falls aktiviert – Ernährung. Über + öffnest du das Quick-Log. Tippe eine Tracker-Karte an, um sie aufzuklappen und ihre Einträge zu verwalten. Der Verlauf fasst deine Daten nach Tag, Woche oder Monat zusammen.'
+					text: 'Der gemeinsame Tracker-Header enthält Heute, Verlauf und – falls aktiviert – Ernährung. Der aktive Tab nutzt deine Theme-Farbe, Ernährung ist orange. Das Menü ist in allen drei Ansichten erreichbar; mit den Pfeilen unter dem Header wechselst du im Verlauf und bei Ernährung das Datum. Über + öffnest du das Quick-Log. Tippe eine Tracker-Karte an, um sie aufzuklappen und ihre Einträge zu verwalten. Der Verlauf fasst deine Daten nach Tag, Woche oder Monat in einer gemeinsamen Karte zusammen. Neutrale Bereichsüberschriften und feine Trennlinien gliedern den Verlauf; Trackerfarben kennzeichnen die Diagramme. Vorhandene Auf- und Zuklappfunktionen bleiben erhalten. Bereiche ohne relevante Daten werden ausgeblendet.'
 				},
 				{
 					title: 'PDF-Export',
@@ -279,7 +279,7 @@
 				},
 				{
 					title: 'Supplements & Erinnerungen',
-					text: 'Lege Supplements unter „Verwalten“ mit Name, Einheit und optionalen Nährstoffen an. Über die Glocke planst du Erinnerungen; ein Log bis zu 45 Minuten vorher erledigt den zeitlich passendsten Reminder. Der Wochenplan zeigt alle Termine auf einen Blick.',
+					text: 'Lege Supplements unter „Verwalten“ mit Name, Einheit und optionalen Nährstoffen an. Über die Glocke planst du Erinnerungen; ein Log bis zu 45 Minuten vorher erledigt den zeitlich passendsten Reminder. Tippe im Header auf den heutigen Erinnerungsstatus, um kompakte Einnahmezeilen aufzuklappen. Die vollständige aktuelle Woche öffnet sich zum heutigen Tag gescrollt. Alle Tage sind frei scrollbar, während die Statuszeile sichtbar bleibt. Eingenommene Supplements sind am jeweiligen Datum durchgestrichen; tippe auf eine heutige Zeitgruppe, um ihren Erinnerungsstatus zu ändern. Derselbe Wochenplan ist auch unter Verwalten verfügbar.',
 					link: { href: '/tracker/verwalten', label: 'Verwalten öffnen' }
 				},
 				{
@@ -322,7 +322,7 @@
 				},
 				{
 					title: 'Ordnen & merken',
-					text: 'Rezepte stehen in einer gemeinsamen Karte mit Favoriten unten. Die Übersicht zeigt Bewertungen, die gesamte Vorbereitungs- und Kochzeit sowie Tags als kompakte Textzeile; Beschreibungen bleiben in den Rezeptdetails. Organisiere Rezepte mit Favoriten, Bewertungen und Tags. „Heute gekocht“ aktualisiert den Kochverlauf; über das Sortiermenü änderst du die Reihenfolge der Rezepte.'
+					text: 'Der gemeinsame Header enthält Rezepte und Wochenplan. Die Suche öffnet sich unter den Tabs; beim Wechsel zum Wochenplan schließen sich Suche und Filter. Rezepte stehen in einer gemeinsamen Karte mit Favoriten unten. Die Übersicht zeigt Bewertungen, die gesamte Vorbereitungs- und Kochzeit sowie Tags als kompakte Textzeile; Beschreibungen bleiben in den Rezeptdetails. Organisiere Rezepte mit Favoriten, Bewertungen und Tags. „Heute gekocht“ aktualisiert den Kochverlauf; über das Sortiermenü änderst du die Reihenfolge der Rezepte.'
 				},
 				{
 					title: 'Rezepte offline',
