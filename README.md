@@ -12,7 +12,7 @@ Import recipes from websites, add ingredients to shopping lists, and plan meals 
 
 Run Groly on your own server with **Docker Compose** or install it through **Unraid Community Applications**. Use it in a browser on your phone or computer, or add it to your home screen on iOS or Android as a **Progressive Web App (PWA)**.
 
-See the [installation guides](#installation-guides) for Docker Compose, Unraid, Synology, TrueNAS, QNAP, and Portainer.
+See the [deployment guides](#deployment) for Docker Compose, Unraid, Synology, TrueNAS, QNAP, and Portainer.
 
 **HTTPS is required** for offline mode, PWA installation, push notifications, barcode scanning, and location-based list opening. The admin invites users via one-time links; there is no public registration.
 
@@ -294,124 +294,10 @@ Zero-config HTTPS tunnel to your server, no port forwarding required. Free tier 
 #### Reverse Proxy
 Run Groly behind Nginx Proxy Manager, Caddy, or Traefik with your own domain and Let's Encrypt. Best fit if your server is already reachable from the internet and you have an existing reverse-proxy setup.
 
-## Docker Deployment
+## Push Notifications (optional)
 
-### Installation guides
-
-The published image currently supports **Linux on Intel/AMD (`amd64`)**. ARM devices are not supported.
-
-| System | Guide | Configuration | Validation status |
-| --- | --- | --- | --- |
-| Docker Compose | [General setup](#docker-compose) | [Compose file](docker-compose.yml) | General deployment path; see [release verification](docs/UPGRADING.md#release-verification) |
-| Unraid | [Community Applications setup](#unraid) | [Unraid template](unraid/groly.xml) | Existing integration; not revalidated here |
-| Synology DSM | [Container Manager guide](docs/synology/README.md) | [Compose file](docs/synology/docker-compose.yml) · [Environment example](docs/synology/.env.example) | YAML syntax checked; NAS test pending |
-| TrueNAS (Docker-based Apps) | [Custom App guide](docs/truenas/README.md) | [Compose file](docs/truenas/docker-compose.yml) | YAML syntax checked; NAS test pending |
-| QNAP | [Container Station guide](docs/qnap/README.md) | [Compose file](docs/qnap/docker-compose.yml) | YAML syntax checked; NAS test pending |
-| Portainer (Docker Standalone) | [Stack guide](docs/portainer/README.md) | [Compose file](docs/portainer/docker-compose.yml) | YAML syntax checked; Portainer test pending |
-
-The platform guides cover data storage, HTTPS, updates, and backups. A syntax check does not confirm successful deployment on a platform; each guide states its remaining validation requirements.
-
-The image is published to GitHub Container Registry and can be pulled directly:
-
-```
-ghcr.io/peterthepeter/groly:latest
-```
-
-### Docker Compose
-
-```yaml
-services:
-  groly:
-    image: ghcr.io/peterthepeter/groly:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - /mnt/user/appdata/groly:/app/data
-    environment:
-      - ADMIN_USERNAME=your-username
-      - ADMIN_PASSWORD=secure-password
-      - ORIGIN=https://your-domain.com
-      # - ADDRESS_HEADER=X-Forwarded-For  # only set this when running behind a reverse proxy (Caddy, Nginx, Traefik)
-      # - OFF_COUNTRY=germany  # optional: restrict nutrition product search to one country (default: worldwide)
-      # Optional: push notifications (see Push Notifications section below)
-      # - VAPID_PUBLIC_KEY=<publicKey>
-      # - VAPID_PRIVATE_KEY=<privateKey>
-      # - PUBLIC_VAPID_PUBLIC_KEY=<same publicKey>
-      # - VAPID_SUBJECT=https://your-domain.com
-    restart: unless-stopped
-```
-
-### Beta channel (optional)
-
-Two image tags are published:
-
-- `:latest` — stable releases. **Recommended for everyone.**
-- `:beta` — pre-release builds for early testing. Opt-in only.
-
-To help test upcoming changes, switch your image tag to `:beta`:
-
-```yaml
-    image: ghcr.io/peterthepeter/groly:beta
-```
-
-Everyone staying on `:latest` is unaffected by beta builds. To leave the beta channel, switch the tag back to `:latest` and pull again.
-
-> **Back up your database before switching to `:beta`.** Beta builds may apply new database migrations that do not yet exist in `:latest`. Returning to `:latest` afterwards can fail if a newer migration has already run. The database lives in the `/app/data` volume — copy it somewhere safe first.
-
-Groly 1.0 creates verified database and upload backups before version upgrades and keeps your existing container configuration. See the [upgrade and restore guide (English / Deutsch)](docs/UPGRADING.md), including free-space requirements and the effect of the meal-plan date fix on older entries.
-
-### Unraid
-
-Install via **Community Applications** (search for "Groly") or add the template manually:
-
-- **Template URL:** `https://raw.githubusercontent.com/peterthepeter/groly/main/unraid/groly.xml`
-- **Repository:** `ghcr.io/peterthepeter/groly:latest`
-- **Port:** `3000` (WebUI)
-- **Path:** `/app/data` → e.g. `/mnt/user/appdata/groly`
-- **Variables:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ORIGIN`
-- **Push notifications (optional):** additionally set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_SUBJECT` — see [Push Notifications](#push-notifications-optional) below
-
-The volume `/app/data` contains the SQLite database. An admin user is created on first start with the credentials from `ADMIN_USERNAME` and `ADMIN_PASSWORD`. After the first start both variables can be safely deleted from the container — `ADMIN_PASSWORD` is never re-applied. If you ever forget your admin password, see [Admin password recovery](#admin-password-recovery) below.
-
-> **File permissions:** The application runs as user `node` (UID 1000, GID 1000). The container entrypoint adjusts ownership of `/app/data` before starting the application. If your host prevents this adjustment, set ownership on the host:
-> ```bash
-> chown -R 1000:1000 /path/to/your/appdata/groly
-> ```
-> Keep the existing directory and its contents when upgrading. The application needs write access to create its pre-upgrade backup and open the database.
-
-> **Architecture:** The Docker image is built for `linux/amd64`.
-
-### Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | Path to the SQLite file, e.g. `/app/data/groly.db` |
-| `ORIGIN` | Yes | Full URL of your instance, e.g. `https://groly.example.com` |
-| `ADMIN_USERNAME` | First run only | Username for the initial admin account. After first start can be deleted, but must be present (with the original value) if you ever need to use `ADMIN_PASSWORD_RESET`. |
-| `ADMIN_PASSWORD` | First run only | Password for the initial admin account. **Only used when no users exist yet.** Can — and should — be deleted from the container after first start. To reset a forgotten admin password, use `ADMIN_PASSWORD_RESET` instead. |
-| `ADMIN_PASSWORD_RESET` | Emergency only | If set, resets the password of the user defined in `ADMIN_USERNAME` to this value on container start and invalidates all their existing sessions. Leave empty in normal operation — see [Admin password recovery](#admin-password-recovery). |
-| `VAPID_PUBLIC_KEY` | Optional | VAPID public key for push notifications |
-| `VAPID_PRIVATE_KEY` | Optional | VAPID private key for push notifications |
-| `PUBLIC_VAPID_PUBLIC_KEY` | Optional | Same value as `VAPID_PUBLIC_KEY` |
-| `VAPID_SUBJECT` | Optional | `https://` URL or `mailto:` address for VAPID |
-| `ADDRESS_HEADER` | Optional | Set to `X-Forwarded-For` **only** when running behind a reverse proxy (Caddy, Nginx, Traefik). **Do not set this if you're accessing Groly directly** — it will cause login failures. Enables accurate per-client IP rate limiting. |
-| `OFF_COUNTRY` | Optional | Restricts the nutrition tracker's Open Food Facts product search to a single country for more locally relevant results, e.g. `germany`, `france`, `switzerland`. Leave unset to search worldwide (default). |
-
-### Admin password recovery
-
-Forgot your admin password? Since Groly is self-hosted and has no email server, recovery is done through the container environment:
-
-1. **Set the variable** `ADMIN_PASSWORD_RESET` in your container template to a new password (any string — it will become the new admin password).
-2. Make sure `ADMIN_USERNAME` is still set to the username of the admin you want to reset (default `admin`).
-3. **Restart the container.** On startup, Groly will reset that user's password and invalidate all their existing sessions. You will see a warning in the container logs.
-4. **Log in** with the new password.
-5. **Delete `ADMIN_PASSWORD_RESET`** from your container template. As long as it stays set, the password will be re-applied on every container restart.
-
-This works only for the user named in `ADMIN_USERNAME` (the original admin). For any other admin or regular user who is locked out, log in as the original admin and use the "Reset password" button in the user management UI — it generates a fresh invite link you can send them.
-
-### Push Notifications (optional)
-
-Generate a VAPID key pair once:
+Generate a VAPID key pair once in Groly's container console, or in a Node.js
+environment with `web-push` installed:
 
 ```sh
 node -e "const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(JSON.stringify(k,null,2))"
@@ -428,9 +314,37 @@ environment:
 ```
 
 **Important:**
+
 - `VAPID_PUBLIC_KEY` and `PUBLIC_VAPID_PUBLIC_KEY` must be the **same value**.
 - `VAPID_SUBJECT` must be a real `https://` URL or `mailto:` address — a `.local` domain will be rejected by Apple's push service.
 - Generate the keys **once** and keep them. If the keys change, all existing subscriptions become invalid and users need to re-subscribe in Settings.
+
+## Admin Password Recovery
+
+Forgot your admin password? Since Groly is self-hosted and has no email server, recovery is done through the container environment:
+
+1. **Set the variable** `ADMIN_PASSWORD_RESET` in your container template to a new password (any string — it will become the new admin password).
+2. Make sure `ADMIN_USERNAME` is still set to the username of the admin you want to reset (default `admin`).
+3. **Restart the container.** On startup, Groly will reset that user's password and invalidate all their existing sessions. You will see a warning in the container logs.
+4. **Log in** with the new password.
+5. **Delete `ADMIN_PASSWORD_RESET`** from your container template. As long as it stays set, the password will be re-applied on every container restart.
+
+This works only for the user named in `ADMIN_USERNAME` (the original admin). For any other admin or regular user who is locked out, log in as the original admin and use the "Reset password" button in the user management UI — it generates a fresh invite link you can send them.
+
+## Deployment
+
+The published image currently supports **Linux on Intel/AMD (`amd64`)**. ARM devices are not supported.
+
+| System | Guide | Configuration | Validation status |
+| --- | --- | --- | --- |
+| Docker Compose | [General setup](docs/docker/README.md) | [Compose file](docker-compose.yml) | General deployment path; see [release verification](docs/UPGRADING.md#release-verification) |
+| Unraid | [Community Applications setup](docs/unraid/README.md) | [Unraid template](unraid/groly.xml) | Existing integration; not revalidated here |
+| Synology DSM | [Container Manager guide](docs/synology/README.md) | [Compose file](docs/synology/docker-compose.yml) · [Environment example](docs/synology/.env.example) | YAML syntax checked; NAS test pending |
+| TrueNAS (Docker-based Apps) | [Custom App guide](docs/truenas/README.md) | [Compose file](docs/truenas/docker-compose.yml) | YAML syntax checked; NAS test pending |
+| QNAP | [Container Station guide](docs/qnap/README.md) | [Compose file](docs/qnap/docker-compose.yml) | YAML syntax checked; NAS test pending |
+| Portainer (Docker Standalone) | [Stack guide](docs/portainer/README.md) | [Compose file](docs/portainer/docker-compose.yml) | YAML syntax checked; Portainer test pending |
+
+The platform guides cover data storage, HTTPS, updates, and backups. A syntax check does not confirm successful deployment on a platform; each guide states its remaining validation requirements.
 
 ## Database Maintenance
 
