@@ -2,6 +2,15 @@
 .github
 .vscode
 .local
+CONTRIBUTING.md
+/docs/RELEASING.md
+/docs/DESIGN_SYSTEM.md
+/docs/releases
+/docs/verification
+/scripts/seed-dev-data.mjs
+/scripts/seed-tracker-preview.mjs
+/scripts/fetch-off-brands.mjs
+/scripts/verify-brands.mjs
 .env
 .env.*
 .aws

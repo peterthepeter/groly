@@ -23,11 +23,15 @@ Thumbs.db
 # Private working notes and archived release preparation
 /.local/
 /docs/RELEASE_PLAN_*.md
-/docs/releases/*-preview.md
-/docs/releases/*-app-draft.json
-/docs/verification/*
-!/docs/verification/*-published.md
-!/docs/verification/*-published.json
+/CONTRIBUTING.md
+/docs/RELEASING.md
+/docs/DESIGN_SYSTEM.md
+/docs/releases/
+/docs/verification/
+/scripts/seed-dev-data.mjs
+/scripts/seed-tracker-preview.mjs
+/scripts/fetch-off-brands.mjs
+/scripts/verify-brands.mjs
 
 # Claude Code (local config)
 /CLAUDE.md

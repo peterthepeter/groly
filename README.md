@@ -366,7 +366,7 @@ The published image currently supports **Linux on Intel/AMD (`amd64`)**. ARM dev
 
 | System | Guide | Configuration | Validation status |
 | --- | --- | --- | --- |
-| Docker Compose | [General setup](docs/docker/README.md) | [Compose file](docker-compose.yml) | General deployment path; see [release verification](docs/verification/1.0.0-published.md) |
+| Docker Compose | [General setup](docs/docker/README.md) | [Compose file](docker-compose.yml) | General deployment path; see [published release verification](https://github.com/peterthepeter/groly/releases/tag/v1.0.0) |
 | Unraid | [Community Applications setup](docs/unraid/README.md) | [Unraid template](unraid/groly.xml) | Existing integration; not revalidated here |
 | Synology DSM | [Container Manager guide](docs/synology/README.md) | [Compose file](docs/synology/docker-compose.yml) · [Environment example](docs/synology/.env.example) | YAML syntax checked; NAS test pending |
 | TrueNAS (Docker-based Apps) | [Custom App guide](docs/truenas/README.md) | [Compose file](docs/truenas/docker-compose.yml) | YAML syntax checked; NAS test pending |
@@ -416,10 +416,6 @@ Groly uses SvelteKit, SQLite, and Docker, with an installable progressive web ap
 | Deployment | Docker (Node.js adapter), linux/amd64 |
 
 </details>
-
-## Contributing
-
-Please follow the [contribution guidelines](CONTRIBUTING.md). All GitHub-facing documentation, issues, pull requests, commit messages, and release titles and notes must be in English.
 
 ## Support
 
