@@ -1,5 +1,7 @@
 .git
 .github
+.vscode
+.local
 .env
 .env.*
 .aws

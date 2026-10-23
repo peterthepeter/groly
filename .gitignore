@@ -18,6 +18,16 @@ Thumbs.db
 # Editor
 *.swp
 *.swo
+/.vscode/
+
+# Private working notes and archived release preparation
+/.local/
+/docs/RELEASE_PLAN_*.md
+/docs/releases/*-preview.md
+/docs/releases/*-app-draft.json
+/docs/verification/*
+!/docs/verification/*-published.md
+!/docs/verification/*-published.json
 
 # Claude Code (local config)
 /CLAUDE.md

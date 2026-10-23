@@ -366,7 +366,7 @@ The published image currently supports **Linux on Intel/AMD (`amd64`)**. ARM dev
 
 | System | Guide | Configuration | Validation status |
 | --- | --- | --- | --- |
-| Docker Compose | [General setup](docs/docker/README.md) | [Compose file](docker-compose.yml) | General deployment path; see [release verification](docs/UPGRADING.md#release-verification) |
+| Docker Compose | [General setup](docs/docker/README.md) | [Compose file](docker-compose.yml) | General deployment path; see [release verification](docs/verification/1.0.0-published.md) |
 | Unraid | [Community Applications setup](docs/unraid/README.md) | [Unraid template](unraid/groly.xml) | Existing integration; not revalidated here |
 | Synology DSM | [Container Manager guide](docs/synology/README.md) | [Compose file](docs/synology/docker-compose.yml) · [Environment example](docs/synology/.env.example) | YAML syntax checked; NAS test pending |
 | TrueNAS (Docker-based Apps) | [Custom App guide](docs/truenas/README.md) | [Compose file](docs/truenas/docker-compose.yml) | YAML syntax checked; NAS test pending |
