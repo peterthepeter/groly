@@ -1,0 +1,22 @@
+# Use this in a Portainer stack on Docker Standalone, not Docker Swarm.
+# Set the required variables in the stack's Environment variables form.
+services:
+  groly:
+    image: ghcr.io/peterthepeter/groly:latest
+    ports:
+      - "${GROLY_PORT:-3000}:3000"
+    volumes:
+      - "${GROLY_DATA_DIR:?Set GROLY_DATA_DIR in Portainer}:/app/data"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: /app/data/groly.db
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in Portainer}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in Portainer}
+      ORIGIN: ${ORIGIN:?Set ORIGIN in Portainer}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${PORT:-3000}/api/health"]
+      start_period: 10m
+      interval: 30s
+      timeout: 5s
+      retries: 3

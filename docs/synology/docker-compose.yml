@@ -1,0 +1,22 @@
+# Follow README.md in this directory before starting the project.
+services:
+  groly:
+    image: ghcr.io/peterthepeter/groly:latest
+    # DSM's reverse proxy connects locally; the HTTP port is not exposed to the LAN.
+    ports:
+      - "127.0.0.1:${GROLY_PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: /app/data/groly.db
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      ORIGIN: ${ORIGIN:?Set ORIGIN in .env}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${PORT:-3000}/api/health"]
+      start_period: 10m
+      interval: 30s
+      timeout: 5s
+      retries: 3

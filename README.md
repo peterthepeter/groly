@@ -12,6 +12,8 @@ Import recipes from websites, add ingredients to shopping lists, and plan meals 
 
 Run Groly on your own server with **Docker Compose** or install it through **Unraid Community Applications**. Use it in a browser on your phone or computer, or add it to your home screen on iOS or Android as a **Progressive Web App (PWA)**.
 
+See the [installation guides](#installation-guides) for Docker Compose, Unraid, Synology, TrueNAS, QNAP, and Portainer.
+
 **HTTPS is required** for offline mode, PWA installation, push notifications, barcode scanning, and location-based list opening. The admin invites users via one-time links; there is no public registration.
 
 ## Features
@@ -294,6 +296,21 @@ Run Groly behind Nginx Proxy Manager, Caddy, or Traefik with your own domain and
 
 ## Docker Deployment
 
+### Installation guides
+
+The published image currently supports **Linux on Intel/AMD (`amd64`)**. ARM devices are not supported.
+
+| System | Guide | Configuration | Validation status |
+| --- | --- | --- | --- |
+| Docker Compose | [General setup](#docker-compose) | [Compose file](docker-compose.yml) | General deployment path; see [release verification](docs/UPGRADING.md#release-verification) |
+| Unraid | [Community Applications setup](#unraid) | [Unraid template](unraid/groly.xml) | Existing integration; not revalidated here |
+| Synology DSM | [Container Manager guide](docs/synology/README.md) | [Compose file](docs/synology/docker-compose.yml) · [Environment example](docs/synology/.env.example) | YAML syntax checked; NAS test pending |
+| TrueNAS (Docker-based Apps) | [Custom App guide](docs/truenas/README.md) | [Compose file](docs/truenas/docker-compose.yml) | YAML syntax checked; NAS test pending |
+| QNAP | [Container Station guide](docs/qnap/README.md) | [Compose file](docs/qnap/docker-compose.yml) | YAML syntax checked; NAS test pending |
+| Portainer (Docker Standalone) | [Stack guide](docs/portainer/README.md) | [Compose file](docs/portainer/docker-compose.yml) | YAML syntax checked; Portainer test pending |
+
+The platform guides cover data storage, HTTPS, updates, and backups. A syntax check does not confirm successful deployment on a platform; each guide states its remaining validation requirements.
+
 The image is published to GitHub Container Registry and can be pulled directly:
 
 ```
@@ -444,6 +461,10 @@ Active data (lists, unchecked items, recipes, supplements, list members) is only
 | CSS | Tailwind CSS v4 |
 | i18n | Paraglide-SvelteKit |
 | Deployment | Docker (Node.js adapter), linux/amd64 |
+
+## Contributing
+
+Please follow the [contribution guidelines](CONTRIBUTING.md). All GitHub-facing documentation, issues, pull requests, commit messages, and release titles and notes must be in English.
 
 ## Support
 

@@ -1,0 +1,23 @@
+# Edit the data path, password, and HTTPS origin before creating the application.
+services:
+  groly:
+    image: ghcr.io/peterthepeter/groly:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      # Create this dedicated directory first; use your actual QNAP shared path.
+      - /share/Container/groly/data:/app/data
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: /app/data/groly.db
+      ADMIN_USERNAME: "admin"
+      # Required on first start. Use $$ for each literal $ in inline YAML values.
+      ADMIN_PASSWORD: ""
+      ORIGIN: "https://groly.example.com"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${PORT:-3000}/api/health"]
+      start_period: 10m
+      interval: 30s
+      timeout: 5s
+      retries: 3
