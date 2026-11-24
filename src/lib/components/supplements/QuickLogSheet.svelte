@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PreferredDateTimeInput from '#lib/components/PreferredDateTimeInput.svelte';
+	import { displayDate } from '#lib/dateDisplay';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { displayUnit } from '#lib/units';
 	import { goto } from '$app/navigation';
@@ -82,7 +84,7 @@
 	}
 
 	function formatLogDate(dateStr: string): string {
-		return new Date(dateStr + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+		return displayDate(new Date(dateStr + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' });
 	}
 
 	const isRetro = $derived(!!logDate && logDate !== todayStr());
@@ -141,29 +143,53 @@
 	let waterRetroMl = $state('');
 	let saving = $state<Record<string, boolean>>({});
 	let done = $state<Record<string, boolean>>({});
-	let logCounts = $state<Record<string, number>>({});
+	let logCounts: Record<string, number> = {};
+	let logCountsLoaded = false;
+	let frequencySortCounts = $state.raw<Readonly<Record<string, number>> | null>(null);
+	const sortOrder = $derived(userSettings.supplementSortOrder ?? 'az');
+	const frequencySortLoading = $derived(sortOrder === 'freq' && frequencySortCounts === null);
 
-	async function fetchLogCounts() {
+	async function fetchLogCounts(signal: AbortSignal): Promise<Record<string, number> | undefined> {
 		try {
-			const res = await fetch('/api/supplement-logs/stats');
-			if (res.ok) {
-				logCounts = (await res.json()).counts ?? {};
-				await tick();
-				if (sheetEl && activeSheetTab === 'supplements') sheetEl.scrollTop = sheetEl.scrollHeight;
-			}
+			const res = await fetch('/api/supplement-logs/stats', { signal });
+			if (res.ok) return (await res.json()).counts ?? {};
 		} catch {}
 	}
 
 	$effect(() => {
-		if (open && userSettings.supplementSortOrder === 'freq') {
-			void fetchLogCounts();
+		if (!open || sortOrder !== 'freq') {
+			frequencySortCounts = null;
+			return;
 		}
+		if (untrack(() => frequencySortCounts) !== null) return;
+
+		let active = true;
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 2000);
+
+		void fetchLogCounts(controller.signal).then(async (counts) => {
+			clearTimeout(timeout);
+			if (!active) return;
+			if (counts) {
+				logCounts = counts;
+				logCountsLoaded = true;
+			}
+			frequencySortCounts = logCounts;
+			await tick();
+			if (active && sheetEl && activeSheetTab === 'supplements') sheetEl.scrollTop = sheetEl.scrollHeight;
+		});
+
+		return () => {
+			active = false;
+			clearTimeout(timeout);
+			controller.abort();
+		};
 	});
 
 	function cycleSortOrder() {
 		const order: Array<'az' | 'za' | 'freq'> = ['az', 'za', 'freq'];
-		const current = userSettings.supplementSortOrder ?? 'az';
-		const next = order[(order.indexOf(current) + 1) % order.length];
+		const next = order[(order.indexOf(sortOrder) + 1) % order.length];
+		if (next === 'freq' && logCountsLoaded) frequencySortCounts = logCounts;
 		userSettings.supplementSortOrder = next;
 	}
 
@@ -183,11 +209,12 @@
 	);
 
 	const trackerTabAvailable = $derived(trackerList.length > 0 || initialTab === 'tracker');
+	const supplementTabVisible = $derived(activeSheetTab === 'supplements' || !trackerTabAvailable);
 
 	const sortedSupplements = $derived(sortQuickLogItems(
 		supplements,
-		userSettings.supplementSortOrder ?? 'az',
-		logCounts,
+		sortOrder,
+		frequencySortCounts ?? undefined,
 		currentLang()
 	));
 	const supplementGrid = $derived(layoutBottomUp(sortedSupplements, 3));
@@ -342,6 +369,7 @@
 			// stößt logSupplementOffline den Server-Sync an (idempotent über clientLogId).
 			await logSupplementOffline({ supplementId, amount, loggedAt, note, clientLogId });
 
+			// Keep the current grid's frequency snapshot intact until the next sort.
 			logCounts = { ...logCounts, [supplementId]: (logCounts[supplementId] ?? 0) + 1 };
 			done = { ...done, [supplementId]: true };
 			setTimeout(() => { done = { ...done, [supplementId]: false }; }, 2500);
@@ -446,8 +474,8 @@
 							>
 								<span class="text-[11px] font-medium" style="color: var(--color-on-surface-variant)">{t.supplement_sort_label}</span>
 								<span class="text-[10px] font-bold" style="color: var(--color-primary)">
-									{#if (userSettings.supplementSortOrder ?? 'az') === 'az'}A→Z
-									{:else if userSettings.supplementSortOrder === 'za'}Z→A
+									{#if sortOrder === 'az'}A→Z
+									{:else if sortOrder === 'za'}Z→A
 									{:else}
 										<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary)">
 											<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
@@ -543,7 +571,7 @@
 								{/if}
 								{#if isRetro && waterRetroOpen && !waterDone}
 									<div class="grid grid-cols-2 gap-1.5 items-center">
-										<input type="time" bind:value={waterRetroTime}
+										<PreferredDateTimeInput type="time" bind:value={waterRetroTime} aria-label={t.supplement_log_time}
 											class="w-full h-9 px-1 rounded-xl border-0 outline-none text-center min-w-0"
 											style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"/>
 										<input type="number" inputmode="numeric" min="1" bind:value={waterRetroMl} placeholder="ml"
@@ -592,7 +620,7 @@
 									<div class="space-y-1.5">
 										<div class="grid grid-cols-[auto_1fr] items-center gap-1.5">
 											<span class="text-[10px] font-semibold" style="color: var(--color-on-surface-variant)">Startzeit</span>
-											<input type="time" bind:value={meditationRetroStartTime}
+											<PreferredDateTimeInput type="time" bind:value={meditationRetroStartTime} aria-label={t.supplement_log_time}
 												class="w-full min-w-0 h-8 px-1 rounded-xl border-0 outline-none text-center"
 												style="background-color: var(--color-surface-high); color: var(--color-on-surface); font-size: 16px"/>
 										</div>
@@ -671,7 +699,9 @@
 				{#if activeSheetTab === 'tracker' && trackerList.length === 0 && trackerTabAvailable}
 					<div class="py-6 text-center"><p class="text-sm" style="color: var(--color-on-surface-variant)">{t.shortcut_trackers_empty}</p><button type="button" class="min-h-11 text-sm font-semibold" style="color: var(--color-primary)" onclick={manageSupplements}>{t.supplement_manage}</button></div>
 				{/if}
-				{#if (activeSheetTab === 'supplements' || !trackerTabAvailable) && sortedSupplements.length === 0}
+				{#if supplementTabVisible && frequencySortLoading}
+					<p class="py-6 text-center text-sm" style="color: var(--color-on-surface-variant)" role="status">{t.admin_loading}</p>
+				{:else if supplementTabVisible && sortedSupplements.length === 0}
 					<div class="rounded-2xl px-4 py-6 flex flex-col items-center gap-3 text-center" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					<p class="text-sm" style="color: var(--color-on-surface-variant)">{t.supplement_empty_hint}</p>
 					<button
@@ -680,8 +710,7 @@
 							style="background-color: var(--color-surface-high); color: var(--color-primary)"
 						>{t.supplement_manage}</button>
 					</div>
-				{/if}
-				{#if (activeSheetTab === 'supplements' || !trackerTabAvailable) && sortedSupplements.length > 0}
+				{:else if supplementTabVisible}
 					<div class="grid grid-cols-3 gap-2" aria-label={t.supplement_title}>
 						{#each supplementGrid as supplement, index (supplement?.id ?? `empty-${index}`)}
 							{#if supplement}

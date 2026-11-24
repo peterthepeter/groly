@@ -1,3 +1,4 @@
+import type { ListKind } from '#lib/checklists';
 import type { db as appDb } from '#lib/db';
 import { itemHistory, items, lists } from '#lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -10,6 +11,9 @@ export type ItemCreateInput = {
 	name: string;
 	quantityInfo: string | null;
 	categoryOverride: string | null;
+	sectionId?: string | null;
+	checklistNote?: string | null;
+	kind?: ListKind;
 	createdBy: string;
 	createdAt: number;
 	updatedAt: number;
@@ -29,6 +33,8 @@ export function persistItemCreate(database: AppDatabase, input: ItemCreateInput)
 			quantityInfo: input.quantityInfo,
 			isChecked: false,
 			categoryOverride: input.categoryOverride,
+			sectionId: input.sectionId ?? null,
+			checklistNote: input.checklistNote ?? null,
 			createdBy: input.createdBy,
 			createdAt: input.createdAt,
 			updatedAt: input.updatedAt
@@ -36,7 +42,7 @@ export function persistItemCreate(database: AppDatabase, input: ItemCreateInput)
 
 		if (result.changes === 0) return false;
 
-		tx.insert(itemHistory)
+		if (input.kind !== 'checklist') tx.insert(itemHistory)
 			.values({ userId: input.createdBy, name: input.name, useCount: 1, lastUsedAt: input.createdAt })
 			.onConflictDoUpdate({
 				target: [itemHistory.userId, itemHistory.name],

@@ -23,11 +23,15 @@ import { validatePasswordRule } from '#lib/password';
 import { emit } from '#lib/server/userEvents';
 import * as loginRoute from '../../routes/api/auth/login/+server';
 import * as logoutRoute from '../../routes/api/auth/logout/+server';
+import * as settingsRoute from '../../routes/api/users/me/+server';
 import * as sseRoute from '../../routes/api/events/+server';
 import * as planner from '../../routes/api/meal-plan/+server';
 import * as planEntry from '../../routes/api/meal-plan/[id]/+server';
 import * as shareRoute from '../../routes/api/recipes/[id]/share/+server';
 import * as acceptShare from '../../routes/api/recipes/shares/[id]/+server';
+import * as recipesRoute from '../../routes/api/recipes/+server';
+import * as recipeRoute from '../../routes/api/recipes/[id]/+server';
+import * as recipeCategoryRoute from '../../routes/api/recipes/categories/+server';
 import * as subscribeRoute from '../../routes/api/push/subscribe/+server';
 import { handle } from '../../hooks.server';
 
@@ -45,6 +49,32 @@ beforeEach(() => { sqlite.exec('DELETE FROM users'); });
 afterEach(() => { vi.unstubAllEnvs(); });
 
 describe('account security', () => {
+	it('initializes formats once for an existing account and shares later choices across sessions', async () => {
+		await createUser('alice', 'Password123');
+		const first = (await login('alice', 'Password123'))!.sessionId;
+		const second = (await login('alice', 'Password123'))!.sessionId;
+		const endpoint = '/api/users/me';
+		const { settingsRevision } = await (await settingsRoute.GET(event(first, endpoint))).json();
+		const patch = (session: string, revision: number, settings: unknown) =>
+			settingsRoute.PATCH(event(session, endpoint, { settings, settingsRevision: revision }));
+
+		const initialized = await patch(first, settingsRevision, { initialFormats: { dateFormat: 'dmy-slash', timeFormat: '24h' } });
+		expect(initialized.status).toBe(200);
+		const cached = await initialized.json();
+		expect(cached.settings).toMatchObject({ dateFormat: 'dmy-slash', timeFormat: '24h' });
+		const secondDefaults = { initialFormats: { dateFormat: 'mdy-slash', timeFormat: '12h' } };
+		expect((await patch(second, settingsRevision, secondDefaults)).status).toBe(409);
+		const replay = await (await patch(second, cached.settingsRevision, secondDefaults)).json();
+		expect(replay.settings).toEqual(cached.settings);
+		expect(replay.settingsRevision).toBe(cached.settingsRevision);
+
+		const choice = await patch(second, cached.settingsRevision, { timeFormat: '12h' });
+		expect(choice.status).toBe(200);
+		const afterChoice = await (await settingsRoute.GET(event(first, endpoint))).json();
+		expect(afterChoice.settings).toMatchObject({ dateFormat: 'dmy-slash', timeFormat: '12h' });
+		expect(afterChoice.settings).not.toHaveProperty('initialFormats');
+	});
+
 	it('rejects an old tab sending requests under the browser new account cookie', async () => {
 		const alice = await createUser('alice', 'Password123');
 		await createUser('bob', 'Password123');
@@ -165,5 +195,38 @@ describe('recipe sharing and meal-plan ownership', () => {
 		expect(entries[0].recipeTitle).toBeNull();
 		await planner.POST(event(b, '/api/meal-plan', { dates: ['2026-10-18'], listId: 'bob-list' }));
 		expect(sqlite.prepare('SELECT COUNT(*) AS count FROM items WHERE list_id = ?').get('bob-list')).toEqual({ count: 1 });
+	});
+});
+
+describe('recipe categories', () => {
+	it('assigns a single owned category, preserves it on partial edits, and unassigns recipes when a category is removed', async () => {
+		await createUser('alice', 'Password123');
+		await createUser('bob', 'Password123');
+		const a = (await login('alice', 'Password123'))!.sessionId;
+		const b = (await login('bob', 'Password123'))!.sessionId;
+		const catalog = '/api/recipes/categories';
+		const created = await recipesRoute.POST(event(a, '/api/recipes', { title: 'Lasagne', category: { newCategoryName: ' Oven ' } }));
+		expect(created.status).toBe(201);
+		const { id } = await created.json();
+		const path = '/api/recipes/' + id;
+		const getRecipe = async () => (await recipeRoute.GET(event(a, path, undefined, { id }))).json();
+		const { categories: base } = await (await recipeCategoryRoute.GET(event(a, catalog))).json();
+		expect(base).toEqual([{ id: expect.any(String), name: 'Oven' }]);
+		expect((await recipeRoute.PUT(event(a, path, { title: 'Vegetable lasagne' }, { id }))).status).toBe(200);
+		expect(await getRecipe()).toMatchObject({ title: 'Vegetable lasagne', categoryId: base[0].id });
+		expect((await recipesRoute.POST(event(b, '/api/recipes', { title: 'Soup', category: { categoryId: base[0].id } }))).status).toBe(409);
+		expect((await recipeRoute.PATCH(event(b, path, { category: { categoryId: null } }, { id }))).status).toBe(404);
+		expect((await recipeRoute.PATCH(event(a, path, { category: { newCategoryName: ' oven ' } }, { id }))).status).toBe(200);
+
+		const renamed = { id: base[0].id, name: 'Bakes' };
+		const next = [{ id: 'soups', name: 'Soups' }, renamed];
+		expect((await recipeCategoryRoute.PUT(event(a, catalog, { base, categories: next }))).status).toBe(200);
+		expect(await getRecipe()).toMatchObject({ categoryId: renamed.id, categoryName: 'Bakes' });
+		expect((await recipeCategoryRoute.PUT(event(a, catalog, { base, categories: [] }))).status).toBe(409);
+		expect((await recipeCategoryRoute.PUT(event(a, catalog, { base: next, categories: [next[0]] }))).status).toBe(200);
+		expect(await getRecipe()).toMatchObject({ title: 'Vegetable lasagne', categoryId: null, categoryName: null });
+		expect(await (await recipesRoute.GET(event(a, '/api/recipes'))).json()).toMatchObject({
+			categories: [next[0]], recipes: [{ id, categoryId: null }]
+		});
 	});
 });

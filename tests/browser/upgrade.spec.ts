@@ -83,6 +83,9 @@ test('the published latest PWA upgrades directly with its session and unsynced c
 		docker('rm', '-f', container); container = '';
 		start(image!, 'new');
 		await wait(true);
+		// Let the new document replay the queued write. Reconnecting the old one
+		// first can drain it before the updated worker gets a chance to reload.
+		await page.evaluate(() => window.addEventListener('online', event => event.stopImmediatePropagation(), { capture: true, once: true }));
 		await context.setOffline(false);
 		await page.evaluate(async () => { const registration = await navigator.serviceWorker.ready; await registration.update(); }).catch(error => {
 			if (!/Execution context was destroyed|navigation/i.test(String(error))) throw error;

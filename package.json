@@ -1,7 +1,7 @@
 {
 	"name": "groly",
 	"private": true,
-	"version": "1.0.0",
+	"version": "1.1.0-beta.1",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -17,30 +17,31 @@
 		"test:dependencies": "node scripts/verify-dependencies.mjs && node scripts/verify-migration-generator.mjs"
 	},
 	"devDependencies": {
-		"@inlang/paraglide-js": "2.28.0",
-		"@lucide/svelte": "1.57.0",
-		"@playwright/test": "1.64.1",
-		"@sveltejs/adapter-node": "6.0.0",
-		"@sveltejs/kit": "3.1.0",
-		"@sveltejs/vite-plugin-svelte": "7.3.1",
-		"@tailwindcss/vite": "4.3.3",
+		"@inlang/paraglide-js": "3.2.2",
+		"@lucide/svelte": "1.79.0",
+		"@playwright/test": "1.65.1",
+		"@sveltejs/adapter-node": "6.0.5",
+		"@sveltejs/kit": "3.4.0",
+		"@sveltejs/vite-plugin-svelte": "7.3.2",
+		"@tailwindcss/vite": "4.3.5",
 		"@types/better-sqlite3": "9.6.0",
 		"@types/leaflet": "1.9.22",
+		"@types/node": "24.19.2",
 		"@types/pdfmake": "0.3.3",
 		"@types/web-push": "3.6.4",
 		"@undecaf/zbar-wasm": "0.11.0",
-		"dexie": "4.4.6",
+		"dexie": "4.4.7",
 		"drizzle-kit": "file:vendor/drizzle-kit-0.31.11.tgz",
-		"fake-indexeddb": "6.2.5",
+		"fake-indexeddb": "6.2.8",
 		"leaflet": "1.9.4",
-		"pdfmake": "0.3.11",
-		"svelte": "5.57.2",
-		"svelte-check": "4.7.6",
-		"tailwindcss": "4.3.3",
+		"pdfmake": "0.3.15",
+		"svelte": "5.59.1",
+		"svelte-check": "4.7.8",
+		"tailwindcss": "4.3.5",
 		"typescript": "6.0.3",
-		"vite": "8.3.4",
+		"vite": "8.3.8",
 		"vite-plugin-pwa": "2.0.0",
-		"vitest": "5.0.4",
+		"vitest": "5.1.1",
 		"workbox-build": "7.4.1",
 		"workbox-expiration": "7.4.1",
 		"workbox-precaching": "7.4.1",
@@ -49,13 +50,13 @@
 		"workbox-window": "7.4.1"
 	},
 	"dependencies": {
-		"better-sqlite3": "13.0.3",
+		"better-sqlite3": "13.2.0",
 		"drizzle-orm": "0.45.4",
 		"fflate": "0.8.3",
-		"web-push": "3.6.7"
+		"web-push": "4.0.0"
 	},
 	"overrides": {
-		"workbox-build": { "glob": "13.0.6" }
+		"workbox-build": { "glob": "14.0.6" }
 	},
 	"engines": {
 		"node": ">=24 <25"

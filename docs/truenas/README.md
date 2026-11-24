@@ -46,6 +46,7 @@ the YAML. Edit these values before installation:
 | `ADMIN_USERNAME` | Username for the first Groly administrator. |
 | `ADMIN_PASSWORD` | A strong, unique password. The empty example value intentionally prevents a fresh installation from initializing. |
 | `ORIGIN` | The exact HTTPS URL you will use, such as `https://groly.example.com`, with any non-default port but no path. |
+| `KEEP_CHECKED_ITEMS` | Optional. Defaults to `"false"` for 60-day cleanup. Set to `"true"` to keep checked-off items in all shopping lists. |
 
 Values are embedded directly in this YAML; this installation does not use a
 separate `.env` file. Keep your edited YAML private. Compose interprets `$` in

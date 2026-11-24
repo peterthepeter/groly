@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import '../reminder-time.css';
 
 	let {
 		accent,
@@ -447,14 +448,6 @@
 		padding: 9px;
 	}
 
-	:global(.reminder-schedule-row) {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 12px;
-		padding: 6px 11px 4px;
-		border-top: 1px solid var(--bubble-container-border);
-	}
-
 	:global(.reminder-schedule-row.reminder-schedule-row-single) {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -480,49 +473,6 @@
 
 	:global(.reminder-condition-row:first-child) {
 		border-top: 0;
-	}
-
-	:global(.reminder-time-cell),
-	:global(.reminder-interval-cell) {
-		display: block;
-		min-width: 0;
-		transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1);
-	}
-
-	:global(.reminder-time-cell:focus-within),
-	:global(.reminder-interval-cell:focus-within) {
-		background: color-mix(in srgb, var(--manage-accent) 7%, transparent);
-	}
-
-	:global(.reminder-time-field) {
-		position: relative;
-		display: block;
-		width: 100%;
-		height: 30px;
-		min-width: 0;
-	}
-
-	:global(.reminder-time-picker) {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		max-width: 100%;
-		height: 100%;
-		border: 0;
-		opacity: 0;
-		cursor: pointer;
-	}
-
-	:global(.reminder-time-value) {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		pointer-events: none;
-		color: var(--manage-accent);
-		font-size: 16px;
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
 	}
 
 	:global(.reminder-interval-select) {

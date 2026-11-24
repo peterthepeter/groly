@@ -54,6 +54,7 @@ Open [docker-compose.yml](docker-compose.yml) and copy the YAML from GitHub's
 | `ADMIN_USERNAME` | Username for the first Groly administrator. |
 | `ADMIN_PASSWORD` | Your own strong, unique password. The empty example value prevents fresh initialization until you set it. |
 | `ORIGIN` | Your exact HTTPS browser URL, including any custom port, with no path. |
+| `KEEP_CHECKED_ITEMS` | Optional. Defaults to `"false"` for 60-day cleanup. Set to `"true"` to keep checked-off items in all shopping lists. |
 
 There is no separate `.env` file for this example. Keep the edited YAML private.
 Compose interprets `$` in inline values, even in YAML quotes. Use `$$` for a

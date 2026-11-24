@@ -13,6 +13,8 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in Portainer}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in Portainer}
       ORIGIN: ${ORIGIN:?Set ORIGIN in Portainer}
+      KEEP_CHECKED_ITEMS: ${KEEP_CHECKED_ITEMS:-false}
+      # Set to true to keep checked-off items in all lists. The default is 60-day cleanup.
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${PORT:-3000}/api/health"]

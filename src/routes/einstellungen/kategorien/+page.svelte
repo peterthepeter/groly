@@ -3,6 +3,7 @@
 	import AppHeader from '#lib/components/AppHeader.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
 	import CategoryOrderEditor from '#lib/components/CategoryOrderEditor.svelte';
+	import ShoppingItemSortSelect from '#lib/components/ShoppingItemSortSelect.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { t } from '#lib/i18n.svelte';
 </script>
@@ -12,7 +13,12 @@
 	<div class="categories-content flex-1 overflow-y-auto px-4">
 		<h1 class="sr-only">{t.settings_category_sorting}</h1>
 		<div class="categories-surface">
-			<CategoryOrderEditor order={userSettings.categoryOrder} onchange={(order) => userSettings.setCategoryOrder(order)} />
+			<div class:inset-row-divider={userSettings.shoppingItemSortMode === 'category'}>
+				<ShoppingItemSortSelect value={userSettings.shoppingItemSortMode} onchange={mode => userSettings.setShoppingItemSortMode(mode)} />
+			</div>
+			{#if userSettings.shoppingItemSortMode === 'category'}
+				<CategoryOrderEditor order={userSettings.categoryOrder} onchange={(order) => userSettings.setCategoryOrder(order)} />
+			{/if}
 		</div>
 	</div>
 </div>
@@ -20,5 +26,5 @@
 
 <style>
 	.categories-content { padding-top: calc(env(safe-area-inset-top) + 6rem); padding-bottom: calc(env(safe-area-inset-bottom) + 6rem); scroll-padding-top: calc(env(safe-area-inset-top) + 6rem); }
-	.categories-surface { padding-top: 8px; border: 1px solid var(--bubble-container-border); border-radius: 16px; background: var(--bubble-container-bg); }
+	.categories-surface { border: 1px solid var(--bubble-container-border); border-radius: 16px; background: var(--bubble-container-bg); }
 </style>

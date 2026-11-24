@@ -54,6 +54,7 @@ Edit `.env`:
 | `ADMIN_PASSWORD` | Your own strong, unique password. It must not be empty. |
 | `ORIGIN` | Your exact browser URL, for example `https://groly.example.com`. Include the port if HTTPS uses a non-default port. Do not add a path. |
 | `GROLY_PORT` | A free local NAS port, normally `3000`. This is separate from the external HTTPS port. |
+| `KEEP_CHECKED_ITEMS` | Optional. Defaults to `false` for 60-day cleanup. Set to `true` to keep checked-off items in all shopping lists. |
 
 For passwords containing `$` or `#`, put the value in single quotes as shown in
 the example file. Keep `.env` private and do not include it in support requests.

@@ -17,9 +17,16 @@ test('logout and account switching isolate cached data while preserving the orig
 		await page.goto('/login');
 		await page.locator('input[autocomplete="username"]').fill(username);
 		await page.locator('input[autocomplete="current-password"]').fill('Groly-upgrade-test-2026!');
+		// Wait for the account's initial settings to settle before replacing the document.
+		const settingsReady = page.waitForResponse(async response => {
+			if (new URL(response.url()).pathname !== '/api/users/me' || response.request().method() !== 'GET' || !response.ok()) return false;
+			const { settings } = await response.json();
+			return Boolean(settings.dateFormat && settings.timeFormat);
+		});
 		await page.locator('button[type="submit"]').click();
 		await expect(page).toHaveURL('http://127.0.0.1:3100/');
 		await expect(page.getByText('Familie 🥦', { exact: true }).first()).toBeVisible();
+		await settingsReady;
 	}
 	const queued = () => page.evaluate(() => new Promise<Array<{ userId?: string }>>((resolve, reject) => {
 		const open = indexedDB.open('groly');

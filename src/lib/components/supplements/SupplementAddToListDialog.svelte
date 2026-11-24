@@ -37,7 +37,7 @@
 	async function loadLists() {
 		loading = true;
 		try {
-			const res = await fetch('/api/lists');
+			const res = await fetch('/api/lists?kind=shopping');
 			if (res.ok) { const d = await res.json(); lists = d.lists ?? d ?? []; }
 		} catch { lists = []; }
 		loading = false;
@@ -50,7 +50,7 @@
 			await fetch(`/api/lists/${listId}/items`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: itemName, quantityInfo: null })
+				body: JSON.stringify({ name: itemName, quantityInfo: null, kind: 'shopping' })
 			});
 			supplementId = null;
 		} finally {

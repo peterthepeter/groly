@@ -3,6 +3,7 @@
 </script>
 
 <script lang="ts">
+	import { displayTime } from '#lib/dateDisplay';
 	import { t } from '#lib/i18n.svelte';
 	import { todayKey } from '#lib/dates';
 	import { buildSupplementWeekPlan, type WeekSchedule, type WeekCompletion } from '#lib/supplementWeekPlan';
@@ -52,7 +53,7 @@
 								<span class="week-check" class:checked={group.done} aria-hidden="true">
 									{#if group.done}<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12" /></svg>{/if}
 								</span>
-								<span class="week-time">{group.time}</span>
+								<span class="week-time">{displayTime(group.time)}</span>
 								<span class="week-intake-names">
 									{#each group.entries as entry, entryIndex (entry.id)}
 										{#if entryIndex > 0}<span> · </span>{/if}<span class:done={entry.done}>{entry.name}</span>
@@ -68,7 +69,7 @@
 					{:else}
 						{#each row.entries as entry}
 							{#snippet entryContents(entry: WeekEntry)}
-								<span class="week-time">{entry.time}</span>
+								<span class="week-time">{displayTime(entry.time)}</span>
 								<span class="week-name">{entry.name}</span>
 							{/snippet}
 							{#if onSelectSupplement}
@@ -90,7 +91,7 @@
 	.week-day-label { padding-top: 4px; font-size: 11px; font-weight: 700; line-height: 20px; text-transform: uppercase; letter-spacing: .025em; color: var(--color-on-surface-variant); }
 	.today .week-day-label { color: var(--week-plan-accent); }
 	.week-day-entries { min-width: 0; }
-	.week-entry { display: grid; width: 100%; grid-template-columns: 3.25rem minmax(0, 1fr); align-items: start; padding: 2px 0; text-align: left; line-height: 20px; }
+	.week-entry { display: grid; width: 100%; grid-template-columns: minmax(3.25rem, max-content) minmax(0, 1fr); align-items: start; padding: 2px 0; text-align: left; line-height: 20px; }
 	button.week-entry:active { opacity: .5; }
 	button.week-entry:focus-visible { outline: 2px solid var(--week-plan-accent); outline-offset: 1px; }
 	.week-time { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--color-on-surface-variant); }
@@ -99,9 +100,9 @@
 	.week-empty { padding: 24px 16px; font-size: 13px; text-align: center; color: var(--color-on-surface-variant); }
 	.compact .week-day { grid-template-columns: 2rem minmax(0, 1fr); padding: 4px 16px; }
 	.compact .week-day-label { padding-top: 4px; }
-	.compact .week-entry { grid-template-columns: 3rem minmax(0, 1fr); }
+	.compact .week-entry { grid-template-columns: minmax(3rem, max-content) minmax(0, 1fr); }
 	.compact .week-name { font-size: 13px; font-weight: 550; }
-	.week-intake { display: grid; grid-template-columns: 16px 3rem minmax(0, 1fr); align-items: center; gap: 8px; min-height: 28px; width: 100%; text-align: left; }
+	.week-intake { display: grid; grid-template-columns: 16px minmax(3rem, max-content) minmax(0, 1fr); align-items: center; gap: 8px; min-height: 28px; width: 100%; text-align: left; }
 	.week-intake .week-time { color: var(--week-plan-accent); font-size: 13px; font-weight: 600; }
 	.week-intake-names { min-width: 0; padding: 4px 0; overflow-wrap: anywhere; font-size: 13px; line-height: 20px; color: var(--color-on-surface); }
 	.week-intake-names .done { text-decoration: line-through; color: var(--color-on-surface-variant); }

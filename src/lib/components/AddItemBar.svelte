@@ -1,16 +1,22 @@
 <script lang="ts">
 	import { tick, onMount, onDestroy } from 'svelte';
+	import { Check, Plus, X } from '@lucide/svelte';
 	import { t } from '#lib/i18n.svelte';
+	import SettingsToggleRow from './SettingsToggleRow.svelte';
+	import { generateClientId } from '#lib/sync/manager';
+	import { CHECKLIST_NOTE_LIMIT, CHECKLIST_SECTION_LIMIT, CHECKLIST_SECTION_NAME_LIMIT, type ChecklistSectionChoice, type ChecklistSection } from '#lib/checklists';
 	import { watchVisualViewportBottomOffset } from '#lib/visualViewport';
 	import { getCategoryForItem, getCategoryKey, CATEGORIES } from '#lib/categories';
 	import BarcodeScanner from './BarcodeScanner.svelte';
 	import ItemRow from './ItemRow.svelte';
 	import AddItemModal from './AddItemModal.svelte';
+	import SettingsSelectRow from './SettingsSelectRow.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
 
-	let { onAdd, onClose, suggestions = [], onSearchSuggestions = null, autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null, onEditFavorite = null }: {
-		onAdd: (name: string, quantityInfo: string, favoriteCategoryOverride?: string | null) => Promise<void>;
+	let { onAdd, onClose, checklist, suggestions = [], onSearchSuggestions = null, autoOpenScanner = false, autoOpenFavorites = false, favorites = [], activeItemNames = new Set<string>(), onRemoveFavorite = null, onAddFavorite = null, onEditFavorite = null }: {
+		onAdd: (name: string, quantityInfo: string, favoriteCategoryOverride?: string | null, sectionId?: string | null, choice?: ChecklistSectionChoice, checklistNote?: string | null) => Promise<void>;
 		onClose: () => void;
+		checklist?: { onSetDefault: (section: string | null) => Promise<void>; canManageSections: boolean; sections: ChecklistSection[]; defaultSectionId: string | null };
 		suggestions?: string[];
 		onSearchSuggestions?: ((query: string, signal: AbortSignal) => Promise<string[]>) | null;
 		autoOpenScanner?: boolean;
@@ -18,13 +24,52 @@
 		favorites?: Array<{ name: string; quantityInfo: string | null; categoryOverride: string | null }>;
 		activeItemNames?: Set<string>;
 		onEditFavorite?: ((previousName: string, name: string, quantityInfo: string, categoryOverride: string | null) => Promise<void>) | null;
-		onRemoveFavorite?: ((name: string) => void) | null;
-		onAddFavorite?: ((name: string, quantityInfo: string) => void) | null;
+		onRemoveFavorite?: ((name: string) => Promise<void>) | null;
+		onAddFavorite?: ((name: string, quantityInfo: string) => Promise<void>) | null;
 	} = $props();
 
 	let name = $state('');
 	let quantityInfo = $state('');
+	let note = $state('');
+	let noteInput = $state<HTMLTextAreaElement>();
+	let sectionNameInput = $state<HTMLInputElement>();
+	let sectionChoice = $state<string>();
+	const newSectionOption = ':new';
+	let sectionName = $state('');
+	let setDefault = $state(false);
+	let draftSectionId = '';
+	const creatingSection = $derived(sectionChoice === newSectionOption);
+	const invalidSection = $derived(creatingSection && (!sectionName.trim() || checklist?.sections.some(row =>
+		row.name.toLowerCase() === sectionName.trim().toLowerCase())));
+	let defaultError = $state(false);
+	async function chooseSection(value: string) {
+		defaultError = false;
+		if (value === ':default') {
+			try { await checklist?.onSetDefault(sectionId || null); }
+			catch { defaultError = true; }
+			return;
+		}
+		if (creatingSection && value !== newSectionOption && document.activeElement === sectionNameInput) {
+			nameInput?.focus({ preventScroll: true });
+		}
+		sectionName = '';
+		sectionChoice = value;
+		setDefault = false;
+		if (value === newSectionOption) draftSectionId = generateClientId();
+	}
+	const sectionOptions = $derived([
+		{ value: '', label: t.checklist_no_section },
+		...(checklist?.sections ?? []).map(section => ({ value: section.id, label: section.name })),
+		...(checklist?.canManageSections && checklist.sections.length < CHECKLIST_SECTION_LIMIT ? [{ value: newSectionOption, label: t.checklist_new_section }] : []),
+		...(checklist?.canManageSections && !creatingSection && sectionChoice !== undefined && sectionChoice !== (checklist.defaultSectionId ?? '')
+			? [{ value: ':default', label: t.checklist_set_default }] : [])
+	]);
+	const sectionId = $derived(sectionOptions.find(option => option.value === (sectionChoice ?? checklist?.defaultSectionId))?.value ?? '');
 	let nameInput = $state<HTMLInputElement | undefined>(undefined);
+	function isChecklistInputFocused() {
+		const focused = document.activeElement;
+		return focused === nameInput || focused === noteInput || focused === sectionNameInput;
+	}
 	let feedbackSuggestions = $state<string[] | null>(null);
 	let pendingSuggestions = $state(new Set<string>());
 	let confirmedSuggestions = $state(new Set<string>());
@@ -34,9 +79,14 @@
 	let destroyed = false;
 	let remoteSuggestions = $state<string[]>([]);
 	let bottomOffset = $state(0);
+	let checklistViewport = $state<{ top: number; height: number; keyboardOpen: boolean } | null>(null);
+	let checklistFocusTimer: ReturnType<typeof setTimeout> | undefined;
 	let scannerOpen = $state(false);
 	let favoritesOpen = $state(false);
+	const sheetViewport = $derived(checklist && !favoritesOpen ? checklistViewport : null);
+	let favoritesOpenedFromEntry = $state(false);
 	let addedName = $state<string | null>(null);
+	let checklistFavoriteFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
 	let removeTarget = $state<string | null>(null);
 	let editFavorite = $state<(typeof favorites)[number] | null>(null);
 	let favoriteSaving = $state(false);
@@ -47,6 +97,8 @@
 	let newFavName = $state('');
 	let newFavQty = $state('');
 	let favAddedFeedback = $state(false);
+	let favoritesError = $state(false);
+	let newFavoriteError = $state(false);
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let favScrollEl: HTMLElement | null = $state(null);
 	let submissionChain: Promise<void> = Promise.resolve();
@@ -54,29 +106,63 @@
 	// Sort favorites by category order
 	const CATEGORY_ORDER = new Map<string, number>(CATEGORIES.map((c, i) => [c.key, i]));
 	const sortedFavorites = $derived(
-		[...favorites].sort((a, b) => {
+		checklist ? favorites : [...favorites].sort((a, b) => {
 			const aIdx = CATEGORY_ORDER.get(getCategoryKey(a.name, a.categoryOverride)) ?? CATEGORIES.length;
 			const bIdx = CATEGORY_ORDER.get(getCategoryKey(b.name, b.categoryOverride)) ?? CATEGORIES.length;
 			return aIdx - bIdx;
 		})
 	);
 
-	// Scroll to bottom when favorites panel opens
+	// The shopping layout fills from the bottom. Checklist favorites start at the section selector.
 	$effect(() => {
-		if (favoritesOpen) {
+		if (favoritesOpen && !checklist) {
 			tick().then(() => {
 				if (favScrollEl) favScrollEl.scrollTop = favScrollEl.scrollHeight;
 			});
 		}
 	});
 
-	function submitNewFavorite() {
-		if (!newFavName.trim()) return;
-		onAddFavorite?.(newFavName.trim(), newFavQty.trim());
-		newFavName = '';
+	function openNewFavorite() {
+		newFavName = checklist ? name.trim() : '';
 		newFavQty = '';
-		favAddedFeedback = true;
-		setTimeout(() => { favAddedFeedback = false; }, 1200);
+		newFavoriteError = false;
+		addFavOpen = true;
+	}
+
+	async function submitNewFavorite() {
+		if (!newFavName.trim() || !onAddFavorite || favoriteSaving) return;
+		const submittedName = newFavName;
+		const submittedQuantity = newFavQty;
+		favoriteSaving = true;
+		newFavoriteError = false;
+		try {
+			await onAddFavorite(submittedName.trim(), submittedQuantity.trim());
+			if (newFavName === submittedName && newFavQty === submittedQuantity) {
+				newFavName = '';
+				newFavQty = '';
+			}
+			favAddedFeedback = true;
+			setTimeout(() => { favAddedFeedback = false; }, 1200);
+		} catch {
+			newFavoriteError = true;
+		} finally {
+			favoriteSaving = false;
+		}
+	}
+
+	async function removeFavorite() {
+		if (!removeTarget || !onRemoveFavorite || favoriteSaving) return;
+		favoriteSaving = true;
+		favoritesError = false;
+		try {
+			await onRemoveFavorite(removeTarget);
+			editFavorite = null;
+		} catch {
+			favoritesError = true;
+		} finally {
+			removeTarget = null;
+			favoriteSaving = false;
+		}
 	}
 
 	function openFavoriteEditor(favoriteName: string) {
@@ -114,12 +200,68 @@
 	async function handleFavAdd(fav: { name: string; quantityInfo: string | null; categoryOverride: string | null }) {
 		if (favLongPressFired) { favLongPressFired = false; return; }
 		if (editFavorite) return;
+		if (checklist) {
+			if (favoriteSaving) return;
+			favoriteSaving = true;
+			favoritesError = false;
+			announcement = '';
+			try {
+				await enqueueItems([{ name: fav.name, quantityInfo: '' }]);
+				if (destroyed) return;
+				if (name.trim() === fav.name && !note) name = '';
+				addedName = fav.name;
+				clearTimeout(checklistFavoriteFeedbackTimer);
+				checklistFavoriteFeedbackTimer = setTimeout(() => { addedName = null; }, 1000);
+				announcement = `${fav.name}: ${t.item_suggestion_added}`;
+			} catch {
+				favoritesError = true;
+			} finally {
+				favoriteSaving = false;
+			}
+			return;
+		}
 		addedName = fav.name;
 		await onAdd(fav.name, fav.quantityInfo ?? '', fav.categoryOverride);
 		setTimeout(() => { if (addedName === fav.name) addedName = null; }, 1000);
 	}
+
+	async function returnToEntry() {
+		favoritesOpen = false;
+		await tick();
+		nameInput?.focus({ preventScroll: true });
+	}
+
+	function updateChecklistViewport(viewport: VisualViewport) {
+		const top = viewport.pageTop;
+		if (checklistFocusTimer !== undefined && checklistViewport) {
+			checklistViewport = { ...checklistViewport, top };
+			return;
+		}
+		checklistViewport = {
+			top,
+			height: viewport.height,
+			keyboardOpen: Math.round(viewport.height) < document.documentElement.clientHeight
+		};
+	}
+
+	function focusChecklistField(event: MouseEvent) {
+		if (event.button !== 0 || !sheetViewport?.keyboardOpen || !isChecklistInputFocused()) return;
+		const field = event.currentTarget as HTMLInputElement | HTMLTextAreaElement;
+		if (document.activeElement !== field) field.focus({ preventScroll: true });
+	}
+
+	function settleChecklistFocus() {
+		if (!sheetViewport?.keyboardOpen) return;
+		// Keep the keyboard edge stable while WebKit switches text fields, but keep compensating for page panning.
+		clearTimeout(checklistFocusTimer);
+		checklistFocusTimer = setTimeout(() => {
+			checklistFocusTimer = undefined;
+			if (window.visualViewport) updateChecklistViewport(window.visualViewport);
+		}, 150);
+	}
+
 	onMount(() => {
-		if (autoOpenScanner) {
+		if (autoOpenScanner && !checklist) {
 			scannerOpen = true;
 		} else if (autoOpenFavorites) {
 			favoritesOpen = true;
@@ -127,8 +269,9 @@
 			nameInput?.focus();
 		}
 
-		return watchVisualViewportBottomOffset((offset) => {
+		return watchVisualViewportBottomOffset((offset, viewport) => {
 			bottomOffset = offset;
+			if (checklist && viewport) updateChecklistViewport(viewport);
 		});
 	});
 
@@ -155,7 +298,7 @@
 		return { name: trimmed, quantityInfo: '' };
 	}
 
-	const isMultiItem = $derived(name.includes(','));
+	const isMultiItem = $derived(!checklist && name.includes(','));
 	const parsedItems = $derived(
 		isMultiItem
 			? name.split(',').map(t => t.trim()).filter(t => t.length > 0).map(parseQuickItem)
@@ -213,12 +356,23 @@
 		destroyed = true;
 		endLongPress();
 		clearTimeout(feedbackTimer);
+		clearTimeout(checklistFavoriteFeedbackTimer);
+		clearTimeout(checklistFocusTimer);
 	});
 
-	function enqueueItems(entries: Array<{ name: string; quantityInfo: string }>, onCreated?: () => void) {
+	function enqueueItems(entries: Array<{ name: string; quantityInfo: string; checklistNote?: string | null }>, onCreated?: () => void) {
+		if (invalidSection) return Promise.reject(new Error('Invalid section name'));
+		const newSection = creatingSection ? { id: draftSectionId, name: sectionName.trim() } : undefined;
+		const targetSection = checklist ? newSection?.id ?? (sectionId || null) : undefined;
+		const choice = newSection || setDefault ? { newSection, setDefault } : undefined;
 		const submission = submissionChain.then(async () => {
 			for (const item of entries) {
-				await onAdd(item.name, item.quantityInfo);
+				await onAdd(item.name, item.quantityInfo, undefined, targetSection, choice, item.checklistNote);
+				if (newSection && creatingSection && draftSectionId === newSection.id) {
+					sectionChoice = newSection.id;
+					sectionName = '';
+				}
+				if (choice && sectionChoice === (targetSection ?? '')) setDefault = false;
 				onCreated?.();
 			}
 		});
@@ -228,15 +382,16 @@
 	}
 
 	async function handleAdd() {
-		if (!name.trim()) return;
+		if (invalidSection || !name.trim()) return;
 		clearFeedback();
 		addError = false;
 		let completed = 0;
-		const entries = isMultiItem
+		const entries: Array<{ name: string; quantityInfo: string; checklistNote?: string | null }> = isMultiItem
 			? parsedItems.filter((item) => item.name).map((item) => ({ ...item }))
-			: [{ name: name.trim(), quantityInfo: quantityInfo.trim() }];
+			: [{ name: name.trim(), quantityInfo: quantityInfo.trim(), ...(checklist ? { checklistNote: note.trim() || null } : {}) }];
 		name = '';
 		quantityInfo = '';
+		note = '';
 		nameInput?.focus({ preventScroll: true });
 		try {
 			await enqueueItems(entries, () => completed++);
@@ -248,6 +403,7 @@
 				const remaining = entries.slice(completed);
 				name = remaining.length === 1 ? remaining[0].name : remaining.map(item => `${item.quantityInfo} ${item.name}`.trim()).join(', ');
 				quantityInfo = remaining.length === 1 ? remaining[0].quantityInfo : '';
+				if (!note && remaining.length === 1) note = remaining[0].checklistNote ?? '';
 			}
 			addError = true;
 		}
@@ -297,13 +453,35 @@
 	}
 </script>
 
+{#snippet sectionSelect()}
+	<div class="add-item-section">
+		<div class:inset-row-divider={creatingSection}><SettingsSelectRow label={t.checklist_section} value={sectionId} options={sectionOptions}
+			onchange={chooseSection} keepInputFocus={isChecklistInputFocused} /></div>
+		{#if defaultError}<p role="alert" class="px-4 text-sm" style="color: var(--color-error)">{t.checklist_edit_error}</p>{/if}
+		{#if creatingSection}
+			<div class="section-field inset-row-divider">
+				<input class="w-full min-h-11 px-4 text-base font-medium bg-transparent outline-none" aria-label={t.checklist_section_name} placeholder={t.checklist_section_name}
+				maxlength={CHECKLIST_SECTION_NAME_LIMIT} bind:this={sectionNameInput} bind:value={sectionName}
+				onkeydown={event => { if (event.key === 'Enter') nameInput?.focus(); }} />
+			</div>
+			<SettingsToggleRow label={t.checklist_set_default} checked={setDefault} onchange={() => setDefault = !setDefault} />
+		{/if}
+	</div>
+{/snippet}
+
 <!-- Backdrop -->
 <div class="fixed inset-0" style="z-index: 50; background-color: rgba(0,0,0,0.5)"></div>
 
 <!-- Bottom sheet -->
-<div class="fixed left-0 right-0 z-[60] max-w-[430px] mx-auto" style="bottom: {bottomOffset}px">
+<div class="fixed left-0 right-0 z-[60] max-w-[430px] mx-auto"
+	class:checklist-viewport-sheet={sheetViewport !== null}
+	style:bottom={sheetViewport ? undefined : `${bottomOffset}px`}
+	style:--checklist-viewport-top={sheetViewport ? `${sheetViewport.top}px` : undefined}
+	style:--checklist-viewport-height={sheetViewport ? `${sheetViewport.height}px` : undefined}>
 	<div class="add-item-surface rounded-t-3xl px-4 pt-3 shadow-2xl"
-	     style="background-color: var(--modal-bg); --add-item-safe-area: {bottomOffset > 0 ? '0px' : 'env(safe-area-inset-bottom, 0px)'}">
+	     class:checklist-entry-form={checklist && !favoritesOpen}
+	     style="background-color: var(--modal-bg); --add-item-safe-area: {(sheetViewport?.keyboardOpen ?? (bottomOffset > 0)) ? '0px' : 'env(safe-area-inset-bottom, 0px)'}"
+	     style:--add-keyboard-offset={`${bottomOffset}px`}>
 
 		<!-- Handle -->
 		<div class="flex justify-center mb-3">
@@ -313,7 +491,31 @@
 		{#if favoritesOpen}
 			<!-- Favorites follow the shopping list layout preference. -->
 			<div class="fav-scroll overflow-y-auto mb-3" style="max-height: calc(80vh - 140px)" bind:this={favScrollEl}>
-				{#if sortedFavorites.length === 0}
+				{#if checklist}
+					<div class="shopping-items-surface">
+						<div class="inset-row-divider">{@render sectionSelect()}</div>
+						{#if sortedFavorites.length === 0}
+							<p class="text-sm text-center px-4 py-3" style="color: var(--color-on-surface-variant)">{t.checklist_saved_empty}</p>
+						{:else}
+							{#each sortedFavorites as fav, index (fav.name)}
+								<div class="flex items-stretch" class:inset-row-divider={index < sortedFavorites.length - 1}>
+									<button type="button" class="checklist-favorite-action flex min-w-0 flex-1 items-center justify-between gap-2 py-2 pl-4 pr-1 text-left text-sm font-semibold" aria-disabled={favoriteSaving} onclick={() => handleFavAdd(fav)}>
+										<span class="break-words min-w-0">{fav.name}</span>
+										{#if addedName === fav.name}
+											<Check size={18} class="shrink-0" color="var(--color-primary)" aria-hidden="true" />
+										{:else}
+											<Plus size={18} class="shrink-0" color="var(--color-primary)" aria-hidden="true" />
+										{/if}
+									</button>
+									<button type="button" class="checklist-favorite-action grid min-h-11 w-11 shrink-0 place-items-center" style="color: var(--color-on-surface-variant)"
+										disabled={favoriteSaving} aria-label={`${t.checklist_saved_remove} · ${fav.name}`} onclick={() => removeTarget = fav.name}>
+										<X size={16} aria-hidden="true" />
+									</button>
+								</div>
+							{/each}
+						{/if}
+					</div>
+				{:else if sortedFavorites.length === 0}
 					<p class="text-sm text-center py-8" style="color: var(--color-on-surface-variant)">{t.favorites_empty}</p>
 				{:else if userSettings.itemLayout === 'list'}
 					<div class="shopping-items-surface">
@@ -384,13 +586,20 @@
 					</div>
 				{/if}
 			</div>
+			{#if favoritesError}
+				<p class="suggestion-message suggestion-error mb-2" role="alert">{t.list_save_error}</p>
+			{/if}
+			{#if checklist}
+				<span class="sr-only" role="status" aria-live="polite">{announcement}</span>
+			{/if}
 
 			<div class="flex gap-2">
 				<!-- Add Item (= neuen Favoriten hinzufügen) -->
 				<button
 					type="button"
 					onpointerdown={(e) => e.preventDefault()}
-					onclick={() => { addFavOpen = true; newFavName = ''; newFavQty = ''; }}
+					onclick={openNewFavorite}
+					disabled={favoriteSaving}
 					class="flex-1 h-12 rounded-full flex items-center justify-center gap-1.5 text-sm font-semibold"
 					style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 				>
@@ -398,7 +607,8 @@
 				</button>
 				<!-- Close -->
 				<button
-					onclick={onClose}
+					onclick={checklist && favoritesOpenedFromEntry ? returnToEntry : onClose}
+					disabled={favoriteSaving}
 					class="flex-1 h-12 rounded-full text-sm font-semibold"
 					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
 				>
@@ -434,12 +644,14 @@
 							<button
 								type="button"
 								onclick={() => removeTarget = null}
+								disabled={favoriteSaving}
 							>
 								{t.item_cancel}
 							</button>
 							<button
 								type="button"
-								onclick={() => { onRemoveFavorite?.(removeTarget!); removeTarget = null; editFavorite = null; }}
+								onclick={removeFavorite}
+								disabled={favoriteSaving}
 								class="favorite-remove-confirm"
 							>
 								{t.favorites_remove_action}
@@ -453,7 +665,7 @@
 			{#if addFavOpen}
 				<div class="fixed inset-0 z-[70] flex items-end justify-center pb-6 px-4"
 				     style="background-color: rgba(0,0,0,0.5)"
-				     role="dialog" aria-modal="true">
+				     role="dialog" aria-modal="true" aria-label={t.favorites_new}>
 					<div class="w-full max-w-[400px] rounded-3xl shadow-2xl"
 					     style="background-color: var(--color-surface-low)">
 						<div class="px-5 pt-5 pb-3">
@@ -462,23 +674,26 @@
 								<!-- svelte-ignore a11y_autofocus -->
 								<input
 									type="text"
-									placeholder={t.item_name_label}
+									placeholder={checklist ? t.checklist_entry : t.item_name_label}
+									aria-label={checklist ? t.checklist_entry : t.item_name_label}
 									bind:value={newFavName}
 									autofocus
 									autocomplete="off"
-									onkeydown={(e) => { if (e.key === 'Enter') submitNewFavorite(); if (e.key === 'Escape') addFavOpen = false; }}
+									onkeydown={(e) => { if (e.key === 'Enter') submitNewFavorite(); if (e.key === 'Escape' && !favoriteSaving) addFavOpen = false; }}
 									class="w-full rounded-xl px-4 py-3 text-base font-medium outline-none"
 									style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
 								/>
-								<input
-									type="text"
-									placeholder={t.item_quantity_placeholder}
-									bind:value={newFavQty}
-									autocomplete="off"
-									onkeydown={(e) => { if (e.key === 'Enter') submitNewFavorite(); if (e.key === 'Escape') addFavOpen = false; }}
-									class="w-full rounded-xl px-4 py-3 text-base outline-none"
-									style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
-								/>
+								{#if !checklist}
+									<input
+										type="text"
+										placeholder={t.item_quantity_placeholder}
+										bind:value={newFavQty}
+										autocomplete="off"
+										onkeydown={(e) => { if (e.key === 'Enter') submitNewFavorite(); if (e.key === 'Escape' && !favoriteSaving) addFavOpen = false; }}
+										class="w-full rounded-xl px-4 py-3 text-base outline-none"
+										style="background-color: var(--color-surface-container); color: var(--color-on-surface)"
+									/>
+								{/if}
 							</div>
 							<!-- Hinzugefügt-Feedback -->
 							{#if favAddedFeedback}
@@ -491,18 +706,22 @@
 									<span class="text-sm font-medium" style="color: var(--color-primary)">{t.favorites_add}</span>
 								</div>
 							{/if}
+							{#if newFavoriteError}
+								<p class="suggestion-message suggestion-error mt-3" role="alert">{t.list_save_error}</p>
+							{/if}
 						</div>
 						<div class="flex gap-2 p-3 pt-0">
 							<button
 								onpointerdown={(e) => e.preventDefault()}
 								onclick={() => addFavOpen = false}
+								disabled={favoriteSaving}
 								class="flex-1 py-3.5 rounded-full text-sm font-semibold"
 								style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
 							>{t.close}</button>
 							<button
 								onpointerdown={(e) => e.preventDefault()}
 								onclick={submitNewFavorite}
-								disabled={!newFavName.trim()}
+								disabled={favoriteSaving || !newFavName.trim()}
 								class="flex-1 py-3.5 rounded-full text-sm font-semibold disabled:opacity-40"
 								style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 							>{t.add}</button>
@@ -515,82 +734,92 @@
 			<!-- === Normal-Modus === -->
 
 			<!-- Fixed workspace: changing matches never resize the focused input's fixed parent. -->
-			<section class="suggestion-workspace" aria-label={t.item_suggestions}>
-				<div class="suggestion-chips">
-					{#if addError}
-						<p class="suggestion-message suggestion-error" role="alert">{t.item_add_error}</p>
-					{:else}
-						{#each displayedSuggestions as s (s)}
-							{@const normalized = s.trim().toLowerCase()}
-							{@const alreadyAdded = activeItemNames.has(normalized)}
-							{@const confirmed = confirmedSuggestions.has(normalized)}
-							<button
-								type="button"
-								onpointerdown={(e) => e.preventDefault()}
-								onclick={() => pickSuggestion(s)}
-								aria-disabled={alreadyAdded || pendingSuggestions.has(normalized)}
-								aria-label={alreadyAdded ? `${s}: ${t.item_suggestion_on_list}` : s}
-								title={s}
-								class="suggestion-chip"
-								class:on-list={alreadyAdded && !confirmed && !pendingSuggestions.has(normalized)}
-								class:confirmed
-							>
-								<span class="suggestion-chip-label" class:invisible={confirmed}>{s}</span>
-								{#if alreadyAdded && !confirmed && !pendingSuggestions.has(normalized)}
-									<svg class="suggestion-existing-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-								{/if}
-								{#if confirmed}
-									<svg class="suggestion-confirmation" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-								{/if}
-							</button>
-						{/each}
-					{/if}
-				</div>
-			</section>
+			{#if !checklist}
+				<section class="suggestion-workspace" aria-label={t.item_suggestions}>
+					<div class="suggestion-chips">
+						{#if addError}
+							<p class="suggestion-message suggestion-error" role="alert">{t.item_add_error}</p>
+						{:else}
+							{#each displayedSuggestions as s (s)}
+								{@const normalized = s.trim().toLowerCase()}
+								{@const alreadyAdded = activeItemNames.has(normalized)}
+								{@const confirmed = confirmedSuggestions.has(normalized)}
+								<button
+									type="button"
+									onpointerdown={(e) => e.preventDefault()}
+									onclick={() => pickSuggestion(s)}
+									aria-disabled={alreadyAdded || pendingSuggestions.has(normalized)}
+									aria-label={alreadyAdded ? `${s}: ${t.item_suggestion_on_list}` : s}
+									title={s}
+									class="suggestion-chip"
+									class:on-list={alreadyAdded && !confirmed && !pendingSuggestions.has(normalized)}
+									class:confirmed
+								>
+									<span class="suggestion-chip-label" class:invisible={confirmed}>{s}</span>
+									{#if alreadyAdded && !confirmed && !pendingSuggestions.has(normalized)}
+										<svg class="suggestion-existing-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+									{/if}
+									{#if confirmed}
+										<svg class="suggestion-confirmation" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+									{/if}
+								</button>
+							{/each}
+						{/if}
+					</div>
+				</section>
+			{:else if addError}
+				<p class="suggestion-message suggestion-error mb-2" role="alert">{t.item_add_error}</p>
+			{/if}
 			<span class="sr-only" role="status" aria-live="polite">{announcement}</span>
 
 			<!-- Eingabefelder -->
-			<div class="mb-3">
+			<div class="mb-3 entry-inputs">
 				<div class="rounded-2xl overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
 					{#if !isMultiItem}
-						<div class="flex items-center gap-2 px-4" style="height: 44px">
-							<input
-								type="text"
-								placeholder={t.item_quantity_placeholder}
-								aria-label={t.item_quantity_placeholder}
-								bind:value={quantityInfo}
-								onkeydown={handleKeydown}
-								autocomplete="off"
-								class="flex-1 bg-transparent outline-none text-sm min-w-0"
-								style="color: var(--color-on-surface)"
-							/>
-							<button
-								onpointerdown={(e) => e.preventDefault()}
-								onclick={decrement}
-								disabled={!isNumeric || quantityInfo.trim() === ''}
-								tabindex="-1"
-								class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
-								style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-							>−</button>
-							<button
-								onpointerdown={(e) => e.preventDefault()}
-								onclick={increment}
-								disabled={!isNumeric}
-								tabindex="-1"
-								class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
-								style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-							>+</button>
-						</div>
+						{#if checklist}
+							{@render sectionSelect()}
+						{:else}
+							<div class="flex items-center gap-2 px-4" style="height: 44px">
+								<input
+									type="text"
+									placeholder={t.item_quantity_placeholder}
+									aria-label={t.item_quantity_placeholder}
+									bind:value={quantityInfo}
+									onkeydown={handleKeydown}
+									autocomplete="off"
+									class="flex-1 bg-transparent outline-none text-sm min-w-0"
+									style="color: var(--color-on-surface)"
+								/>
+								<button
+									onpointerdown={(e) => e.preventDefault()}
+									onclick={decrement}
+									disabled={!isNumeric || quantityInfo.trim() === ''}
+									tabindex="-1"
+									class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+									style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+								>−</button>
+								<button
+									onpointerdown={(e) => e.preventDefault()}
+									onclick={increment}
+									disabled={!isNumeric}
+									tabindex="-1"
+									class="w-7 h-7 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 disabled:opacity-30 transition-opacity"
+									style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+								>+</button>
+							</div>
+						{/if}
 						<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
 					{/if}
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						bind:this={nameInput}
 						data-add-item-name
-						aria-label={t.item_name_label}
+						aria-label={checklist ? t.checklist_entry : t.item_name_label}
 						type="text"
-						placeholder={t.item_name_placeholder}
+						placeholder={checklist ? t.checklist_entry : t.item_name_placeholder}
 						bind:value={name}
+						onmousedown={focusChecklistField}
+						onfocus={settleChecklistFocus}
 						oninput={handleInput}
 						onkeydown={handleKeydown}
 						autofocus={!autoOpenScanner && !autoOpenFavorites}
@@ -598,6 +827,14 @@
 						class="w-full px-4 text-base font-medium outline-none bg-transparent"
 						style="color: var(--color-on-surface); height: 44px"
 					/>
+					{#if checklist}
+						<div class="h-px mx-4" style="background-color: var(--color-outline-variant)"></div>
+						<textarea class="block min-h-11 w-full resize-none bg-transparent px-4 py-2.5 text-base outline-none"
+							style="color: var(--color-on-surface)" rows="2" maxlength={CHECKLIST_NOTE_LIMIT}
+							aria-label={t.checklist_note} placeholder={t.checklist_note} bind:this={noteInput} bind:value={note}
+							onmousedown={focusChecklistField} onfocus={settleChecklistFocus}
+							onkeydown={event => { if (event.key === 'Escape') onClose(); }}></textarea>
+					{/if}
 				</div>
 
 				<!-- Multi-item preview chips -->
@@ -620,33 +857,40 @@
 				<button
 					type="button"
 					onpointerdown={(e) => e.preventDefault()}
-					onclick={() => { (document.activeElement as HTMLElement)?.blur(); favoritesOpen = true; }}
+					onclick={() => {
+						(document.activeElement as HTMLElement)?.blur();
+						favoritesError = false;
+						favoritesOpenedFromEntry = true;
+						favoritesOpen = true;
+					}}
 					class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
 					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-					aria-label={t.favorites_panel_toggle}
+					aria-label={checklist ? t.checklist_saved : t.favorites_panel_toggle}
 				>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">
 						<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
 					</svg>
 				</button>
-				<button
-					type="button"
-					onpointerdown={(e) => e.preventDefault()}
-					onclick={() => { (document.activeElement as HTMLElement)?.blur(); scannerOpen = true; }}
-					class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-					style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
-					aria-label={t.barcode_scan}
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">
-						<path d="M3 9V6a2 2 0 0 1 2-2h2"/>
-						<path d="M3 15v3a2 2 0 0 0 2 2h2"/>
-						<path d="M21 9V6a2 2 0 0 0-2-2h-2"/>
-						<path d="M21 15v3a2 2 0 0 1-2 2h-2"/>
-						<line x1="10" y1="9" x2="10" y2="15"/>
-						<line x1="13" y1="9" x2="13" y2="15"/>
-						<line x1="16" y1="9" x2="16" y2="15"/>
-					</svg>
-				</button>
+				{#if !checklist}
+					<button
+						type="button"
+						onpointerdown={(e) => e.preventDefault()}
+						onclick={() => { (document.activeElement as HTMLElement)?.blur(); scannerOpen = true; }}
+						class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+						style="background-color: var(--color-surface-high); color: var(--color-on-surface-variant)"
+						aria-label={t.barcode_scan}
+					>
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">
+							<path d="M3 9V6a2 2 0 0 1 2-2h2"/>
+							<path d="M3 15v3a2 2 0 0 0 2 2h2"/>
+							<path d="M21 9V6a2 2 0 0 0-2-2h-2"/>
+							<path d="M21 15v3a2 2 0 0 1-2 2h-2"/>
+							<line x1="10" y1="9" x2="10" y2="15"/>
+							<line x1="13" y1="9" x2="13" y2="15"/>
+							<line x1="16" y1="9" x2="16" y2="15"/>
+						</svg>
+					</button>
+				{/if}
 				<button
 					onclick={onClose}
 					class="flex-1 h-12 rounded-full text-sm font-semibold"
@@ -656,9 +900,10 @@
 				</button>
 				<button
 					type="button"
-					onpointerdown={(e) => e.preventDefault()}
+					onpointerdown={event => { if (!checklist) event.preventDefault(); }}
+					onmousedown={event => { if (checklist) event.preventDefault(); }}
 					onclick={handleAdd}
-					disabled={!name.trim()}
+					disabled={invalidSection || !name.trim()}
 					class="h-12 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
 					style="flex: 2; background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
 				>
@@ -681,6 +926,30 @@
 {/if}
 
 <style>
+	/* Anchor the checklist form in page coordinates so iOS focus panning cannot move it behind the keyboard. */
+	.checklist-viewport-sheet {
+		position: absolute;
+		top: var(--checklist-viewport-top);
+		height: var(--checklist-viewport-height);
+		display: flex;
+		align-items: end;
+		pointer-events: none;
+	}
+	.checklist-viewport-sheet > .add-item-surface { width: 100%; pointer-events: auto; }
+	.checklist-entry-form {
+		display: flex;
+		flex-direction: column;
+		max-height: var(--checklist-viewport-height, calc(100dvh - var(--add-keyboard-offset)));
+	}
+	.checklist-entry-form > :not(.entry-inputs) { flex-shrink: 0; }
+	.checklist-entry-form .entry-inputs { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+	.checklist-favorite-action:active { background: var(--bubble-interactive-bg); }
+	.checklist-favorite-action:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: 8px; }
+
+	.add-item-section :global(.settings-select-row), .add-item-section :global(.settings-toggle-header) {
+		padding-inline: 16px;
+	}
+
 	.favorite-remove-overlay {
 		position: fixed;
 		inset: 0;

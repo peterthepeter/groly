@@ -1,4 +1,4 @@
-export type ListIconId = 'supermarkt' | 'drogerie' | 'bio' | 'baeckerei' | 'haushalt' | 'online' | 'laden' | 'apotheke' | 'rezept';
+export type ListIconId = 'supermarkt' | 'drogerie' | 'bio' | 'baeckerei' | 'haushalt' | 'online' | 'laden' | 'apotheke' | 'rezept' | 'checklist' | 'rucksack' | 'koffer';
 
 export interface ListIcon {
 	id: ListIconId;
@@ -71,6 +71,27 @@ export const LIST_ICONS: ListIcon[] = [
 		labelEn: 'Recipe',
 		color: '#b45309',
 		svgContent: '<path d="M4 21H20V17C21 14 23 12 22 9C21 6 19 4 17 4C16 4 15 8 15 8C14 6 13 3 12 3C11 3 10 6 9 8C9 8 8 6 7 4C5 4 3 6 2 9C1 12 3 14 4 17Z"/>'
+	},
+	{
+		id: 'checklist',
+		label: 'Häkchenliste',
+		labelEn: 'Checklist',
+		color: '#398542',
+		svgContent: '<path d="M3 4.5l2 2 3-4M3 12l2 2 3-4M3 19.5l2 2 3-4M11 4.5h10M11 12h10M11 19.5h10"/>'
+	},
+	{
+		id: 'rucksack',
+		label: 'Rucksack',
+		labelEn: 'Backpack',
+		color: '#2e7990',
+		svgContent: '<rect x="3" y="6" width="18" height="16" rx="4"/><path d="M9 6V5a3 3 0 0 1 6 0v1M3 13h18M11 16h2"/>'
+	},
+	{
+		id: 'koffer',
+		label: 'Koffer',
+		labelEn: 'Suitcase',
+		color: '#8258a0',
+		svgContent: '<rect x="2" y="5.5" width="20" height="15.5" rx="2"/><path d="M9 5.5v-3h6v3M7.5 5.5V21M16.5 5.5V21"/>'
 	}
 ];
 

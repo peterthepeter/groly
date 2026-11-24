@@ -49,7 +49,7 @@ Shared, offline-first shopping lists with real-time sync, smart suggestions, bar
 - **Barcode scan** – Scan product barcodes with your camera to add items directly to your list (iOS and Android). Uses the native [BarcodeDetector API](https://developer.mozilla.org/en-US/docs/Web/API/BarcodeDetector) where available (Chrome/Android) with [ZBar WASM](https://github.com/undecaf/zbar-wasm) as a fallback for iOS and Firefox. Product names are looked up via [Open Food Facts](https://world.openfoodfacts.org/), [Open Products Facts](https://world.openproductsfacts.org/), and [Open Beauty Facts](https://world.openbeautyfacts.org/) — open, community-maintained product databases covering food, household, and personal care items. No API key required. Lookups are routed through your server (user IPs are not exposed) and cached persistently in SQLite. An offline indicator is shown in the scanner when there is no internet connection.
 - **Category sorting** – Items are automatically assigned a category based on keyword matching (e.g. "milk" → Dairy, "apple" → Fruit & Vegetables). The display order of categories can be customized in Settings to match your supermarket layout — globally or individually per list. Users can also override the category of any single item.
 - **Quick entry** – Add multiple items at once by separating them with commas — e.g. `2x Milk, 500g Ground beef, Bread`. Quantities at the start of each item are recognized automatically.
-- **Smart suggestions** – When adding items, previously used item names are suggested. Suggestions are tracked per user in a dedicated history table and ranked by usage frequency. Checked-off items older than 60 days are automatically removed from the database; suggestion history is retained for 6 months after last use.
+- **Smart suggestions** – When adding items, previously used item names are suggested. Suggestions are tracked per user in a dedicated history table and ranked by usage frequency. Suggestion history is retained for 6 months after last use.
 - **Swipe to peek** – Swipe left or right on any item tile whose name is truncated to reveal the full name in an overlay, without accidentally checking it off.
 - **Favourites** – Long-press an item and tap the star next to the quantity field to save it as a favourite. Favourited items are marked with a small green dot on their tile (can be turned off in Settings → Display). Open the favourites panel via + → Favourites to quickly re-add them to any list, sorted by category. Long-press a favourite card to remove it.
 
@@ -320,7 +320,7 @@ Generate a VAPID key pair once in Groly's container console, or in a Node.js
 environment with `web-push` installed:
 
 ```sh
-node -e "const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(JSON.stringify(k,null,2))"
+node --input-type=module -e "import { generateVAPIDKeys } from 'web-push'; console.log(JSON.stringify(generateVAPIDKeys(), null, 2))"
 ```
 
 Add to your environment:
@@ -384,7 +384,7 @@ Groly performs automatic cleanup daily — no manual intervention required.
 
 | Data | Cleanup rule |
 |------|-------------|
-| Checked-off items | Deleted after 60 days |
+| Checked-off items | Deleted after 60 days by default. Set [`KEEP_CHECKED_ITEMS=true`](docs/docker/README.md#environment-variables) to keep them in all shopping lists. |
 | Item suggestions | Deleted after 6 months without use |
 | Barcode cache | Deleted after 6 months without a lookup |
 | Expired sessions | Deleted daily |

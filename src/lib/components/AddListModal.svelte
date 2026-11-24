@@ -1,22 +1,28 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import { ArrowLeft, ChevronRight, ListOrdered, MapPin, Users, Bell, LocateFixed, Map, Search, X, Trash2 } from '@lucide/svelte';
+	import { ArrowLeft, ChevronRight, ListOrdered, MapPin, Users, Bell, LocateFixed, Map, Search, X, Trash2, Copy, RotateCcw } from '@lucide/svelte';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import ManageSheetShell from '#lib/components/supplements/ManageSheetShell.svelte';
+	import ChecklistSectionsEditor from './ChecklistSectionsEditor.svelte';
 	import CategoryOrderEditor from '#lib/components/CategoryOrderEditor.svelte';
+	import ShoppingItemSortSelect from '#lib/components/ShoppingItemSortSelect.svelte';
 	import SettingsSelectRow from '#lib/components/SettingsSelectRow.svelte';
 	import SettingsToggleRow from '#lib/components/SettingsToggleRow.svelte';
 	import MapPickerSheet from '#lib/components/MapPickerSheet.svelte';
 	import { LIST_ICONS, getListIcon, getListIconLabel } from '#lib/listIcons';
 	import { userSettings } from '#lib/userSettings.svelte';
-	import type { ListCategorySettings } from '#lib/userSettingsTypes';
+	import { resolveShoppingItemSortMode, type ListCategorySettings, type ShoppingItemSortMode } from '#lib/userSettingsTypes';
+	import { validChecklistSections, type ChecklistSettings, type ListKind } from '#lib/checklists';
+	import { generateClientId } from '#lib/sync/manager';
 	import { watchVisualViewportBottomOffset } from '#lib/visualViewport';
 
-	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0, suspended = false }: {
-		list?: { id: string; name: string; description: string | null; iconId?: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null } | null;
-		onSave: (name: string, description: string, iconId: string | null, shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null) => void | Promise<void>;
+	let { list = null, onSave, onDelete = null, onShare = null, onClose, memberCount = 0, suspended = false, onReset = null, onDuplicate = null }: {
+		list?: { id: string; name: string; description: string | null; iconId?: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null; kind?: ListKind; checklistSections?: ChecklistSettings['checklistSections'] | null; defaultSectionId?: string | null } | null;
+		onSave: (name: string, description: string, iconId: string | null, shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null, kind?: ListKind, checklist?: ChecklistSettings) => void | Promise<void>;
 		onDelete?: (() => void) | null;
 		onShare?: (() => void) | null;
+		onReset?: (() => Promise<void>) | null;
+		onDuplicate?: ((name: string, id: string) => Promise<void>) | null;
 		onClose: () => void;
 		memberCount?: number;
 		suspended?: boolean;
@@ -32,6 +38,7 @@
 	let selectedIconId = $state<string | null>(list ? list.iconId ?? null : 'supermarkt');
 	// svelte-ignore state_referenced_locally
 	let categorySettings = $state<ListCategorySettings | null>(initialCategorySettings(list?.id));
+	const itemSortMode = $derived(categorySettings && resolveShoppingItemSortMode(categorySettings.enabled, categorySettings.itemSortDirection));
 	// svelte-ignore state_referenced_locally
 	let locationDisabled = $state(list?.id ? userSettings.isListLocationDisabled(list.id) : false);
 	// svelte-ignore state_referenced_locally
@@ -40,7 +47,17 @@
 	let locationLng = $state<number | null>(list?.locationLng ?? null);
 	// svelte-ignore state_referenced_locally
 	let locationName = $state<string | null>(list?.locationName ?? null);
-	let view = $state<'list' | 'categories' | 'location'>('list');
+	const initial = untrack(() => ({
+		kind: list?.kind ?? 'shopping',
+		checklistSections: list?.checklistSections?.map(section => ({ ...section })) ?? [],
+		defaultSectionId: list?.defaultSectionId ?? null
+	}));
+	let kind = $state<ListKind>(initial.kind);
+	let sections = $state(initial.checklistSections.map(section => ({ ...section })));
+	let defaultSectionId = $state(initial.defaultSectionId);
+	let duplicateName = $state('');
+	let duplicateId = '';
+	let view = $state<'list' | 'categories' | 'location' | 'sections' | 'duplicate'>('list');
 	let bottomOffset = $state(0);
 	let saving = $state(false);
 	let saveError = $state('');
@@ -59,15 +76,46 @@
 	let mapPickerOpen = $state(false);
 	const selectedIcon = $derived(getListIcon(selectedIconId));
 	const iconOptions = $derived([{ value: 'standard', label: t.list_icon_standard }, ...LIST_ICONS.map(icon => ({ value: icon.id, label: getListIconLabel(icon, currentLang()) }))]);
-	const title = $derived(view === 'categories' ? t.settings_category_sorting : view === 'location' ? t.list_location : list ? t.list_edit_title : t.list_create_title);
+	const title = $derived(view === 'categories' ? t.settings_category_sorting : view === 'location' ? t.list_location : view === 'sections' ? t.checklist_sections : view === 'duplicate' ? t.checklist_duplicate : list ? t.list_edit_title : t.list_create_title);
+
+	const listTypes = $derived([
+		{ value: 'shopping', label: t.list_type_shopping }, { value: 'checklist', label: t.list_type_checklist }
+	]);
+	const validSections = $derived(validChecklistSections(sections));
+
+	function selectKind(value: string) {
+		if (value !== 'shopping' && value !== 'checklist') return;
+		if (selectedIconId === 'supermarkt' || selectedIconId === 'checklist') selectedIconId = value === 'checklist' ? 'checklist' : 'supermarkt';
+		kind = value;
+	}
+
+	async function runListAction(action: () => Promise<void>) {
+		if (saving) return;
+		saving = true;
+		saveError = '';
+		try { await action(); } catch { saveError = t.list_save_error; } finally { saving = false; }
+	}
 
 	function initialCategorySettings(listId?: string): ListCategorySettings | null {
 		const settings = listId ? userSettings.getListCategorySettings(listId) : null;
-		return settings ? { enabled: settings.enabled, order: [...settings.order] } : null;
+		return settings ? { ...settings, order: [...settings.order] } : null;
 	}
 
 	function toggleGlobalCategories() {
-		categorySettings = categorySettings ? null : { enabled: userSettings.categorySortEnabled, order: [...userSettings.categoryOrder] };
+		categorySettings = categorySettings ? null : {
+			enabled: userSettings.categorySortEnabled,
+			order: [...userSettings.categoryOrder],
+			itemSortDirection: userSettings.itemSortDirection
+		};
+	}
+
+	function setItemSortMode(mode: ShoppingItemSortMode) {
+		if (!categorySettings || mode === itemSortMode) return;
+		if (mode === 'az' || mode === 'za') categorySettings.itemSortDirection = mode;
+		else {
+			categorySettings.enabled = mode === 'category';
+			categorySettings.itemSortDirection = null;
+		}
 	}
 
 	function close() { if (!saving) onClose(); }
@@ -89,12 +137,15 @@
 			if (list) {
 				const original = initialCategory;
 				if (JSON.stringify(categorySettings) !== JSON.stringify(original)) {
-					if (categorySettings) userSettings.setListCategorySettings(list.id, { enabled: categorySettings.enabled, order: [...categorySettings.order] });
+					if (categorySettings) userSettings.setListCategorySettings(list.id, { ...categorySettings, order: [...categorySettings.order] });
 					else userSettings.clearListCategorySettings(list.id);
 				}
 				if (locationDisabled !== initialLocationDisabled) userSettings.setListLocationDisabled(list.id, locationDisabled);
 			}
-			await onSave(name.trim(), description.trim(), selectedIconId, shareAfterCreate, locationLat, locationLng, locationName);
+			const checklist = { checklistSections: sections.map(section => ({ ...section, name: section.name.trim() })), defaultSectionId };
+			const changed = JSON.stringify(initial.checklistSections) !== JSON.stringify(checklist.checklistSections) || initial.defaultSectionId !== defaultSectionId;
+			await onSave(name.trim(), description.trim(), selectedIconId, shareAfterCreate, locationLat, locationLng, locationName,
+				kind, kind === 'checklist' && list && changed ? checklist : undefined);
 		} catch {
 			saveError = t.list_save_error;
 		} finally {
@@ -188,6 +239,11 @@
 			<fieldset class="list-editor" disabled={saving} aria-busy={saving}>
 				{#if view === 'list'}
 					<div class="manage-settings-surface list-surface">
+						{#if !list}
+							<div class="list-flat-row">
+								<SettingsSelectRow label={t.list_type} value={kind} options={listTypes} onchange={selectKind} />
+							</div>
+						{/if}
 						<label class="manage-settings-row list-field" for={`${id}-name`}>
 							<span class="manage-label">{t.list_name_label}</span>
 							<input id={`${id}-name`} class="manage-settings-input" type="text" bind:value={name} placeholder={t.list_name_label} disabled={saving} />
@@ -196,19 +252,23 @@
 							<span class="manage-label">{t.list_description_label}</span>
 							<input id={`${id}-description`} class="manage-settings-input" type="text" bind:value={description} placeholder={t.list_optional} disabled={saving} />
 						</label>
-						<div class="list-flat-row">
+						<div class="list-flat-row" class:checklist-icon={kind === 'checklist'}>
 							<SettingsSelectRow label={t.list_icon} value={selectedIconId ?? 'standard'} options={iconOptions} onchange={value => { selectedIconId = value === 'standard' ? null : value; }}>
 								{#snippet preview()}{@render iconPreview(selectedIcon?.id ?? null)}{/snippet}
 								{#snippet optionPreview(value)}{@render iconPreview(value === 'standard' ? null : value)}{/snippet}
 							</SettingsSelectRow>
 						</div>
-						{#if list}
+						{#if list && kind === 'checklist'}
+							<button type="button" class="list-row" onclick={() => view = 'sections'}>
+								<ListOrdered size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.checklist_sections}</span><ChevronRight size={16} aria-hidden="true" />
+							</button>
+						{:else if list}
 							<button type="button" class="list-row" disabled={saving} onclick={() => view = 'categories'}>
 								<ListOrdered size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.settings_category_sorting}</span>
 								<span class="row-value" class:custom={categorySettings !== null}>{categorySettings ? t.list_sort_custom : t.list_sort_global}</span><ChevronRight size={16} aria-hidden="true" />
 							</button>
 						{/if}
-						{#if userSettings.locationNavEnabled}
+						{#if kind === 'shopping' && userSettings.locationNavEnabled}
 							<button type="button" class="list-row" disabled={saving} onclick={() => view = 'location'}>
 								<MapPin size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.list_location}</span>
 								<span class="row-value">{locationLat !== null ? locationName || `${locationLat.toFixed(4)}, ${locationLng?.toFixed(4)}` : t.list_location_setup}</span><ChevronRight size={16} aria-hidden="true" />
@@ -232,12 +292,34 @@
 							</div>
 						{/if}
 					</div>
+					{#if kind === 'checklist' && (onDuplicate || onReset)}
+						<div class="manage-settings-surface list-surface checklist-actions">
+							{#if onDuplicate}
+								<button type="button" class="list-row" onclick={() => { duplicateName = name; duplicateId = generateClientId(); saveError = ''; view = 'duplicate'; }}>
+									<Copy size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.checklist_duplicate}</span><ChevronRight size={16} aria-hidden="true" />
+								</button>
+							{/if}
+							{#if onReset}
+								<button type="button" class="list-row" onclick={() => { if (onReset && confirm(t.checklist_reset_confirm)) void runListAction(onReset); }}>
+									<RotateCcw size={18} aria-hidden="true" /><span class="manage-settings-label row-label">{t.checklist_reset}</span>
+								</button>
+							{/if}
+						</div>
+					{/if}
+				{:else if view === 'sections'}
+					<ChecklistSectionsEditor bind:sections bind:defaultSectionId />
+				{:else if view === 'duplicate'}
+					<div class="manage-settings-surface list-surface">
+						<label class="manage-settings-row list-field"><span class="manage-label">{t.checklist_copy_name}</span>
+							<input class="manage-settings-input" type="text" bind:value={duplicateName} />
+						</label>
+					</div>
 				{:else if view === 'categories'}
 					<div class="manage-settings-surface list-surface">
 						<SettingsToggleRow label={t.list_sort_use_global} description={t.list_sort_global_hint} checked={categorySettings === null} onchange={toggleGlobalCategories} />
-						{#if categorySettings}
-							<div class="list-flat-row"><SettingsToggleRow label={t.list_sort_enabled} checked={categorySettings.enabled} onchange={() => { if (categorySettings) categorySettings.enabled = !categorySettings.enabled; }} /></div>
-							{#if categorySettings.enabled}
+						{#if categorySettings && itemSortMode}
+							<div class="list-flat-row"><ShoppingItemSortSelect value={itemSortMode} onchange={setItemSortMode} /></div>
+							{#if itemSortMode === 'category'}
 								<div class="list-flat-row category-editor"><CategoryOrderEditor order={categorySettings.order} onchange={order => { if (categorySettings) categorySettings.order = order; }} /></div>
 							{/if}
 						{:else}
@@ -267,10 +349,14 @@
 		{#snippet footer()}
 			{#if view === 'list'}
 				<button type="button" class="manage-secondary list-footer-action" disabled={saving} onclick={close}>{t.list_cancel}</button>
-				<button type="button" class="manage-primary list-footer-action" disabled={!name.trim() || saving} onclick={save}>{saving ? t.list_saving : list ? t.list_save : t.create}</button>
+				<button type="button" class="manage-primary list-footer-action" disabled={!name.trim() || saving || (kind === 'checklist' && !validSections)} onclick={save}>{saving ? t.list_saving : list ? t.list_save : t.create}</button>
+			{:else if view === 'duplicate'}
+				<button type="button" class="manage-secondary list-footer-action" disabled={saving} onclick={() => { view = 'list'; saveError = ''; }}>{t.list_cancel}</button>
+				<button type="button" class="manage-primary list-footer-action" disabled={saving || !duplicateName.trim()}
+					onclick={() => { if (onDuplicate) void runListAction(() => onDuplicate!(duplicateName.trim(), duplicateId)); }}>{t.checklist_duplicate}</button>
 			{:else}
 				<button type="button" class="manage-secondary list-footer-action list-detail-back" onclick={() => view = 'list'}><ArrowLeft size={18} aria-hidden="true" />{t.a11y_back}</button>
-				<button type="button" class="manage-primary list-footer-action" onclick={() => view = 'list'}>{t.sort_mode_done}</button>
+				<button type="button" class="manage-primary list-footer-action" disabled={view === 'sections' && !validSections} onclick={() => view = 'list'}>{t.sort_mode_done}</button>
 			{/if}
 		{/snippet}
 	</ManageSheetShell>
@@ -279,6 +365,8 @@
 <MapPickerSheet bind:open={mapPickerOpen} initialLat={locationLat} initialLng={locationLng} initialName={locationName} onConfirm={onMapConfirm} />
 
 <style>
+	.checklist-actions { margin-top: 4px; }
+
 	.list-editor { min-width: 0; margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px; }
 	.list-surface { border-radius: 16px; }
 	.list-surface :global(.settings-select-label), .list-surface :global(.settings-toggle-label) { font-weight: 600; }
@@ -289,6 +377,7 @@
 	.list-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 9px 20px; text-align: left; color: var(--color-on-surface-variant); }
 	.row-label { flex: 1; color: var(--color-on-surface); }
 	.row-value { min-width: 0; max-width: 43%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 400; line-height: 1.4; }
+	.checklist-icon :global(.settings-select-value) { max-width: 64%; }
 	.list-surface :global(.settings-select-value) { font-size: 14px; font-weight: 400; line-height: 1.4; }
 	.row-value.custom { color: var(--color-primary); }
 	.list-row :global(svg) { flex: none; }

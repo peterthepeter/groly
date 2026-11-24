@@ -1,3 +1,5 @@
+import type { ChecklistSection, ListKind } from '#lib/checklists';
+import type { RecipeCategory } from '#lib/recipeCategories';
 import Dexie, { type EntityTable, type Table } from 'dexie';
 
 export interface AccountCache {
@@ -12,6 +14,12 @@ interface OfflineList extends AccountCache {
 	description: string | null;
 	ownerId: string;
 	openCount: number;
+	kind?: ListKind;
+	totalCount?: number;
+	checklistItemsCached?: boolean;
+	checklistSections?: ChecklistSection[] | null;
+	defaultSectionId?: string | null;
+	userPermission?: 'owner' | 'write' | 'read';
 	updatedAt: number;
 	locationLat?: number | null;
 	locationLng?: number | null;
@@ -26,6 +34,12 @@ interface OfflineItem extends AccountCache {
 	isChecked: boolean;
 	checkedAt: number | null;
 	categoryOverride: string | null;
+	sectionId?: string | null;
+	checklistPosition?: number | null;
+	checklistNote?: string | null;
+	createdAt?: number;
+	remindAt?: number | null;
+	reminderStatus?: 'syncing' | 'pending' | 'sent' | 'missed' | null;
 	updatedAt: number;
 	localConfirmedAt?: number;
 }
@@ -37,6 +51,7 @@ interface PendingMutation {
 		| 'create_list'
 		| 'update_list'
 		| 'delete_list'
+		| 'manage_checklist'
 		| 'create_item'
 		| 'update_item'
 		| 'delete_item'
@@ -68,6 +83,8 @@ interface OfflineUserSettings {
 	updatedAt: number;
 	favorites?: OfflineFavorite[];
 	favoritesUpdatedAt?: number;
+	checklistFavorites?: OfflineFavorite[];
+	checklistFavoritesUpdatedAt?: number;
 }
 
 interface OfflineFavorite {
@@ -115,6 +132,8 @@ interface OfflineRecipe extends AccountCache {
 	cookTime: number | null;
 	updatedAt: number;
 	isFavorite?: boolean;
+	categoryId?: string | null;
+	categoryName?: string | null;
 	rating?: number | null;
 	cookCount?: number;
 	lastCookedAt?: number | null;
@@ -167,6 +186,7 @@ class GrolydDb extends Dexie {
 	supplementLogs!: EntityTable<OfflineSupplementLog, 'id'>;
 	recipes!: EntityTable<OfflineRecipe, 'id'>;
 	recipeDetails!: EntityTable<OfflineRecipeDetail, 'id'>;
+	recipeCategoryCatalog!: EntityTable<{ userId: string; categories: RecipeCategory[] }, 'userId'>;
 	waterLogs!: EntityTable<OfflineWaterLog, 'id'>;
 	caffeineLogs!: EntityTable<OfflineCaffeineLog, 'id'>;
 	meditationLogs!: EntityTable<OfflineMeditationLog, 'id'>;
@@ -212,6 +232,7 @@ class GrolydDb extends Dexie {
 			accountLists: '[cacheUserId+id], cacheUserId',
 			accountItems: '[cacheUserId+id], cacheUserId, [cacheUserId+listId]'
 		});
+		this.version(9).stores({ recipeCategoryCatalog: 'userId' });
 	}
 }
 

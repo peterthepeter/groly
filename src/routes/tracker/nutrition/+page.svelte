@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayDate, displayTime } from '#lib/dateDisplay';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -77,7 +78,7 @@
 		if (s === todayStr) return t.nutrition_today;
 		const yest = new Date(); yest.setDate(yest.getDate() - 1);
 		if (s === toLocalDateKey(yest)) return t.nutrition_yesterday;
-		return d.toLocaleDateString(currentLang(), { weekday: 'short', day: 'numeric', month: 'long' });
+		return displayDate(d, { weekday: 'short', day: 'numeric', month: 'long' }, currentLang());
 	}
 
 	async function load() {
@@ -288,7 +289,7 @@
 					{@const mealC = m.components.reduce((s, c) => s + (c.carbs ?? 0), 0)}
 					{@const singleImg = !m.favoriteName && m.components.length === 1 ? m.components[0].imageUrl : null}
 					<button type="button" class="nutrition-meal-entry" onclick={() => openEditMeal(m)}>
-						<span class="nutrition-meal-time">{m.time}</span>
+						<span class="nutrition-meal-time">{displayTime(m.time)}</span>
 						<span class="nutrition-meal-content">
 							<span class="nutrition-meal-heading">
 								<span>{m.name}</span>

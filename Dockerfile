@@ -1,4 +1,4 @@
-FROM node:24.22.0-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS node-base
+FROM node:24.22.3-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS node-base
 
 FROM node-base AS builder
 
@@ -16,13 +16,13 @@ RUN npm prune --omit=dev --omit=optional --ignore-scripts \
     && node -e "const Database=require('better-sqlite3'); const db=new Database(':memory:'); if(db.prepare('SELECT 1 AS ok').get().ok!==1) process.exit(1); db.close();"
 
 # ─── Runtime Stage ───────────────────────────────────────────
-FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS runtime
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
 
 WORKDIR /app
 
 # Copy only the verified Node runtime, so package managers and SDK headers never
 # enter a shipped image layer. SQLite 13 embeds SQLite in its native addon.
-RUN apk add --no-cache --upgrade zlib=1.3.2-r1 libstdc++ libgcc libatomic su-exec \
+RUN apk add --no-cache --upgrade libcrypto3=3.5.9-r1 libssl3=3.5.9-r1 zlib=1.4-r0 libstdc++ libgcc libatomic su-exec \
     && addgroup -g 1000 node \
     && adduser -u 1000 -G node -s /bin/sh -D node
 COPY --from=node-base /usr/local/bin/node /usr/local/bin/node

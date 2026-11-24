@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { getListIcon } from '#lib/listIcons';
-	import { list_items_open, t } from '#lib/i18n.svelte';
+	import type { ListKind } from '#lib/checklists';
+	import { checklistProgress, list_items_open, t } from '#lib/i18n.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
 
 	// Fallback: konsistente Farbe aus dem Listennamen
@@ -13,7 +14,7 @@
 	}
 
 	let { list, onClick, onLongPress, onShare = null, showBorder = false, reorderControls = null }: {
-		list: { id: string; name: string; description: string | null; openCount: number; iconId?: string | null; ownerUsername?: string | null; locationLat?: number | null };
+		list: { id: string; name: string; description: string | null; openCount: number; totalCount?: number; kind?: ListKind; iconId?: string | null; ownerUsername?: string | null; locationLat?: number | null };
 		onClick: () => void;
 		onLongPress: () => void;
 		onShare?: (() => void) | null;
@@ -30,6 +31,9 @@
 	const icon = $derived(getListIcon(list.iconId));
 	const color = $derived(icon ? icon.color : colorForName(list.name));
 	const initial = $derived(list.name[0]?.toUpperCase() ?? '?');
+	const progress = $derived(list.kind === 'checklist' && list.totalCount !== undefined
+		? list.totalCount > 0 ? checklistProgress(Math.max(0, list.totalCount - list.openCount), list.totalCount) : ''
+		: list_items_open(list.openCount));
 
 	let pressTimer: ReturnType<typeof setTimeout> | null = null;
 	let longFired = false;
@@ -49,7 +53,8 @@
 
 {#snippet contents()}
 	<!-- Icon -->
-	<div class="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center">
+	<div class="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center"
+	     class:translate-x-0.5={list.kind === 'checklist' && icon !== null}>
 		{#if icon}
 			<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
 			     stroke={color} stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -63,9 +68,11 @@
 	<!-- Text -->
 	<div class="flex-1 min-w-0">
 		<div class="font-semibold text-sm truncate" style="color: var(--color-on-surface)">{list.name}</div>
-		<div class="text-xs truncate mt-0.5" style="color: var(--color-on-surface-variant)">
-			{list.description ? `${list.description} · ` : ''}{list_items_open(list.openCount)}
-		</div>
+		{#if list.description || progress}
+			<div class="text-xs truncate mt-0.5" style="color: var(--color-on-surface-variant)">
+				{list.description}{list.description && progress ? ' · ' : ''}{progress}
+			</div>
+		{/if}
 	</div>
 
 	{#if onShare}

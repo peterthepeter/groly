@@ -21,6 +21,9 @@ function createDatabase(): AppDatabase {
 			is_checked INTEGER DEFAULT 0 NOT NULL,
 			checked_at INTEGER,
 			category_override TEXT,
+			section_id TEXT,
+			checklist_position INTEGER,
+			checklist_note TEXT,
 			created_by TEXT,
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER NOT NULL

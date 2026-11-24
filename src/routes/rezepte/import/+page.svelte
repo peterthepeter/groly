@@ -1,4 +1,8 @@
 <script lang="ts">
+	import RecipeCategoryPicker from '#lib/components/recipe/RecipeCategoryPicker.svelte';
+	import RecipeFormViewport from '#lib/components/recipe/RecipeFormViewport.svelte';
+	import { recipeCategoryChoiceValid, type RecipeCategoryChoice } from '#lib/recipeCategories';
+	import { recipeCategoryErrorMessage } from '#lib/recipeCategoryUi';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
@@ -19,6 +23,8 @@
 	let url = $state('');
 	let loading = $state(false);
 	let error = $state('');
+	let category = $state<RecipeCategoryChoice>({ categoryId: null });
+	const categoryValid = $derived(recipeCategoryChoiceValid(category));
 	let parsed = $state<ParsedRecipe | null>(null);
 	let saving = $state(false);
 
@@ -37,6 +43,7 @@
 		loading = true;
 		error = '';
 		parsed = null;
+		category = { categoryId: null };
 		try {
 			const res = await fetch('/api/recipes/import', {
 				method: 'POST',
@@ -56,19 +63,20 @@
 	}
 
 	async function saveRecipe() {
-		if (!parsed || saving) return;
+		if (!parsed || saving || !categoryValid) return;
 		saving = true;
 		try {
 			const res = await fetch('/api/recipes', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(parsed)
+				body: JSON.stringify({ ...parsed, category })
 			});
 			if (res.ok) {
 				const data = await res.json();
 				goto(`/rezepte/${data.id}`);
 			} else {
-				error = t.recipe_import_save_failed;
+				const body = await res.json().catch(() => ({}));
+				error = recipeCategoryErrorMessage(body.code) ?? t.recipe_import_save_failed;
 				saving = false;
 			}
 		} catch {
@@ -94,11 +102,11 @@
 	}
 </script>
 
-<div class="h-[100dvh] flex flex-col justify-end" style="background-color: var(--color-bg)">
+<RecipeFormViewport bottomAligned>
 
 	<!-- Bottom sheet card -->
 	<div class="rounded-t-3xl flex flex-col"
-	     style="background-color: var(--color-surface-card); max-height: 92dvh; padding-bottom: max(env(safe-area-inset-bottom), 1.5rem)">
+	     style="background-color: var(--color-surface-card); max-height: 92%; padding-bottom: max(var(--recipe-form-bottom-inset), 1.5rem)">
 
 		<!-- Drag handle + header -->
 		<div class="flex-shrink-0 pt-3 px-6 pb-3">
@@ -127,7 +135,7 @@
 					{#if parsed.imageUrl}
 						<img src={parsed.imageUrl} alt={parsed.title} class="w-full h-40 object-cover" />
 					{/if}
-					<div class="p-4">
+					<div class="p-4 inset-row-divider">
 						<h2 class="text-base font-bold mb-2" style="color: var(--color-on-surface)">{parsed.title}</h2>
 						{#if parsed.description}
 							<p class="text-sm mb-3 line-clamp-2" style="color: var(--color-on-surface-variant)">{parsed.description}</p>
@@ -158,6 +166,7 @@
 							{/if}
 						</div>
 					</div>
+					<RecipeCategoryPicker bind:value={category} />
 				</div>
 			{/if}
 
@@ -230,7 +239,7 @@
 			{#if parsed}
 				<button
 					onclick={saveRecipe}
-					disabled={saving}
+					disabled={saving || !categoryValid}
 					class="w-full py-3 rounded-2xl font-semibold text-sm disabled:opacity-40 active:opacity-70 transition-opacity"
 					style="background-color: var(--color-primary); color: var(--color-on-primary)"
 				>
@@ -256,4 +265,4 @@
 		</div>
 
 	</div>
-</div>
+</RecipeFormViewport>

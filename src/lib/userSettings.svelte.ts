@@ -1,12 +1,13 @@
 import { normalizeShortcuts, MAX_SHORTCUTS } from '#lib/shortcutActions';
+import { detectRegionalFormats, isDateFormat, isTimeFormat, type DateFormat, type TimeFormat } from '#lib/dates';
 import { browser } from '$app/env';
-import { type UserSettings, type ListCategorySettings, type Shortcut, DEFAULT_SETTINGS } from '#lib/userSettingsTypes';
+import { type UserSettings, type ListCategorySettings, type Shortcut, type ItemSortDirection, type ShoppingItemSortMode, DEFAULT_SETTINGS, resolveShoppingItemSortMode } from '#lib/userSettingsTypes';
 import { DEFAULT_CATEGORY_ORDER } from '#lib/categories';
 export type { UserSettings, ListCategorySettings, Shortcut } from '#lib/userSettingsTypes';
 export { DEFAULT_SETTINGS } from '#lib/userSettingsTypes';
 import type { Locale } from '#lib/paraglide/runtime';
 import { drainPendingMutations, queueUserSettingsPatch, refreshUserSettings } from '#lib/sync/manager';
-import type { UserSettingsPatch } from '#lib/userSettingsSync';
+import { applyUserSettingsPatch, getStoredFormats, type UserSettingsPatch } from '#lib/userSettingsSync';
 
 const CACHE_KEY = 'groly_settings';
 const CACHE_OWNER_KEY = 'groly_settings_owner';
@@ -100,11 +101,15 @@ function merge(stored: UserSettings): Required<typeof DEFAULT_SETTINGS> {
 // correct scoped cache synchronously before its first network await.
 const cache: UserSettings = {};
 const initial = merge(cache);
+const regionalFormats = browser ? detectRegionalFormats() : undefined;
 
 let _lang = $state(initial.lang);
 let _timeZone = $state<string>(cache.timeZone ?? '');
+let _dateFormat = $state<DateFormat>();
+let _timeFormat = $state<TimeFormat>();
 let _categorySortEnabled = $state(initial.categorySortEnabled);
 let _categoryOrder = $state<string[]>(initial.categoryOrder);
+let _itemSortDirection = $state<ItemSortDirection | null>(null);
 let _listCategorySettings = $state<Record<string, ListCategorySettings>>(cache.listCategorySettings ?? {});
 let _shortcuts = $state<Shortcut[]>(cache.shortcuts ?? []);
 let _locationNavEnabled = $state<boolean>(cache.locationNavEnabled ?? false);
@@ -159,10 +164,13 @@ function currentSettings(): UserSettings {
 	return {
 		lang: _lang,
 		timeZone: _timeZone,
+		dateFormat: _dateFormat,
+		timeFormat: _timeFormat,
 		theme: _theme,
 		colorScheme: _colorScheme,
 		categorySortEnabled: _categorySortEnabled,
 		categoryOrder: _categoryOrder,
+		itemSortDirection: _itemSortDirection,
 		listCategorySettings: _listCategorySettings,
 		shortcuts: _shortcuts,
 		locationNavEnabled: _locationNavEnabled,
@@ -228,9 +236,30 @@ export const userSettings = {
 	set lang(v: Locale) { _lang = v; scheduleSave({ lang: v }); },
 	get timeZone() { return _timeZone; },
 	set timeZone(v: string) { _timeZone = v; scheduleSave({ timeZone: v }); },
+	get dateFormat() { return _dateFormat ?? regionalFormats?.dateFormat; },
+	setDateFormat(format: DateFormat) {
+		_dateFormat = format;
+		scheduleSave({ dateFormat: format });
+	},
+	get timeFormat() { return _timeFormat ?? regionalFormats?.timeFormat; },
+	setTimeFormat(format: TimeFormat) {
+		_timeFormat = format;
+		scheduleSave({ timeFormat: format });
+	},
 
 	get categorySortEnabled() { return _categorySortEnabled; },
-	set categorySortEnabled(v: boolean) { _categorySortEnabled = v; scheduleSave({ categorySortEnabled: v }); },
+	get itemSortDirection() { return _itemSortDirection; },
+	get shoppingItemSortMode() { return resolveShoppingItemSortMode(_categorySortEnabled, _itemSortDirection); },
+	setShoppingItemSortMode(mode: ShoppingItemSortMode) {
+		if (mode === 'az' || mode === 'za') {
+			_itemSortDirection = mode;
+			scheduleSave({ itemSortDirection: mode });
+		} else {
+			_itemSortDirection = null;
+			_categorySortEnabled = mode === 'category';
+			scheduleSave({ itemSortDirection: null, categorySortEnabled: _categorySortEnabled });
+		}
+	},
 
 	get categoryOrder() { return _categoryOrder; },
 	setCategoryOrder(order: string[]) {
@@ -407,8 +436,12 @@ function applySettings(settings: UserSettings) {
 	const merged = merge(settings);
 	_lang = merged.lang;
 	_timeZone = settings.timeZone ?? '';
+	const formats = getStoredFormats(settings);
+	_dateFormat = formats.dateFormat;
+	_timeFormat = formats.timeFormat;
 	_categorySortEnabled = merged.categorySortEnabled;
 	_categoryOrder = merged.categoryOrder;
+	_itemSortDirection = settings.itemSortDirection ?? null;
 	_listCategorySettings = settings.listCategorySettings ?? {};
 	_shortcuts = normalizeShortcuts(settings.shortcuts);
 	_locationNavEnabled = settings.locationNavEnabled ?? false;
@@ -471,9 +504,18 @@ export async function initUserSettings(
 		settingsRevision
 	});
 	if (activeSettingsUserId !== userId) return null;
-	const effective = row.settings as UserSettings;
+	const stored = row.settings as UserSettings;
+	const initialFormats: UserSettingsPatch['initialFormats'] = {};
+	if (!isDateFormat(stored.dateFormat) && regionalFormats) initialFormats.dateFormat = regionalFormats.dateFormat;
+	if (!isTimeFormat(stored.timeFormat) && regionalFormats) initialFormats.timeFormat = regionalFormats.timeFormat;
+	const initializeFormats = Boolean(initialFormats.dateFormat || initialFormats.timeFormat);
+	const effective = initializeFormats ? applyUserSettingsPatch(stored, { initialFormats }) : stored;
 	applySettings(effective);
 	saveCache(currentSettings(), userId);
+	if (initializeFormats) {
+		scheduleSave({ initialFormats });
+		void refreshActiveUserSettings().catch(() => {});
+	}
 	notifyAppliedSettings(effective);
 	return effective;
 }

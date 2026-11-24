@@ -13,6 +13,7 @@ Install via **Community Applications** (search for "Groly") or add the template 
 - **Port:** `3000` (WebUI)
 - **Path:** `/app/data` → e.g. `/mnt/user/appdata/groly`
 - **Variables:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ORIGIN`
+- **Keep checked-off items (optional):** Set `KEEP_CHECKED_ITEMS` to `true` in Advanced View to keep checked-off items in all shopping lists. The default `false` enables 60-day cleanup.
 - **Push notifications (optional):** additionally set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_SUBJECT` — see [Push Notifications](../../README.md#push-notifications-optional)
 
 The volume `/app/data` contains the SQLite database. An admin user is created on first start with the credentials from `ADMIN_USERNAME` and `ADMIN_PASSWORD`. After the first start, remove `ADMIN_PASSWORD` from the container; keep `ADMIN_USERNAME` for password recovery — `ADMIN_PASSWORD` is never re-applied. If you ever forget your admin password, see [Admin Password Recovery](../../README.md#admin-password-recovery).

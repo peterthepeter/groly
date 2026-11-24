@@ -1,3 +1,4 @@
+import type { ChecklistSection } from '#lib/checklists';
 import { sqliteTable, text, integer, real, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
@@ -27,6 +28,9 @@ export const lists = sqliteTable('lists', {
 	name: text('name').notNull(),
 	description: text('description'),
 	iconId: text('icon_id'),
+	kind: text('kind', { enum: ['shopping', 'checklist'] }).notNull().default('shopping'),
+	checklistSections: text('checklist_sections', { mode: 'json' }).$type<ChecklistSection[]>(),
+	defaultSectionId: text('default_section_id'),
 	ownerId: text('owner_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
@@ -80,10 +84,40 @@ export const items = sqliteTable('items', {
 	isChecked: integer('is_checked', { mode: 'boolean' }).notNull().default(false),
 	checkedAt: integer('checked_at'),
 	categoryOverride: text('category_override'),
+	sectionId: text('section_id'),
+	checklistPosition: integer('checklist_position'),
+	checklistNote: text('checklist_note'),
 	createdBy: text('created_by').references(() => users.id),
 	createdAt: integer('created_at').notNull(),
 	updatedAt: integer('updated_at').notNull()
 });
+
+export const checklistReminders = sqliteTable('checklist_reminders', {
+	itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	dueAt: integer('due_at').notNull(),
+	nextAttemptAt: integer('next_attempt_at').notNull(),
+	status: text('status', { enum: ['pending', 'sent', 'missed'] }).notNull().default('pending')
+}, (t) => [
+	primaryKey({ columns: [t.itemId, t.userId] }),
+	index('checklist_reminders_due_idx').on(t.status, t.nextAttemptAt)
+]);
+
+export const checklistFavorites = sqliteTable('checklist_favorites', {
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	createdAt: integer('created_at').notNull()
+}, (t) => [primaryKey({ columns: [t.userId, t.name] })]);
+
+export const recipeCategories = sqliteTable('recipe_categories', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	normalizedName: text('normalized_name').notNull(),
+	sortOrder: integer('sort_order').notNull()
+}, (table) => [
+	uniqueIndex('recipe_categories_user_name_idx').on(table.userId, table.normalizedName)
+]);
 
 export const recipes = sqliteTable('recipes', {
 	id: text('id').primaryKey(),
@@ -96,6 +130,7 @@ export const recipes = sqliteTable('recipes', {
 	prepTime: integer('prep_time'),
 	cookTime: integer('cook_time'),
 	isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
+	categoryId: text('category_id').references(() => recipeCategories.id, { onDelete: 'set null' }),
 	rating: integer('rating'),
 	cookCount: integer('cook_count').notNull().default(0),
 	lastCookedAt: integer('last_cooked_at'),

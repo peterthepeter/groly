@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_SETTINGS, resolveShoppingItemSortMode, type UserSettings } from '#lib/userSettingsTypes';
 import {
 	applyUserSettingsPatch,
 	combineUserSettingsPatches,
@@ -8,6 +9,37 @@ import {
 } from '#lib/userSettingsSync';
 
 describe('user settings patches', () => {
+	it('persists the two date and time choices independently and rejects unknown formats', () => {
+		const date = sanitizeUserSettingsPatch({ dateFormat: 'ymd-dash' });
+		const time = sanitizeUserSettingsPatch({ timeFormat: '12h' });
+		expect(date).toEqual({ dateFormat: 'ymd-dash' });
+		expect(time).toEqual({ timeFormat: '12h' });
+		const original = { lang: 'en' as const };
+		const changed = applyUserSettingsPatch(applyUserSettingsPatch(original, date!), time!);
+		expect(changed).toEqual({ ...original, dateFormat: 'ymd-dash', timeFormat: '12h' });
+		expect(applyUserSettingsPatch(original, { theme: 'dark' })).toEqual({ ...original, theme: 'dark' });
+		expect(sanitizeUserSettingsPatch({ dateFormat: 'default' })).toBeNull();
+		expect(sanitizeUserSettingsPatch({ timeFormat: 'automatic' })).toBeNull();
+	});
+
+	it('initializes missing formats without overriding an account selection', () => {
+		const initial = { initialFormats: { dateFormat: 'mdy-slash', timeFormat: '12h' } } as const;
+		expect(sanitizeUserSettingsPatch(initial)).toEqual(initial);
+		expect(sanitizeUserSettingsPatch({ initialFormats: { dateFormat: 'invalid' } })).toBeNull();
+		const upgraded = applyUserSettingsPatch({ lang: 'de', theme: 'dark' }, initial);
+		expect(upgraded).toEqual({ lang: 'de', theme: 'dark', dateFormat: 'mdy-slash', timeFormat: '12h' });
+		expect(applyUserSettingsPatch(upgraded, { initialFormats: { dateFormat: 'dmy-dot', timeFormat: '24h' } })).toEqual(upgraded);
+		expect(userSettingsPatchMatches(upgraded, { initialFormats: { dateFormat: 'dmy-dot', timeFormat: '24h' } })).toBe(true);
+		expect(userSettingsPatchMatches({}, initial)).toBe(false);
+	});
+
+	it('preserves a local test selection and allows a deliberate change before automatic settings sync', () => {
+		const initial = { initialFormats: { dateFormat: 'mdy-slash', timeFormat: '12h' } } as const;
+		expect(applyUserSettingsPatch({ checklistTimeFormat: '24h' }, initial)).toMatchObject({ dateFormat: 'mdy-slash', timeFormat: '24h' });
+		const pending = combineUserSettingsPatches(initial, { dateFormat: 'ymd-dash' });
+		expect(applyUserSettingsPatch({}, pending)).toEqual({ dateFormat: 'ymd-dash', timeFormat: '12h' });
+	});
+
 	it('updates top-level settings without replacing unrelated values', () => {
 		expect(applyUserSettingsPatch(
 			{ theme: 'light', categorySortEnabled: true },
@@ -23,6 +55,34 @@ describe('user settings patches', () => {
 		expect(result.listCategorySettings).toEqual({
 			a: { enabled: true, order: ['obst'] },
 			b: { enabled: false, order: ['snacks'] }
+		});
+	});
+
+	it('keeps existing category preferences until alphabetical sorting is explicitly selected', () => {
+		const legacy = {
+			categorySortEnabled: false,
+			categoryOrder: ['obst', 'snacks'],
+			listCategorySettings: { a: { enabled: true, order: ['snacks', 'obst'] } }
+		} satisfies UserSettings;
+		const list = legacy.listCategorySettings.a;
+		expect(resolveShoppingItemSortMode(DEFAULT_SETTINGS.categorySortEnabled)).toBe('category');
+		expect(resolveShoppingItemSortMode(legacy.categorySortEnabled)).toBe('off');
+		expect(resolveShoppingItemSortMode(list.enabled)).toBe('category');
+
+		const changes = sanitizeUserSettingsPatch({
+			itemSortDirection: 'az',
+			listCategorySettings: { a: { ...list, itemSortDirection: 'za' } }
+		})!;
+		const alphabetical = applyUserSettingsPatch(legacy, changes);
+		expect(alphabetical).toEqual({
+			...legacy,
+			itemSortDirection: 'az',
+			listCategorySettings: { a: { ...list, itemSortDirection: 'za' } }
+		});
+		expect(resolveShoppingItemSortMode(legacy.categorySortEnabled, alphabetical.itemSortDirection)).toBe('az');
+		expect(resolveShoppingItemSortMode(list.enabled, alphabetical.listCategorySettings?.a.itemSortDirection)).toBe('za');
+		expect(applyUserSettingsPatch(alphabetical, { itemSortDirection: null, listCategorySettings: { a: list } })).toEqual({
+			...legacy, itemSortDirection: null
 		});
 	});
 

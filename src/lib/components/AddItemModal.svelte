@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { t } from '#lib/i18n.svelte';
 	import { MANUAL_CATEGORIES, CATEGORY_LABELS, getCategoryForItem } from '#lib/categories';
+	import ItemEditSheet from './ItemEditSheet.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
 
 	let { item = null, onSave, onClose, onDelete = null, isFavorite = false, onToggleFavorite = null, title, deleteLabel, saving = false, error = null }: {
@@ -55,39 +56,22 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-50" style="background-color: rgba(0,0,0,0.6)" onclick={onClose}></div>
-
-<div class="fixed bottom-0 left-0 right-0 z-[60] max-w-[430px] mx-auto rounded-t-3xl px-6 pb-5 pt-3"
-     style="background-color: var(--modal-bg)">
-	<div class="flex justify-center mb-3">
-		<div class="w-10 h-1 rounded-full" style="background-color: var(--color-surface-high)"></div>
-	</div>
-
-	<div class="flex items-center justify-between mb-3">
-		<h2 class="text-lg font-bold" style="color: var(--color-on-surface)">{title ?? (item ? t.item_edit_title : t.items_add)}</h2>
-		{#if item && onDelete}
-			<button
-				type="button"
-				onclick={onDelete}
-				class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors active:scale-95"
-				style="color: #ef4444"
-				aria-label={deleteLabel ?? t.a11y_delete_item}
-			>
-				<svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-				     stroke="currentColor" stroke-width="2"
-				     stroke-linecap="round" stroke-linejoin="round">
-					<polyline points="3 6 5 6 21 6"/>
-					<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-					<path d="M10 11v6M14 11v6"/>
-					<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-				</svg>
-			</button>
-		{/if}
-	</div>
-
-	<div class="rounded-2xl mb-3 overflow-hidden" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+<ItemEditSheet
+	title={title ?? (item ? t.item_edit_title : t.items_add)}
+	saveLabel={item ? t.item_save : t.add}
+	saveDisabled={!name.trim() || saving}
+	{onClose}
+	{error}
+	{deleteLabel}
+	onDelete={item ? onDelete : null}
+	onSave={() => name.trim() && onSave(name.trim(), quantityInfo.trim(), categoryOverride, categoryPickerUsed)}
+	isFavorite={favState}
+	onToggleFavorite={onToggleFavorite ? () => {
+		favState = !favState;
+		onToggleFavorite?.(name.trim() || item?.name || '', favState);
+	} : null}
+>
+	{#snippet fields()}
 		<!-- Kategorie-Picker -->
 		<button
 			onclick={() => categoryOpen = !categoryOpen}
@@ -190,43 +174,5 @@
 				style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
 			>+</button>
 		</div>
-	</div>
-
-	{#if error}<p role="alert" class="text-sm mb-3" style="color: var(--color-error)">{error}</p>{/if}
-	<div class="flex items-center gap-2">
-		{#if onToggleFavorite}
-			<button
-				type="button"
-				onpointerdown={(e) => e.preventDefault()}
-				onclick={() => { favState = !favState; onToggleFavorite!(name.trim() || item?.name || '', favState); }}
-				class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
-				style="background-color: {favState ? 'color-mix(in srgb, var(--color-primary) 18%, transparent)' : 'var(--bubble-interactive-bg)'};
-				       border: 1px solid {favState ? 'var(--color-primary)' : 'var(--bubble-interactive-border)'};
-				       color: {favState ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}"
-				aria-label={favState ? t.favorites_remove : t.favorites_add}
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24"
-				     fill={favState ? 'currentColor' : 'none'}
-				     stroke="currentColor" stroke-width="1.8"
-				     stroke-linecap="round" stroke-linejoin="round">
-					<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-				</svg>
-			</button>
-		{/if}
-		<button
-			onclick={onClose}
-			class="flex-1 py-3 rounded-full text-sm font-semibold"
-			style="background-color: var(--bubble-interactive-bg); border: 1px solid var(--bubble-interactive-border); color: var(--color-on-surface-variant)"
-		>
-			{t.item_cancel}
-		</button>
-		<button
-			onclick={() => name.trim() && onSave(name.trim(), quantityInfo.trim(), categoryOverride, categoryPickerUsed)}
-			disabled={!name.trim() || saving}
-			class="flex-1 py-3 rounded-full text-sm font-semibold disabled:opacity-40"
-			style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-		>
-			{item ? t.item_save : t.add}
-		</button>
-	</div>
-</div>
+	{/snippet}
+</ItemEditSheet>

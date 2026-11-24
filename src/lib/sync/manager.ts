@@ -1,3 +1,6 @@
+import { clearMissingChecklistSection, orderChecklistRows, type ChecklistSectionChoice, type ChecklistSettings, type ListKind } from '#lib/checklists';
+import type { RecipeCategory } from '#lib/recipeCategories';
+import { dispatch } from '#lib/sseStore.svelte';
 import { offlineDb, type AccountCache } from './db';
 import { cachedForUser, migrateAccountCache } from './accountCache';
 import { setApiUserId } from '#lib/apiTimeout';
@@ -314,8 +317,22 @@ async function confirmItemWrite(mutation: PendingMutation, response: Record<stri
 			// Rebase only descendants of our confirmed write. Genuine remote
 			// conflicts still use the server's existing 409 policy.
 			for (const entry of later) await offlineDb.pendingMutations.update(entry.id!, { payload: { ...entry.payload, clientUpdatedAt: revision } });
-			await offlineDb.items.update(mutation.payload.id as string, { updatedAt: revision, localConfirmedAt: Date.now(), cacheUserId: userId });
-			await offlineDb.accountItems.update([userId, mutation.payload.id as string], { updatedAt: revision, localConfirmedAt: Date.now() });
+			const canonical: Partial<OfflineItem> = { updatedAt: revision, localConfirmedAt: Date.now() };
+			if ('sectionId' in response && !later.some(entry => 'sectionId' in entry.payload)) {
+				canonical.sectionId = response.sectionId as OfflineItem['sectionId'];
+			}
+			if ('checklistNote' in response && !later.some(entry => 'checklistNote' in entry.payload)) {
+				canonical.checklistNote = response.checklistNote as OfflineItem['checklistNote'];
+			}
+			if ('remindAt' in response && !later.some(entry => 'remindAt' in entry.payload || entry.payload.isChecked === true)) {
+				canonical.remindAt = response.remindAt as OfflineItem['remindAt'];
+				canonical.reminderStatus = response.reminderStatus as OfflineItem['reminderStatus'];
+			}
+			const deletion = await offlineDb.pendingMutations.where('type').equals('delete_item')
+				.filter(entry => entry.userId === userId && entry.payload.id === mutation.payload.id && !!entry.payload.undoUntil).first();
+			if (deletion) await offlineDb.pendingMutations.update(deletion.id!, { payload: { ...deletion.payload, canonical } });
+			await offlineDb.items.update(mutation.payload.id as string, { ...canonical, cacheUserId: userId });
+			await offlineDb.accountItems.update([userId, mutation.payload.id as string], canonical);
 		}
 		await offlineDb.pendingMutations.delete(mutation.id!);
 	});
@@ -330,19 +347,23 @@ async function syncItemUpdate(mutation: PendingMutation, userId: string) {
 		// A previous attempt may have reached the server but lost its response.
 		// Acknowledge only an already-applied patch; different remote values still
 		// follow the normal conflict policy, without an unconditional overwrite.
-		const keys = ['name', 'quantityInfo', 'categoryOverride', 'isChecked'].filter(key => key in mutation.payload);
+		const keys = ['name', 'quantityInfo', 'categoryOverride', 'isChecked', 'sectionId', 'remindAt'].filter(key => key in mutation.payload);
 		if (keys.length && keys.every(key => body.current[key] === mutation.payload[key])) {
 			await confirmItemWrite(mutation, body.current, userId);
+			if ('sectionId' in body.current) dispatch({ type: 'checklist_refreshed', listId: mutation.payload.listId });
 			return;
 		}
 	}
 	if (!response.ok) throw Object.assign(new Error(`API error: ${response.status}`), { status: response.status });
 	await confirmItemWrite(mutation, body, userId);
+	if ('sectionId' in body) dispatch({ type: 'checklist_refreshed', listId: mutation.payload.listId });
 }
 
 async function confirmFavoriteWrite(mutation: PendingMutation, userId: string) {
 	await offlineDb.transaction('rw', offlineDb.userSettings, offlineDb.pendingMutations, async () => {
-		await offlineDb.userSettings.update(userId, { favoritesUpdatedAt: Date.now() });
+		const timestamp = Date.now();
+		await offlineDb.userSettings.update(userId, mutation.payload.kind === 'checklist'
+			? { checklistFavoritesUpdatedAt: timestamp } : { favoritesUpdatedAt: timestamp });
 		await offlineDb.pendingMutations.delete(mutation.id!);
 	});
 }
@@ -367,6 +388,9 @@ async function runPendingMutations(userId: string) {
 				case 'delete_list':
 					await apiFetch(`/api/lists/${mutation.payload.id}`, { method: 'DELETE' });
 					break;
+				case 'manage_checklist':
+					await apiFetch(`/api/lists/${mutation.payload.listId}/checklist`, { method: 'POST', body: JSON.stringify(mutation.payload) });
+					break;
 				case 'create_item':
 					await confirmItemWrite(mutation, await apiFetch(`/api/lists/${mutation.payload.listId}/items`, { method: 'POST', body: JSON.stringify(mutation.payload) }), userId);
 					mutationManagesItsOwnQueueEntry = true;
@@ -376,6 +400,10 @@ async function runPendingMutations(userId: string) {
 					mutationManagesItsOwnQueueEntry = true;
 					break;
 				case 'delete_item':
+					if (typeof mutation.payload.undoUntil === 'number' && mutation.payload.undoUntil > Date.now()) {
+						setTimeout(() => { if (activeUserId === userId) void drainPendingMutations(); }, mutation.payload.undoUntil - Date.now());
+						continue;
+					}
 					await apiFetch(`/api/items/${mutation.payload.id}`, { method: 'DELETE' });
 					break;
 				case 'create_supplement_log':
@@ -426,8 +454,10 @@ async function runPendingMutations(userId: string) {
 			const status = (e as { status?: number })?.status;
 			const isCategoryPreferenceMutation = mutation.type === 'set_category_preference' || mutation.type === 'delete_category_preference' || mutation.type === 'set_favorite' || mutation.type === 'delete_favorite';
 			const isSettingsMutation = mutation.type === 'update_user_settings';
+			const checklistItemUpdate = mutation.type === 'update_item' &&
+				('remindAt' in mutation.payload || 'sectionId' in mutation.payload || 'checklistNote' in mutation.payload);
 			if (status === 404 || status === 409 || status === 403 || (
-				status === 400 && (isCategoryPreferenceMutation || isSettingsMutation)
+				status === 400 && (isCategoryPreferenceMutation || isSettingsMutation || checklistItemUpdate || mutation.type === 'manage_checklist' || mutation.payload.kind === 'checklist')
 			)) {
 				// Diese Endpunkte liefern selbst weder 403, 404 noch 409. Solche Antworten
 				// stammen daher typischerweise von einem kalten Proxy/WAF und dürfen eine
@@ -450,6 +480,7 @@ async function runPendingMutations(userId: string) {
 					mutation.type === 'create_meditation_log'
 				) continue; // in der Queue lassen, nächste Mutation versuchen
 				await offlineDb.pendingMutations.delete(mutation.id!);
+				if (checklistItemUpdate || mutation.type === 'manage_checklist' || mutation.payload.kind === 'checklist') dispatch({ type: 'checklist_sync_error', listId: mutation.payload.listId });
 				continue;
 			}
 			break; // Netzwerkfehler / Timeout / 5xx — beim nächsten Drain erneut versuchen
@@ -503,12 +534,15 @@ export async function execute<T>(
 	return null;
 }
 
-type CreateItemMutationPayload = {
+type CreateItemMutationPayload = ChecklistSectionChoice & {
 	id: string;
 	listId: string;
 	name: string;
 	quantityInfo: string;
 	categoryOverride: string | null;
+	sectionId?: string | null;
+	checklistNote?: string | null;
+	kind?: ListKind;
 };
 
 async function touchCachedList(userId: string, listId: string) {
@@ -517,6 +551,83 @@ async function touchCachedList(userId: string, listId: string) {
 	if (list) await offlineDb.accountLists.update([userId, listId], { updatedAt });
 	const legacy = await offlineDb.lists.get(listId);
 	if (legacy && cachedForUser(legacy, userId)) await offlineDb.lists.update(listId, { updatedAt });
+}
+
+function applyPendingChecklistSettings<T extends OfflineList>(list: T, payload: Record<string, unknown>): T {
+	if (payload.action === 'updateSections') {
+		return { ...list, checklistSections: payload.checklistSections as ChecklistSettings['checklistSections'],
+			defaultSectionId: payload.defaultSectionId as ChecklistSettings['defaultSectionId'] };
+	}
+	let sections = list.checklistSections ?? [];
+	if (payload.action === 'orderSections') sections = orderChecklistRows(sections, payload.ids as string[]);
+	const section = payload.newSection as ChecklistSectionChoice['newSection'];
+	if (section && !sections.some(row => row.id === section.id)) sections = [...sections, section];
+	return { ...list, checklistSections: sections, defaultSectionId: (payload.setDefault || payload.action === 'setDefault') ? payload.sectionId as string | null : list.defaultSectionId };
+}
+
+export async function queueChecklistSections(userId: string, listId: string, settings: ChecklistSettings) {
+	await offlineDb.transaction('rw', [offlineDb.items, offlineDb.accountItems, offlineDb.lists, offlineDb.accountLists, offlineDb.pendingMutations], async () => {
+		const list = await offlineDb.accountLists.get([userId, listId]);
+		if (list?.ownerId !== userId || list.kind !== 'checklist') throw new Error('Local checklist missing');
+		await touchCachedList(userId, listId);
+		await offlineDb.accountLists.update([userId, listId], settings);
+		await offlineDb.lists.update(listId, settings);
+		const sectionIds = new Set(settings.checklistSections.map(section => section.id));
+		const entries = await offlineDb.accountItems.where('[cacheUserId+listId]').equals([userId, listId]).toArray();
+		const changed = entries.flatMap(entry => {
+			const next = clearMissingChecklistSection(entry, sectionIds);
+			return next === entry ? [] : [next];
+		});
+		await offlineDb.accountItems.bulkPut(changed);
+		await offlineDb.items.bulkPut(changed);
+		await offlineDb.pendingMutations.add({ type: 'manage_checklist', userId, createdAt: Date.now(),
+			payload: { listId, action: 'updateSections', ...settings } });
+	});
+	if (activeUserId === userId) {
+		networkStore.setPending(await countActivePendingMutations());
+		if (networkStore.online) void drainPendingMutations();
+	}
+}
+
+export async function setChecklistDefault(userId: string, listId: string, sectionId: string | null) {
+	await offlineDb.transaction('rw', offlineDb.lists, offlineDb.accountLists, offlineDb.pendingMutations, async () => {
+		const list = await offlineDb.accountLists.get([userId, listId]);
+		if (list?.ownerId !== userId || list.kind !== 'checklist' ||
+			(sectionId !== null && !list.checklistSections?.some(section => section.id === sectionId))) {
+			throw new Error('Invalid checklist default');
+		}
+		await offlineDb.accountLists.update([userId, listId], { defaultSectionId: sectionId });
+		await offlineDb.lists.update(listId, { defaultSectionId: sectionId });
+		await offlineDb.pendingMutations.add({ type: 'manage_checklist', userId, createdAt: Date.now(),
+			payload: { listId, action: 'setDefault', sectionId } });
+	});
+	if (activeUserId === userId) {
+		networkStore.setPending(await countActivePendingMutations());
+		if (networkStore.online) void drainPendingMutations();
+	}
+}
+
+export async function queueChecklistOrder(userId: string, listId: string, ids: string[], sectionId?: string | null) {
+	const payload = { listId, ids, sectionId, action: sectionId === undefined ? 'orderSections' : 'orderEntries' };
+	await offlineDb.transaction('rw', [offlineDb.items, offlineDb.accountItems, offlineDb.lists, offlineDb.accountLists, offlineDb.pendingMutations], async () => {
+		if (sectionId === undefined) {
+			const list = await offlineDb.accountLists.get([userId, listId]);
+			if (!list) throw new Error('Local checklist missing');
+			const changes = { checklistSections: orderChecklistRows(list.checklistSections ?? [], ids) };
+			await offlineDb.accountLists.update([userId, listId], changes);
+			await offlineDb.lists.update(listId, changes);
+		} else {
+			for (const [position, id] of ids.entries()) {
+				await offlineDb.accountItems.update([userId, id], { checklistPosition: position });
+				await offlineDb.items.update(id, { checklistPosition: position });
+			}
+		}
+		await offlineDb.pendingMutations.add({ type: 'manage_checklist', userId, createdAt: Date.now(), payload });
+	});
+	if (activeUserId === userId) {
+		networkStore.setPending(await countActivePendingMutations());
+		if (networkStore.online) void drainPendingMutations();
+	}
 }
 
 /**
@@ -531,6 +642,13 @@ export async function queueItemCreate(
 ): Promise<void> {
 	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, offlineDb.lists, offlineDb.accountLists, async () => {
 		await touchCachedList(userId, item.listId);
+		if (payload.newSection || payload.setDefault) {
+			const list = await offlineDb.accountLists.get([userId, item.listId]);
+			if (!list) throw new Error('Local checklist missing');
+			const patch = applyPendingChecklistSettings(list, payload);
+			await offlineDb.accountLists.put(patch);
+			await offlineDb.lists.put(patch);
+		}
 		await offlineDb.items.put({ ...item, cacheUserId: userId });
 		await offlineDb.accountItems.put({ ...item, cacheUserId: userId });
 		await offlineDb.pendingMutations.add({
@@ -565,28 +683,76 @@ export async function queueItemUpdate(userId: string, id: string, changes: Parti
 		if (!item) throw new Error('Local item missing');
 		if (item.cacheUserId && item.cacheUserId !== userId) throw new Error('Local item belongs to another account');
 		await touchCachedList(userId, item.listId);
-		const { updatedAt: _updatedAt, id: _id, listId: _listId, ...patch } = changes;
+		const { updatedAt: _updatedAt, id: _id, listId: _listId, reminderStatus: _reminderStatus, ...payload } = changes;
+		const patch = { ...payload, ...(_reminderStatus !== undefined ? { reminderStatus: _reminderStatus } : {}) };
 		await offlineDb.items.update(id, { ...patch, cacheUserId: userId });
 		await offlineDb.accountItems.put({ ...item, ...patch, cacheUserId: userId });
-		await offlineDb.pendingMutations.add({ type: 'update_item', userId, payload: { ...patch, id, clientUpdatedAt: item.updatedAt }, createdAt: Date.now() });
+		await offlineDb.pendingMutations.add({ type: 'update_item', userId, payload: { ...payload, id, listId: item.listId, clientUpdatedAt: item.updatedAt }, createdAt: Date.now() });
 	});
 	if (activeUserId !== userId) return;
 	networkStore.setPending(await countActivePendingMutations());
 	if (networkStore.online) void drainPendingMutations();
 }
 
+export async function resetChecklist(userId: string, listId: string): Promise<void> {
+	await accountReady;
+	if (activeUserId !== userId) throw new Error('Active account changed');
+	const pendingUpdate = () => offlineDb.pendingMutations.where('type').equals('update_item')
+		.filter(entry => entry.userId === userId && entry.payload.listId === listId).first();
+	// Apply earlier item changes before the bulk reset can advance their server revisions.
+	if (await pendingUpdate()) {
+		await drainPendingMutations();
+		if (await pendingUpdate()) throw new Error('Checklist changes are still pending');
+	}
+	if (activeUserId !== userId) throw new Error('Active account changed');
+	await apiFetch(`/api/lists/${listId}/checklist`, {
+		method: 'POST',
+		body: JSON.stringify({ action: 'reset' })
+	}, userId);
+}
+
 export async function queueItemDelete(userId: string, id: string): Promise<void> {
-	await offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, offlineDb.lists, offlineDb.accountLists, async () => {
-		const item = await offlineDb.accountItems.get([userId, id]) ?? await offlineDb.items.get(id);
-		if (item?.cacheUserId && item.cacheUserId !== userId) throw new Error('Local item belongs to another account');
-		if (item) await touchCachedList(userId, item.listId);
-		await offlineDb.items.delete(id);
-		await offlineDb.accountItems.delete([userId, id]);
-		await offlineDb.pendingMutations.add({ type: 'delete_item', userId, payload: { id }, createdAt: Date.now() });
+	await queueItemDeletes(userId, [id]);
+}
+
+export async function queueItemDeletes(userId: string, ids: string[], undoUntil?: number, checklistId?: string) {
+	await offlineDb.transaction('rw', [offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, offlineDb.lists, offlineDb.accountLists], async () => {
+		const lists = new Set<string>();
+		for (const id of ids) {
+			const item = await offlineDb.accountItems.get([userId, id]) ?? await offlineDb.items.get(id);
+			if (item?.cacheUserId && item.cacheUserId !== userId) throw new Error('Local item belongs to another account');
+			if (checklistId && item && item.listId !== checklistId) throw new Error('Item belongs to another list');
+			if (item) lists.add(item.listId);
+			await offlineDb.items.delete(id);
+			await offlineDb.accountItems.delete([userId, id]);
+			if (!checklistId || undoUntil) {
+				await offlineDb.pendingMutations.add({ type: 'delete_item', userId, payload: { id, listId: item?.listId, undoUntil }, createdAt: Date.now() });
+			}
+		}
+		if (checklistId && !undoUntil) {
+			await offlineDb.pendingMutations.add({ type: 'manage_checklist', userId,
+				payload: { listId: checklistId, action: 'deleteEntries', ids }, createdAt: Date.now() });
+		}
+		for (const id of lists) await touchCachedList(userId, id);
 	});
 	if (activeUserId !== userId) return;
 	networkStore.setPending(await countActivePendingMutations());
 	if (networkStore.online) void drainPendingMutations();
+}
+
+export async function undoChecklistDelete(userId: string, item: OfflineItem) {
+	const restored = await offlineDb.transaction('rw', offlineDb.pendingMutations, offlineDb.accountItems, offlineDb.items, async () => {
+		const mutation = await offlineDb.pendingMutations.where('type').equals('delete_item')
+			.filter(row => row.userId === userId && row.payload.id === item.id && Number(row.payload.undoUntil) > Date.now()).first();
+		if (!mutation) return false;
+		await offlineDb.pendingMutations.delete(mutation.id!);
+		const restored = { ...item, ...(mutation.payload.canonical as Partial<OfflineItem>), cacheUserId: userId };
+		await offlineDb.accountItems.put(restored);
+		await offlineDb.items.put(restored);
+		return true;
+	});
+	if (activeUserId === userId) networkStore.setPending(await countActivePendingMutations());
+	return restored;
 }
 
 async function writeUserSettingsCache(row: OfflineUserSettings): Promise<void> {
@@ -595,8 +761,9 @@ async function writeUserSettingsCache(row: OfflineUserSettings): Promise<void> {
 	});
 }
 
-export async function getOfflineFavorites(userId: string): Promise<OfflineFavorite[] | null> {
-	return (await offlineDb.userSettings.get(userId))?.favorites ?? null;
+export async function getOfflineFavorites(userId: string, kind: ListKind = 'shopping'): Promise<OfflineFavorite[] | null> {
+	const row = await offlineDb.userSettings.get(userId);
+	return (kind === 'checklist' ? row?.checklistFavorites : row?.favorites) ?? null;
 }
 
 function applyFavorite(favorites: OfflineFavorite[], favorite: OfflineFavorite & { previousName?: string }, remove: boolean): OfflineFavorite[] {
@@ -605,27 +772,34 @@ function applyFavorite(favorites: OfflineFavorite[], favorite: OfflineFavorite &
 	return remove ? rest : [value, ...rest];
 }
 
-export async function cacheFavorites(userId: string, favorites: OfflineFavorite[], requestStartedAt = Date.now()): Promise<OfflineFavorite[]> {
+export async function cacheFavorites(userId: string, favorites: OfflineFavorite[], requestStartedAt = Date.now(), kind: ListKind = 'shopping'): Promise<OfflineFavorite[]> {
 	return offlineDb.transaction('rw', offlineDb.userSettings, offlineDb.pendingMutations, async () => {
 		const row = (await offlineDb.userSettings.get(userId)) ?? { userId, settings: {}, revision: 0, updatedAt: Date.now() };
-		if (row.favoritesUpdatedAt !== undefined && row.favoritesUpdatedAt >= requestStartedAt && row.favorites) favorites = row.favorites;
+		const key = kind === 'checklist' ? 'checklistFavorites' : 'favorites';
+		const updatedAt = kind === 'checklist' ? row.checklistFavoritesUpdatedAt : row.favoritesUpdatedAt;
+		const cached = row[key];
+		if (updatedAt !== undefined && updatedAt >= requestStartedAt && cached) favorites = cached;
 		let effective = favorites.map(({ name, quantityInfo, categoryOverride }) => ({ name, quantityInfo, categoryOverride }));
 		for (const mutation of await offlineDb.pendingMutations.orderBy('id').toArray()) {
-			if (mutation.userId !== userId || !['set_favorite', 'delete_favorite'].includes(mutation.type)) continue;
-			effective = applyFavorite(effective, mutation.payload as unknown as OfflineFavorite, mutation.type === 'delete_favorite');
+			if (mutation.userId !== userId || !['set_favorite', 'delete_favorite'].includes(mutation.type) || (mutation.payload.kind ?? 'shopping') !== kind) continue;
+			const { name, quantityInfo, categoryOverride, previousName } = mutation.payload as unknown as OfflineFavorite & { previousName?: string };
+			effective = applyFavorite(effective, { name, quantityInfo, categoryOverride, previousName }, mutation.type === 'delete_favorite');
 		}
-		await offlineDb.userSettings.put({ ...row, favorites: effective });
+		await offlineDb.userSettings.put({ ...row, [key]: effective });
 		return effective;
 	});
 }
 
-export async function setFavoriteOffline(userId: string, favorite: OfflineFavorite, remove = false, previousName?: string): Promise<OfflineFavorite[]> {
+export async function setFavoriteOffline(userId: string, favorite: OfflineFavorite, remove = false, previousName?: string, kind: ListKind = 'shopping'): Promise<OfflineFavorite[]> {
 	const plain = { name: favorite.name.trim(), quantityInfo: favorite.quantityInfo, categoryOverride: favorite.categoryOverride, ...(previousName && previousName !== favorite.name.trim() ? { previousName } : {}) };
 	const favorites = await offlineDb.transaction('rw', offlineDb.userSettings, offlineDb.pendingMutations, async () => {
 		const row = (await offlineDb.userSettings.get(userId)) ?? { userId, settings: {}, revision: 0, updatedAt: Date.now() };
-		const effective = applyFavorite(row.favorites ?? [], plain, remove);
-		await offlineDb.userSettings.put({ ...row, favorites: effective, favoritesUpdatedAt: Date.now() });
-		await offlineDb.pendingMutations.add({ userId, type: remove ? 'delete_favorite' : 'set_favorite', payload: plain, createdAt: Date.now() });
+		const key = kind === 'checklist' ? 'checklistFavorites' : 'favorites';
+		const dateKey = kind === 'checklist' ? 'checklistFavoritesUpdatedAt' : 'favoritesUpdatedAt';
+		const effective = applyFavorite(row[key] ?? [], plain, remove);
+		await offlineDb.userSettings.put({ ...row, [key]: effective, [dateKey]: Date.now() });
+		await offlineDb.pendingMutations.add({ userId, type: remove ? 'delete_favorite' : 'set_favorite',
+			payload: kind === 'checklist' ? { ...plain, kind } : plain, createdAt: Date.now() });
 		return effective;
 	});
 	if (activeUserId === userId) {
@@ -984,7 +1158,7 @@ export async function refreshUserSettings(
 export async function cacheListsData(lists: OfflineList[], userId = activeUserId, replace = false) {
 	await accountReady;
 	if (!userId) return;
-	await offlineDb.transaction('rw', offlineDb.lists, offlineDb.accountLists, offlineDb.accountItems, async () => {
+	await offlineDb.transaction('rw', offlineDb.lists, offlineDb.accountLists, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
 		if (replace) {
 			const ids = new Set(lists.map(row => row.id));
 			const old = await offlineDb.accountLists.where('cacheUserId').equals(userId).toArray();
@@ -994,33 +1168,79 @@ export async function cacheListsData(lists: OfflineList[], userId = activeUserId
 				await offlineDb.accountItems.where('[cacheUserId+listId]').equals([userId, row.id]).delete();
 			}
 		}
-		const rows = lists.map(row => ({ ...row, cacheUserId: userId }));
+		const pending = (await offlineDb.pendingMutations.orderBy('id').toArray()).filter(entry => entry.userId === userId &&
+			(entry.payload.action === 'updateSections' || entry.payload.action === 'orderSections' ||
+				entry.payload.action === 'setDefault' || entry.payload.newSection || entry.payload.setDefault));
+		const previous = await offlineDb.accountLists.bulkGet(lists.map(list => [userId, list.id]));
+		const rows = lists.map(list => pending.filter(entry => entry.payload.listId === list.id)
+			.reduce((row, entry) => applyPendingChecklistSettings(row, entry.payload), list)).map((row, index) => ({
+			...row,
+			checklistItemsCached: row.checklistItemsCached ?? previous[index]?.checklistItemsCached,
+			checklistSections: row.checklistSections?.map(({ id, name }) => ({ id, name })) ?? row.checklistSections,
+			cacheUserId: userId
+		}));
 		await offlineDb.lists.bulkPut(rows);
 		await offlineDb.accountLists.bulkPut(rows);
 	});
 }
 
 export async function getOfflineLists(): Promise<OfflineList[]> {
-	return scopedRows(() => offlineDb.accountLists.toArray());
+	const userId = activeUserId;
+	if (!userId) return [];
+	return scopedRows(() => offlineDb.transaction('r', offlineDb.accountLists, offlineDb.accountItems, async () => {
+		const rows = await offlineDb.accountLists.where('cacheUserId').equals(userId).toArray();
+		return Promise.all(rows.map(async row => {
+			if (row.kind !== 'checklist' || !row.checklistItemsCached) return row;
+			const entries = await offlineDb.accountItems.where('[cacheUserId+listId]').equals([userId, row.id]).toArray();
+			return { ...row, totalCount: entries.length, openCount: entries.filter(entry => !entry.isChecked).length };
+		}));
+	}), userId);
 }
 
-export async function cacheItemsData<T extends OfflineItem>(items: T[], userId = activeUserId, requestStartedAt = Date.now()): Promise<T[]> {
+export async function cacheItemsData<T extends OfflineItem>(items: T[], userId = activeUserId, requestStartedAt = Date.now(), completeChecklistId?: string): Promise<T[]> {
 	await accountReady;
 	if (!userId) return [];
 	return offlineDb.transaction('rw', offlineDb.items, offlineDb.accountItems, offlineDb.pendingMutations, async () => {
 		const pending = (await offlineDb.pendingMutations.orderBy('id').toArray()).filter(entry => entry.userId === userId);
+		const deletions = new Set<string>();
+		const positions = new Map<PendingMutation, Map<string, number>>();
+		const sectionUpdates = new Map<PendingMutation, Set<string>>();
+		for (const mutation of pending) {
+			if (mutation.type === 'delete_item') deletions.add(mutation.payload.id as string);
+			if (mutation.type !== 'manage_checklist') continue;
+			const ids = mutation.payload.ids as string[];
+			if (mutation.payload.action === 'deleteEntries') {
+				for (const id of ids) deletions.add(id);
+			} else if (mutation.payload.action === 'orderEntries') {
+				positions.set(mutation, new Map(ids.map((id, index) => [id, index])));
+			} else if (mutation.payload.action === 'updateSections') {
+				const sections = mutation.payload.checklistSections as ChecklistSettings['checklistSections'];
+				sectionUpdates.set(mutation, new Set(sections.map(section => section.id)));
+			}
+		}
 		const effective: T[] = [];
 		for (const item of items) {
-			if (pending.some(entry => entry.type === 'delete_item' && entry.payload.id === item.id)) continue;
+			if (deletions.has(item.id)) continue;
 			let merged = { ...item };
 			const cached = await offlineDb.accountItems.get([userId, item.id]) ?? await offlineDb.items.get(item.id);
 			// A GET begun before our write was acknowledged may finish after the
 			// queue entry is gone. Preserve the confirmed value in that one race.
 			if (cached && cachedForUser(cached, userId) && cached.localConfirmedAt !== undefined && cached.localConfirmedAt >= requestStartedAt) merged = { ...merged, ...cached };
 			for (const entry of pending) {
+				const sectionIds = sectionUpdates.get(entry);
+				if (sectionIds && entry.payload.listId === item.listId) merged = clearMissingChecklistSection(merged, sectionIds);
+				if (entry.type === 'manage_checklist' && entry.payload.action === 'orderEntries' && entry.payload.listId === item.listId && entry.payload.sectionId === (merged.sectionId ?? null)) {
+					const index = positions.get(entry)?.get(item.id);
+					if (index !== undefined) merged.checklistPosition = index;
+				}
 				if (entry.type !== 'update_item' || entry.payload.id !== item.id) continue;
-				for (const key of ['name', 'quantityInfo', 'categoryOverride', 'isChecked', 'checkedAt'] as const) {
+				if ('sectionId' in entry.payload && entry.payload.sectionId !== merged.sectionId) merged.checklistPosition = null;
+				for (const key of ['name', 'quantityInfo', 'categoryOverride', 'isChecked', 'checkedAt', 'sectionId', 'checklistNote', 'remindAt'] as const) {
 					if (key in entry.payload) Object.assign(merged, { [key]: entry.payload[key] });
+				}
+				if ('remindAt' in entry.payload) Object.assign(merged, { reminderStatus: entry.payload.remindAt ? 'syncing' : null });
+				if (entry.payload.isChecked === true && (merged.remindAt !== undefined || 'sectionId' in entry.payload)) {
+					Object.assign(merged, { remindAt: null, reminderStatus: null });
 				}
 				if (entry.payload.isChecked !== undefined && entry.payload.checkedAt === undefined) {
 					merged.checkedAt = entry.payload.isChecked ? Math.floor(entry.createdAt / 1000) : null;
@@ -1029,6 +1249,19 @@ export async function cacheItemsData<T extends OfflineItem>(items: T[], userId =
 			await offlineDb.items.put({ ...merged, cacheUserId: userId ?? undefined });
 			await offlineDb.accountItems.put({ ...merged, cacheUserId: userId });
 			effective.push(merged);
+		}
+		if (completeChecklistId) {
+			const liveIds = new Set(effective.map(item => item.id));
+			for (const entry of pending) {
+				if (entry.type === 'create_item' && entry.payload.listId === completeChecklistId) liveIds.add(entry.payload.id as string);
+			}
+			const previous = await offlineDb.accountItems.where('[cacheUserId+listId]').equals([userId, completeChecklistId]).toArray();
+			for (const row of previous) {
+				if (liveIds.has(row.id) || (row.localConfirmedAt ?? 0) >= requestStartedAt) continue;
+				await offlineDb.accountItems.delete([userId, row.id]);
+				const legacy = await offlineDb.items.get(row.id);
+				if (legacy && cachedForUser(legacy, userId)) await offlineDb.items.delete(row.id);
+			}
 		}
 		return effective;
 	});
@@ -1040,10 +1273,10 @@ export async function getOfflineItems(listId: string): Promise<OfflineItem[]> {
 	return scopedRows(() => offlineDb.accountItems.where('[cacheUserId+listId]').equals([userId, listId]).toArray(), userId);
 }
 
-export async function getOfflineListName(listId: string): Promise<string> {
+export async function getOfflineList(listId: string): Promise<OfflineList | undefined> {
 	await accountReady;
 	const list = activeUserId ? await offlineDb.accountLists.get([activeUserId, listId]) : undefined;
-	return list && cachedForUser(list, activeUserId) ? list.name : '';
+	return list && cachedForUser(list, activeUserId) ? list : undefined;
 }
 
 export async function updateOfflineItem(id: string, changes: Partial<OfflineItem>) {
@@ -1058,10 +1291,11 @@ export async function deleteOfflineItem(id: string) {
 	if (userId) await offlineDb.accountItems.delete([userId, id]);
 }
 
-export async function updateOfflineList(id: string, changes: Partial<OfflineList>) {
-	const userId = activeUserId;
-	await offlineDb.lists.update(id, changes);
-	if (userId) await offlineDb.accountLists.update([userId, id], changes);
+export async function updateOfflineList(id: string, changes: Partial<OfflineList>, userId = activeUserId) {
+	const patch = { ...changes };
+	if (changes.checklistSections) patch.checklistSections = changes.checklistSections.map(({ id, name }) => ({ id, name }));
+	await offlineDb.lists.update(id, patch);
+	if (userId) await offlineDb.accountLists.update([userId, id], patch);
 }
 
 export async function deleteOfflineList(id: string) {
@@ -1165,9 +1399,39 @@ export async function getOfflineTodayLogs(): Promise<OfflineSupplementLog[]> {
 
 // ── Rezept-Cache ───────────────────────────────────────────────────────────────
 
-export async function cacheRecipes(recipes: OfflineRecipe[], userId = activeUserId) {
+export async function cacheRecipes(recipes: OfflineRecipe[], userId = activeUserId, categories?: RecipeCategory[]) {
 	await accountReady;
-	if (userId) await offlineDb.recipes.bulkPut(recipes.map(row => ({ ...row, cacheUserId: userId })));
+	if (!userId) return;
+	await offlineDb.transaction('rw', offlineDb.recipes, offlineDb.recipeCategoryCatalog, async () => {
+		await offlineDb.recipes.bulkPut(recipes.map(row => ({ ...row, cacheUserId: userId })));
+		if (categories) await offlineDb.recipeCategoryCatalog.put({ userId, categories });
+	});
+}
+
+export async function cacheRecipeCategories(categories: RecipeCategory[], userId = activeUserId) {
+	await accountReady;
+	if (userId) await offlineDb.recipeCategoryCatalog.put({ userId, categories });
+}
+
+export async function getOfflineRecipeCategories(userId = activeUserId): Promise<RecipeCategory[] | undefined> {
+	await accountReady;
+	if (userId && activeUserId === userId) return (await offlineDb.recipeCategoryCatalog.get(userId))?.categories;
+}
+
+export async function cacheRecipeCategoryAssignment(id: string, category: RecipeCategory | null, updatedAt: number, userId = activeUserId) {
+	await accountReady;
+	if (!userId) return;
+	await offlineDb.transaction('rw', offlineDb.recipes, offlineDb.recipeDetails, offlineDb.recipeCategoryCatalog, async () => {
+		const patch = { categoryId: category?.id ?? null, categoryName: category?.name ?? null, updatedAt };
+		const listRow = await offlineDb.recipes.get(id);
+		const detail = await offlineDb.recipeDetails.get(id);
+		if (listRow && cachedForUser(listRow, userId)) await offlineDb.recipes.update(id, patch);
+		if (detail && cachedForUser(detail, userId)) await offlineDb.recipeDetails.update(id, patch);
+		const catalog = await offlineDb.recipeCategoryCatalog.get(userId);
+		if (category && catalog && !catalog.categories.some(row => row.id === category.id)) {
+			await offlineDb.recipeCategoryCatalog.update(userId, { categories: [...catalog.categories, category] });
+		}
+	});
 }
 
 export async function getOfflineRecipes(): Promise<OfflineRecipe[]> {

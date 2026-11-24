@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { toLocalDateKey } from '#lib/dates';
+	import { formatDateKey, toLocalDateKey } from '#lib/dates';
+	import { userSettings } from '#lib/userSettings.svelte';
 	import { goto } from '$app/navigation';
 	import { tick, onMount } from 'svelte';
 	import { t, currentLang } from '#lib/i18n.svelte';
@@ -61,6 +62,7 @@
 		const lang = currentLang();
 		const kw = kwNumber(monday);
 		const sunday = weekDays[6];
+		if (userSettings.dateFormat) return `KW\u00a0${kw} · ${formatDayDate(monday)} – ${formatDayDate(sunday)}`;
 		const fmtDay = (d: Date) => d.getDate() + '.';
 		const fmtMonth = (d: Date) => {
 			const months = lang === 'en'
@@ -83,6 +85,7 @@
 	});
 
 	function formatDayDate(d: Date): string {
+		if (userSettings.dateFormat) return formatDateKey(toLocalDateKey(d), userSettings.dateFormat, false);
 		const lang = currentLang();
 		const months = lang === 'en'
 			? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -282,7 +285,7 @@
 		listSheetNewName = '';
 		listSheetLoading = true;
 		try {
-			const res = await fetch('/api/lists');
+			const res = await fetch('/api/lists?kind=shopping');
 			if (!res.ok) throw new Error();
 			const data = await res.json();
 			listSheetLists = data.lists ?? data ?? [];

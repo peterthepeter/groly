@@ -1,4 +1,4 @@
-import webpush from 'web-push';
+import * as webpush from 'web-push';
 import { db } from '#lib/db';
 import { pushSubscriptions, listMembers, listNotificationPrefs, lists, users } from '#lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
@@ -33,6 +33,11 @@ function init() {
 		env.VAPID_PRIVATE_KEY
 	);
 	initialized = true;
+}
+
+export function hasUserPushSubscription(userId: string) {
+	return Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY &&
+		db.select({ userId: pushSubscriptions.userId }).from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)).get());
 }
 
 function isNotificationsEnabled(listId: string, userId: string): boolean {

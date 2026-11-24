@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { displayDate } from '#lib/dateDisplay';
 	import { onMount, onDestroy } from 'svelte';
 	import { on } from '#lib/sseStore.svelte';
 	import { goto } from '$app/navigation';
-	import { execute, cacheListsData, getOfflineLists, updateOfflineList, deleteOfflineList } from '#lib/sync/manager';
+	import { execute, cacheListsData, getOfflineLists, updateOfflineList, deleteOfflineList, resetChecklist } from '#lib/sync/manager';
+	import type { ChecklistSettings, ListKind } from '#lib/checklists';
 	import AppHeader from '#lib/components/AppHeader.svelte';
 	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
 	import ListCard from '#lib/components/ListCard.svelte';
@@ -24,7 +26,7 @@
 
 	let { data } = $props();
 
-	type ListItem = { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; openCount: number; memberCount: number; updatedAt: number; isOwner: boolean; ownerUsername: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null };
+	type ListItem = Partial<ChecklistSettings> & { kind?: ListKind; totalCount?: number; id: string; name: string; description: string | null; iconId: string | null; ownerId: string; openCount: number; memberCount: number; updatedAt: number; isOwner: boolean; ownerUsername: string | null; locationLat?: number | null; locationLng?: number | null; locationName?: string | null };
 	type PendingInvitation = { id: string; name: string; description: string | null; iconId: string | null; ownerId: string; ownerUsername: string | null; openCount: number; updatedAt: number };
 
 
@@ -69,7 +71,7 @@
 	const todayHour = new Date().getHours();
 	const todayGreeting = $derived(todayHour < 12 ? t.greeting_morning : todayHour < 18 ? t.greeting_day : todayHour < 22 ? t.greeting_evening : t.greeting_night);
 	const todayDayName = $derived(new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(new Date()));
-	const todayDateStr = $derived(new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(new Date()));
+	const todayDateStr = $derived(displayDate(new Date(), { day: 'numeric', month: 'long' }, currentLang() === 'de' ? 'de-DE' : 'en-US'));
 	const totalOpenItems = $derived(lists.reduce((s, l) => s + l.openCount, 0));
 	const listInfoLine = $derived(
 		loading || lists.length === 0 ? '' :
@@ -185,14 +187,15 @@
 		else { listSort = mode; saveSort(); }
 	}
 
-	function applyListActivity(listId: string, updatedAt: unknown, countDelta = 0) {
+	function applyListActivity(listId: string, updatedAt: unknown, countDelta = 0, totalDelta = 0) {
 		lists = lists.map(list => list.id === listId ? {
 			...list,
 			openCount: Math.max(0, list.openCount + countDelta),
+			totalCount: list.totalCount === undefined ? undefined : Math.max(0, list.totalCount + totalDelta),
 			updatedAt: typeof updatedAt === 'number' ? Math.max(list.updatedAt, updatedAt) : list.updatedAt
 		} : list);
 		const list = lists.find(list => list.id === listId);
-		if (list) void updateOfflineList(listId, { updatedAt: list.updatedAt, openCount: list.openCount });
+		if (list) void updateOfflineList(listId, { updatedAt: list.updatedAt, openCount: list.openCount, totalCount: list.totalCount });
 	}
 
 	async function loadLists() {
@@ -220,20 +223,28 @@
 			pendingInvitations = newInvitations;
 		} catch {
 			if (requestVersion !== listsLoadVersion) return;
+			const localLists = await getOfflineLists();
+			if (requestVersion !== listsLoadVersion) return;
 			if (lists.length === 0) {
-				lists = (await getOfflineLists()) as unknown as ListItem[];
+				lists = localLists as unknown as ListItem[];
 				pendingInvitations = [];
+			} else {
+				const progress = new Map(localLists.filter(row => row.kind === 'checklist' && row.checklistItemsCached).map(row => [row.id, row]));
+				lists = lists.map(list => {
+					const local = progress.get(list.id);
+					return local ? { ...list, openCount: local.openCount, totalCount: local.totalCount } : list;
+				});
 			}
 		}
 		if (requestVersion !== listsLoadVersion) return;
 		loading = false;
 	}
 
-	async function createList(name: string, description: string, iconId: string | null, shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null) {
+	async function createList(name: string, description: string, iconId: string | null, shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null, kind: ListKind = 'shopping') {
 		const res = await fetch('/api/lists', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name, description, iconId, locationLat, locationLng, locationName })
+			body: JSON.stringify({ name, description, iconId, locationLat, locationLng, locationName, kind })
 		});
 		if (res.ok) {
 			const newList = await res.json();
@@ -248,22 +259,43 @@
 		addModalOpen = false;
 	}
 
-	async function saveEditList(name: string, description: string, iconId: string | null, _shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null) {
+	async function saveEditList(name: string, description: string, iconId: string | null, _shareAfterCreate?: boolean, locationLat?: number | null, locationLng?: number | null, locationName?: string | null, _kind?: ListKind, checklist?: ChecklistSettings) {
 		if (!editList) return;
 		const id = editList.id;
 		await execute(
 			() => fetch(`/api/lists/${id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, description, iconId, locationLat, locationLng, locationName })
+				body: JSON.stringify({ name, description, iconId, locationLat, locationLng, locationName, ...checklist })
 			}).then(r => { if (!r.ok) throw new Error(); }),
-			{ type: 'update_list', payload: { id, name, description, iconId, locationLat, locationLng, locationName }, createdAt: Date.now() },
+			{ type: 'update_list', payload: { id, name, description, iconId, locationLat, locationLng, locationName, ...checklist }, createdAt: Date.now() },
 			() => {
-				lists = lists.map(l => l.id === id ? { ...l, updatedAt: Math.floor(Date.now() / 1000), name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null } : l);
-				void updateOfflineList(id, { updatedAt: Math.floor(Date.now() / 1000), name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null });
+				lists = lists.map(l => l.id === id ? { ...l, updatedAt: Math.floor(Date.now() / 1000), name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null, ...checklist } : l);
+				void updateOfflineList(id, { updatedAt: Math.floor(Date.now() / 1000), name, description: description || null, iconId, locationLat: locationLat ?? null, locationLng: locationLng ?? null, locationName: locationName ?? null, ...checklist });
 			}
 		);
 		editList = null;
+	}
+
+	async function resetEditedChecklist() {
+		if (editList?.kind !== 'checklist' || !data.user?.id) return;
+		await resetChecklist(data.user.id, editList.id);
+		await loadLists();
+		editList = null;
+	}
+
+	async function duplicateEditedChecklist(name: string, id: string) {
+		if (editList?.kind !== 'checklist') return;
+		const response = await fetch(`/api/lists/${editList.id}/checklist`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ action: 'duplicate', name, id })
+		});
+		if (!response.ok) throw new Error();
+		await loadLists();
+		editList = null;
+		const { id: duplicateId } = await response.json();
+		await goto(`/listen/${duplicateId}`);
 	}
 
 	async function deleteList(id: string) {
@@ -340,6 +372,7 @@
 		on('list_member_count_changed', (ev) => {
 			lists = lists.map(l => l.id === ev.listId ? { ...l, memberCount: ev.memberCount as number } : l);
 		}),
+		on('checklist_refreshed', () => void loadLists()),
 		on('list_updated', (ev) => {
 			const update = ev.list as Partial<ListItem>;
 			lists = lists.map(l => l.id === ev.listId ? { ...l, ...update } : l);
@@ -351,13 +384,13 @@
 			customOrder = customOrder.filter(id => id !== ev.listId);
 		}),
 		on('item_added', (ev) => {
-			applyListActivity(ev.listId as string, ev.listUpdatedAt ?? (ev.item as { updatedAt?: number })?.updatedAt, 1);
+			applyListActivity(ev.listId as string, ev.listUpdatedAt ?? (ev.item as { updatedAt?: number })?.updatedAt, 1, 1);
 		}),
 		on('item_updated', (ev) => {
 			applyListActivity(ev.listId as string, ev.listUpdatedAt ?? (ev.item as { updatedAt?: number })?.updatedAt, (ev.openCountDelta as number) ?? 0);
 		}),
 		on('item_deleted', (ev) => {
-			applyListActivity(ev.listId as string, ev.listUpdatedAt, ev.wasChecked ? 0 : -1);
+			applyListActivity(ev.listId as string, ev.listUpdatedAt, ev.wasChecked ? 0 : -1, -1);
 		}),
 	];
 
@@ -514,6 +547,8 @@
 		list={editList}
 		memberCount={lists.find(list => list.id === editList?.id)?.memberCount ?? editList.memberCount}
 		onSave={saveEditList}
+		onReset={editList.kind === 'checklist' ? resetEditedChecklist : null}
+		onDuplicate={editList.kind === 'checklist' ? duplicateEditedChecklist : null}
 		onDelete={() => deleteList(editList!.id)}
 		onShare={() => { shareList = editList; }}
 		suspended={shareList?.id === editList.id}

@@ -6,6 +6,9 @@ type ItemEventSource = {
 	isChecked: boolean;
 	checkedAt: number | null;
 	categoryOverride: string | null;
+	sectionId?: string | null;
+	checklistPosition?: number | null;
+	checklistNote?: string | null;
 	createdBy: string | null;
 	createdAt: number;
 	updatedAt: number;
@@ -20,6 +23,9 @@ export function toAddedItemEventPayload(item: ItemEventSource, createdByUsername
 		isChecked: item.isChecked,
 		checkedAt: item.checkedAt,
 		categoryOverride: item.categoryOverride,
+		...(item.checklistPosition !== undefined ? { checklistPosition: item.checklistPosition } : {}),
+		...(item.sectionId !== undefined ? { sectionId: item.sectionId } : {}),
+		...(item.checklistNote !== undefined ? { checklistNote: item.checklistNote } : {}),
 		createdBy: item.createdBy,
 		createdByUsername,
 		createdAt: item.createdAt,
@@ -35,6 +41,9 @@ export function toUpdatedItemEventPayload(item: ItemEventSource, createdByUserna
 		isChecked: item.isChecked,
 		checkedAt: item.checkedAt,
 		categoryOverride: item.categoryOverride,
+		...(item.checklistPosition !== undefined ? { checklistPosition: item.checklistPosition } : {}),
+		...(item.sectionId !== undefined ? { sectionId: item.sectionId } : {}),
+		...(item.checklistNote !== undefined ? { checklistNote: item.checklistNote } : {}),
 		createdByUsername,
 		updatedAt: item.updatedAt
 	};

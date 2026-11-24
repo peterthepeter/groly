@@ -101,7 +101,7 @@ export const POST: RequestHandler = async (event) => {
 
 		// Prüfen ob der User Schreibzugriff auf die Liste hat
 		const list = db.select().from(lists).where(eq(lists.id, listId)).get();
-		if (!list) return Response.json({ error: 'Liste nicht gefunden' }, { status: 404 });
+		if (!list || list.kind !== 'shopping') return Response.json({ error: 'Einkaufsliste nicht gefunden' }, { status: 404 });
 		const isOwner = list.ownerId === user!.id;
 		const isMember = isOwner ? false : db
 			.select()

@@ -2,24 +2,17 @@
 import type { RequestHandler } from './$types';
 import { authGuard } from '#lib/auth/middleware';
 import { db } from '#lib/db';
-import { lists, items, listMembers, users } from '#lib/db/schema';
+import { items, users, lists, checklistReminders } from '#lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { emitToListMembers } from '#lib/server/userEvents';
 import { schedulePushForItemAdded } from '#lib/server/pushDebounce';
 import { now, generateId } from '#lib/auth';
 import { isValidCategoryKey } from '#lib/categories';
 import { getCategoryPreference } from '#lib/server/categoryPreferences';
+import { getListAccess, parseChecklistSections } from '#lib/server/checklists';
+import { parseChecklistNote } from '#lib/checklists';
 import { toAddedItemEventPayload } from '#lib/server/itemEventPayload';
 import { persistItemCreate } from '#lib/server/itemCreate';
-
-function getListAccess(listId: string, userId: string): { list: typeof lists.$inferSelect; permission: 'owner' | 'write' | 'read' | null } {
-	const list = db.select().from(lists).where(eq(lists.id, listId)).get();
-	if (!list) return { list: null as any, permission: null };
-	if (list.ownerId === userId) return { list, permission: 'owner' };
-	const member = db.select().from(listMembers).where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId), eq(listMembers.status, 'accepted'))).get();
-	if (member) return { list, permission: member.permission === 'write' ? 'write' : 'read' };
-	return { list: null as any, permission: null };
-}
 
 export const GET: RequestHandler = async (event) => {
 	const { error, user } = authGuard(event);
@@ -37,12 +30,18 @@ export const GET: RequestHandler = async (event) => {
 			isChecked: items.isChecked,
 			checkedAt: items.checkedAt,
 			categoryOverride: items.categoryOverride,
+			sectionId: items.sectionId,
+			checklistPosition: items.checklistPosition,
+			checklistNote: items.checklistNote,
+			remindAt: checklistReminders.dueAt,
+			reminderStatus: checklistReminders.status,
 			createdBy: items.createdBy,
 			createdByUsername: users.username,
 			createdAt: items.createdAt,
 			updatedAt: items.updatedAt
 		})
 		.from(items)
+		.leftJoin(checklistReminders, and(eq(checklistReminders.itemId, items.id), eq(checklistReminders.userId, user!.id)))
 		.leftJoin(users, eq(items.createdBy, users.id))
 		.where(eq(items.listId, event.params.id))
 		.all();
@@ -58,9 +57,22 @@ export const POST: RequestHandler = async (event) => {
 	if (!list || permission === null) return Response.json({ error: 'Nicht gefunden' }, { status: 404 });
 	if (permission === 'read') return Response.json({ error: 'Keine Schreibberechtigung' }, { status: 403 });
 
-	const { name, quantityInfo, id: clientId, categoryOverride: requestedCategoryOverride } = await event.request.json();
-	if (!name?.trim()) return Response.json({ error: 'Name erforderlich' }, { status: 400 });
-	if (requestedCategoryOverride != null && !isValidCategoryKey(requestedCategoryOverride)) {
+	const { name, quantityInfo, id: clientId, categoryOverride: requestedCategoryOverride, sectionId, kind, newSection, setDefault, checklistNote } = await event.request.json();
+	if (typeof name !== 'string' || !name.trim()) return Response.json({ error: 'Name erforderlich' }, { status: 400 });
+	if (kind !== undefined && kind !== list.kind) return Response.json({ error: 'List type does not match' }, { status: 409 });
+	const checklist = list.kind === 'checklist';
+	const note = checklistNote === undefined ? null : parseChecklistNote(checklistNote);
+	if (checklistNote !== undefined && (!checklist || note === undefined)) {
+		return Response.json({ error: 'Invalid checklist note' }, { status: 400 });
+	}
+	const changesSections = newSection !== undefined || setDefault === true;
+	if (changesSections && (!checklist || permission !== 'owner')) {
+		return Response.json({ error: 'Owner required' }, { status: 403 });
+	}
+	if (newSection !== undefined && (!newSection || newSection.id !== sectionId)) {
+		return Response.json({ error: 'Invalid new section' }, { status: 400 });
+	}
+	if (!checklist && requestedCategoryOverride != null && !isValidCategoryKey(requestedCategoryOverride)) {
 		return Response.json({ error: 'Ungültige Kategorie' }, { status: 400 });
 	}
 
@@ -69,18 +81,44 @@ export const POST: RequestHandler = async (event) => {
 		: generateId(16);
 	const ts = now();
 	const trimmedName = name.trim();
-	const trimmedQty = quantityInfo?.trim() ?? null;
-	const categoryOverride = requestedCategoryOverride ?? getCategoryPreference(user!.id, trimmedName);
-	const persisted = persistItemCreate(db, {
+	const trimmedQty = !checklist && typeof quantityInfo === 'string' ? quantityInfo.trim() : null;
+	const categoryOverride = checklist ? null : requestedCategoryOverride ?? getCategoryPreference(user!.id, trimmedName);
+	const create = (selectedSection: string | null) => persistItemCreate(db, {
 		id,
 		listId: event.params.id,
 		name: trimmedName,
 		quantityInfo: trimmedQty,
 		categoryOverride,
+		sectionId: selectedSection,
+		checklistNote: note,
+		kind: list.kind,
 		createdBy: user!.id,
-		createdAt: ts,
+		createdAt: checklist ? Date.now() : ts,
 		updatedAt: ts
 	});
+	const requestedSection = sectionId === undefined ? list.defaultSectionId : sectionId;
+	const persisted = changesSections ? db.transaction(tx => {
+		const current = tx.select().from(lists).where(eq(lists.id, list.id)).get()!;
+		let sections = current.checklistSections ?? [];
+		const requested = sectionId === undefined ? current.defaultSectionId : sectionId;
+		const existing = tx.select().from(items).where(eq(items.id, id)).get();
+		if (existing) return { item: existing, inserted: false };
+		if (newSection !== undefined) {
+			const known = sections.find(section => section.id === newSection.id);
+			if (known && known.name !== newSection.name) return null;
+			const valid = parseChecklistSections(known ? sections : [...sections, newSection]);
+			if (!valid) return null;
+			sections = valid;
+		}
+		const selectedSection = checklist && sections.some(section => section.id === requested) ? requested as string : null;
+		if (setDefault === true && requested !== null && !selectedSection) return null;
+		const result = create(selectedSection);
+		tx.update(lists).set({
+			checklistSections: sections, defaultSectionId: setDefault === true ? selectedSection : current.defaultSectionId
+		}).where(eq(lists.id, list.id)).run();
+		return result;
+	}) : create(checklist && list.checklistSections?.some(section => section.id === requestedSection) ? requestedSection : null);
+	if (!persisted) return Response.json({ error: 'Invalid checklist section' }, { status: 409 });
 
 	if (!persisted.inserted) {
 		if (persisted.item.listId !== event.params.id || persisted.item.createdBy !== user!.id) {
@@ -94,6 +132,8 @@ export const POST: RequestHandler = async (event) => {
 	const newItem = toAddedItemEventPayload(persisted.item, creator?.username ?? null);
 
 	emitToListMembers(event.params.id, { type: 'item_added', listId: event.params.id, item: newItem, listUpdatedAt: ts, byUserId: user!.id });
+
+	if (changesSections) emitToListMembers(list.id, { type: 'checklist_refreshed', listId: list.id });
 
 	schedulePushForItemAdded({
 		listId: event.params.id,

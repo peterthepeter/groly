@@ -35,6 +35,10 @@
 					text: 'Sign-in and invite pages appear in German for German browsers and English otherwise. After signing in, you can choose either language in Settings; your choice is saved for your account.'
 				},
 				{
+					title: 'Date and time formats',
+					text: 'Choose both formats in Settings → General. Groly uses your browser’s region to fill in the first formats and saves them for your account. The same settings apply across the app and on your other devices.'
+				},
+				{
 					title: 'Updates',
 					text: 'When an update is ready, an arrow appears in the top bar. Tap it and reload Groly from the dialog.'
 				},
@@ -61,7 +65,11 @@
 				{ title: t.sort_mode_title, text: t.lists_sort_help },
 				{
 					title: 'Open, edit & sort',
-					text: 'Tap a list to open it. Long-press its name to edit its name, additional info, icon, category sorting, and location in one grouped surface. Category sorting uses the same drag handles and position picker as Settings. Done returns to the editor; Save applies your edits and Cancel discards them.'
+					text: 'Tap a list to open it. Long-press a list you own to edit its name, additional info, icon, item sorting, and location. Done returns to the editor. Save applies your edits and Cancel discards them.'
+				},
+				{
+					title: 'Checklists',
+					text: 'Tap + in Lists, then choose Checklist under List type. Long-press the list in the overview to duplicate it or reopen every entry. Add multiple entries from the same bottom bar. Changing the section keeps the keyboard open while you type. Add an optional note when creating or editing an entry. The checklist shows a one-line preview, and the dots open the full note, including for people with view access. Notes are copied when you duplicate the list. Completed entries stay in place. Use + and New section to create a section with its first entry. Choose Set as default to use it next time. For an existing section, choose it and reopen the section picker to set it as the default. The header shows how many entries are complete. Tap the progress count to show all entries or only open ones. Open Manage and choose Sections to add, rename, reorder or remove sections and set the default. Sort shows drag handles and retains completion marks. Delete entries starts with an empty selection. Tap any entries or use Select checked entries, then confirm the number to delete. Uncheck all entries reopens completed entries. Done returns to Manage. After deleting a selection or unchecking all entries, you can choose another action. Tap Close or outside the menu to return to the checklist. Swipe left on an entry and tap Delete to remove it. Undo is available briefly. Tap the dots beside an entry to move it, set a personal reminder or save it with the star. Tap the star in the bottom bar and choose Add favourite to save a new favourite directly. Saved entries can be added to any checklist. A reminder needs to sync with the server before it can send a push.'
 				},
 				{
 					title: 'Share & notify',
@@ -97,8 +105,8 @@
 				},
 				{
 					title: 'Categories',
-					text: 'Groly automatically recognizes items and shows a matching category or product icon. Long-press an item to change its category or return to Automatic. Groly remembers your choice for items with the same name. Set the order globally in Settings or per list in its edit dialog.',
-					link: { href: '/einstellungen/kategorien', label: 'Set category sorting' }
+					text: 'Groly automatically recognizes items and shows a matching category or product icon. Long-press an item to change its category or return to Automatic. Groly remembers your choice for items with the same name. In Settings → Shopping lists → Sort items, choose a sort order for open items: by category, A–Z, Z–A, or off. If you sort by category, drag the categories or tap a handle to change their order. In a list you own, turn off Use global settings in the list editor to choose a different sort order for that list.',
+					link: { href: '/einstellungen/kategorien', label: 'Set item sorting' }
 				},
 				{
 					title: 'Favorites',
@@ -120,7 +128,7 @@
 				},
 				{
 					title: 'Supplements & reminders',
-					text: 'Create supplements under Manage with a name, unit, and optional nutrients. Use the bell to schedule reminders; logging a supplement up to 45 minutes early completes its closest reminder. Tap today’s reminder status in the header to expand compact intake rows. The complete current week opens scrolled to today. All days scroll freely while the reminder-status row stays visible. Taken supplements are crossed out on their actual date; tap a time group today to change its reminder status. The same week plan is also available under Manage.',
+					text: 'Create supplements under Manage with a name, unit, and optional nutrients. If you sort by frequency in Quick Log, supplement tiles keep their positions while you log. The order updates the next time you open Quick Log. Use the bell to schedule reminders; logging a supplement up to 45 minutes early completes its closest reminder. Tap today’s reminder status in the header to expand compact intake rows. The complete current week opens scrolled to today. All days scroll freely while the reminder-status row stays visible. Taken supplements are crossed out on their actual date; tap a time group today to change its reminder status. The same week plan is also available under Manage.',
 					link: { href: '/tracker/verwalten', label: 'Open Manage' }
 				},
 				{
@@ -163,7 +171,7 @@
 				},
 				{
 					title: 'Organize & remember',
-					text: 'The shared header contains Recipes and Meal Plan. Search opens below the tabs; switching to Meal Plan closes the search and resets its filters. Recipes share one card with favorites at the bottom. The overview shows ratings, total preparation and cooking time, and tags as a compact text line; descriptions remain in recipe details. Use favorites, ratings, and tags to organize recipes. “Cooked today” updates the cooking history; use the sort menu to change the recipe order.'
+					text: 'The shared header contains Recipes and Meal Plan. Search opens below the tabs; switching to Meal Plan closes the search and resets its filters. Recipes are grouped by category. Choose or create a category below the photo when adding or editing a recipe, in the URL import preview, or by tapping the category on the recipe photo. For an uncategorized recipe, open More and choose Change category. Add or edit tags from the same menu. Each recipe can have one category, and the overview also shows uncategorized recipes. Open Sort and choose Manage categories to add, rename, reorder, or remove categories. Recipes from a removed category move to Uncategorized. Existing favorites are grouped in the Favorites category. Use tags to filter across categories. “Cooked today” updates the cooking history; use the sort menu to change the recipe order.'
 				},
 				{
 					title: 'Offline recipes',
@@ -200,6 +208,10 @@
 					text: 'Ist ein Update verfügbar, erscheint oben ein Pfeil. Tippe ihn an und lade Groly über den angezeigten Dialog neu.'
 				},
 				{
+					title: 'Datums- und Uhrzeitformat',
+					text: 'Beide Formate findest du unter Einstellungen → Allgemein. Groly ermittelt die ersten Werte anhand der Regionseinstellung deines Browsers und speichert sie im Konto. Die Auswahl gilt in der ganzen App und auf deinen anderen Geräten.'
+				},
+				{
 					title: 'Sicherung vor Versionswechseln',
 					text: 'Vor dem ersten Start einer neuen Serverversion sichert Groly Datenbank und hochgeladene Bilder geprüft im Ordner backups neben der Datenbank. Dafür muss ausreichend freier Speicher vorhanden sein. Schlägt die Sicherung fehl, bleibt der Start gesperrt; die Ursache steht im Container-Log. Sicherungen werden nie automatisch gelöscht. Zum Wiederherstellen Groly stoppen, Datenbank und Bilder aus derselben Sicherung zurückspielen und das passende vorherige Image starten. Die vollständigen Schritte stehen in der Upgrade-Anleitung für Betreiber.'
 				},
@@ -222,7 +234,11 @@
 				{ title: t.sort_mode_title, text: t.lists_sort_help },
 				{
 					title: 'Öffnen, bearbeiten & sortieren',
-					text: 'Tippe eine Liste zum Öffnen an. Halte ihren Namen gedrückt, um Name, Zusatzinfo, Icon, Kategorie-Sortierung und Standort in einer gemeinsamen Fläche zu bearbeiten. Die Kategorie-Sortierung nutzt dieselben Griffe und die Positionsauswahl wie die Einstellungen. Fertig führt zurück zum Editor; Speichern übernimmt deine Änderungen, Abbrechen verwirft sie.'
+					text: 'Tippe eine Liste zum Öffnen an. Halte eine eigene Liste gedrückt, um Name, Zusatzinfo, Icon, Artikelsortierung und Standort zu bearbeiten. Fertig führt zurück zum Editor. Speichern übernimmt deine Änderungen. Abbrechen verwirft sie.'
+				},
+				{
+					title: 'Checklisten',
+					text: 'Tippe unter „Listen“ auf + und wähle unter „Listentyp“ die Checkliste. Halte die Liste in der Übersicht gedrückt, um sie zu duplizieren oder alle Einträge wieder zu öffnen. Über die Eingabeleiste kannst du mehrere Einträge nacheinander hinzufügen. Beim Wechsel des Abschnitts bleibt die Tastatur beim Tippen offen. Beim Anlegen und Bearbeiten kannst du eine optionale Notiz hinzufügen. Die Checkliste zeigt eine Vorschau. Über die drei Punkte können auch Personen mit Leserechten die ganze Notiz öffnen. Beim Duplizieren werden Notizen übernommen. Abgehakte Einträge bleiben an ihrem Platz. Über + und „Neuer Abschnitt …“ legst du einen Abschnitt mit seinem ersten Eintrag an. Mit „Als Standard festlegen“ wählst du ihn für künftige Einträge. Bei einem vorhandenen Abschnitt findest du die Aktion nach der Auswahl direkt im Abschnittsmenü. Im Kopf siehst du, wie viele Einträge erledigt sind. Tippe auf den Fortschritt, um alle oder nur offene Einträge anzuzeigen. Unter „Verwalten“ und „Abschnitte“ kannst du Abschnitte anlegen, umbenennen, verschieben, entfernen und als Standard festlegen. Unter „Sortieren“ verschiebst du Abschnitte und Einträge. Erledigte Einträge bleiben abgehakt. „Einträge löschen“ startet mit einer leeren Auswahl. Tippe Einträge an oder nutze „Abgehakte auswählen“ und bestätige die Anzahl. „Alle Häkchen entfernen“ öffnet die erledigten Einträge wieder. „Fertig“ führt zurück zu „Verwalten“. Auch nach dem Löschen oder Zurücksetzen kannst du dort direkt die nächste Aktion wählen. Mit „Schließen“ oder einem Tipp außerhalb des Menüs kommst du zurück zur Checkliste. Wische für einen einzelnen Eintrag nach links und tippe auf „Löschen“. Kurz danach kannst du das rückgängig machen. Über die drei Punkte neben einem Eintrag kannst du ihn verschieben, eine persönliche Erinnerung setzen oder ihn mit dem Stern speichern. Über den Stern in der Eingabeleiste und „Favorit hinzufügen“ kannst du auch direkt einen Favoriten speichern. Gespeicherte Einträge kannst du in jeder Checkliste hinzufügen. Für einen Push muss die Erinnerung zuerst mit dem Server synchronisiert sein.'
 				},
 				{
 					title: 'Teilen & Benachrichtigungen',
@@ -258,8 +274,8 @@
 				},
 				{
 					title: 'Kategorien',
-					text: 'Groly erkennt Items automatisch und zeigt passende Kategorie- oder Produktsymbole. Halte ein Item gedrückt, um die Kategorie zu ändern oder zu „Automatisch“ zurückzukehren. Groly merkt sich deine Auswahl für gleich benannte Items. Die Reihenfolge legst du global in den Einstellungen oder je Liste fest.',
-					link: { href: '/einstellungen/kategorien', label: 'Kategoriesortierung festlegen' }
+					text: 'Groly erkennt Artikel automatisch und zeigt passende Kategorie- oder Produktsymbole. Halte einen Artikel gedrückt, um seine Kategorie zu ändern oder zu „Automatisch“ zurückzukehren. Groly merkt sich deine Auswahl für gleich benannte Artikel. Unter Einstellungen → Einkaufslisten → Artikel sortieren wählst du, wie offene Artikel angezeigt werden: nach Kategorie, A–Z, Z–A oder ohne Sortierung. Bei Kategoriesortierung kannst du die Kategorien am Griff verschieben oder die Position durch Antippen des Griffs auswählen. Für eine eigene Liste schaltest du im Listeneditor „Einstellungen übernehmen“ aus und wählst dort die gewünschte Sortierung.',
+					link: { href: '/einstellungen/kategorien', label: 'Artikelsortierung festlegen' }
 				},
 				{
 					title: 'Favoriten',
@@ -281,7 +297,7 @@
 				},
 				{
 					title: 'Supplements & Erinnerungen',
-					text: 'Lege Supplements unter „Verwalten“ mit Name, Einheit und optionalen Nährstoffen an. Über die Glocke planst du Erinnerungen; ein Log bis zu 45 Minuten vorher erledigt den zeitlich passendsten Reminder. Tippe im Header auf den heutigen Erinnerungsstatus, um kompakte Einnahmezeilen aufzuklappen. Die vollständige aktuelle Woche öffnet sich zum heutigen Tag gescrollt. Alle Tage sind frei scrollbar, während die Statuszeile sichtbar bleibt. Eingenommene Supplements sind am jeweiligen Datum durchgestrichen; tippe auf eine heutige Zeitgruppe, um ihren Erinnerungsstatus zu ändern. Derselbe Wochenplan ist auch unter Verwalten verfügbar.',
+					text: 'Lege Supplements unter „Verwalten“ mit Name, Einheit und optionalen Nährstoffen an. Wenn du beim Loggen nach Häufigkeit sortierst, behalten die Supplement-Kacheln ihre Positionen. Die Reihenfolge aktualisiert sich beim nächsten Öffnen der Log-Übersicht. Über die Glocke planst du Erinnerungen; ein Log bis zu 45 Minuten vorher erledigt den zeitlich passendsten Reminder. Tippe im Header auf den heutigen Erinnerungsstatus, um kompakte Einnahmezeilen aufzuklappen. Die vollständige aktuelle Woche öffnet sich zum heutigen Tag gescrollt. Alle Tage sind frei scrollbar, während die Statuszeile sichtbar bleibt. Eingenommene Supplements sind am jeweiligen Datum durchgestrichen; tippe auf eine heutige Zeitgruppe, um ihren Erinnerungsstatus zu ändern. Derselbe Wochenplan ist auch unter Verwalten verfügbar.',
 					link: { href: '/tracker/verwalten', label: 'Verwalten öffnen' }
 				},
 				{
@@ -324,7 +340,7 @@
 				},
 				{
 					title: 'Ordnen & merken',
-					text: 'Der gemeinsame Header enthält Rezepte und Wochenplan. Die Suche öffnet sich unter den Tabs; beim Wechsel zum Wochenplan schließen sich Suche und Filter. Rezepte stehen in einer gemeinsamen Karte mit Favoriten unten. Die Übersicht zeigt Bewertungen, die gesamte Vorbereitungs- und Kochzeit sowie Tags als kompakte Textzeile; Beschreibungen bleiben in den Rezeptdetails. Organisiere Rezepte mit Favoriten, Bewertungen und Tags. „Heute gekocht“ aktualisiert den Kochverlauf; über das Sortiermenü änderst du die Reihenfolge der Rezepte.'
+					text: 'Der gemeinsame Header enthält Rezepte und Wochenplan. Die Suche öffnet sich unter den Tabs; beim Wechsel zum Wochenplan schließen sich Suche und Filter. Rezepte sind nach Kategorie gruppiert. Wähle oder erstelle eine Kategorie unter dem Foto beim Anlegen oder Bearbeiten, in der Vorschau beim URL-Import oder über die Kategorie auf dem Rezeptfoto. Bei einem Rezept ohne Kategorie öffnest du „Mehr“ und wählst „Kategorie ändern“. Tags fügst du über dasselbe Menü hinzu oder bearbeitest sie dort. Jedes Rezept kann einer Kategorie angehören. Die Übersicht zeigt auch Rezepte ohne Kategorie. Über „Sortierung“ und „Kategorien verwalten“ kannst du Kategorien anlegen, umbenennen, verschieben und entfernen. Rezepte aus einer entfernten Kategorie findest du unter „Ohne Kategorie“. Bestehende Favoriten findest du in der Kategorie „Favoriten“. Über Tags kannst du kategorienübergreifend filtern. „Heute gekocht“ aktualisiert den Kochverlauf; über das Sortiermenü änderst du die Reihenfolge der Rezepte.'
 				},
 				{
 					title: 'Rezepte offline',

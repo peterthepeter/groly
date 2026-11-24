@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayTime } from '#lib/dateDisplay';
 	type TileSupplement = {
 		id: string;
 		name: string;
@@ -157,7 +158,7 @@
 	<button
 		type="button"
 		disabled={saving || done}
-		aria-label={`${supplement.name}, ${amount} ${unitLabel}, ${time}`}
+	aria-label={`${supplement.name}, ${amount} ${unitLabel}, ${displayTime(time)}`}
 		onclick={handleTileClick}
 		onpointerdown={startPress}
 		onpointermove={movePress}
@@ -206,12 +207,12 @@
 			<label
 				class="tile-edit-control relative h-8 min-w-0 px-1 flex items-center justify-center text-[10px] font-semibold tabular-nums overflow-hidden"
 			>
-				<span>{time || '--:--'}</span>
+				<span>{displayTime(time) || '--:--'}</span>
 				<input
 					type="time"
 					value={time}
 					oninput={(event) => onTimeChange(event.currentTarget.value)}
-					aria-label={`${supplement.name}: ${time}`}
+					aria-label={`${supplement.name}: ${displayTime(time)}`}
 					class="absolute inset-0 w-full h-full opacity-[0.001] cursor-pointer"
 				/>
 			</label>

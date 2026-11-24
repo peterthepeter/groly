@@ -1,6 +1,6 @@
 import { db } from '#lib/db';
-import { barcodeCache, items, itemHistory, sessions, supplementLogs, mealPlanEntries, userInvites } from '#lib/db/schema';
-import { and, eq, lt, lte, or, isNotNull } from 'drizzle-orm';
+import { barcodeCache, items, lists, itemHistory, sessions, supplementLogs, mealPlanEntries, userInvites } from '#lib/db/schema';
+import { and, eq, lt, lte, or, isNotNull, inArray } from 'drizzle-orm';
 
 const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
 const TWO_MONTHS_S = 60 * 24 * 60 * 60;
@@ -14,8 +14,12 @@ export function cleanupBarcodeCache() {
 
 export function cleanupOldData() {
 	const nowS = Math.floor(Date.now() / 1000);
-	// Abgehakte Items löschen, die älter als 60 Tage sind
-	db.delete(items).where(and(eq(items.isChecked, true), lt(items.checkedAt, nowS - TWO_MONTHS_S))).run();
+	if (process.env.KEEP_CHECKED_ITEMS !== 'true') {
+		const shoppingLists = db.select({ id: lists.id }).from(lists).where(eq(lists.kind, 'shopping'));
+		db.delete(items).where(and(
+			inArray(items.listId, shoppingLists), eq(items.isChecked, true), lt(items.checkedAt, nowS - TWO_MONTHS_S)
+		)).run();
+	}
 	// Vorschläge löschen, die seit mehr als 6 Monaten nicht genutzt wurden
 	db.delete(itemHistory).where(lt(itemHistory.lastUsedAt, nowS - SIX_MONTHS_S)).run();
 	// Supplement-Logs älter als 2 Jahre löschen

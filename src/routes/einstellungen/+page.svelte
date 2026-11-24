@@ -1,5 +1,7 @@
 <script lang="ts">
+	import PreferredDateTimeInput from '#lib/components/PreferredDateTimeInput.svelte';
 	import { tick } from 'svelte';
+	import { CalendarDays, Clock } from '@lucide/svelte';
 	import { goto, snapshot } from '$app/navigation';
 	import { page } from '$app/state';
 	import * as publicEnv from '$app/env/public';
@@ -12,12 +14,17 @@
 	import SettingsGroup from '#lib/components/SettingsGroup.svelte';
 	import { t, currentLang, setLang } from '#lib/i18n.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
+	import { DATE_FORMATS, TIME_FORMATS, formatDateKey, formatClockTime, isDateFormat, isTimeFormat } from '#lib/dates';
+	import { getStoredFormats } from '#lib/userSettingsSync';
 	import { validatePasswordRule, getPasswordHint } from '#lib/password';
 	import { logoutDevice, syncDevicePush } from '#lib/deviceSession';
 
 	const PUBLIC_VAPID_KEY = publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '';
+	const dateFormats = DATE_FORMATS.map(value => ({ value, label: formatDateKey('2026-11-23', value) }));
+	const timeFormats = TIME_FORMATS.map(value => ({ value, label: formatClockTime('17:30', value) }));
 
 	let { data } = $props();
+	const storedFormats = $derived(getStoredFormats(data.settings ?? {}));
 
 	let openedGroups = $state({ general: false, visibility: false, display: false, shopping: false, notifications: false, account: false });
 	snapshot({
@@ -444,6 +451,14 @@
 				<SettingsSelectRow label={t.language} value={currentLang()} options={[{ value: 'de', label: t.language_de }, { value: 'en', label: t.language_en }]} onchange={(value) => setLang(value as 'de' | 'en')}>
 					{#snippet icon()}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>{/snippet}
 				</SettingsSelectRow>
+				<SettingsSelectRow label={t.settings_date_format} value={userSettings.dateFormat ?? storedFormats.dateFormat ?? ''} options={dateFormats}
+					onchange={value => { if (isDateFormat(value)) userSettings.setDateFormat(value); }}>
+					{#snippet icon()}<CalendarDays size={20} />{/snippet}
+				</SettingsSelectRow>
+				<SettingsSelectRow label={t.settings_time_format} value={userSettings.timeFormat ?? storedFormats.timeFormat ?? ''} options={timeFormats}
+					onchange={value => { if (isTimeFormat(value)) userSettings.setTimeFormat(value); }}>
+					{#snippet icon()}<Clock size={20} />{/snippet}
+				</SettingsSelectRow>
 
 				<div id="schnellzugriff">
 					<a href="/einstellungen/schnellzugriff" class="settings-quick-access">
@@ -550,11 +565,9 @@
 						<a class="settings-category-open" href="/einstellungen/kategorien">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
 							<span class="settings-category-label">{t.settings_category_sorting}</span>
+							<span class="settings-category-value">{t[`item_sort_${userSettings.shoppingItemSortMode}`]}</span>
 							<span class="settings-category-affordance" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg></span>
 						</a>
-						<button type="button" role="switch" aria-checked={userSettings.categorySortEnabled} aria-label={t.settings_category_sorting} class="settings-category-switch" onclick={() => userSettings.categorySortEnabled = !userSettings.categorySortEnabled}>
-							<span class="h-5 w-10 rounded-full border" style="border-color: {userSettings.categorySortEnabled ? 'var(--color-primary)' : 'var(--color-outline-variant)'}; background-color: {userSettings.categorySortEnabled ? 'var(--color-primary)' : 'var(--color-surface-container)'}" aria-hidden="true"></span>
-						</button>
 					</div>
 				</div>
 
@@ -739,18 +752,20 @@
 											<div class="flex">
 												<div class="flex-1 px-3 py-2 flex flex-col gap-0.5">
 													<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'From' : 'Von'}</span>
-													<input
+													<PreferredDateTimeInput
 														type="date"
 														bind:value={exportFrom}
+													aria-label={t.export_from}
 														class="border-0 outline-none w-full"
 														style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
 													/>
 												</div>
 												<div class="flex-1 px-3 py-2 flex flex-col gap-0.5" style="border-left: 1px solid var(--color-surface-high)">
 													<span class="text-xs font-medium" style="color: var(--color-on-surface-variant)">{currentLang() === 'en' ? 'To' : 'Bis'}</span>
-													<input
+													<PreferredDateTimeInput
 														type="date"
 														bind:value={exportTo}
+													aria-label={t.export_to}
 														class="border-0 outline-none w-full"
 														style="background: transparent; color: var(--color-on-surface); font-size: 16px; padding: 0"
 													/>
@@ -983,8 +998,8 @@
 	.settings-category-open > svg { flex: none; color: var(--color-on-surface-variant); }
 	.settings-category-open:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: 12px; }
 	.settings-category-label { flex: 1; }
-	.settings-category-affordance { display: flex; align-items: center; justify-content: center; width: 40px; flex: none; color: var(--color-on-surface-variant); }
-	.settings-category-switch { display: flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; flex: none; }
+	.settings-category-value { color: var(--color-on-surface-variant); text-align: right; }
+	.settings-category-affordance { flex: none; color: var(--color-on-surface-variant); }
 	.settings-shared-row + .settings-shared-row { border-top: 1px solid var(--bubble-container-border); }
 	.settings-inline-status { margin: 0; padding: 0 20px 8px; font-size: 12px; line-height: 1.5; }
 	.settings-push-actions { padding: 0 20px; }

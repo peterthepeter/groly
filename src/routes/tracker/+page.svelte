@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayDate, displayTime } from '#lib/dateDisplay';
 	import { onMount, tick } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/state';
@@ -9,7 +10,6 @@
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { cacheSupplements, getOfflineSupplements, mergePendingSupplementStock, cacheTodayLogs, getOfflineTodayLogs, cacheWaterLogs, getOfflineWaterLogsToday, cacheCaffeineLogs, getOfflineCaffeineLogsToday, cacheCaffeineDrinks, getOfflineCaffeineDrinks, cacheMeditationLogs, getOfflineMeditationLogsToday, getPendingLogs, onSupplementLogSynced } from '#lib/sync/manager';
 	import { displayUnit } from '#lib/units';
-	import { formatTime } from '#lib/dates';
 	import { flushUserSettings, userSettings } from '#lib/userSettings.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
 	import QuickLogSheet from '#lib/components/supplements/QuickLogSheet.svelte';
@@ -263,7 +263,7 @@
 		const times = logs
 			.slice()
 			.sort((a, b) => a.loggedAt - b.loggedAt)
-			.map(l => formatTime(l.loggedAt))
+			.map(l => displayTime(l.loggedAt))
 			.join(', ');
 		return `(${times})`;
 	}
@@ -1080,7 +1080,7 @@
 	function formatPeriodLabel(): string {
 		const d = new Date(historyDate + 'T00:00:00');
 		if (historyPeriod === 'day') {
-			return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+			return displayDate(d, { weekday: 'short', day: 'numeric', month: 'short' });
 		}
 		if (historyPeriod === 'week') {
 			const day = d.getDay();
@@ -1089,7 +1089,7 @@
 			monday.setDate(d.getDate() + diffToMonday);
 			const sunday = new Date(monday);
 			sunday.setDate(monday.getDate() + 6);
-			return `${monday.toLocaleDateString([], { day: 'numeric', month: 'short' })} – ${sunday.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
+			return `${displayDate(monday, { day: 'numeric', month: 'short' })} – ${displayDate(sunday, { day: 'numeric', month: 'short' })}`;
 		}
 		return d.toLocaleDateString([], { month: 'long', year: 'numeric' });
 	}
@@ -1211,7 +1211,7 @@
 			{@const hour = now.getHours()}
 			{@const todayGreeting = hour < 12 ? t.greeting_morning : hour < 18 ? t.greeting_day : hour < 22 ? t.greeting_evening : t.greeting_night}
 			{@const todayDayName = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(now)}
-			{@const todayDateStr = new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(now)}
+			{@const todayDateStr = displayDate(now, { day: 'numeric', month: 'long' }, currentLang() === 'de' ? 'de-DE' : 'en-US')}
 			<div bind:this={greetingEl} class="absolute left-0 right-0 flex flex-col justify-end px-6 pb-4 pointer-events-none" style="top: var(--tracker-header-height); height: calc(22vh - 2.5rem); min-height: 75px; max-height: 120px; transition: opacity 0.15s ease;">
 				<p class="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style="color: var(--color-on-surface-variant)">{todayDayName} · {todayDateStr}</p>
 				<p class="text-2xl font-light leading-tight" style="color: var(--color-on-surface)">{todayGreeting}, {data.user.username}</p>
@@ -1375,7 +1375,7 @@
 										{:else}
 											<div class="mt-auto w-full h-7 grid grid-cols-2 items-stretch rounded-[9px] overflow-hidden text-[10px] font-medium leading-none tabular-nums" style="background-color: color-mix(in srgb, var(--color-on-surface) 4%, transparent); color: var(--color-on-surface-variant)">
 												<span class="min-w-0 px-1 flex items-center justify-center truncate">{total} {displayUnit(supplement.unit, currentLang())}</span>
-												<span class="min-w-0 px-1 flex items-center justify-center truncate border-l" style="border-color: var(--bubble-container-border)">{logs.length > 1 ? `${logs.length}× · ` : ''}{formatTime(latestLog.loggedAt)}</span>
+												<span class="min-w-0 px-1 flex items-center justify-center truncate border-l" style="border-color: var(--bubble-container-border)">{logs.length > 1 ? `${logs.length}× · ` : ''}{displayTime(latestLog.loggedAt)}</span>
 											</div>
 										{/if}
 									</button>
@@ -1392,7 +1392,7 @@
 														onpointercancel={cancelPress}
 														class="flex-1 text-left py-0.5 active:opacity-60"
 														style="color: var(--color-primary)"
-													>{log.amount} {displayUnit(supplement.unit, currentLang())} {t.supplement_log_at} {formatTime(log.loggedAt)}</button>
+													>{log.amount} {displayUnit(supplement.unit, currentLang())} {t.supplement_log_at} {displayTime(log.loggedAt)}</button>
 													<button
 														onclick={() => openEditLog(log, supplement)}
 														class="p-1 rounded active:opacity-50 shrink-0"

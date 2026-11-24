@@ -60,7 +60,8 @@ export const PATCH: RequestHandler = async (event) => {
 		if (requestedRevision === undefined) {
 			// Old clients send a complete top-level snapshot, including the complete
 			// per-list map. Preserve those replacement semantics during the rollout.
-			const merged = { ...current, ...(patch as UserSettings) };
+			const { initialFormats, ...legacyPatch } = patch;
+			const merged = applyUserSettingsPatch({ ...current, ...(legacyPatch as UserSettings) }, { initialFormats });
 			const nextRevision = fullUser.settingsRevision + 1;
 			db.update(users)
 				.set({
@@ -85,6 +86,9 @@ export const PATCH: RequestHandler = async (event) => {
 		}
 
 		const merged = applyUserSettingsPatch(current, patch);
+		if (patch.initialFormats && Object.keys(patch).length === 1 && JSON.stringify(merged) === JSON.stringify(current)) {
+			return Response.json({ ok: true, settings: current, settingsRevision: requestedRevision });
+		}
 		const nextRevision = fullUser.settingsRevision + 1;
 		const result = db.update(users)
 			.set({

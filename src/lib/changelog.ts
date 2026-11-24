@@ -2,6 +2,23 @@
 // Diese Änderungen werden im Update-Popup angezeigt.
 export type ChangelogEntry = { version: string; intro?: { de: string; en: string }; de: string[]; en: string[] };
 export const CHANGELOG: ChangelogEntry[] = [
+	{
+		version: '1.1.0-beta.1',
+		de: [
+			'Erstelle gemeinsame Checklisten mit Abschnitten, Notizen und einmaligen Erinnerungen. Du kannst sie duplizieren oder alle Einträge wieder öffnen.',
+			'Organisiere deine Rezepte in eigenen Kategorien. Bestehende Favoriten findest du in der Kategorie „Favoriten“.',
+			'Sortiere offene Einkaufsartikel nach Kategorie, von A–Z oder Z–A, oder schalte die Sortierung aus. Die Einstellung gilt global oder pro Liste.',
+			'Wähle dein Datums- und Uhrzeitformat einmal für dein Konto. Die Auswahl gilt auch auf deinen anderen Geräten.',
+			'Nach Häufigkeit sortierte Supplement-Kacheln behalten beim schnellen Loggen ihre Position. Die Reihenfolge aktualisiert sich beim nächsten Öffnen.'
+		],
+		en: [
+			'Create shared checklists with sections, notes, and one-time reminders. Duplicate a checklist or reopen all its entries.',
+			'Organize recipes into your own categories. Existing favorites appear in the Favorites category.',
+			'Sort open shopping items by category, A–Z, or Z–A, or turn sorting off. Set a default or choose a different order for each list.',
+			'Choose your date and time formats once for your account. Your choices apply across devices.',
+			'Supplement tiles sorted by frequency stay in place while you log. The order updates the next time you open Quick Log.'
+		]
+	},
 {
 	"version": "1.0.0",
 	"intro": {

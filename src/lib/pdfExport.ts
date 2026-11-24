@@ -7,6 +7,7 @@
 // scattering casts; we use `any` for the doc tree and rely on pdfmake's runtime validation.
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { tsToDateKey } from './dates';
+import { displayDate, displayTime } from './dateDisplay';
 import {
 	computeAdherence,
 	computeTrackerStats,
@@ -75,13 +76,12 @@ const COLORS = {
 };
 
 function formatAxisLabel(dateKey: string, lang: 'de' | 'en'): string {
-	// dateKey is YYYY-MM-DD; render as e.g. "1. Mai" or "May 1"
 	const d = new Date(dateKey + 'T12:00:00');
-	return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'de-DE', { day: 'numeric', month: 'short' });
+	return displayDate(d, { day: 'numeric', month: 'short' }, lang);
 }
 
 function fmtDate(ts: number, lang: 'de' | 'en'): string {
-	return new Date(ts).toLocaleDateString(lang === 'en' ? 'en-US' : 'de-DE', { day: 'numeric', month: 'short', year: 'numeric' });
+	return displayDate(new Date(ts), { day: 'numeric', month: 'short', year: 'numeric' }, lang);
 }
 
 function tx(lang: 'de' | 'en', de: string, en: string): string {
@@ -103,9 +103,7 @@ export async function exportReport(opts: ReportOptions): Promise<void> {
 function buildDocument(opts: ReportOptions): TDocumentDefinitions {
 	const { lang, range, template } = opts;
 	const periodLabel = `${fmtDate(range.from, lang)} – ${fmtDate(range.to, lang)}`;
-	const generatedAt = new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'de-DE', {
-		day: 'numeric', month: 'long', year: 'numeric'
-	});
+	const generatedAt = displayDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric' }, lang);
 
 	const titles: Record<ReportTemplate, [string, string]> = {
 		supplements: ['Supplements', 'Supplements'],
@@ -269,7 +267,7 @@ function buildCurrentTherapy(opts: ReportOptions): any[] {
 		if (!times || times.length === 0) continue;
 		rows.push([
 			{ text: supp.name, fontSize: 10 },
-			{ text: times.sort().join(' · '), fontSize: 9, color: COLORS.muted, alignment: 'right' }
+			{ text: times.sort().map(time => displayTime(time)).join(' · '), fontSize: 9, color: COLORS.muted, alignment: 'right' }
 		]);
 	}
 	if (rows.length === 0) return [];

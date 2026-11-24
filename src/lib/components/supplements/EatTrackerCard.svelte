@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayTime } from '#lib/dateDisplay';
 	import { goto } from '$app/navigation';
 	import { t, currentLang, nutrition_meals_count } from '#lib/i18n.svelte';
 	import TrackerTileShell from './TrackerTileShell.svelte';
@@ -146,7 +147,7 @@
 				{#each meals.slice(0, 4) as m (m.id)}
 					{@const kcal = Math.round(m.components.reduce((s, c) => s + (c.kcal ?? 0), 0))}
 					<div class="flex items-center gap-2 text-sm">
-						<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant); min-width: 38px">{m.time}</span>
+						<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant); min-width: 38px">{displayTime(m.time)}</span>
 						<span class="flex-1 truncate" style="color: var(--color-on-surface)">{m.name}</span>
 						<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">{fmtKcal(kcal)} kcal</span>
 					</div>

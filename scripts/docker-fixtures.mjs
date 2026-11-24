@@ -1,5 +1,5 @@
 // These functions run inside the image under test, using that image's SQLite driver.
-export async function seedUpgradeFixture() {
+export async function seedUpgradeFixture(legacyRecipeFavorite = false) {
 	const { default: Database } = await import('better-sqlite3');
 	const { scryptSync, createHash } = await import('node:crypto');
 	const { mkdirSync, writeFileSync } = await import('node:fs');
@@ -25,7 +25,7 @@ export async function seedUpgradeFixture() {
 		insert('favorites', { user_id: 'upgrade-owner', name: 'Äpfel', quantity_info: '500 g', created_at: seconds });
 		insert('category_preferences', { user_id: 'upgrade-owner', normalized_name: 'hafermilch', category_override: 'dairy', updated_at: ms });
 		insert('item_history', { user_id: 'upgrade-owner', name: 'Hafermilch', use_count: 5, last_used_at: seconds });
-		insert('recipes', { id: 'upgrade-recipe', user_id: 'upgrade-owner', title: 'Gemüsepfanne 🥦', image_url: '/uploads/upgrade-test.png', servings: 3, created_at: ms, updated_at: ms });
+		insert('recipes', { id: 'upgrade-recipe', user_id: 'upgrade-owner', title: 'Gemüsepfanne 🥦', image_url: '/uploads/upgrade-test.png', servings: 3, is_favorite: Number(legacyRecipeFavorite), created_at: ms, updated_at: ms });
 		insert('recipe_ingredients', { id: 'upgrade-ingredient', recipe_id: 'upgrade-recipe', amount: '1.5', unit: 'kg', name: 'Gemüse', sort_order: 0 });
 		insert('recipe_steps', { id: 'upgrade-step', recipe_id: 'upgrade-recipe', step_number: 1, text: 'Gemüse anbraten.' });
 		insert('recipe_tags', { recipe_id: 'upgrade-recipe', tag: 'Familie' });
@@ -73,7 +73,7 @@ export async function snapshotUpgradeData(originalColumns = {}, databasePath = '
 	/** @param {string | Uint8Array} value */
 	const hash = value => createHash('sha256').update(value).digest('hex');
 	/** @typedef {{cid: number; name: string; type: string; notnull: number; dflt_value: string | null; pk: number}} Column */
-	/** @type {Record<string, {count: number; sha256: string; schema: string; columns: Column[]; originalColumnsSha256?: string; addedColumnsAreNull?: boolean}>} */
+	/** @type {Record<string, {count: number; sha256: string; schema: string; columns: Column[]; originalColumnsSha256?: string; addedColumns?: Record<string, number>}>} */
 	const tables = {};
 	const inventory = /** @type {Array<{name: string; sql: string}>} */ (db.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all());
 	for (const { name, sql } of inventory) {
@@ -84,9 +84,18 @@ export async function snapshotUpgradeData(originalColumns = {}, databasePath = '
 		if (originalColumns[name]) {
 			const keys = originalColumns[name];
 			tables[name].originalColumnsSha256 = hash(rows.map(row => JSON.stringify(Object.fromEntries(keys.map(key => [key, row[key]])))).sort().join('\n'));
-			tables[name].addedColumnsAreNull = columns.filter(column => !keys.includes(column.name)).every(column => rows.every(row => row[column.name] === null));
+			tables[name].addedColumns = Object.fromEntries(columns.filter(column => !keys.includes(column.name)).map(({ name: column }) => [column,
+				rows.filter(row => column === 'kind' && name === 'lists' ? row[column] === 'shopping' : row[column] !== null).length
+			]));
 		}
 	}
+	const recipeColumns = tables.recipes?.columns.map(column => column.name) ?? [];
+	const recipeCategoryAssignments = recipeColumns.includes('category_id')
+		? db.prepare('SELECT id, category_id FROM recipes WHERE category_id IS NOT NULL ORDER BY id').all()
+		: [];
+	const legacyRecipeFavorites = !tables.recipe_categories && recipeColumns.includes('is_favorite')
+		? db.prepare('SELECT r.id, r.user_id, u.settings FROM recipes r JOIN users u ON u.id = r.user_id WHERE r.is_favorite = 1 ORDER BY r.id').all()
+		: [];
 	/** @type {Record<string, string>} */
 	const images = {};
 	/** @param {string} directory @param {string} [prefix] */
@@ -102,5 +111,5 @@ export async function snapshotUpgradeData(originalColumns = {}, databasePath = '
 	const integrity = db.pragma('integrity_check', { simple: true });
 	const migrations = db.prepare('SELECT * FROM __drizzle_migrations ORDER BY id').all();
 	db.close();
-	return { tables, images, foreignKeys, integrity, migrations };
+	return { tables, images, foreignKeys, integrity, migrations, recipeCategoryAssignments, legacyRecipeFavorites };
 }

@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { FolderCog } from '@lucide/svelte';
+	import RecipeCategoryManageSheet from '#lib/components/recipe/RecipeCategoryManageSheet.svelte';
+	import type { RecipeCategory } from '#lib/recipeCategories';
+	import { displayDate } from '#lib/dateDisplay';
 	import { onMount } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/state';
@@ -10,7 +14,7 @@
 	import MealPlanner from '#lib/components/MealPlanner.svelte';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { userSettings } from '#lib/userSettings.svelte';
-	import { cacheRecipes, getOfflineRecipes } from '#lib/sync/manager';
+	import { cacheRecipeCategories, cacheRecipes, getOfflineRecipeCategories, getOfflineRecipes } from '#lib/sync/manager';
 
 	let { data } = $props();
 
@@ -24,6 +28,7 @@
 		cookTime: number | null;
 		updatedAt: number;
 		isFavorite?: boolean;
+		categoryId?: string | null;
 		rating?: number | null;
 		cookCount?: number;
 		lastCookedAt?: number | null;
@@ -42,6 +47,8 @@
 	};
 
 	let recipes = $state<Recipe[]>([]);
+	let categories = $state<RecipeCategory[]>([]);
+	let categoriesOpen = $state(false);
 	let limit = $state(50);
 	let pendingShares = $state<PendingShare[]>([]);
 	let loading = $state(true);
@@ -76,7 +83,7 @@
 	const todayHour = new Date().getHours();
 	const todayGreeting = $derived(todayHour < 12 ? t.greeting_morning : todayHour < 18 ? t.greeting_day : todayHour < 22 ? t.greeting_evening : t.greeting_night);
 	const todayDayName = $derived(new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { weekday: 'long' }).format(new Date()));
-	const todayDateStr = $derived(new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long' }).format(new Date()));
+	const todayDateStr = $derived(displayDate(new Date(), { day: 'numeric', month: 'long' }, currentLang() === 'de' ? 'de-DE' : 'en-US'));
 	const recipeInfoLine = $derived(
 		loading || recipes.length === 0 ? '' :
 		currentLang() === 'de'
@@ -124,8 +131,21 @@
 		return arr;
 	});
 
-	const favoriteRecipes = $derived(filteredRecipes.filter((r) => r.isFavorite));
-	const otherRecipes = $derived(filteredRecipes.filter((r) => !r.isFavorite));
+	const recipeGroups = $derived.by(() => {
+		const groups = new Map(categories.map(category => [category.id, { ...category, entries: [] as Recipe[] }]));
+		const legacyFavorites: Recipe[] = [];
+		const uncategorized: Recipe[] = [];
+		for (const recipe of filteredRecipes) {
+			const group = recipe.categoryId ? groups.get(recipe.categoryId) : undefined;
+			if (group) group.entries.push(recipe);
+			else if (recipe.categoryId === undefined && recipe.isFavorite) legacyFavorites.push(recipe);
+			else uncategorized.push(recipe);
+		}
+		const visible = [...groups.values()].filter(group => group.entries.length > 0);
+		if (uncategorized.length) visible.push({ id: ':uncategorized', name: t.recipe_category_none, entries: uncategorized });
+		if (legacyFavorites.length) visible.push({ id: ':legacy-favorites', name: t.recipes_favorites, entries: legacyFavorites });
+		return visible;
+	});
 
 	function loadSortPref() {
 		try {
@@ -150,7 +170,7 @@
 
 	function formatLastCooked(ts: number | null | undefined): string {
 		if (!ts) return '';
-		return new Intl.DateTimeFormat(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'short' }).format(new Date(ts));
+		return displayDate(new Date(ts), { day: 'numeric', month: 'short' }, currentLang() === 'de' ? 'de-DE' : 'en-US');
 	}
 
 	const totalTime = (r: Recipe) => {
@@ -165,10 +185,12 @@
 			if (!res.ok) throw new Error();
 			const json = await res.json();
 			recipes = json.recipes ?? [];
+			categories = json.categories ?? [];
 			limit = json.limit ?? 50;
-			try { await cacheRecipes(json.recipes ?? [], cacheUserId); } catch (e) { console.error('cacheRecipes failed:', e); }
+			try { await cacheRecipes(json.recipes ?? [], cacheUserId, json.categories ?? []); } catch (e) { console.error('cacheRecipes failed:', e); }
 		} catch {
-			const cached = await getOfflineRecipes();
+			const [cached, catalog] = await Promise.all([getOfflineRecipes(), getOfflineRecipeCategories(cacheUserId)]);
+			categories = catalog ?? [];
 			recipes = cached;
 			limit = cached.length;
 		}
@@ -447,22 +469,16 @@
 				</a>
 			{/snippet}
 
-			<!-- One bottom-anchored surface, with favorites nearest the thumb. -->
-			<div bind:this={bubbleContainerEl} data-recipe-card class="rounded-2xl overflow-hidden pb-2" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
-				<h2 class="px-4 pt-3 pb-1 text-sm font-semibold" style="color: var(--color-primary)">{t.recipes_title}</h2>
-				{#if otherRecipes.length > 0}
-					{#each otherRecipes as recipe, i (recipe.id)}
-						{@render recipeRow(recipe, i < otherRecipes.length - 1)}
-					{/each}
-				{/if}
-				{#if favoriteRecipes.length > 0}
-					{#if otherRecipes.length > 0}
-						<h3 class="mx-4 pt-2 pb-1 text-sm font-semibold" style="color: var(--color-primary)">{t.recipes_favorites}</h3>
-					{/if}
-					{#each favoriteRecipes as recipe, i (recipe.id)}
-						{@render recipeRow(recipe, i < favoriteRecipes.length - 1)}
-					{/each}
-				{/if}
+			<div bind:this={bubbleContainerEl} data-recipe-card class="rounded-2xl overflow-hidden pb-2"
+				style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+				{#each recipeGroups as group (group.id)}
+					<section class="recipe-category-group" aria-label={group.name}>
+						<h2>{group.name}</h2>
+						{#each group.entries as recipe, index (recipe.id)}
+							{@render recipeRow(recipe, index < group.entries.length - 1)}
+						{/each}
+					</section>
+				{/each}
 			</div>
 		{/if}
 
@@ -563,11 +579,44 @@
 					{/if}
 				</button>
 			{/each}
+			<button type="button" class="recipe-manage-categories" onclick={() => { sortSheetOpen = false; categoriesOpen = true; }}>
+				<FolderCog size={17} aria-hidden="true" />{t.recipe_categories_manage}
+			</button>
 		</div>
 	</div>
 {/if}
 
+{#if categoriesOpen}
+	<RecipeCategoryManageSheet onclose={() => categoriesOpen = false} onsaved={rows => {
+		categories = rows;
+		void cacheRecipeCategories(rows, data.user?.id ?? null).catch(() => {});
+		void loadRecipes();
+	}} />
+{/if}
+
 <style>
+	.recipe-category-group h2 {
+		margin: 0;
+		padding: 9px 16px 2px;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 650;
+		color: var(--color-on-surface-variant);
+		overflow-wrap: anywhere;
+	}
+	.recipe-category-group + .recipe-category-group { margin-top: 5px; }
+	.recipe-manage-categories {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		min-height: 44px;
+		padding-inline: 16px;
+		border-top: 1px solid var(--bubble-container-border);
+		color: var(--color-on-surface);
+		font-weight: 550;
+	}
+	.recipe-manage-categories:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; }
 	.recipe-workspace {
 		--recipe-header-height: calc(env(safe-area-inset-top) + 130px);
 		display: flex;

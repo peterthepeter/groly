@@ -1,10 +1,20 @@
 import type { Locale } from '#lib/paraglide/runtime';
+import type { DateFormat, TimeFormat } from '#lib/dates';
 import { DEFAULT_CATEGORY_ORDER } from '#lib/categories';
+
+export type ItemSortDirection = 'az' | 'za';
+export type ShoppingItemSortMode = 'category' | ItemSortDirection | 'off';
 
 export type ListCategorySettings = {
 	enabled: boolean;
 	order: string[];
+	itemSortDirection?: ItemSortDirection | null;
 };
+
+export function resolveShoppingItemSortMode(categoryEnabled: boolean, direction?: ItemSortDirection | null): ShoppingItemSortMode {
+	if (direction === 'az' || direction === 'za') return direction;
+	return categoryEnabled ? 'category' : 'off';
+}
 
 export type ShortcutAction = 'go' | 'add' | 'scanner' | 'log-tracker' | 'log-supplement';
 
@@ -19,10 +29,16 @@ export type Shortcut = {
 export type UserSettings = {
 	lang?: Locale;
 	timeZone?: string;
+	dateFormat?: DateFormat;
+	timeFormat?: TimeFormat;
+	/** Read the previous local checklist preferences during the first initialization. */
+	checklistDateFormat?: DateFormat;
+	checklistTimeFormat?: TimeFormat;
 	theme?: 'system' | 'light' | 'dark';
 	colorScheme?: 'forest' | 'classic' | 'indigo';
 	categorySortEnabled?: boolean;
 	categoryOrder?: string[];
+	itemSortDirection?: ItemSortDirection | null;
 	listCategorySettings?: Record<string, ListCategorySettings>;
 	shortcuts?: Shortcut[];
 	locationNavEnabled?: boolean;

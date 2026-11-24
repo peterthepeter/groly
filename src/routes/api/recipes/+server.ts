@@ -5,6 +5,7 @@ import { db } from '#lib/db';
 import { recipes, recipeIngredients, recipeSteps, recipeTags } from '#lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { getRecipeCategories, RecipeCategoryError, recipeCategoryErrorResponse, resolveRecipeCategory } from '#lib/server/recipeCategories';
 
 const RECIPE_LIMIT = 50;
 
@@ -23,6 +24,7 @@ export const GET: RequestHandler = async (event) => {
 			prepTime: recipes.prepTime,
 			cookTime: recipes.cookTime,
 			isFavorite: recipes.isFavorite,
+			categoryId: recipes.categoryId,
 			rating: recipes.rating,
 			cookCount: recipes.cookCount,
 			lastCookedAt: recipes.lastCookedAt,
@@ -46,7 +48,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 	const withTags = userRecipes.map((r) => ({ ...r, tags: tagsByRecipe.get(r.id) ?? [] }));
 
-	return Response.json({ recipes: withTags, limit: RECIPE_LIMIT });
+	return Response.json({ recipes: withTags, categories: getRecipeCategories(db, user!.id), limit: RECIPE_LIMIT });
 };
 
 export const POST: RequestHandler = async (event) => {
@@ -54,63 +56,72 @@ export const POST: RequestHandler = async (event) => {
 	if (error) return error;
 
 	try {
-		const count = db.select().from(recipes).where(eq(recipes.userId, user!.id)).all().length;
-		if (count >= RECIPE_LIMIT) {
-			return Response.json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht`, code: 'limit_reached', limit: RECIPE_LIMIT }, { status: 400 });
-		}
-
 		const body = await event.request.json();
-		const { title, description, imageUrl, sourceUrl, servings, prepTime, cookTime, ingredients, steps } = body;
+		const { title, description, imageUrl, sourceUrl, servings, prepTime, cookTime, ingredients, steps, category } = body;
 
-		if (!title?.trim()) return Response.json({ error: 'Titel erforderlich' }, { status: 400 });
+		if (typeof title !== 'string' || !title.trim()) return Response.json({ error: 'Titel erforderlich' }, { status: 400 });
 
 		const now = Date.now();
 		const recipeId = randomUUID();
 
-		db.insert(recipes).values({
-			id: recipeId,
-			userId: user!.id,
-			title: title.trim(),
-			description: description?.trim() || null,
-			imageUrl: imageUrl?.trim() || null,
-			sourceUrl: sourceUrl?.trim() || null,
-			servings: servings ?? 4,
-			prepTime: prepTime ?? null,
-			cookTime: cookTime ?? null,
-			createdAt: now,
-			updatedAt: now
-		}).run();
+		const userId = user!.id;
+		const created = db.transaction(tx => {
+			const count = tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.userId, userId)).all().length;
+			if (count >= RECIPE_LIMIT) return false;
+			const categoryId = category === undefined ? null : resolveRecipeCategory(tx, userId, category)?.id ?? null;
+			tx.insert(recipes).values({
+				id: recipeId,
+				userId,
+				categoryId,
+				title: title.trim(),
+				description: description?.trim() || null,
+				imageUrl: imageUrl?.trim() || null,
+				sourceUrl: sourceUrl?.trim() || null,
+				servings: servings ?? 4,
+				prepTime: prepTime ?? null,
+				cookTime: cookTime ?? null,
+				createdAt: now,
+				updatedAt: now
+			}).run();
 
-		if (Array.isArray(ingredients)) {
-			for (let i = 0; i < ingredients.length; i++) {
-				const ing = ingredients[i];
-				if (!ing.name?.trim()) continue;
-				db.insert(recipeIngredients).values({
-					id: randomUUID(),
-					recipeId,
-					amount: ing.amount?.trim() || null,
-					unit: ing.unit?.trim() || null,
-					name: ing.name.trim(),
-					sortOrder: i
-				}).run();
+			if (Array.isArray(ingredients)) {
+				for (let i = 0; i < ingredients.length; i++) {
+					const ing = ingredients[i];
+					if (!ing.name?.trim()) continue;
+					tx.insert(recipeIngredients).values({
+						id: randomUUID(),
+						recipeId,
+						amount: ing.amount?.trim() || null,
+						unit: ing.unit?.trim() || null,
+						name: ing.name.trim(),
+						sortOrder: i
+					}).run();
+				}
 			}
-		}
 
-		if (Array.isArray(steps)) {
-			for (let i = 0; i < steps.length; i++) {
-				const step = steps[i];
-				if (!step.text?.trim()) continue;
-				db.insert(recipeSteps).values({
-					id: randomUUID(),
-					recipeId,
-					stepNumber: i + 1,
-					text: step.text.trim()
-				}).run();
+			if (Array.isArray(steps)) {
+				for (let i = 0; i < steps.length; i++) {
+					const step = steps[i];
+					if (!step.text?.trim()) continue;
+					tx.insert(recipeSteps).values({
+						id: randomUUID(),
+						recipeId,
+						stepNumber: i + 1,
+						text: step.text.trim()
+					}).run();
+				}
 			}
+
+			return true;
+		});
+
+		if (!created) {
+			return Response.json({ error: `Maximale Anzahl von ${RECIPE_LIMIT} Rezepten erreicht`, code: 'limit_reached', limit: RECIPE_LIMIT }, { status: 400 });
 		}
 
 		return Response.json({ id: recipeId }, { status: 201 });
 	} catch (e) {
+		if (e instanceof RecipeCategoryError) return recipeCategoryErrorResponse(e);
 		console.error('POST /api/recipes error:', e);
 		return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 	}

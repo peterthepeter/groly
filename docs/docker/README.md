@@ -25,6 +25,7 @@ ghcr.io/peterthepeter/groly:latest
    ADMIN_USERNAME=admin
    ADMIN_PASSWORD=
    ORIGIN=https://groly.example.com
+   KEEP_CHECKED_ITEMS=false
    ```
 
 3. Fill in your own strong, unique `ADMIN_PASSWORD` before the first start. Put
@@ -124,6 +125,7 @@ with `docker compose up -d`.
 | `ADMIN_USERNAME` | First run only | Username for the initial admin account. After first start can be deleted, but must be present (with the original value) if you ever need to use `ADMIN_PASSWORD_RESET`. |
 | `ADMIN_PASSWORD` | First run only | Password for the initial admin account. **Only used when no users exist yet.** Can — and should — be deleted from the container after first start. To reset a forgotten admin password, use `ADMIN_PASSWORD_RESET` instead. |
 | `ADMIN_PASSWORD_RESET` | Emergency only | If set, resets the password of the user defined in `ADMIN_USERNAME` to this value on container start and invalidates all their existing sessions. Leave empty in normal operation — see [Admin Password Recovery](../../README.md#admin-password-recovery). |
+| `KEEP_CHECKED_ITEMS` | Optional | Set to `true` to keep checked-off items in all shopping lists indefinitely. Defaults to `false`, which deletes checked-off items after 60 days. |
 | `VAPID_PUBLIC_KEY` | Optional | VAPID public key for push notifications |
 | `VAPID_PRIVATE_KEY` | Optional | VAPID private key for push notifications |
 | `PUBLIC_VAPID_PUBLIC_KEY` | Optional | Same value as `VAPID_PUBLIC_KEY` |

@@ -24,6 +24,7 @@ function migrateItemHistory() {
 		SELECT l.owner_id, i.name, COUNT(*) AS use_count, MAX(i.updated_at) AS last_used_at
 		FROM items i
 		JOIN lists l ON i.list_id = l.id
+		WHERE l.kind = 'shopping'
 		GROUP BY l.owner_id, i.name
 	`);
 

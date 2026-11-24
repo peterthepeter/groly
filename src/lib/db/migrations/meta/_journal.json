@@ -358,6 +358,34 @@
       "when": 1792502230356,
       "tag": "0050_recoverable_admin_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "6",
+      "when": 1795422406048,
+      "tag": "0051_checklists",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "6",
+      "when": 1795441617812,
+      "tag": "0052_checklist_entry_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "6",
+      "when": 1795506783180,
+      "tag": "0053_checklist_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "6",
+      "when": 1795510328093,
+      "tag": "0054_recipe_categories",
+      "breakpoints": true
     }
   ]
 }

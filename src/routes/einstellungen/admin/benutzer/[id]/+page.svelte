@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayDate } from '#lib/dateDisplay';
 	import { onMount } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import AppHeader from '#lib/components/AppHeader.svelte';
@@ -42,7 +43,7 @@
 		return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', onVisible); };
 	});
 	function formatDate(time: number | null) {
-		return time === null ? t.admin_user_never : new Date(time * 1000).toLocaleDateString(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+		return time === null ? t.admin_user_never : displayDate(new Date(time * 1000), { day: 'numeric', month: 'short', year: 'numeric' }, currentLang() === 'de' ? 'de-DE' : 'en-US');
 	}
 	async function changeRole(role: string) {
 		if (busy || !data.canChangeRole || role === member.role) return;

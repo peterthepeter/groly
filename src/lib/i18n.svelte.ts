@@ -170,3 +170,11 @@ export function recipeShoppingAddLabel(count: number): string {
 	void _lang;
 	return count === 1 ? t.recipe_shopping_add_one : m.recipe_shopping_add_many({ count }, { locale: currentLang() });
 }
+
+export function checklistDeleteLabel(count: number): string {
+	return count === 1 ? t.checklist_delete_one : m.checklist_delete_many({ count }, { locale: currentLang() });
+}
+
+export function checklistProgress(done: number, total: number): string {
+	return m.checklist_progress({ done, total }, { locale: currentLang() });
+}

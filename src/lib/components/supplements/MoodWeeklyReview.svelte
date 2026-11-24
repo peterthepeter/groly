@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayDate } from '#lib/dateDisplay';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { findTag } from '#lib/mood';
 	import ManageSheetShell from './ManageSheetShell.svelte';
@@ -24,7 +25,7 @@
 			factors: ranked.filter(([key]) => findTag(key)?.kind !== 'feeling').slice(0, 3)
 		};
 	});
-	const formatDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString(currentLang(), { day: 'numeric', month: 'short' });
+	const formatDate = (date: string) => displayDate(new Date(`${date}T12:00:00`), { day: 'numeric', month: 'short' }, currentLang());
 	function label(key: string): string {
 		const tag = findTag(key); if (!tag) return key;
 		return (t[tag.labelKey as keyof typeof t] as string) ?? key;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PreferredDateTimeInput from '#lib/components/PreferredDateTimeInput.svelte';
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import { t } from '#lib/i18n.svelte';
@@ -143,7 +144,7 @@
 					<span class="manage-settings-label">{t.recipe_nutrition_portions}</span>
 					<div><button type="button" onclick={() => changePortions(-0.5)} disabled={portions <= 0.5} aria-label="−">−</button><strong>{portions}</strong><button type="button" onclick={() => changePortions(0.5)} aria-label="+">+</button></div>
 				</div>
-				<div class="manage-settings-row recipe-date-row"><input type="date" bind:value={date} /><span></span><input type="time" bind:value={time} /></div>
+				<div class="manage-settings-row recipe-date-row"><PreferredDateTimeInput type="date" bind:value={date} class="recipe-native-input" aria-label={t.supplement_log_date} /><span class="date-time-divider" aria-hidden="true"></span><PreferredDateTimeInput type="time" bind:value={time} class="recipe-native-input" aria-label={t.supplement_log_time} /></div>
 			</section>
 			<section class="manage-section recipe-track-total"><strong>{totalKcal}</strong><span>kcal{#if portions !== 1} · {basePerPortionKcal}/{t.recipe_nutrition_per_portion_short}{/if}</span></section>
 		</div>
@@ -168,8 +169,8 @@
 	.recipe-portions-row button { width: 36px; height: 36px; border: 1px solid var(--bubble-container-border); border-radius: 999px; color: #FB923C; font-size: 18px; }
 	.recipe-portions-row strong { min-width: 30px; text-align: center; color: var(--color-on-surface); font-size: 14px; font-variant-numeric: tabular-nums; }
 	.recipe-date-row { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(105px, .7fr); align-items: center; gap: 8px; }
-	.recipe-date-row input { width: 100%; min-width: 0; height: 38px; border: 0; outline: 0; background: transparent; color: #FB923C; font-size: 16px; font-weight: 600; }
-	.recipe-date-row span { height: 22px; background: var(--bubble-container-border); }
+	.recipe-date-row :global(.recipe-native-input) { width: 100%; min-width: 0; height: 38px; border: 0; outline: 0; background: transparent; color: #FB923C; font-size: 16px; font-weight: 600; }
+	.recipe-date-row .date-time-divider { height: 22px; background: var(--bubble-container-border); }
 	.recipe-track-total { display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 11px; }
 	.recipe-track-total strong { color: #FB923C; font-size: 22px; font-weight: 740; font-variant-numeric: tabular-nums; }
 	.recipe-track-total span { color: var(--color-on-surface-variant); font-size: 11px; }

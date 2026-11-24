@@ -4,7 +4,7 @@
 
 	import type { Snippet } from 'svelte';
 
-	let { title = 'Meine Listen', subtitle = '', eyebrow = '', onMenuOpen, onSearch = null, actions = null, hidden = false, onBack = null, embedded = false }: {
+	let { title = 'Meine Listen', subtitle = '', eyebrow = '', onMenuOpen, onSearch = null, actions = null, hidden = false, onBack = null, embedded = false, footer = null }: {
 		title?: string;
 		subtitle?: string;
 		eyebrow?: string;
@@ -14,13 +14,15 @@
 		hidden?: boolean;
 		onBack?: (() => void) | null;
 		embedded?: boolean;
+		footer?: Snippet | null;
 	} = $props();
 </script>
 
 <header class:embedded class="app-header fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
         style={embedded ? undefined : `padding-top: calc(env(safe-area-inset-top) + 1rem); background: color-mix(in srgb, var(--color-bg) 60%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transform: translateY(${hidden ? '-110%' : '0'}); transition: transform 0.25s ease;`}>
+	<div class:grouped={!!footer}>
 	<div class="app-header-row flex items-center justify-between rounded-2xl px-4 py-2"
-	     style={embedded ? undefined : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}>
+	     style={embedded || footer ? undefined : 'background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)'}>
 		<!-- Left: Hamburger + App Name -->
 		<div class="flex items-center gap-3 min-w-0">
 			{#if onBack}
@@ -68,7 +70,7 @@
 		</div>
 
 		<!-- Right: optional Suche + Page Context -->
-		<div class="flex items-center gap-2 flex-shrink-0 ml-2">
+		<div class="app-header-context flex items-center gap-2 flex-shrink-0 min-w-0 ml-2">
 			{#if actions}
 				{@render actions()}
 			{/if}
@@ -85,7 +87,7 @@
 					</svg>
 				</button>
 			{/if}
-<div class="text-right">
+<div class="min-w-0 text-right">
 				{#if eyebrow}
 					<div class="text-[11px] leading-tight truncate max-w-32" style="color: var(--color-on-surface-variant)">{eyebrow}</div>
 				{/if}
@@ -96,9 +98,21 @@
 			</div>
 		</div>
 	</div>
+	{#if footer}<div class="header-footer">{@render footer()}</div>{/if}
+	</div>
 </header>
 
 <style>
+	.grouped { background: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border); border-radius: var(--radius-xl); overflow: hidden; }
+	.header-footer { position: relative; }
+	.header-footer::before { content: ''; position: absolute; inset: 0 16px auto; height: 1px; background: var(--bubble-container-border); }
+
 	.app-header.embedded { position: static; max-width: none; padding: 0; }
 	.app-header.embedded .app-header-row { border-radius: 0; }
+	@media (max-width: 373px) {
+		.app-header:not(.embedded) .app-header-context {
+			/* Leave room for the menu and wordmark before truncating the title. */
+			max-width: calc(100% - 114px);
+		}
+	}
 </style>

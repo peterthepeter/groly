@@ -12,8 +12,10 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - ORIGIN=${ORIGIN:-}
-      # Web Push (VAPID) - Keys generieren mit:
-      # node -e "const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(k)"
+      - KEEP_CHECKED_ITEMS=${KEEP_CHECKED_ITEMS:-false}
+      # Set to true to keep checked-off items in all lists. The default is 60-day cleanup.
+      # Web Push (VAPID) - generate keys with:
+      # node --input-type=module -e "import { generateVAPIDKeys } from 'web-push'; console.log(generateVAPIDKeys())"
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
       - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:admin@groly.local}

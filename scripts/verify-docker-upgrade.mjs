@@ -144,7 +144,7 @@ async function verifyUpgrade(baseline, dataCopy) {
 	let container = start(baselineImage(baseline), data, `old-${suffix}`);
 	await ready(container);
 	let cookie;
-	if (!dataCopy) cookie = evaluate(container, seedUpgradeFixture).cookie;
+	if (!dataCopy) cookie = evaluate(container, seedUpgradeFixture, [true]).cookie;
 	else cookie = evaluate(container, async () => {
 		const { default: Database } = await import('better-sqlite3');
 		const db = new Database('/app/data/groly.db');

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayDate } from '#lib/dateDisplay';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { getMoodLevel, findTag } from '#lib/mood';
 	import MoodEntrySheet from './MoodEntrySheet.svelte';
@@ -24,7 +25,7 @@
 	function formatDate(d: string): string {
 		if (!d) return '';
 		const date = new Date(d + 'T12:00:00');
-		return date.toLocaleDateString(currentLang(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+		return displayDate(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, currentLang());
 	}
 
 	async function deleteEntry() {

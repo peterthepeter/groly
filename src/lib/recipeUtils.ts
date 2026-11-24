@@ -12,6 +12,8 @@ export type Recipe = {
 	ingredients: Ingredient[];
 	steps: Step[];
 	isFavorite?: boolean;
+	categoryId?: string | null;
+	categoryName?: string | null;
 	rating?: number | null;
 	cookCount?: number;
 	lastCookedAt?: number | null;

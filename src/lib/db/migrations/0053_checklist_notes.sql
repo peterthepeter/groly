@@ -1,0 +1,1 @@
+ALTER TABLE `items` ADD `checklist_note` text;

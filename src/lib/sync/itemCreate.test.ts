@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { offlineDb, type OfflineItem } from '#lib/sync/db';
-import { cacheItemsData, drainPendingMutations, getPendingCreateItems, initSync, queueItemCreate, queueItemUpdate, queueItemDelete } from '#lib/sync/manager';
+import { cacheItemsData, getOfflineLists, drainPendingMutations, getPendingCreateItems, initSync, queueItemCreate, queueItemUpdate, queueItemDelete, queueItemDeletes, undoChecklistDelete, queueChecklistOrder, queueChecklistSections, setChecklistDefault, cacheListsData, resetChecklist } from '#lib/sync/manager';
 
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
@@ -47,6 +47,119 @@ describe('local-first item creation', () => {
 		initSync(null);
 		offlineDb.close();
 		await offlineDb.delete();
+	});
+
+	it('keeps offline section creation, the explicit default and manual order through a stale refresh', async () => {
+		const owner = 'user-1';
+		const a = { id: 'a', name: 'Bag' };
+		const b = { id: 'b', name: 'Desk' };
+		const list = { id: 'list-1', ownerId: owner, kind: 'checklist' as const, name: 'Trip', description: null,
+			checklistSections: [a], defaultSectionId: a.id, openCount: 0, updatedAt: 1 };
+		await cacheListsData([list], owner);
+		const camera = { ...item('camera', 'Camera'), sectionId: b.id };
+		await queueItemCreate(owner, camera, { id: camera.id, listId: list.id, name: camera.name,
+			categoryOverride: null, quantityInfo: '', sectionId: b.id, kind: 'checklist', newSection: b });
+		expect((await offlineDb.accountLists.get([owner, list.id]))?.defaultSectionId).toBe(a.id);
+		const phone = { ...item('phone', 'Phone'), sectionId: b.id };
+		await queueItemCreate(owner, phone, { id: phone.id, listId: list.id, name: phone.name,
+			categoryOverride: null, quantityInfo: '', sectionId: b.id, kind: 'checklist', setDefault: true });
+		await queueChecklistOrder(owner, list.id, [b.id, a.id]);
+		await queueChecklistOrder(owner, list.id, [phone.id, camera.id], b.id);
+		await cacheListsData([list], owner);
+		expect(await offlineDb.accountLists.get([owner, list.id])).toMatchObject({ checklistSections: [b, a], defaultSectionId: b.id });
+		const refreshed = await cacheItemsData([camera, phone], owner);
+		expect(refreshed.map(row => (row as OfflineItem).checklistPosition)).toEqual([1, 0]);
+		await setChecklistDefault(owner, list.id, a.id);
+		await cacheListsData([{ ...list, defaultSectionId: b.id }], owner);
+		expect((await offlineDb.accountLists.get([owner, list.id]))?.defaultSectionId).toBe(a.id);
+		await expect(setChecklistDefault(owner, list.id, 'missing')).rejects.toThrow();
+		await expect(setChecklistDefault('other', list.id, b.id)).rejects.toThrow();
+	});
+
+	it('cancels a swipe deletion with its original item and queues a bulk selection as one operation', async () => {
+		const owner = 'user-1';
+		const checked = { ...item('first', 'Keys'), isChecked: true, checklistPosition: 1 };
+		const open = item('second', 'Phone');
+		const keep = item('third', 'Wallet');
+		await cacheItemsData([checked, open, keep], owner);
+		await queueItemDeletes(owner, [checked.id], Date.now() + 7000, checked.listId);
+		expect(await undoChecklistDelete(owner, checked)).toBe(true);
+		expect(await offlineDb.accountItems.get([owner, checked.id])).toMatchObject(checked);
+		await queueItemDeletes(owner, [checked.id, open.id], undefined, checked.listId);
+		const pending = await offlineDb.pendingMutations.toArray();
+		expect(pending).toHaveLength(1);
+		expect(pending[0].payload).toEqual({ listId: checked.listId, action: 'deleteEntries', ids: [checked.id, open.id] });
+		expect((await cacheItemsData([checked, open, keep], owner)).map(row => row.id)).toEqual([keep.id]);
+	});
+
+	it('keeps offline note edits and section removal when a stale list reload arrives', async () => {
+		const owner = 'user-1';
+		const section = { id: 'bag', name: 'Bag' };
+		const list = { id: 'list-1', ownerId: owner, kind: 'checklist' as const, name: 'Trip', description: null,
+			checklistSections: [section], defaultSectionId: section.id, openCount: 1, updatedAt: 1 };
+		const camera = { ...item('camera', 'Camera'), checklistNote: 'Original', sectionId: section.id, checklistPosition: 0 };
+		await cacheListsData([list], owner);
+		await cacheItemsData([camera], owner);
+		await queueItemUpdate(owner, camera.id, { checklistNote: 'In the hall' });
+		await queueChecklistSections(owner, list.id, { checklistSections: [], defaultSectionId: null });
+		await cacheListsData([list], owner);
+		expect(await offlineDb.accountLists.get([owner, list.id])).toMatchObject({ checklistSections: [], defaultSectionId: null });
+		const reloaded = await cacheItemsData([camera], owner);
+		expect(reloaded[0]).toMatchObject({ checklistNote: 'In the hall', sectionId: null, checklistPosition: null });
+		expect((await offlineDb.pendingMutations.toArray()).map(entry => entry.payload)).toMatchObject([
+			{ checklistNote: 'In the hall' }, { action: 'updateSections', checklistSections: [], defaultSectionId: null }
+		]);
+	});
+
+	it('reads checklist card progress from the complete offline snapshot and retains unopened list totals', async () => {
+		const owner = 'user-1';
+		initSync(owner);
+		const list = { id: 'list-1', ownerId: owner, kind: 'checklist' as const, name: 'Trip', description: null,
+			openCount: 2, totalCount: 2, updatedAt: 1 };
+		await cacheListsData([{ ...list, checklistItemsCached: true }], owner);
+		const unopened = { ...list, id: 'unopened' };
+		await cacheListsData([list, unopened], owner, true);
+		const first = item('keys', 'Keys');
+		const second = item('phone', 'Phone');
+		await cacheItemsData([first, second], owner, 0, list.id);
+		await queueItemUpdate(owner, first.id, { isChecked: true });
+		await queueItemDelete(owner, second.id);
+		const progress = new Map((await getOfflineLists()).map(row => [row.id, row]));
+		expect(progress.get(list.id)).toMatchObject({ openCount: 0, totalCount: 1 });
+		expect(progress.get(unopened.id)).toMatchObject({ openCount: 2, totalCount: 2 });
+	});
+
+	it('sends a pending item update before resetting the checklist', async () => {
+		initSync('user-1');
+		await offlineDb.pendingMutations.add({
+			type: 'update_item', userId: 'user-1', createdAt: 1,
+			payload: { id: 'item-1', listId: 'list-1', isChecked: true, clientUpdatedAt: 100 }
+		});
+		const fetchMock = vi.fn()
+			.mockResolvedValueOnce(jsonResponse({ ...item('item-1', 'Camera'), isChecked: true, updatedAt: 101 }))
+			.mockResolvedValueOnce(jsonResponse({ ok: true }));
+		vi.stubGlobal('fetch', fetchMock);
+
+		await resetChecklist('user-1', 'list-1');
+
+		expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/items/item-1', '/api/lists/list-1/checklist']);
+		expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ action: 'reset' });
+		expect(await offlineDb.pendingMutations.count()).toBe(0);
+	});
+
+	it('preserves an unsynced checklist change if a reset cannot be sequenced after it', async () => {
+		initSync('user-1');
+		await offlineDb.pendingMutations.add({
+			type: 'update_item', userId: 'user-1', createdAt: 1,
+			payload: { id: 'item-1', listId: 'list-1', isChecked: true, clientUpdatedAt: 100 }
+		});
+		const fetchMock = vi.fn().mockRejectedValue(new TypeError('offline'));
+		vi.stubGlobal('fetch', fetchMock);
+
+		await expect(resetChecklist('user-1', 'list-1')).rejects.toThrow('Checklist changes are still pending');
+
+		expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/items/item-1']);
+		expect(await offlineDb.pendingMutations.count()).toBe(1);
 	});
 
 	it('keeps offline list activity current for create, check and delete without touching another account', async () => {

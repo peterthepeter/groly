@@ -1,4 +1,9 @@
 <script lang="ts">
+	import RecipeCategoryPicker from '#lib/components/recipe/RecipeCategoryPicker.svelte';
+	import RecipeFormViewport from '#lib/components/recipe/RecipeFormViewport.svelte';
+	import RecipeFormSave from '#lib/components/recipe/RecipeFormSave.svelte';
+	import { recipeCategoryChoiceValid, type RecipeCategoryChoice } from '#lib/recipeCategories';
+	import { recipeCategoryErrorMessage } from '#lib/recipeCategoryUi';
 	import { goto } from '$app/navigation';
 	import { tick } from 'svelte';
 	import { t, recipeLimitReached } from '#lib/i18n.svelte';
@@ -10,6 +15,8 @@
 	function uid() { return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
 
 	let title = $state('');
+	let category = $state<RecipeCategoryChoice>({ categoryId: null });
+	const categoryValid = $derived(recipeCategoryChoiceValid(category));
 	let description = $state('');
 	let servings = $state(4);
 	let prepTime = $state('');
@@ -176,7 +183,7 @@
 	}
 
 	async function save() {
-		if (!title.trim() || saving || imageUploading) return;
+		if (!title.trim() || saving || imageUploading || !categoryValid) return;
 		saving = true;
 		error = '';
 		try {
@@ -184,6 +191,7 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					category,
 					title: title.trim(),
 					description: description.trim() || null,
 					imageUrl,
@@ -205,7 +213,7 @@
 				const data = await res.json();
 				error = data.code === 'limit_reached' && typeof data.limit === 'number'
 					? recipeLimitReached(data.limit)
-					: t.recipe_save_error;
+					: recipeCategoryErrorMessage(data.code) ?? t.recipe_save_error;
 				saving = false;
 			}
 		} catch {
@@ -215,10 +223,10 @@
 	}
 </script>
 
-<div class="h-[100dvh] flex flex-col" style="background-color: var(--color-bg)">
+<RecipeFormViewport>
 
 	<!-- Header -->
-	<div class="fixed top-0 left-0 right-0 z-40 max-w-[430px] mx-auto px-4 pb-2"
+	<div class="flex-none px-4 pb-2"
 	     style="padding-top: calc(env(safe-area-inset-top) + 1rem)">
 		<div class="flex items-center justify-between rounded-2xl px-4 py-3"
 		     style="background-color: var(--modal-bg)">
@@ -236,8 +244,7 @@
 		</div>
 	</div>
 
-	<div class="flex-1 overflow-y-auto px-4 space-y-3"
-	     style="padding-top: calc(env(safe-area-inset-top) + 5.5rem); padding-bottom: 6rem">
+	<div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pb-3">
 
 		<!-- Bild -->
 		<input bind:this={imageFileInput} type="file" accept="image/*"
@@ -276,6 +283,9 @@
 
 		<!-- Block 1: Name + Beschreibung + Portionen/Zeiten -->
 		<div class="rounded-2xl" style="background-color: var(--bubble-container-bg); border: 1px solid var(--bubble-container-border)">
+			<div class="inset-row-divider">
+				<RecipeCategoryPicker bind:value={category} />
+			</div>
 			<div class="px-4 pt-4 pb-2">
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
@@ -450,17 +460,7 @@
 		{/if}
 	</div>
 
-	<!-- Speichern-Button -->
-	<div class="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-4 z-30"
-	     style="padding-bottom: calc(env(safe-area-inset-bottom) + 1rem)">
-		<button
-			onclick={save}
-			disabled={!title.trim() || saving || imageUploading}
-			class="w-full py-4 rounded-full font-semibold text-sm disabled:opacity-40 active:scale-95 transition-transform shadow-lg"
-			style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim)); color: var(--color-on-primary)"
-		>
-			{imageUploading ? t.recipe_saving : saving ? t.recipe_saving : t.recipe_save}
-		</button>
-	</div>
+	<RecipeFormSave onsave={save} disabled={!title.trim() || saving || imageUploading || !categoryValid}
+		label={imageUploading || saving ? t.recipe_saving : t.recipe_save} />
 
-</div>
+</RecipeFormViewport>

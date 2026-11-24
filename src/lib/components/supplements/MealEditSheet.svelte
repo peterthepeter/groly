@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PreferredDateTimeInput from '#lib/components/PreferredDateTimeInput.svelte';
 	import { goto } from '$app/navigation';
 	import AddComponentSheet from './AddComponentSheet.svelte';
 	import ManageSheetShell from './ManageSheetShell.svelte';
@@ -354,10 +355,10 @@
 				</label>
 			{/if}
 					<div class="manage-settings-row nutrition-date-time-row">
-				<input type="date" bind:value={date}
+				<PreferredDateTimeInput type="date" bind:value={date} aria-label={t.supplement_log_date}
 				       class="nutrition-native-input" />
-				<span aria-hidden="true"></span>
-				<input type="time" bind:value={time}
+				<span class="date-time-divider" aria-hidden="true"></span>
+				<PreferredDateTimeInput type="time" bind:value={time} aria-label={t.supplement_log_time}
 				       class="nutrition-native-input nutrition-time-input" />
 					</div>
 				</section>
@@ -475,9 +476,9 @@
 	.nutrition-select-icon { position: absolute; right: 12px; pointer-events: none; }
 	.nutrition-flat-input-row { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); align-items: center; gap: 12px; }
 	.nutrition-date-time-row { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(108px, .7fr); align-items: center; gap: 8px; }
-	.nutrition-date-time-row > span { height: 22px; background: var(--bubble-container-border); }
-	.nutrition-native-input { width: 100%; min-width: 0; height: 38px; border: 0; outline: 0; background: transparent; color: #FB923C; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
-	.nutrition-time-input { text-align: center; }
+	.nutrition-date-time-row .date-time-divider { height: 22px; background: var(--bubble-container-border); }
+	.nutrition-date-time-row :global(.nutrition-native-input) { width: 100%; min-width: 0; height: 38px; border: 0; outline: 0; background: transparent; color: #FB923C; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+	.nutrition-date-time-row :global(.nutrition-time-input) { text-align: center; }
 	.nutrition-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 	.nutrition-section-heading strong { color: #FB923C; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
 	.nutrition-food-list :global(.nutrition-food-row + .nutrition-food-row) { border-top: 1px solid var(--bubble-container-border); }

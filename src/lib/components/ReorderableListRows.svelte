@@ -48,7 +48,7 @@
 					: pointerY > bottom - 44 ? Math.min(12, (pointerY - bottom + 44) / 4) : 0;
 				if (speed) scrollContainer.scrollTop += speed;
 			}
-			const rows = [...root.querySelectorAll<HTMLElement>('[data-list-id]')];
+			const rows = [...root.querySelectorAll<HTMLElement>(':scope > [data-list-id]')];
 			const index = rows.filter(element => element.dataset.listId !== activeId && element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2 < pointerY).length;
 			if (draft.indexOf(activeId) !== index) {
 				const next = draft.filter(id => id !== activeId);

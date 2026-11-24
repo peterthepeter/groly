@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayTime } from '#lib/dateDisplay';
 	import { todayKey } from '#lib/dates';
 	import { onMount } from 'svelte';
 	import { t } from '#lib/i18n.svelte';
@@ -143,7 +144,7 @@
 			</label>
 
 			<label class="caffeine-native-control caffeine-time-picker">
-				<span class="caffeine-native-value"><strong>{logTime}</strong></span>
+				<span class="caffeine-native-value"><strong>{displayTime(logTime)}</strong></span>
 				<input type="time" bind:value={logTime} aria-label={t.supplement_log_time} />
 			</label>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PreferredDateTimeInput from '#lib/components/PreferredDateTimeInput.svelte';
 	import { untrack } from 'svelte';
 	import { t } from '#lib/i18n.svelte';
 	import { todayKey, tsToDateKey } from '#lib/dates';
@@ -137,11 +138,11 @@
 						<div class="grid grid-cols-2 gap-2 mt-2">
 							<div class="rounded-xl px-3 py-2" style="background-color: var(--color-surface-container)">
 								<p class="text-[10px] uppercase tracking-wider mb-1" style="color: var(--color-on-surface-variant)">{t.export_from}</p>
-								<input type="date" bind:value={customFrom} max={customTo} class="w-full bg-transparent outline-none text-sm" style="color: var(--color-on-surface); font-size: 16px"/>
+								<PreferredDateTimeInput type="date" bind:value={customFrom} aria-label={t.export_from} max={customTo} class="w-full bg-transparent outline-none text-sm" style="color: var(--color-on-surface); font-size: 16px"/>
 							</div>
 							<div class="rounded-xl px-3 py-2" style="background-color: var(--color-surface-container)">
 								<p class="text-[10px] uppercase tracking-wider mb-1" style="color: var(--color-on-surface-variant)">{t.export_to}</p>
-								<input type="date" bind:value={customTo} min={customFrom} max={todayKey()} class="w-full bg-transparent outline-none text-sm" style="color: var(--color-on-surface); font-size: 16px"/>
+								<PreferredDateTimeInput type="date" bind:value={customTo} aria-label={t.export_to} min={customFrom} max={todayKey()} class="w-full bg-transparent outline-none text-sm" style="color: var(--color-on-surface); font-size: 16px"/>
 							</div>
 						</div>
 					{/if}

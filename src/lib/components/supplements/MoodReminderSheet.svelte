@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayTime } from '#lib/dateDisplay';
 	import { t } from '#lib/i18n.svelte';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 	import SupplementActiveToggle from './SupplementActiveToggle.svelte';
@@ -165,7 +166,7 @@
 									<span class="manage-settings-label">{t.supplement_reminders_time_label}</span>
 									<span class="reminder-time-field">
 										<input type="time" bind:value={entry.time} class="reminder-time-picker" />
-										<span class="reminder-time-value">{entry.time}</span>
+										<span class="reminder-time-value">{displayTime(entry.time)}</span>
 									</span>
 								</label>
 								<button

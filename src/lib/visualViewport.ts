@@ -1,16 +1,16 @@
-export function watchVisualViewportBottomOffset(setBottomOffset: (offset: number) => void): () => void {
+export function watchVisualViewportBottomOffset(setBottomOffset: (offset: number, viewport: VisualViewport | null) => void): () => void {
 	if (typeof window === 'undefined') return () => {};
 
 	const visualViewport = window.visualViewport;
 	if (!visualViewport) {
-		setBottomOffset(0);
+		setBottomOffset(0, null);
 		return () => {};
 	}
 
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const update = () => {
-		setBottomOffset(Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop));
+		setBottomOffset(Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop), visualViewport);
 	};
 
 	const debouncedUpdate = () => {
@@ -23,11 +23,13 @@ export function watchVisualViewportBottomOffset(setBottomOffset: (offset: number
 
 	visualViewport.addEventListener('resize', debouncedUpdate);
 	visualViewport.addEventListener('scroll', debouncedUpdate);
+	window.addEventListener('scroll', debouncedUpdate);
 	update();
 
 	return () => {
 		visualViewport.removeEventListener('resize', debouncedUpdate);
 		visualViewport.removeEventListener('scroll', debouncedUpdate);
+		window.removeEventListener('scroll', debouncedUpdate);
 		if (debounceTimer) clearTimeout(debounceTimer);
 	};
 }

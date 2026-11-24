@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayDateTime } from '#lib/dateDisplay';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import type { AdminInvite } from '#lib/adminUsers';
 	let { invite, embedded = false }: { invite: AdminInvite; embedded?: boolean } = $props();
@@ -30,7 +31,7 @@
 		<div class="invite-heading"><h2>{invite.type === 'reset' ? t.admin_reset_link_label : t.admin_invite_link_label}</h2><p>{t.admin_invite_active_hint}</p></div>
 		<label class="sr-only" for="admin-invite-link">{t.admin_invite_link_label}</label>
 		<input id="admin-invite-link" bind:this={linkInput} readonly value={invite.inviteUrl} onclick={(event) => event.currentTarget.select()} />
-		<p>{t.admin_invite_expires_at}: {new Date(invite.expiresAt * 1000).toLocaleString(currentLang() === 'de' ? 'de-DE' : 'en-US', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</p>
+		<p>{t.admin_invite_expires_at}: {displayDateTime(new Date(invite.expiresAt * 1000), { day: 'numeric', month: 'long' }, currentLang() === 'de' ? 'de-DE' : 'en-US')}</p>
 		{#if copyError}<p role="status" class="copy-error">{t.admin_invite_copy_error}</p>{/if}
 	</div>
 	<div class="invite-actions"><button type="button" onclick={copy}>{copied ? t.admin_invite_copied : t.admin_invite_copy}</button><button type="button" onclick={share}>{t.admin_invite_share}</button></div>

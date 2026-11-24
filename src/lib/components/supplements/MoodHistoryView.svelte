@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayDate } from '#lib/dateDisplay';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { toLocalDateKey, todayKey } from '#lib/dates';
 	import { getMoodLevel, MOOD_LEVELS, findTag } from '#lib/mood';
@@ -137,7 +138,7 @@
 		const days = weekDays();
 		const first = new Date(days[0] + 'T12:00:00');
 		const last = new Date(days[6] + 'T12:00:00');
-		return `${first.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${last.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+		return `${displayDate(first, { day: 'numeric', month: 'short' })} – ${displayDate(last, { day: 'numeric', month: 'short' })}`;
 	}
 
 	function monthLabel(): string {
@@ -449,7 +450,7 @@
 					</div>
 					<div class="flex-1 min-w-0">
 						<div class="text-[11px] font-medium tabular-nums" style="color: var(--color-on-surface-variant)">
-							{new Date(previewedDate + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+							{displayDate(new Date(previewedDate + 'T12:00:00'), { weekday: 'long', day: 'numeric', month: 'long' }, currentLang() === 'en' ? 'en-US' : 'de-DE')}
 						</div>
 					<div class="text-sm font-bold truncate" style="color: {pLevel.color}">{pLabel}</div>
 					<div class="text-[11px] font-semibold" style="color:var(--color-on-surface-variant)">{t.mood_energy_short}: {pEntry.energy ?? '–'}/5</div>

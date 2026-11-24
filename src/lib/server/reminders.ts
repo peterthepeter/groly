@@ -1,3 +1,4 @@
+import { checkChecklistReminders } from './checklistReminders';
 import { db } from '#lib/db';
 import {
 	supplements,
@@ -283,7 +284,8 @@ export function scheduleNextReminderCheck() {
 			checkSupplementReminders().catch(console.error),
 			checkWaterReminders().catch(console.error),
 			checkMeditationReminders().catch(console.error),
-			checkMoodReminders().catch(console.error)
+			checkMoodReminders().catch(console.error),
+			checkChecklistReminders().catch(console.error)
 		]);
 		scheduleNextReminderCheck();
 	}, msUntilNextMinute);

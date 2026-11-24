@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayDate } from '#lib/dateDisplay';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { MOOD_LEVELS, ENERGY_LEVELS, ACTIVITY_CATEGORIES, type ActivityTag } from '#lib/mood';
 	import { clearMoodDraft, loadMoodDraft, saveMoodDraft } from '#lib/moodDraft';
@@ -170,7 +171,7 @@
 	function formatDate(value: string): string {
 		if (!value) return '';
 		const parsedDate = new Date(value + 'T12:00:00');
-		return parsedDate.toLocaleDateString(currentLang(), { weekday: 'long', day: 'numeric', month: 'long' });
+		return displayDate(parsedDate, { weekday: 'long', day: 'numeric', month: 'long' }, currentLang());
 	}
 
 	async function save() {

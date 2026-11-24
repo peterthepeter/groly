@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { displayTime } from '#lib/dateDisplay';
 	import { t } from '#lib/i18n.svelte';
 	import ManageSheetShell from './ManageSheetShell.svelte';
 
@@ -172,14 +173,14 @@
 									<span class="manage-settings-label">{t.water_reminder_from}</span>
 									<span class="reminder-time-field">
 										<input type="time" bind:value={entry.startTime} class="reminder-time-picker" />
-										<span class="reminder-time-value">{entry.startTime}</span>
+										<span class="reminder-time-value">{displayTime(entry.startTime)}</span>
 									</span>
 								</label>
 								<label class="reminder-time-cell">
 									<span class="manage-settings-label">{t.water_reminder_until}</span>
 									<span class="reminder-time-field">
 										<input type="time" bind:value={entry.endTime} class="reminder-time-picker" />
-										<span class="reminder-time-value">{entry.endTime}</span>
+										<span class="reminder-time-value">{displayTime(entry.endTime)}</span>
 									</span>
 								</label>
 								<label class="reminder-interval-cell">

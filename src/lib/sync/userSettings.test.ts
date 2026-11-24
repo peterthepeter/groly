@@ -161,6 +161,22 @@ describe('offline user settings', () => {
 		});
 	});
 
+	it('uses the account formats when another device initializes them first', async () => {
+		await offlineDb.userSettings.put({ userId: 'user-a', settings: { lang: 'en' }, revision: 1, updatedAt: 1 });
+		initSync('user-a');
+		await queueUserSettingsPatch('user-a', { initialFormats: { dateFormat: 'mdy-slash', timeFormat: '12h' } },
+			{ lang: 'en', dateFormat: 'mdy-slash', timeFormat: '12h' });
+		const settings = { lang: 'en', dateFormat: 'dmy-dot', timeFormat: '24h' };
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'settings_conflict', settings, settingsRevision: 2 }, 409));
+		vi.stubGlobal('fetch', fetchMock);
+
+		await drainPendingMutations();
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(await offlineDb.pendingMutations.count()).toBe(0);
+		expect(await getOfflineUserSettings('user-a')).toMatchObject({ settings, revision: 2 });
+	});
+
 	it('keeps a local pending sort order over a stale server response during reload', async () => {
 		await offlineDb.userSettings.put({ userId: 'user-a', settings: { categoryOrder: ['obst'] }, revision: 2, updatedAt: 1 });
 		initSync('user-a');

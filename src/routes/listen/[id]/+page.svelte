@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { flushSync, onMount, onDestroy, tick } from 'svelte';
+	import { SquarePen, Check } from '@lucide/svelte';
 	import { on } from '#lib/sseStore.svelte';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { clearMissingChecklistSection, orderChecklistRows, type ChecklistSectionChoice, type ChecklistEntryEdit, type ChecklistEntryFields, type ChecklistSection, type ChecklistSettings, type ListKind } from '#lib/checklists';
+	import type { OfflineList } from '#lib/sync/db';
+	import ChecklistManageSheet from '#lib/components/ChecklistManageSheet.svelte';
+	import ChecklistItems from '#lib/components/ChecklistItems.svelte';
+	import ChecklistEntrySheet from '#lib/components/ChecklistEntrySheet.svelte';
 	import AppHeader from '#lib/components/AppHeader.svelte';
 	import HamburgerMenu from '#lib/components/HamburgerMenu.svelte';
 	import AppBottomNav from '#lib/components/AppBottomNav.svelte';
@@ -11,11 +17,17 @@
 	import CheckedDrawer from '#lib/components/CheckedDrawer.svelte';
 	import AddItemModal from '#lib/components/AddItemModal.svelte';
 	import AddItemBar from '#lib/components/AddItemBar.svelte';
+	import SettingsSelectRow from '#lib/components/SettingsSelectRow.svelte';
 	import {
 		generateClientId,
 		queueItemCreate,
 		queueItemUpdate,
 		queueItemDelete,
+		queueItemDeletes,
+		undoChecklistDelete,
+		queueChecklistOrder,
+		queueChecklistSections,
+		setChecklistDefault,
 		deleteOfflineItem,
 		getOfflineFavorites,
 		cacheFavorites,
@@ -23,19 +35,23 @@
 		getPendingCreateItems,
 		cacheItemsData,
 		getOfflineItems,
-		getOfflineListName,
+		getOfflineList,
+		updateOfflineList,
+		cacheListsData,
 		getCategoryOverrideForCreate,
 		refreshCategoryPreferences,
 		setCategoryPreferenceOffline,
-		deleteCategoryPreferenceOffline
+		deleteCategoryPreferenceOffline,
+		resetChecklist
 	} from '#lib/sync/manager';
 	import { acquireWakeLock, releaseWakeLock } from '#lib/wakeLock';
 
 	let wakeLockHeld = false;
-	import { t, list_items_open } from '#lib/i18n.svelte';
+	import { checklistProgress, checklistDeleteLabel, currentLang, t, list_items_open } from '#lib/i18n.svelte';
 	import { getCategoryKey } from '#lib/categories';
 	import { getCategoryPreferenceAction } from '#lib/categoryPreferences';
 	import { userSettings } from '#lib/userSettings.svelte';
+	import { resolveShoppingItemSortMode } from '#lib/userSettingsTypes';
 
 	const LISTVIEW_HINT_KEY = 'groly_listview_hint_dismissed';
 	const LOCATION_HINT_KEY = 'groly_location_hint_dismissed';
@@ -44,12 +60,33 @@
 
 	let { data } = $props();
 
-	type Item = { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number };
+	type Item = ChecklistEntryFields & { id: string; listId: string; name: string; quantityInfo: string | null; isChecked: boolean; checkedAt: number | null; categoryOverride: string | null; createdByUsername: string | null; updatedAt: number };
 
 	type Favorite = { name: string; quantityInfo: string | null; categoryOverride: string | null };
 
 	let listName = $state('');
+	let kind = $state<ListKind>('shopping');
+	let sections = $state<ChecklistSection[]>([]);
+	let defaultSectionId = $state<string | null>(null);
+	let pushAvailable = $state<boolean | null>(null);
+	let highlightedId = $state<string | null>(null);
+	const isChecklist = $derived(kind === 'checklist');
+	let checklistError = $state('');
+	let manageMode = $state<'sort' | 'delete' | null>(null);
+	let manageMenuOpen = $state(false);
+	const managing = $derived(manageMode !== null);
+	let selectedIds = $state(new Set<string>());
+	let undoItem = $state<Item | null>(null);
+	let undoTimer: ReturnType<typeof setTimeout>;
+	let checklistResetError = $state(false);
+	let resettingChecklistId = $state<string | null>(null);
 	let items = $state<Item[]>([]);
+	let userPermission = $state<'owner' | 'write' | 'read'>('write');
+	let onlyOpen = $state(false);
+	const hasChecklistFooter = $derived(isChecklist && (userPermission !== 'read' || items.length > 0));
+	const filterActive = $derived(onlyOpen && !managing && items.length > 0);
+	const checklistViewOptions = $derived([{ value: 'all', label: t.checklist_view_all }, { value: 'open', label: t.checklist_view_open }]);
+	const selection = $derived(new Set(items.filter(item => selectedIds.has(item.id)).map(item => item.id)));
 	let favorites = $state<Favorite[]>([]);
 	const favoriteNames = $derived(new Set(favorites.map(f => f.name.toLowerCase())));
 	const activeItemNames = $derived(new Set(items.filter(i => !i.isChecked).map(i => i.name.toLowerCase())));
@@ -58,7 +95,6 @@
 	let loading = $state(true);
 	let editItem = $state<Item | null>(null);
 	let suggestions = $state<string[]>([]);
-	let userPermission = $state<'owner' | 'write' | 'read'>('write');
 	let searchQuery = $state('');
 	let searchOpen = $state(false);
 	let keyboardOpen = $state(false);
@@ -80,12 +116,21 @@
 	const pullArrowRotation = $derived(Math.min(pullDistance / PULL_THRESHOLD, 1) * 180);
 
 	const listId = $derived(page.params.id);
+	const listCategorySettings = $derived(listId ? userSettings.getListCategorySettings(listId) : null);
+	const itemSortMode = $derived(listCategorySettings === null ? userSettings.shoppingItemSortMode
+		: resolveShoppingItemSortMode(listCategorySettings.enabled, listCategorySettings.itemSortDirection));
+	const alphabeticalSort = $derived(itemSortMode === 'az' || itemSortMode === 'za');
+	// Preserve the grid's existing placement for the category and off modes.
+	const reverseShoppingGrid = $derived(!alphabeticalSort && userSettings.categorySortEnabled);
 	const openItems = $derived.by(() => {
 		const unchecked = items.filter(i => !i.isChecked);
-		const listSettings = listId ? userSettings.getListCategorySettings(listId) : null;
-		const sortEnabled = listSettings !== null ? listSettings.enabled : userSettings.categorySortEnabled;
-		if (!sortEnabled) return unchecked;
-		const order = listSettings !== null ? listSettings.order : userSettings.categoryOrder;
+		if (isChecklist || itemSortMode === 'off') return unchecked;
+		if (alphabeticalSort) {
+			const collator = new Intl.Collator(currentLang(), { numeric: true, sensitivity: 'base' });
+			const direction = itemSortMode === 'za' ? -1 : 1;
+			return unchecked.sort((a, b) => direction * collator.compare(a.name, b.name));
+		}
+		const order = listCategorySettings?.order ?? userSettings.categoryOrder;
 		const orderIndex = new Map(order.map((key, index) => [key, index]));
 		return [...unchecked].sort((a, b) => {
 			const ai = orderIndex.get(getCategoryKey(a.name, a.categoryOverride)) ?? -1;
@@ -99,6 +144,7 @@
 		return userSettings.showAllCheckedItems ? sorted : sorted.slice(0, 16);
 	});
 	const openCount = $derived(openItems.length);
+	const canResetChecklist = $derived(isChecklist && userPermission === 'owner' && !searchOpen && openCount < items.length);
 	const showSearch = $derived(openItems.length >= 5 || items.some(i => i.isChecked));
 	const displayItems = $derived(
 		searchQuery.trim()
@@ -115,7 +161,7 @@
 	const gridPrefix = $derived(displayItems.length % 3 === 0 ? 0 : 3 - (displayItems.length % 3));
 	const totalSearchResults = $derived(displayItems.length + (searchQuery.trim() ? displayCheckedItems.length : 0));
 	const headerSubtitle = $derived(
-		searchQuery.trim()
+		isChecklist ? '' : searchQuery.trim()
 			? `${totalSearchResults} Ergebnis${totalSearchResults !== 1 ? 'se' : ''}`
 			: list_items_open(openCount)
 	);
@@ -129,97 +175,231 @@
 		document.querySelector<HTMLInputElement>('[data-add-item-name]')?.focus({ preventScroll: true });
 	}
 
+	function applyList(list: Pick<OfflineList, 'name' | 'kind' | 'checklistSections' | 'defaultSectionId' | 'userPermission' | 'ownerId'>) {
+		listName = list.name;
+		kind = list.kind ?? 'shopping';
+		sections = list.checklistSections ?? [];
+		defaultSectionId = list.defaultSectionId ?? null;
+		userPermission = list.userPermission ?? (list.ownerId === data.user?.id ? 'owner' : kind === 'checklist' ? 'read' : 'write');
+		if (userPermission === 'read') { manageMode = null; manageMenuOpen = false; selectedIds = new Set(); }
+	}
+
+	async function revealHighlightedEntry() {
+		await tick();
+		const targetId = highlightedId;
+		if (!targetId) return;
+		const entry = scrollContainer?.querySelector(`[data-checklist-entry="${CSS.escape(targetId)}"]`);
+		entry?.scrollIntoView({ block: 'nearest' });
+	}
+
 	async function loadItems() {
 		const targetListId = listId ?? '';
 		const requestVersion = ++itemsLoadVersion;
-		if (data.user?.id) {
-			void refreshCategoryPreferences(data.user.id);
-			const cachedFavorites = await getOfflineFavorites(data.user.id);
-			if (requestVersion !== itemsLoadVersion) return;
+		const userId = data.user?.id;
+		const stillCurrent = () => requestVersion === itemsLoadVersion && targetListId === (listId ?? '');
+		const cached = await getOfflineList(targetListId);
+		if (!stillCurrent()) return;
+		if (cached && !listName) applyList(cached);
+		if (userId) {
+			if (!isChecklist) void refreshCategoryPreferences(userId);
+			const cachedFavorites = await getOfflineFavorites(userId, kind);
+			if (!stillCurrent()) return;
 			if (cachedFavorites) favorites = cachedFavorites;
 		}
-
-		// Gecachte Daten sofort anzeigen, während der Netzwerk-Fetch läuft (stale-while-revalidate)
-		if (items.length === 0) {
-			const [cachedName, cachedItems] = await Promise.all([
-				getOfflineListName(targetListId),
-				getOfflineItems(targetListId)
-			]);
-			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
-			if (cachedItems.length > 0) {
-				listName = cachedName || listName;
+		if (!items.length) {
+			const cachedItems = await getOfflineItems(targetListId);
+			if (!stillCurrent()) return;
+			// Older caches can establish completeness when their snapshot matches the catalog total.
+			if (userId && cached?.kind === 'checklist' && !cached.checklistItemsCached && cached.totalCount === cachedItems.length) {
+				await updateOfflineList(targetListId, { checklistItemsCached: true }, userId);
+				if (!stillCurrent()) return;
+			}
+			if (cached || cachedItems.length) {
 				items = cachedItems.map(item => ({ ...item, createdByUsername: null }));
 				loading = false;
-				await tick();
-				scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight });
 			}
 		}
 
 		try {
 			const requestStartedAt = Date.now();
-			const [listRes, itemsRes, suggestRes, favsRes] = await Promise.all([
+			const [listRes, itemsRes] = await Promise.all([
 				fetch(`/api/lists/${targetListId}`),
-				fetch(`/api/lists/${targetListId}/items`),
-				fetch('/api/suggestions'),
-				fetch('/api/favorites')
+				fetch(`/api/lists/${targetListId}/items`)
 			]);
-			if (!listRes.ok || !itemsRes.ok) throw new Error();
-			const listData = await listRes.json();
-			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
-			listName = listData.name;
-			userPermission = listData.userPermission ?? 'write';
-			const serverItems: Item[] = await itemsRes.json();
-			const pendingItems = data.user?.id
-				? await getPendingCreateItems(data.user.id, targetListId, requestStartedAt)
-				: [];
-			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
-			const serverIds = new Set(serverItems.map((item) => item.id));
-			const newItems: Item[] = [
-				...serverItems,
-				...pendingItems
-					.filter((item) => !serverIds.has(item.id))
-					.map((item) => ({ ...item, createdByUsername: data.user?.username ?? null }))
-			];
-			if (suggestRes.ok) suggestions = await suggestRes.json();
-			if (favsRes.ok && data.user?.id) favorites = await cacheFavorites(data.user.id, await favsRes.json(), requestStartedAt);
-			// Cache als plain objects (vor State-Zuweisung)
-			const mergedItems = await cacheItemsData(newItems, data.user?.id, requestStartedAt);
-			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
-			items = mergedItems;
-		} catch {
-			if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
-			if (items.length === 0) {
-				listName = await getOfflineListName(targetListId);
-				if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
-				items = (await getOfflineItems(targetListId)).map(item => ({ ...item, createdByUsername: null }));
+			if (!listRes.ok || !itemsRes.ok) {
+				if (listRes.status === 404 || itemsRes.status === 404) {
+					if (stillCurrent()) { items = []; listName = ''; userPermission = 'read'; }
+				}
+				throw new Error();
 			}
-		}
-		if (requestVersion !== itemsLoadVersion || targetListId !== (listId ?? '')) return;
+			const listData: OfflineList & { pushAvailable?: boolean } = await listRes.json();
+			const serverItems: Item[] = await itemsRes.json();
+			if (!stillCurrent()) return;
+			if (!userId) applyList(listData);
+			pushAvailable = listData.pushAvailable ?? null;
+			const pendingItems = userId ? await getPendingCreateItems(userId, targetListId, requestStartedAt) : [];
+			const serverIds = new Set(serverItems.map(item => item.id));
+			const newItems = [...serverItems, ...pendingItems.filter(item => !serverIds.has(item.id))
+				.map(item => ({ ...item, createdByUsername: data.user?.username ?? null }))];
+			const merged = await cacheItemsData(newItems, userId, requestStartedAt, listData.kind === 'checklist' ? targetListId : undefined);
+			if (!stillCurrent()) return;
+			items = merged;
+			loading = false;
+			if (userId) {
+				const { pushAvailable: _pushAvailable, ...metadata } = listData;
+				await cacheListsData([{ ...cached, ...metadata, checklistItemsCached: listData.kind === 'checklist',
+					totalCount: merged.length, openCount: merged.filter(item => !item.isChecked).length }], userId);
+				const effectiveList = await getOfflineList(targetListId);
+				if (!stillCurrent()) return;
+				applyList(effectiveList ?? listData);
+				const currentKind = kind;
+				const tasks = [
+					fetch(currentKind === 'checklist' ? '/api/favorites?kind=checklist' : '/api/favorites').then(async res => {
+						if (!res.ok || !stillCurrent()) return;
+						const next = await cacheFavorites(userId, await res.json(), requestStartedAt, currentKind);
+						if (stillCurrent()) favorites = next;
+					})
+				];
+				if (currentKind === 'shopping') tasks.push(fetch('/api/suggestions').then(async res => {
+					if (!res.ok) return;
+					const next = await res.json();
+					if (stillCurrent()) suggestions = next;
+				}));
+				void Promise.allSettled(tasks);
+			}
+		} catch { /* The account cache remains usable if the server is unreachable. */ }
+		if (!stillCurrent()) return;
 		loading = false;
-		await tick();
-		scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight });
+		if (highlightedId) void revealHighlightedEntry();
+		else if (!isChecklist) {
+			await tick();
+			scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight });
+		}
 	}
 
 	async function toggleItem(item: Item) {
-		if (userPermission === 'read' || !data.user?.id) return;
+		if (userPermission === 'read' || !data.user?.id || resettingChecklistId === item.listId) return;
 		const isChecked = !item.isChecked;
 		const checkedAt = isChecked ? Math.floor(Date.now() / 1000) : null;
-		await queueItemUpdate(data.user.id, item.id, { isChecked, checkedAt });
-		items = items.map(i => i.id === item.id ? { ...i, isChecked, checkedAt } : i);
+		const changes = { isChecked, checkedAt, ...(isChecklist && isChecked ? { remindAt: null, reminderStatus: null } : {}) };
+		try {
+			await queueItemUpdate(data.user.id, item.id, changes);
+			items = items.map(i => i.id === item.id ? { ...i, ...changes } : i);
+			checklistError = '';
+		} catch {
+			if (isChecklist) checklistError = t.checklist_edit_error;
+		}
 	}
 
-	async function addItem(name: string, quantityInfo: string, favoriteCategoryOverride?: string | null) {
+	function openManageMenu() {
+		closeSearch();
+		manageMode = null;
+		manageMenuOpen = true;
+		checklistResetError = false;
+		selectedIds = new Set();
+	}
+
+	function selectEntry(id: string) {
+		const next = new Set(selectedIds);
+		if (next.has(id)) next.delete(id); else next.add(id);
+		selectedIds = next;
+	}
+
+	async function setDefaultSection(sectionId: string | null) {
+		const target = listId;
+		if (!target || !data.user?.id || userPermission !== 'owner') throw new Error('Cannot change default section');
+		await setChecklistDefault(data.user.id, target, sectionId);
+		if (target === listId) defaultSectionId = sectionId;
+	}
+
+	async function saveChecklistSections(settings: ChecklistSettings) {
+		const target = listId;
+		const userId = data.user?.id;
+		if (!target || !userId || userPermission !== 'owner') throw new Error('Cannot update checklist sections');
+		await queueChecklistSections(userId, target, settings);
+		if (target !== listId) return;
+		sections = settings.checklistSections;
+		defaultSectionId = settings.defaultSectionId;
+		const sectionIds = new Set(sections.map(section => section.id));
+		items = items.map(item => clearMissingChecklistSection(item, sectionIds));
+	}
+
+	async function reorderChecklist(ids: string[], sectionId?: string | null) {
+		const target = listId;
+		if (!target || !data.user?.id) return;
+		try {
+			await queueChecklistOrder(data.user.id, target, ids, sectionId);
+			if (listId !== target) return;
+			if (sectionId === undefined) sections = orderChecklistRows(sections, ids);
+			else {
+				const positions = new Map(ids.map((id, index) => [id, index]));
+				items = items.map(item => positions.has(item.id) && (item.sectionId ?? null) === sectionId
+					? { ...item, checklistPosition: positions.get(item.id) } : item);
+			}
+		} catch { if (listId === target) checklistError = t.checklist_edit_error; }
+	}
+
+	async function removeChecklistEntries(ids: string[], offerUndo = false) {
+		const target = listId;
+		if (!ids.length || !data.user?.id || !target) return;
+		if (!offerUndo && !confirm(checklistDeleteLabel(ids.length) + '?')) return;
+		const entry = offerUndo ? items.find(item => item.id === ids[0]) : null;
+		const deadline = Date.now() + 7000;
+		try {
+			await queueItemDeletes(data.user.id, ids, offerUndo ? deadline : undefined, target);
+			if (listId !== target) return;
+			const removed = new Set(ids);
+			items = items.filter(item => !removed.has(item.id));
+			if (!offerUndo && manageMode === 'delete') openManageMenu();
+			if (entry) {
+				undoItem = entry;
+				clearTimeout(undoTimer);
+				undoTimer = setTimeout(() => undoItem = null, Math.max(0, deadline - Date.now()));
+			}
+		} catch { if (listId === target) checklistError = t.checklist_edit_error; }
+	}
+
+	async function undoDelete() {
+		const entry = undoItem;
+		if (!entry || !data.user?.id) return;
+		try {
+			const restored = await undoChecklistDelete(data.user.id, entry);
+			if (restored && listId === entry.listId && !items.some(item => item.id === entry.id)) items = [...items, entry];
+			if (undoItem?.id === entry.id) undoItem = null;
+		} catch { checklistError = t.checklist_edit_error; }
+	}
+
+	async function resetCurrentChecklist() {
+		const targetListId = listId;
+		const userId = data.user?.id;
+		if (!canResetChecklist || resettingChecklistId || !targetListId || !userId) return;
+		if (!confirm(t.checklist_reset_confirm)) return;
+		resettingChecklistId = targetListId;
+		checklistResetError = false;
+		try {
+			await resetChecklist(userId, targetListId);
+			if (listId === targetListId) await loadItems();
+		} catch {
+			if (listId === targetListId) checklistResetError = true;
+		} finally {
+			resettingChecklistId = null;
+		}
+	}
+
+	async function addItem(name: string, quantityInfo: string, favoriteCategoryOverride?: string | null, sectionId?: string | null, choice?: ChecklistSectionChoice, checklistNote?: string | null) {
 		const targetListId = listId ?? '';
 		const id = generateClientId();
-		const categoryOverride = data.user?.id
+		const checklist = isChecklist;
+		const categoryOverride = !checklist && data.user?.id
 			? await getCategoryOverrideForCreate(data.user.id, name, favoriteCategoryOverride)
 			: null;
 		const optimisticItem: Item = {
 			id, listId: targetListId, name: name.trim(),
 			quantityInfo: quantityInfo.trim() || null,
 			isChecked: false, checkedAt: null, categoryOverride,
+			...(checklist ? { sectionId: sectionId ?? null, checklistNote: checklistNote ?? null, createdAt: Date.now() } : {}),
 			createdByUsername: data.user?.username ?? null,
-			updatedAt: Math.floor(Date.now() / 1000)
+			updatedAt: checklist ? Date.now() : Math.floor(Date.now() / 1000)
 		};
 		if (!data.user?.id) return;
 		await queueItemCreate(data.user.id, optimisticItem, {
@@ -227,11 +407,14 @@
 			listId: targetListId,
 			name: optimisticItem.name,
 			quantityInfo: quantityInfo.trim(),
-			categoryOverride
+			categoryOverride,
+			...(checklist ? { kind: 'checklist' as const, sectionId: sectionId ?? null, checklistNote: checklistNote ?? null, ...choice } : {})
 		});
 		if (targetListId !== (listId ?? '')) return;
+		if (choice?.newSection && !sections.some(section => section.id === choice.newSection!.id)) sections = [...sections, choice.newSection];
+		if (choice?.setDefault) defaultSectionId = sectionId ?? null;
 		if (!items.some((item) => item.id === id)) items = [...items, optimisticItem];
-		if (!suggestions.some((suggestion) => suggestion.toLowerCase() === optimisticItem.name.toLowerCase())) {
+		if (!checklist && !suggestions.some((suggestion) => suggestion.toLowerCase() === optimisticItem.name.toLowerCase())) {
 			suggestions = [optimisticItem.name, ...suggestions].slice(0, 30);
 		}
 	}
@@ -290,6 +473,36 @@
 		favorites = await setFavoriteOffline(data.user.id, { name, quantityInfo: item?.quantityInfo ?? null, categoryOverride: item?.categoryOverride ?? null }, !makeFavorite);
 	}
 
+	async function saveChecklistItem(changes: ChecklistEntryEdit) {
+		const id = editItem?.id;
+		const userId = data.user?.id;
+		if (!id || !userId) return;
+		const patch = { ...changes, ...(changes.sectionId !== (editItem?.sectionId ?? null) ? { checklistPosition: null } : {}), ...('remindAt' in changes ? { reminderStatus: changes.remindAt ? 'syncing' as const : null } : {}) };
+		await queueItemUpdate(userId, id, patch);
+		items = items.map(item => item.id === id ? { ...item, ...patch } : item);
+		closeChecklistEditor();
+	}
+
+	async function saveChecklistFavorite(name: string, remove: boolean) {
+		const userId = data.user?.id;
+		if (!userId) return;
+		favorites = await setFavoriteOffline(userId, { name, quantityInfo: null, categoryOverride: null }, remove, undefined, 'checklist');
+	}
+
+	function closeChecklistEditor() {
+		addModalOpen = false;
+		editItem = null;
+		autoFavoritesOnOpen = false;
+	}
+
+	function editChecklistEntry(id: string) {
+		const item = items.find(item => item.id === id);
+		if (!item || (userPermission === 'read' && !item.checklistNote)) return;
+		editItem = item;
+		autoFavoritesOnOpen = false;
+		addModalOpen = Boolean(editItem);
+	}
+
 	afterNavigate(({ to, from }) => {
 		const fromId = from?.params?.id;
 		const toId = to?.params?.id;
@@ -297,15 +510,30 @@
 		// When navigating between different lists (component is reused by SvelteKit),
 		// reset state so we don't briefly show the old list's items.
 		if (fromId && toId && fromId !== toId) {
+			manageMode = null; manageMenuOpen = false;
+			onlyOpen = false;
+			selectedIds = new Set();
+			undoItem = null;
+			clearTimeout(undoTimer);
+			closeSearch();
 			items = [];
 			loading = true;
 			listName = '';
+			kind = 'shopping';
+			sections = [];
+			favorites = [];
+			defaultSectionId = null;
+			pushAvailable = null;
+			checklistError = '';
+			checklistResetError = false;
 			addModalOpen = false;
 			editItem = null;
 			void loadItems();
 		}
 
 		// Handle shortcut ?action param — fires on every navigation incl. same-route
+		highlightedId = to?.url.searchParams.get('entry') ?? null;
+		if (highlightedId) void revealHighlightedEntry();
 		const action = to?.url.searchParams.get('action');
 		if (action === 'add' || action === 'scanner') {
 			editItem = null;
@@ -317,7 +545,7 @@
 	});
 
 	function handlePullStart(e: TouchEvent) {
-		if (scrollContainer && scrollContainer.scrollTop <= 0) {
+		if (!managing && scrollContainer && scrollContainer.scrollTop <= 0) {
 			pullStartY = e.touches[0].clientY;
 			isPulling = true;
 		}
@@ -430,6 +658,14 @@
 			if (sseConnectedSinceMount) void loadItems();
 			sseConnectedSinceMount = true;
 		}),
+		on('checklist_refreshed', ev => { if (ev.listId === listId && isChecklist) void loadItems(); }),
+		on('checklist_sync_error', ev => {
+			if (ev.listId === listId && isChecklist) {
+				checklistError = t.checklist_edit_error;
+				void loadItems();
+			}
+		}),
+		on('list_updated', ev => { if (ev.listId === listId && isChecklist) void loadItems(); }),
 		on('item_added', async (ev) => {
 			if (ev.listId !== listId) return;
 			if (!items.some(i => i.id === (ev.item as Item).id)) {
@@ -441,7 +677,9 @@
 			if (ev.listId !== listId) return;
 			const current = items.find(i => i.id === (ev.item as Item).id);
 			if (!current) return;
-			const [merged] = await cacheItemsData([{ ...current, ...(ev.item as Item) }], data.user?.id);
+			const incoming = ev.item as Item;
+			const reminder = isChecklist && incoming.isChecked ? { remindAt: null, reminderStatus: null } : {};
+			const [merged] = await cacheItemsData([{ ...current, ...incoming, ...reminder }], data.user?.id);
 			if (ev.listId !== listId) return;
 			items = merged ? items.map(i => i.id === merged.id ? merged : i) : items.filter(i => i.id !== current.id);
 		}),
@@ -453,23 +691,47 @@
 	];
 
 	onDestroy(() => {
+		clearTimeout(undoTimer);
 		offHandlers.forEach(off => off());
 		if (wakeLockHeld) void releaseWakeLock();
 	});
 </script>
 
 <div class="h-[100dvh] flex flex-col overflow-hidden" style="background-color: var(--color-bg)">
+	{#snippet checklistHeader()}
+		<div class="checklist-header-actions">
+			{#if userPermission !== 'read'}
+				<button type="button" class:active={managing} aria-haspopup="dialog" aria-expanded={manageMenuOpen} onclick={openManageMenu}>
+					{#if managing}<Check size={14} />{t.sort_mode_done}{:else}<SquarePen size={14} />{t.supplement_manage}{/if}
+				</button>
+			{/if}
+			{#if items.length && !managing}
+				<div class="checklist-view">
+					<SettingsSelectRow label={t.checklist_view} value={onlyOpen ? 'open' : 'all'}
+						options={checklistViewOptions} onchange={value => onlyOpen = value === 'open'} compact>
+						{#snippet display()}
+							<span class="checklist-progress">{checklistProgress(items.length - openCount, items.length)}</span>
+							{#if filterActive}<span class="checklist-active-filter">{t.checklist_view_open_short}</span>{/if}
+						{/snippet}
+					</SettingsSelectRow>
+				</div>
+			{:else if items.length}
+				<span class="checklist-progress">{checklistProgress(items.length - openCount, items.length)}</span>
+			{/if}
+		</div>
+	{/snippet}
 	<AppHeader
 		title={listName || t.list_default_name}
 		subtitle={headerSubtitle}
 		onMenuOpen={() => menuOpen = true}
-		onSearch={showSearch && !searchOpen ? () => searchOpen = true : null}
+		footer={hasChecklistFooter ? checklistHeader : null}
+		onSearch={showSearch && !managing && !searchOpen ? () => searchOpen = true : null}
 	/>
 
 	<!-- Suchleiste (fixiert unter dem Header, nur wenn aktiv) -->
 	{#if searchOpen}
 		<div class="fixed left-0 right-0 z-30 max-w-[430px] mx-auto px-4 py-2"
-		     style="top: calc(env(safe-area-inset-top) + 5.25rem); background-color: var(--color-bg)">
+		     style="top: calc(env(safe-area-inset-top) + 5.25rem + {hasChecklistFooter ? '44px' : '0px'}); background-color: var(--color-bg)">
 			<div class="flex items-center gap-2 rounded-xl px-3 py-2.5"
 			     style="background-color: var(--modal-bg)">
 				<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -498,7 +760,7 @@
 	{/if}
 
 	<!-- Hinweis-Banner für kleine Bildschirme -->
-	{#if showListViewHint}
+	{#if !isChecklist && showListViewHint}
 		<div class="fixed left-0 right-0 z-20 max-w-[430px] mx-auto px-4 pointer-events-none"
 		     style="top: calc(env(safe-area-inset-top) + 5.5rem)">
 			<div class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-auto"
@@ -526,9 +788,9 @@
 	{/if}
 
 	<!-- Location-Hint-Banner -->
-	{#if showLocationHint}
+	{#if !isChecklist && showLocationHint}
 		<div class="fixed left-0 right-0 z-20 max-w-[430px] mx-auto px-4 pointer-events-none"
-		     style="top: calc(env(safe-area-inset-top) + 5.5rem + {showListViewHint ? '3.5rem' : '0px'})">
+		     style="top: calc(env(safe-area-inset-top) + 5.5rem + {!isChecklist && showListViewHint ? '3.5rem' : '0px'})">
 			<div class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-auto"
 			     style="background-color: var(--color-surface-elevated); border: 1px solid var(--color-outline-variant)">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)"
@@ -578,13 +840,20 @@
 
 	<!-- Bottom-Anchored Content -->
 	<div bind:this={scrollContainer} class="flex-1 overflow-y-auto px-4 min-h-0"
-	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {searchOpen ? '3.5rem' : '0px'} + {showListViewHint ? '3.5rem' : '0px'} + {showLocationHint ? '3.5rem' : '0px'}); padding-bottom: 5.5rem; overscroll-behavior: none">
+	     style="padding-top: calc(env(safe-area-inset-top) + 5.25rem + {hasChecklistFooter ? '44px' : '0px'} + {searchOpen ? '3.5rem' : '0px'} + {!isChecklist && showListViewHint ? '3.5rem' : '0px'} + {!isChecklist && showLocationHint ? '3.5rem' : '0px'}); padding-bottom: {manageMode === 'delete' ? 'calc(7rem + env(safe-area-inset-bottom))' : manageMode === 'sort' ? 'calc(1rem + env(safe-area-inset-bottom))' : '5.5rem'}; overscroll-behavior: none">
 		<div class="min-h-full flex flex-col" class:justify-end={!searchQuery.trim() || !keyboardOpen}>
 		{#if loading}
 			<div class="flex justify-center py-8">
 				<div class="w-6 h-6 rounded-full border-2 animate-spin"
 				     style="border-color: var(--color-primary); border-top-color: transparent"></div>
 			</div>
+		{:else if isChecklist}
+			{#if checklistError}<p class="text-sm px-2 pb-2" role="alert" style="color: var(--color-error)">{checklistError}</p>{/if}
+			<ChecklistItems entries={items} {sections} readOnly={userPermission === 'read'} onlyOpen={filterActive} query={searchQuery} {highlightedId}
+				ontoggle={id => { const item = items.find(entry => entry.id === id); if (item) void toggleItem(item); }}
+				onedit={editChecklistEntry} mode={manageMode} canOrderSections={userPermission === 'owner'} selected={selection}
+				onselect={selectEntry} onorder={reorderChecklist} ondelete={id => removeChecklistEntries([id], true)} />
+			{#if checklistResetError && !manageMenuOpen}<p role="alert" class="text-sm text-center" style="color: var(--color-error)">{t.checklist_edit_error}</p>{/if}
 		{:else}
 			<!-- CheckedDrawer – direkt über den offenen Items -->
 			{#if checkedItems.length > 0}
@@ -619,8 +888,8 @@
 					</div>
 				{:else}
 				<!-- Kachel-Ansicht: 3er-Grid -->
-				<div class="grid grid-cols-3 gap-2 mt-3" style={userSettings.categorySortEnabled ? 'direction: rtl' : ''}>
-					{#if userSettings.categorySortEnabled}
+				<div class="grid grid-cols-3 gap-2 mt-3" style={reverseShoppingGrid ? 'direction: rtl' : ''}>
+					{#if reverseShoppingGrid}
 						{#each { length: gridPrefix } as _}
 							<div class="aspect-square"></div>
 						{/each}
@@ -635,7 +904,7 @@
 							isFavorite={favoriteNames.has(item.name.toLowerCase())}
 						/>
 					{/each}
-					{#if !userSettings.categorySortEnabled}
+					{#if !reverseShoppingGrid}
 						{#each { length: gridPrefix } as _}
 							<div class="aspect-square"></div>
 						{/each}
@@ -647,37 +916,61 @@
 		</div>
 	</div>
 
-	{#if !addModalOpen && userPermission !== 'read'}
+	{#if undoItem && !addModalOpen}
+		<div class="checklist-undo"><span role="status">{t.checklist_deleted}</span><button type="button" onclick={undoDelete}>{t.checklist_undo}</button></div>
+	{/if}
+	{#if manageMode === 'delete' && isChecklist && userPermission !== 'read'}
+		<div class="checklist-tools">
+			<button type="button" disabled={openCount === items.length} onclick={() => selectedIds = new Set(items.filter(item => item.isChecked).map(item => item.id))}>{t.checklist_select_checked}</button>
+			{#if selection.size}<button type="button" class="delete-selected" onclick={() => removeChecklistEntries([...selection])}>{checklistDeleteLabel(selection.size)}</button>{/if}
+		</div>
+	{:else if !managing && !addModalOpen && userPermission !== 'read'}
 		<AppBottomNav
 			activeTab="lists"
 			onFabTap={openAddInput}
-			fabLabel={t.add}
+			fabLabel={isChecklist ? t.checklist_entry_add : t.add}
 			onFavorites={() => { editItem = null; autoFavoritesOnOpen = true; addModalOpen = true; }}
 		/>
 	{/if}
 </div>
 
+{#if manageMenuOpen && isChecklist && userPermission !== 'read'}
+	<ChecklistManageSheet owner={userPermission === 'owner'} canReset={canResetChecklist && resettingChecklistId === null} resetError={checklistResetError}
+		settings={{ checklistSections: sections, defaultSectionId }} onsavesettings={saveChecklistSections}
+		onmode={mode => { manageMode = mode; selectedIds = new Set(); manageMenuOpen = false; }}
+		onreset={resetCurrentChecklist} onclose={() => manageMenuOpen = false} />
+{/if}
+
 <HamburgerMenu bind:open={menuOpen} user={data.user} />
 
 <!-- Persistente Eingabeleiste für neue Items -->
-{#if addModalOpen && !editItem}
+{#if addModalOpen && isChecklist && editItem}
+	{#key editItem.id}
+		<ChecklistEntrySheet {sections} item={editItem} {favorites} {pushAvailable} readOnly={userPermission === 'read'} onedit={saveChecklistItem}
+			ondelete={async () => { if (editItem) await deleteItem(editItem.id); closeChecklistEditor(); }}
+			onfavorite={saveChecklistFavorite} onclose={closeChecklistEditor} />
+	{/key}
+{/if}
+
+{#if addModalOpen && !editItem && userPermission !== 'read'}
 	<AddItemBar
 		onAdd={addItem}
 		onClose={() => { addModalOpen = false; autoScannerOnOpen = false; autoFavoritesOnOpen = false; }}
+		checklist={isChecklist ? { sections, defaultSectionId, canManageSections: userPermission === 'owner', onSetDefault: setDefaultSection } : undefined}
 		{suggestions}
 		autoOpenScanner={autoScannerOnOpen}
 		autoOpenFavorites={autoFavoritesOnOpen}
 		{favorites}
 		{activeItemNames}
-		onSearchSuggestions={searchItemSuggestions}
-		onRemoveFavorite={(name) => toggleFavorite(name, false)}
-		onAddFavorite={addFavorite}
-		onEditFavorite={editFavorite}
+		onSearchSuggestions={isChecklist ? null : searchItemSuggestions}
+		onRemoveFavorite={(name) => isChecklist ? saveChecklistFavorite(name, true) : toggleFavorite(name, false)}
+		onAddFavorite={isChecklist ? (name) => saveChecklistFavorite(name, false) : addFavorite}
+		onEditFavorite={isChecklist ? null : editFavorite}
 	/>
 {/if}
 
 <!-- Modal nur für Bearbeiten -->
-{#if addModalOpen && editItem}
+{#if addModalOpen && editItem && !isChecklist}
 	<AddItemModal
 		item={editItem}
 		onSave={saveEditItem}
@@ -687,3 +980,20 @@
 		onToggleFavorite={toggleFavorite}
 	/>
 {/if}
+
+<style>
+	.checklist-header-actions { display: flex; min-height: 44px; color: var(--color-on-surface-variant); font-size: 13px; font-weight: 550; }
+	.checklist-header-actions > * { display: flex; flex: 1; align-items: center; justify-content: center; gap: 7px; }
+	.checklist-view :global(.settings-select-row) { justify-content: center; width: 100%; padding: 4px 6px; }
+	.checklist-view :global(.settings-select-value) { gap: 4px; font-size: inherit; text-align: center; }
+	.checklist-progress { color: var(--color-on-surface); font-variant-numeric: tabular-nums; }
+	.checklist-active-filter { display: block; color: var(--color-primary); font-size: 11px; line-height: 1.15; }
+	.checklist-header-actions button.active { color: var(--color-primary); }
+	.checklist-tools, .checklist-undo { position: fixed; z-index: 31; left: 50%; transform: translateX(-50%); background: var(--modal-bg); }
+	.checklist-tools { bottom: 0; display: flex; flex-wrap: wrap; width: 100%; max-width: 430px; padding: 4px 12px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--bubble-container-border); }
+	.checklist-tools button, .checklist-undo button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 2px 6px; font-size: 13px; font-weight: 600; flex: 1; }
+	.checklist-tools button:disabled { opacity: .45; }
+	.checklist-tools .delete-selected { flex-basis: 100%; color: var(--color-error); border-top: 1px solid var(--bubble-container-border); }
+	.checklist-undo { bottom: calc(7rem + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; padding: 0 12px; border: 1px solid var(--bubble-container-border); border-radius: 12px; white-space: nowrap; font-size: 14px; }
+	.checklist-undo button { color: var(--color-primary); }
+</style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PreferredDateTimeInput from '#lib/components/PreferredDateTimeInput.svelte';
 	import { t } from '#lib/i18n.svelte';
 
 	type MeditationEditLogSheetType = {
@@ -92,7 +93,7 @@
 				</div>
 				<div class="shrink-0">
 					<label for="meditation-edit-time" class="text-xs font-medium mb-1.5 block" style="color: var(--color-on-surface-variant)">{t.supplement_log_time}</label>
-					<input
+					<PreferredDateTimeInput
 						id="meditation-edit-time"
 						type="time"
 						bind:value={sheet.time}

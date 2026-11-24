@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { displayDate, displayTime } from '#lib/dateDisplay';
 	import { t, currentLang, nutrients_show_more } from '#lib/i18n.svelte';
 	import { displayUnit } from '#lib/units';
-	import { formatTime } from '#lib/dates';
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -10,6 +10,8 @@
 	import type { CaffeineLog, MeditationLog } from '#lib/db/schema';
 	import { computeAdherence, computeTrackerStats, eachDayInRange, parseDaysMask, type ScheduleLite, type SupplementMeta } from '#lib/trackerStats';
 	import { tsToDateKey, todayKey } from '#lib/dates';
+
+	const hourScale = $derived(userSettings.timeFormat === '12h' ? ['12 AM', '6 AM', '12 PM', '6 PM', '12 AM'] : ['0', '6', '12', '18', '24']);
 
 	type Log = { id: string; supplementId: string; amount: number; loggedAt: number; note?: string | null };
 	type NutrientStat = { total: number; unit: string; name: string };
@@ -403,7 +405,7 @@
 								<span class="font-medium" style="color: var(--color-on-surface)">{t.caffeine_title}</span>
 								{#if selDate}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-										{new Date(selDate + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {cs.daily[selIdx!]} mg
+										{displayDate(new Date(selDate + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' }, currentLang() === 'en' ? 'en-US' : 'de-DE')} · {cs.daily[selIdx!]} mg
 									</span>
 								{:else}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
@@ -437,7 +439,7 @@
 										{#each selCaffeineLogs as log}
 											<div class="flex items-baseline justify-between text-xs">
 												<span style="color: var(--color-on-surface)">
-													<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{formatTime(log.loggedAt)}</span>
+													<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{displayTime(log.loggedAt)}</span>
 													<span class="ml-2">{log.drinkName}</span>
 												</span>
 												<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{log.amountMl} ml · {log.caffeineMg} mg</span>
@@ -461,9 +463,9 @@
 								<span class="font-medium" style="color: var(--color-on-surface)">{t.meditation_title}</span>
 								{#if selDateM}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-										{new Date(selDateM + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ms.daily[selIdxM!]} min
+										{displayDate(new Date(selDateM + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' }, currentLang() === 'en' ? 'en-US' : 'de-DE')} · {ms.daily[selIdxM!]} min
 										{#if selMedLogs.length > 0}
-											<span style="color: var(--color-on-surface-variant)"> · {selMedLogs.map(l => formatTime(l.loggedAt)).join(', ')}</span>
+											<span style="color: var(--color-on-surface-variant)"> · {selMedLogs.map(l => displayTime(l.loggedAt)).join(', ')}</span>
 										{/if}
 									</span>
 								{:else}
@@ -504,7 +506,7 @@
 								<span class="font-medium" style="color: var(--color-on-surface)">{t.water_title}</span>
 								{#if selDateW}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-										{new Date(selDateW + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ws.daily[selIdxW!]} ml
+										{displayDate(new Date(selDateW + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' }, currentLang() === 'en' ? 'en-US' : 'de-DE')} · {ws.daily[selIdxW!]} ml
 									</span>
 								{:else}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
@@ -550,7 +552,7 @@
 								<span class="font-medium" style="color: var(--color-on-surface)">{t.nutrition_label}</span>
 								{#if selDateN}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
-										{new Date(selDateN + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · {ns.daily[selIdxN!]} kcal
+										{displayDate(new Date(selDateN + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' }, currentLang() === 'en' ? 'en-US' : 'de-DE')} · {ns.daily[selIdxN!]} kcal
 									</span>
 								{:else}
 									<span class="text-xs tabular-nums" style="color: var(--color-on-surface-variant)">
@@ -590,7 +592,7 @@
 										<button onclick={() => goto(`/tracker/nutrition?date=${m.date}`)}
 										        class="w-full flex items-baseline justify-between text-xs active:opacity-60">
 											<span style="color: var(--color-on-surface)">
-												<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{m.time}</span>
+												<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{displayTime(m.time)}</span>
 												<span class="ml-2">{m.name}</span>
 											</span>
 											<span class="tabular-nums" style="color: var(--color-on-surface-variant)">{Math.round(m.totalKcal)} kcal</span>
@@ -613,11 +615,11 @@
 				<div class="history-section-content">
 				<!-- Shared hour scale -->
 				<div class="relative text-[9px] tabular-nums mb-2" style="color: var(--color-on-surface-variant); height: 12px">
-					<span class="absolute" style="left: 0">0</span>
-					<span class="absolute" style="left: 25%; transform: translateX(-50%)">6</span>
-					<span class="absolute" style="left: 50%; transform: translateX(-50%)">12</span>
-					<span class="absolute" style="left: 75%; transform: translateX(-50%)">18</span>
-					<span class="absolute" style="right: 0">24</span>
+					<span class="absolute" style="left: 0">{hourScale[0]}</span>
+					<span class="absolute" style="left: 25%; transform: translateX(-50%)">{hourScale[1]}</span>
+					<span class="absolute" style="left: 50%; transform: translateX(-50%)">{hourScale[2]}</span>
+					<span class="absolute" style="left: 75%; transform: translateX(-50%)">{hourScale[3]}</span>
+					<span class="absolute" style="right: 0">{hourScale[4]}</span>
 				</div>
 				<div class="space-y-4">
 					<!-- Nutrition -->
@@ -669,7 +671,7 @@
 										{@const mKcal = Math.round(m.components.reduce((s, c) => s + (c.kcal ?? 0), 0))}
 										<button onclick={() => goto(`/tracker/nutrition?date=${date}`)}
 										        class="w-full flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5 active:opacity-60">
-											<span class="tabular-nums shrink-0" style="color: var(--color-on-surface-variant); min-width: 38px">{m.time}</span>
+											<span class="tabular-nums shrink-0" style="color: var(--color-on-surface-variant); min-width: 38px">{displayTime(m.time)}</span>
 											<span class="flex-1 truncate text-left" style="color: var(--color-on-surface)">{m.name}</span>
 											<span class="font-semibold shrink-0" style="color: var(--color-on-surface-variant)">{mKcal} kcal</span>
 										</button>
@@ -728,7 +730,7 @@
 										{#each caffeineLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
 											<div class="flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
 											     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, #C8956C 18%, transparent)' : ''}>
-												<span class="flex-1 min-w-0" style="color: var(--color-on-surface)">{log.drinkName} · {new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+												<span class="flex-1 min-w-0" style="color: var(--color-on-surface)">{log.drinkName} · {displayTime(log.loggedAt)}</span>
 												<span class="font-semibold shrink-0" style="color: var(--color-on-surface-variant)">{log.caffeineMg} mg</span>
 												{#if onEditCaffeineLog}
 													<button
@@ -752,7 +754,7 @@
 											<div>
 												<div class="flex justify-between items-center mb-0.5">
 													<span class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">
-														{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+														{displayDate(new Date(dateKey + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' })}
 													</span>
 													<span class="text-xs font-semibold" style="color: var(--color-on-surface-variant)">{dayData.totalMg} mg</span>
 												</div>
@@ -827,7 +829,7 @@
 											<div class="flex justify-between items-center text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
 											     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, #9F7AEA 18%, transparent)' : ''}>
 												<span style="color: var(--color-on-surface)">
-													{new Date(startTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(endTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+													{displayTime(startTs)} – {displayTime(endTs)}
 												</span>
 												<span class="font-semibold" style="color: var(--color-on-surface-variant)">{Math.round(log.durationSeconds / 60)} min</span>
 											</div>
@@ -838,7 +840,7 @@
 										{#each meditationByDay as [dateKey, dayData]}
 											<div class="flex justify-between items-center text-xs">
 												<span style="color: var(--color-on-surface)">
-													{new Date(dateKey + 'T12:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+													{displayDate(new Date(dateKey + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' })}
 												</span>
 												<span class="font-semibold" style="color: var(--color-on-surface-variant)">{Math.floor(dayData.totalSeconds / 60)} min</span>
 											</div>
@@ -899,7 +901,7 @@
 									{#each waterLogs.slice().sort((a, b) => a.loggedAt - b.loggedAt) as log}
 										<div class="flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 -mx-1.5"
 										     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, #60A5FA 18%, transparent)' : ''}>
-											<span class="flex-1 min-w-0" style="color: var(--color-on-surface)">{new Date(log.loggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+											<span class="flex-1 min-w-0" style="color: var(--color-on-surface)">{displayTime(log.loggedAt)}</span>
 											<span class="font-semibold shrink-0" style="color: var(--color-on-surface-variant)">{log.amountMl} ml</span>
 											{#if onEditWaterLog}
 												<button
@@ -959,13 +961,13 @@
 							{@const selTimes = selDate ? logs
 								.filter(l => l.supplementId === a.supplementId && tsToDateKey(l.loggedAt) === selDate)
 								.sort((x, y) => x.loggedAt - y.loggedAt)
-								.map(l => formatTime(l.loggedAt)) : []}
+								.map(l => displayTime(l.loggedAt)) : []}
 							<div>
 								<div class="flex items-center justify-between text-sm mb-1.5">
 									<span class="truncate pr-2" style="color: var(--color-on-surface)">{a.name}</span>
 									{#if selDate}
 										<span class="text-xs tabular-nums shrink-0" style="color: var(--color-on-surface-variant)">
-											{new Date(selDate + 'T12:00:00').toLocaleDateString(currentLang() === 'en' ? 'en-US' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' })}
+											{displayDate(new Date(selDate + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' }, currentLang() === 'en' ? 'en-US' : 'de-DE')}
 											·
 											{#if selFill === 'full'}✓{:else if selFill === 'partial'}◐{:else if selFill === 'none'}✗{:else}—{/if}
 											{#if selTimes.length > 0}
@@ -1045,11 +1047,11 @@
 					<div class="history-section-content space-y-2.5">
 						<!-- Hour scale (shared) -->
 						<div class="relative text-[9px] tabular-nums" style="color: var(--color-on-surface-variant); padding-top: 2px; height: 14px">
-							<span class="absolute" style="left: 0; top: 2px">0</span>
-							<span class="absolute" style="left: 25%; top: 2px; transform: translateX(-50%)">6</span>
-							<span class="absolute" style="left: 50%; top: 2px; transform: translateX(-50%)">12</span>
-							<span class="absolute" style="left: 75%; top: 2px; transform: translateX(-50%)">18</span>
-							<span class="absolute" style="right: 0; top: 2px">24</span>
+							<span class="absolute" style="left: 0; top: 2px">{hourScale[0]}</span>
+							<span class="absolute" style="left: 25%; top: 2px; transform: translateX(-50%)">{hourScale[1]}</span>
+							<span class="absolute" style="left: 50%; top: 2px; transform: translateX(-50%)">{hourScale[2]}</span>
+							<span class="absolute" style="left: 75%; top: 2px; transform: translateX(-50%)">{hourScale[3]}</span>
+							<span class="absolute" style="right: 0; top: 2px">{hourScale[4]}</span>
 						</div>
 						{#each dayCombinedSupplements as sup}
 							{@const suppLogs = logsBySuppId.get(sup.id) ?? []}
@@ -1102,7 +1104,7 @@
 											     style={focusedLogId === log.id ? 'background-color: color-mix(in srgb, var(--color-primary) 18%, transparent)' : ''}>
 												<div class="flex-1 min-w-0">
 													<span class="tabular-nums" style="color: var(--color-on-surface-variant)">
-														{formatTime(log.loggedAt)} ·
+														{displayTime(log.loggedAt)} ·
 													</span>
 													<span class="font-medium" style="color: var(--color-on-surface-variant)">{log.amount} {displayUnit(sup.unit, currentLang())}</span>
 													{#if log.note}

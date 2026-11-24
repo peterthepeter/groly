@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { displayTime } from '#lib/dateDisplay';
 	import { onMount } from 'svelte';
 	import { t } from '#lib/i18n.svelte';
-	import { formatTime } from '#lib/dates';
 	import { userSettings } from '#lib/userSettings.svelte';
 	import WaterEditLogSheet from './WaterEditLogSheet.svelte';
 	import WaterReminderSheet from './WaterReminderSheet.svelte';
@@ -182,7 +182,7 @@
 					<div class="space-y-1.5">
 						{#each sortedLogs as log (log.id)}
 							<div class="flex items-center justify-between text-xs">
-								<span style="color: var(--color-on-surface-variant)"><span style="color: #60A5FA">{log.amountMl} ml</span> {t.supplement_log_at} {formatTime(log.loggedAt)}</span>
+								<span style="color: var(--color-on-surface-variant)"><span style="color: #60A5FA">{log.amountMl} ml</span> {t.supplement_log_at} {displayTime(log.loggedAt)}</span>
 								<div class="flex items-center gap-0.5 shrink-0">
 									<button onclick={() => openEdit(log)} class="p-1 rounded active:opacity-50" aria-label={t.edit} style="color: var(--color-on-surface-variant)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
 									<button onclick={() => ondeleted(log.id)} class="p-1 rounded active:opacity-50" aria-label={t.water_log_delete} style="color: var(--color-on-surface-variant)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
@@ -294,7 +294,7 @@
 				<div class="flex items-center justify-between text-xs">
 					<span style="color: var(--color-on-surface-variant)">
 						<span style="color: #60A5FA">{log.amountMl} ml</span>
-						{t.supplement_log_at} {formatTime(log.loggedAt)}
+						{t.supplement_log_at} {displayTime(log.loggedAt)}
 					</span>
 					<div class="flex items-center gap-0.5 shrink-0">
 						<button

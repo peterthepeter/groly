@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { todayKey } from '#lib/dates';
+	import { displayTime } from '#lib/dateDisplay';
+	import { formatDateKey, todayKey } from '#lib/dates';
+	import { userSettings } from '#lib/userSettings.svelte';
 	import { t, currentLang } from '#lib/i18n.svelte';
 	import { displayUnit } from '#lib/units';
 	import { generateClientId, logSupplementOffline } from '#lib/sync/manager';
@@ -137,7 +139,7 @@
 					<label class="min-w-0">
 						<span class="manage-label">{t.supplement_log_time}</span>
 						<span class="manage-native-field">
-							<span class="manage-native-value">{activeSheet.time}</span>
+							<span class="manage-native-value">{displayTime(activeSheet.time)}</span>
 							<input id="edit-log-time" type="time" bind:value={activeSheet.time} class="manage-native-input manage-native-picker" />
 						</span>
 					</label>
@@ -175,13 +177,14 @@
 					<label>
 						<span class="manage-label">{t.supplement_log_date}</span>
 						<span class="manage-native-field">
-							<input id="create-log-date" type="date" bind:value={createDate} max={today} class="manage-native-input font-semibold" />
+							<span class="manage-native-value" aria-hidden="true">{formatDateKey(createDate, userSettings.dateFormat)}</span>
+							<input id="create-log-date" type="date" bind:value={createDate} max={today} class="manage-native-input manage-native-picker" />
 						</span>
 					</label>
 					<label>
 						<span class="manage-label">{t.supplement_log_time}</span>
 						<span class="manage-native-field">
-							<span class="manage-native-value">{createTime}</span>
+							<span class="manage-native-value">{displayTime(createTime)}</span>
 							<input id="create-log-time" type="time" bind:value={createTime} class="manage-native-input manage-native-picker" />
 						</span>
 					</label>

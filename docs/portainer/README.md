@@ -54,6 +54,7 @@ portable way to refer to your intended host directory.
 | `ADMIN_PASSWORD` | Your own strong, unique password. No default is provided. |
 | `ORIGIN` | Your exact HTTPS browser URL, for example `https://groly.example.com`, with any non-default port and no path. |
 | `GROLY_PORT` | Optional host port; defaults to `3000`. |
+| `KEEP_CHECKED_ITEMS` | Optional. Defaults to `false` for 60-day cleanup. Set to `true` to keep checked-off items in all shopping lists. |
 
 Enter the actual values in these form fields, without surrounding YAML quotes or
 doubling dollar signs. They supply the `${...}` substitutions in the Compose

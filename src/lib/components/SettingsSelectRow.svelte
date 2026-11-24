@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick, type Snippet } from 'svelte';
 
-	let { label, value, options, onchange, icon, preview, optionPreview, footer, keepOpenOnSelect = false, compact = false }: {
+	let { label, value, options, onchange, icon, preview, optionPreview, footer, display, keepInputFocus, keepOpenOnSelect = false, compact = false }: {
 		label: string;
 		value: string;
 		options: { value: string; label: string }[];
@@ -10,6 +10,8 @@
 		preview?: Snippet;
 		optionPreview?: Snippet<[string]>;
 		footer?: Snippet;
+		display?: Snippet;
+		keepInputFocus?: () => boolean;
 		keepOpenOnSelect?: boolean;
 		compact?: boolean;
 	} = $props();
@@ -20,6 +22,11 @@
 	let keyboardOpened = false;
 	const selectedLabel = $derived(options.find(option => option.value === value)?.label ?? value);
 
+	function preserveInputFocus(event: MouseEvent) {
+		// Cancel the focus transfer without suppressing the touch-generated click in WebKit.
+		if (keepInputFocus?.()) event.preventDefault();
+	}
+
 	function positionMenu() {
 		if (!menu?.matches(':popover-open')) return;
 		const bounds = trigger.getBoundingClientRect();
@@ -28,6 +35,7 @@
 		const top = viewport?.offsetTop ?? 0;
 		const width = viewport?.width ?? window.innerWidth;
 		const height = viewport?.height ?? window.innerHeight;
+		if (keepInputFocus) menu.style.setProperty('--select-viewport-height', `${height}px`);
 		const menuWidth = menu.offsetWidth;
 		const menuHeight = menu.offsetHeight;
 		const below = bounds.bottom + 6;
@@ -49,12 +57,13 @@
 		if (keyboard) void tick().then(() => focusOption(last));
 	}
 	function closeMenu() {
+		if (!menu?.matches(':popover-open')) return;
 		menu.hidePopover();
 		if (keyboardOpened) trigger.focus({ preventScroll: true });
 	}
 	function selectValue(next: string) {
-		onchange(next);
 		if (!keepOpenOnSelect) closeMenu();
+		onchange(next);
 	}
 	function onTriggerKeyDown(event: KeyboardEvent) {
 		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -81,11 +90,13 @@
 		window.addEventListener('scroll', onScroll, true);
 		window.addEventListener('resize', positionMenu);
 		window.visualViewport?.addEventListener('resize', positionMenu);
+		if (keepInputFocus) window.visualViewport?.addEventListener('scroll', positionMenu);
 		return () => {
 			observer.disconnect();
 			window.removeEventListener('scroll', onScroll, true);
 			window.removeEventListener('resize', positionMenu);
 			window.visualViewport?.removeEventListener('resize', positionMenu);
+			window.visualViewport?.removeEventListener('scroll', positionMenu);
 		};
 	});
 </script>
@@ -95,10 +106,11 @@
 	class="settings-select-row"
 	class:compact
 	bind:this={trigger}
-	aria-label={`${label}: ${selectedLabel}`}
+	aria-label={display ? undefined : `${label}: ${selectedLabel}`}
 	aria-haspopup="dialog"
 	aria-expanded={open}
 	aria-controls={id}
+	onmousedown={preserveInputFocus}
 	onclick={(event) => { if (open) closeMenu(); else showMenu(event.detail === 0); }}
 	onkeydown={onTriggerKeyDown}
 >
@@ -108,7 +120,7 @@
 	</span>
 	<span class="settings-select-value">
 		{#if preview}<span class="settings-select-preview" aria-hidden="true">{@render preview()}</span>{/if}
-		<span>{selectedLabel}</span>
+		<span>{#if display}{@render display()}{:else}{selectedLabel}{/if}</span>
 		<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
 	</span>
 </button>
@@ -116,7 +128,8 @@
 <div id={id} bind:this={menu} class="settings-select-menu" popover="auto" role="dialog" aria-label={label} tabindex="-1" ontoggle={(event) => { open = event.newState === 'open'; }} onkeydown={onMenuKeyDown}>
 	<div role="group" aria-label={label} class="settings-select-options">
 		{#each options as option (option.value)}
-			<button type="button" data-setting-option aria-pressed={option.value === value} onclick={() => selectValue(option.value)}>
+			<button type="button" data-setting-option aria-pressed={option.value === value}
+				onmousedown={preserveInputFocus} onclick={() => selectValue(option.value)}>
 				{#if optionPreview}<span class="settings-select-option-preview" aria-hidden="true">{@render optionPreview(option.value)}</span>{/if}
 				<span class="settings-select-option-label">{option.label}</span>
 				<span class="settings-select-check" aria-hidden="true">
@@ -140,7 +153,7 @@
 	.settings-select-preview, .settings-select-option-preview { display: flex; align-items: center; flex: none; }
 	.settings-select-row:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -3px; border-radius: 12px; }
 	.settings-select-row:active { background: var(--bubble-interactive-bg); }
-	.settings-select-menu { position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(320px, calc(100vw - 24px)); max-height: min(360px, calc(100dvh - 24px)); padding: 5px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--bubble-container-border); border-radius: 14px; background: var(--modal-bg); color: var(--color-on-surface); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.24); }
+	.settings-select-menu { position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(320px, calc(100vw - 24px)); max-height: min(360px, calc(var(--select-viewport-height, 100dvh) - 24px)); padding: 5px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--bubble-container-border); border-radius: 14px; background: var(--modal-bg); color: var(--color-on-surface); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.24); }
 	.settings-select-options button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 9px; text-align: left; font-size: 14px; font-weight: 500; }
 	.settings-select-option-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 	.settings-select-check { display: flex; align-items: center; flex: none; width: 18px; height: 18px; }

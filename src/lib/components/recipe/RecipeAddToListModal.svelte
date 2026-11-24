@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SelectionCheckbox from '#lib/components/SelectionCheckbox.svelte';
 	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { t, recipeShoppingAddLabel } from '#lib/i18n.svelte';
@@ -44,7 +45,7 @@
 		listsLoading = true;
 		listsError = false;
 		try {
-			const response = await fetchWithTimeout('/api/lists');
+			const response = await fetchWithTimeout('/api/lists?kind=shopping');
 			if (!response.ok) throw new Error('Lists unavailable');
 			const data = await response.json();
 			lists = data.lists ?? data ?? [];
@@ -83,7 +84,7 @@
 				const quantityInfo = `${scaleAmount(ingredient.amount, currentServings, originalServings) ?? ''}${ingredient.unit ? ' ' + ingredient.unit : ''}`.trim() || null;
 				return fetchWithTimeout(`/api/lists/${listId}/items`, {
 					method: 'POST', headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ id, name: ingredient.name, quantityInfo })
+					body: JSON.stringify({ id, name: ingredient.name, quantityInfo, kind: 'shopping' })
 				});
 			}));
 			if (results.some(result => result.status === 'rejected' || !result.value.ok)) throw new Error('Ingredients could not be added');
@@ -128,13 +129,9 @@
 				<p class="shopping-hint" role="status">{selectionSaving ? t.recipe_shopping_saving : t.recipe_shopping_hint}</p>
 				<div class="manage-settings-surface" data-shopping-ingredients>
 					{#each shoppingIngredients as ingredient (ingredient.id)}
-						<label class="manage-settings-row shopping-ingredient">
-							<input class="shopping-native-check" type="checkbox" checked={!excludedIngredients.has(ingredient.id)} onchange={() => onToggleIngredient(ingredient.id)} disabled={addingToList || selectionUnavailable} aria-label={ingredient.name} />
-							<span class="shopping-check" aria-hidden="true" style:background-color={excludedIngredients.has(ingredient.id) ? 'transparent' : 'var(--color-primary)'} style:border-color={excludedIngredients.has(ingredient.id) ? 'var(--color-outline)' : 'var(--color-primary)'}>
-								{#if !excludedIngredients.has(ingredient.id)}
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-								{/if}
-							</span>
+						<label class="manage-settings-row shopping-ingredient" class:selection-disabled={addingToList || selectionUnavailable}>
+							<SelectionCheckbox label={ingredient.name} checked={!excludedIngredients.has(ingredient.id)}
+								onchange={() => onToggleIngredient(ingredient.id)} disabled={addingToList || selectionUnavailable} />
 							{#if ingredient.amount || ingredient.unit}
 								<span class="shopping-amount" style:color={excludedIngredients.has(ingredient.id) ? 'var(--color-on-surface-variant)' : 'var(--color-primary)'}>{scaleAmount(ingredient.amount, currentServings, originalServings) ?? ''}{ingredient.unit ? '\u00a0' + ingredient.unit : ''}</span>
 							{/if}
@@ -178,10 +175,7 @@
 <style>
 	.shopping-hint { font-size: 12px; line-height: 1.45; color: var(--color-on-surface-variant); }
 	.shopping-ingredient { min-height: 40px; padding-block: 4px; position: relative; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-	.shopping-native-check { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
-	.shopping-check { display: flex; width: 18px; height: 18px; flex: none; align-items: center; justify-content: center; border: 1.5px solid; border-radius: 5px; }
-	.shopping-ingredient input:focus-visible + .shopping-check { outline: 2px solid var(--color-primary); outline-offset: 3px; }
-	.shopping-ingredient:has(input:disabled) { cursor: default; }
+	.shopping-ingredient.selection-disabled { cursor: default; }
 	.shopping-amount { flex: none; max-width: 32%; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 	.shopping-name { min-width: 0; flex: 1; font-size: 14px; line-height: 1.4; color: var(--color-on-surface); overflow-wrap: anywhere; }
 	.shopping-select-field { position: relative; color: var(--color-on-surface-variant); }

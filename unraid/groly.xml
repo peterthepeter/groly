@@ -47,8 +47,12 @@
     Description="Only fill this in if Groly is running behind a reverse proxy (Nginx Proxy Manager, Caddy, Traefik) — set it to X-Forwarded-For. Leave empty if you access Groly directly. Setting this without a reverse proxy will cause login to fail."
     Type="Variable" Display="always" Required="false" Mask="false"></Config>
 
+  <Config Name="KEEP_CHECKED_ITEMS" Target="KEEP_CHECKED_ITEMS" Default="false" Mode=""
+    Description="Set to true to keep checked-off items in all shopping lists. By default, Groly deletes checked-off items after 60 days."
+    Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+
   <Config Name="VAPID_PUBLIC_KEY" Target="VAPID_PUBLIC_KEY" Default="" Mode=""
-    Description="VAPID public key for push notifications (optional). Generate a key pair once with: node -e &quot;const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(JSON.stringify(k,null,2))&quot;"
+    Description="VAPID public key for push notifications (optional). Generate a key pair once with: node --input-type=module -e &quot;import { generateVAPIDKeys } from 'web-push'; console.log(JSON.stringify(generateVAPIDKeys(), null, 2))&quot;"
     Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
 
   <Config Name="VAPID_PRIVATE_KEY" Target="VAPID_PRIVATE_KEY" Default="" Mode=""

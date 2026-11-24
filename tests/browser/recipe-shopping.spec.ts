@@ -108,11 +108,14 @@ test('cooking stays readable; shopping selections persist and failed additions r
 		await page.route('**/api/lists/upgrade-list/items', async route => { if (route.request().method() === 'POST') { await route.fetch(); await route.abort(); } else await route.continue(); }, { times: 1 });
 		await add.click();
 		await expect(dialog.getByRole('alert')).toContainText(de.recipe_shopping_add_error);
-		const categoryPreferencesLoaded = page.waitForResponse(response => response.url().endsWith('/api/category-preferences') && response.request().method() === 'GET');
+		const listRefreshed = Promise.all(['/api/category-preferences', '/api/favorites', '/api/suggestions'].map(path =>
+			page.waitForResponse(response => new URL(response.url()).pathname === path && response.request().method() === 'GET')
+				.then(response => response.finished())
+		));
 		await add.click();
 		await expect(page).toHaveURL(/\/listen\/upgrade-list$/);
 		// Let the new page finish its refresh before a forced document navigation.
-		await (await categoryPreferencesLoaded).finished();
+		await listRefreshed;
 		const items = await (await page.request.get('/api/lists/upgrade-list/items')).json();
 		for (const name of names.slice(0, 2)) expect(items.filter((item: { name: string }) => item.name === name)).toHaveLength(1);
 		expect(items.find((item: { name: string }) => item.name === names[0]).quantityInfo).toBe('1 kg');
@@ -130,7 +133,8 @@ test('cooking stays readable; shopping selections persist and failed additions r
 		await expect(dialog.getByRole('checkbox', { name: 'Zucker', exact: true })).toBeEnabled();
 		await expect(dialog.getByRole('checkbox', { name: 'Zucker', exact: true })).not.toBeChecked();
 		await dialog.getByRole('button', { name: de.close, exact: true }).click();
-		await page.route('**/api/lists', route => route.fulfill({ status: 503, body: '{}' }), { times: 1 });
+		await page.route(url => url.pathname === '/api/lists' && url.searchParams.get('kind') === 'shopping',
+			route => route.fulfill({ status: 503, body: '{}' }), { times: 1 });
 		await bag.focus();
 		await bag.click();
 		await expect(dialog.getByRole('alert')).toContainText(de.recipe_shopping_load_error);
@@ -168,7 +172,7 @@ test('cooking stays readable; shopping selections persist and failed additions r
 	}
 });
 
-test('one recipe card keeps favorites at the bottom and shows concise metadata in both languages', async ({ page, request }) => {
+test('one recipe card groups categories and shows concise metadata in both languages', async ({ page, request }) => {
 	const id = `groly-overview-${randomUUID().slice(0, 8)}`;
 	const volume = `${id}-data`;
 	const errors: string[] = [];
@@ -195,44 +199,46 @@ test('one recipe card keeps favorites at the bottom and shows concise metadata i
 			return recipeId;
 		}
 		const onePot = await createRecipe({ title: 'One-Pot-Spätzle mit Hähnchen von Henglein', description: 'lecker', prepTime: 15, cookTime: 30, rating: 4, tags: ['chillig', 'schnell', 'zusätzlich mit einer besonders ausführlichen Beschreibung im Tag'] });
-		const chili = await createRecipe({ title: 'Chili con Carne – das beste Rezept', description: 'Importierter Beschreibungstext', cookTime: 45, rating: 3, isFavorite: true });
+		const weeknight = 'Weeknight meals';
+		const category = { newCategoryName: weeknight };
+		const chili = await createRecipe({ title: 'Chili con Carne – das beste Rezept', description: 'Importierter Beschreibungstext', cookTime: 45, rating: 3, category, tags: ['chillig'] });
 		const noInfo = await createRecipe({ title: 'Ohne Angaben', description: 'lecker' });
-		const ratingOnly = await createRecipe({ title: 'Nur bewertet', rating: 5, isFavorite: true });
+		const ratingOnly = await createRecipe({ title: 'Nur bewertet', rating: 5, category });
 		await page.goto('/rezepte');
 		const card = page.locator('[data-recipe-card]');
 		await expect(card).toHaveCount(1);
 		await expect(card.locator('[data-recipe-id]')).toHaveCount(5);
 		await page.getByRole('button', { name: de.recipes_sort_label, exact: true }).click();
 		await page.getByRole('button', { name: de.recipes_sort_title, exact: true }).click();
-		const expectedOrder = ['upgrade-recipe', noInfo, onePot, chili, ratingOnly];
+		const expectedOrder = [chili, ratingOnly, 'upgrade-recipe', noInfo, onePot];
 		expect(await card.locator('[data-recipe-id]').evaluateAll(elements => elements.map(element => element.getAttribute('data-recipe-id')))).toEqual(expectedOrder);
-		await expect(card.locator('h3')).toHaveText([de.recipes_favorites]);
-		expect(await card.locator('h3').evaluate(heading => {
-			const title = heading.parentElement!.querySelector('h2')!;
-			const section = getComputedStyle(heading), main = getComputedStyle(title);
-			return section.color === main.color && section.fontSize === main.fontSize && section.fontWeight === main.fontWeight;
-		})).toBe(true);
+		await expect(card.getByRole('heading', { level: 2 })).toHaveText([weeknight, de.recipe_category_none]);
+		await expect(card.getByRole('region', { name: weeknight }).locator('[data-recipe-id]')).toHaveCount(2);
+		await expect(card.getByRole('region', { name: de.recipe_category_none }).locator('[data-recipe-id]')).toHaveCount(3);
 		await expect(card).not.toContainText('lecker');
 		await expect(card).not.toContainText('Importierter Beschreibungstext');
 		await expect(card.locator(`[data-recipe-id="${onePot}"] [data-recipe-meta]`)).toContainText('4 · 45 Min · chillig · schnell');
 		await expect(card.locator('[data-recipe-id="upgrade-recipe"] [data-recipe-meta]')).toHaveText('Familie');
 		await expect(card.locator(`[data-recipe-id="${ratingOnly}"] [data-recipe-meta]`)).toHaveText('5');
 		await expect(card.locator(`[data-recipe-id="${noInfo}"] [data-recipe-meta]`)).toHaveCount(0);
-		// Search, tag filtering and the saved sort still operate across both groups.
+		// Search and tag filtering leave only groups with matching recipes.
 		await page.getByRole('button', { name: de.a11y_search, exact: true }).click();
 		await page.getByPlaceholder(de.recipes_search_placeholder).fill('Chili');
 		await expect(card.locator('[data-recipe-id]')).toHaveCount(1);
-		await expect(card.locator('h3')).toHaveCount(0);
+		await expect(card.getByRole('heading', { level: 2 })).toHaveText([weeknight]);
 		await page.getByRole('button', { name: de.a11y_close_search, exact: true }).click();
 		await page.getByRole('button', { name: de.a11y_search, exact: true }).click();
 		await page.getByRole('button', { name: 'chillig', exact: true }).click();
+		await expect(card.locator('[data-recipe-id]')).toHaveCount(2);
+		await expect(card.getByRole('heading', { level: 2 })).toHaveText([weeknight, de.recipe_category_none]);
+		await page.getByRole('button', { name: 'schnell', exact: true }).click();
 		await expect(card.locator('[data-recipe-id]')).toHaveCount(1);
 		await expect(card.locator(`[data-recipe-id="${onePot}"]`)).toBeVisible();
 		await page.getByRole('button', { name: de.a11y_close_search, exact: true }).click();
 		for (const [lang, messages] of [['de', de], ['en', en]] as const) {
 			expect((await page.request.patch('/api/users/me', { data: { settings: { lang } } })).ok()).toBe(true);
 			await page.reload();
-			await expect(card.locator('h3')).toHaveText([messages.recipes_favorites]);
+			await expect(card.getByRole('heading', { level: 2 })).toHaveText([weeknight, messages.recipe_category_none]);
 			for (const width of [320, 390]) {
 				await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
 				expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -252,14 +258,11 @@ test('one recipe card keeps favorites at the bottom and shows concise metadata i
 		await expect(page.getByText('lecker', { exact: true })).toBeVisible();
 		await page.getByRole('button', { name: en.a11y_back, exact: true }).click();
 		await expect(card.locator('[data-recipe-id]')).toHaveCount(5);
-		for (const recipeId of [chili, ratingOnly]) await updateRecipe(recipeId, { isFavorite: false });
+		const categories = await (await page.request.get('/api/recipes/categories')).json();
+		expect((await page.request.put('/api/recipes/categories', { data: { base: categories.categories, categories: [] } })).ok()).toBe(true);
 		await page.reload();
 		await expect(card.locator('[data-recipe-id]')).toHaveCount(5);
-		await expect(card.locator('h3')).toHaveCount(0);
-		for (const recipeId of expectedOrder) await updateRecipe(recipeId, { isFavorite: true });
-		await page.reload();
-		await expect(card.locator('[data-recipe-id]')).toHaveCount(5);
-		await expect(card.locator('h3')).toHaveCount(0);
+		await expect(card.getByRole('heading', { level: 2 })).toHaveText([en.recipe_category_none]);
 		for (const recipeId of expectedOrder) expect((await page.request.delete(`/api/recipes/${recipeId}`, { headers: { Origin: 'http://127.0.0.1:3100' } })).ok()).toBe(true);
 		await page.reload();
 		await expect(card).toHaveCount(0);
