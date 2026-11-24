@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { seedUpgradeFixture } from '../../scripts/docker-fixtures.mjs';
+import { trackApiReads } from './api-idle';
 import de from '../../messages/de.json' with { type: 'json' };
 
 const image = process.env.GROLY_TEST_IMAGE;
@@ -12,9 +13,10 @@ test('logout and account switching isolate cached data while preserving the orig
 	const name = `groly-accounts-${randomUUID().slice(0, 8)}`;
 	const volume = `${name}-data`;
 	const errors: string[] = [];
+	const waitForApiIdle = trackApiReads(page);
 	page.on('pageerror', error => errors.push(error.message));
 	async function login(username: string) {
-		await page.goto('/login');
+		if (new URL(page.url()).pathname !== '/login') await page.goto('/login');
 		await page.locator('input[autocomplete="username"]').fill(username);
 		await page.locator('input[autocomplete="current-password"]').fill('Groly-upgrade-test-2026!');
 		// Wait for the account's initial settings to settle before replacing the document.
@@ -65,29 +67,33 @@ test('logout and account switching isolate cached data while preserving the orig
 		}, { listId });
 		const recipeResponse = await page.request.post('/api/recipes', { data: { title: 'Alice private recipe', servings: 2, ingredients: [], steps: [] } });
 		expect(recipeResponse.status()).toBe(201);
+		await waitForApiIdle();
 		await page.goto('/rezepte');
 		await expect(page.getByText('Alice private recipe', { exact: true })).toBeVisible();
-		await page.goto('/');
+		await page.getByRole('button', { name: de.nav_lists, exact: true }).click();
 		await expect(page.getByText('Alice private list', { exact: true })).toBeVisible();
-		await page.goto(`/listen/${listId}`);
+		await page.getByRole('button', { name: /Alice private list/ }).click();
+		await expect(page).toHaveURL(`/listen/${listId}`);
 		await page.evaluate(() => localStorage.setItem('groly_test_block_item', '1'));
 		await page.getByRole('button', { name: de.add, exact: true }).click();
 		await page.locator('[data-add-item-name]').fill('Alice pending item');
 		await page.locator('[data-add-item-name]').press('Enter');
 		await expect.poll(async () => (await queued()).some(row => row.userId === 'upgrade-owner')).toBe(true);
-		await page.goto('/einstellungen');
+		await page.getByRole('button', { name: de.close, exact: true }).click();
 		await page.getByRole('button', { name: de.menu_open, exact: true }).click();
+		await waitForApiIdle();
 		await page.getByRole('button', { name: de.nav_logout, exact: true }).click();
 		await expect(page).toHaveURL('http://127.0.0.1:3100/login');
 		await login('upgrade-member');
 		await expect(page.getByText('Alice private list', { exact: true })).toHaveCount(0);
 		await page.evaluate(() => localStorage.setItem('groly_test_block_recipes', '1'));
-		await page.goto('/rezepte');
+		await page.getByRole('button', { name: /^(Recipes|Rezepte)$/ }).click();
+		await expect(page).toHaveURL('/rezepte');
 		await expect(page.locator('.animate-spin')).toHaveCount(0);
 		await expect(page.getByText('Alice private recipe', { exact: true })).toHaveCount(0);
 		expect((await queued()).some(row => row.userId === 'upgrade-owner')).toBe(true);
-		await page.goto('/einstellungen');
 		await page.getByRole('button', { name: /Open menu|Menü öffnen/, exact: true }).click();
+		await waitForApiIdle();
 		await page.getByRole('button', { name: /Sign out|Abmelden/, exact: true }).click();
 		await expect(page).toHaveURL('http://127.0.0.1:3100/login');
 		await page.evaluate(() => {

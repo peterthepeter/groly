@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { seedUpgradeFixture } from '../../scripts/docker-fixtures.mjs';
+import { trackApiReads } from './api-idle';
 import de from '../../messages/de.json' with { type: 'json' };
 import en from '../../messages/en.json' with { type: 'json' };
 
@@ -27,6 +28,7 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 	const id = `groly-offline-${randomUUID().slice(0, 8)}`;
 	const volume = `${id}-data`;
 	const errors: string[] = [];
+	const waitForApiIdle = trackApiReads(page);
 	let desktop: Awaited<ReturnType<typeof browser.newContext>> | undefined;
 	let releaseHomeLists!: () => void;
 	const homeListsReady = new Promise<void>(resolve => { releaseHomeLists = resolve; });
@@ -55,12 +57,14 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		const created = await page.request.post('/api/recipes', { data: { title: 'Uncached recipe', servings: 2, ingredients: [], steps: [] } });
 		expect(created.status()).toBe(201);
 		const { id: uncachedId } = await created.json();
+		await waitForApiIdle();
 		await page.goto('/rezepte/upgrade-recipe');
 		await expect(page.getByText('Gemüse', { exact: true })).toBeVisible();
 		await expect.poll(async () => (await rows(page, 'recipeDetails')).some(row => row.id === 'upgrade-recipe')).toBe(true);
 		await page.getByRole('button', { name: de.a11y_back, exact: true }).click();
 		await expect(page.getByText('Uncached recipe', { exact: true })).toBeVisible();
 		await expect.poll(async () => (await rows(page, 'recipes')).some(row => row.id === uncachedId)).toBe(true);
+		await waitForApiIdle();
 		await page.goto('/listen/upgrade-list');
 		await expect(page.getByText('Hafermilch', { exact: true })).toBeVisible();
 		await expect.poll(async () => (await rows(page, 'userSettings')).some(row => row.favorites?.some((fav: { name: string }) => fav.name === 'Äpfel'))).toBe(true);
@@ -73,6 +77,7 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		const desktopPage = await desktop.newPage();
 		await desktopPage.goto('http://127.0.0.1:3100/listen/upgrade-list');
 		await expect(desktopPage.getByText('Hafermilch', { exact: true })).toBeVisible();
+		await waitForApiIdle();
 		await context.setOffline(true);
 		await page.getByRole('button', { name: de.add, exact: true }).click();
 		await page.locator('[data-add-item-name]').fill('Offline checked item');
@@ -81,6 +86,7 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await page.getByRole('button', { name: 'Offline checked item', exact: true }).click();
 		await expect.poll(async () => (await rows(page, 'items')).find(row => row.name === 'Offline checked item')?.isChecked).toBe(true);
 		// Favorites must be read from IndexedDB after the component is recreated.
+		await waitForApiIdle();
 		await page.reload();
 		await expect(page.getByText('Hafermilch', { exact: true })).toBeVisible();
 		await page.getByRole('button', { name: de.add, exact: true }).click();
@@ -126,6 +132,7 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await page.screenshot({ path: `test-results/${test.info().project.name}-offline-recipe.png`, fullPage: true });
 		// Full navigation to a URL with neither cached HTML nor detail data uses the
 		// self-contained fallback, including working language and recovery controls.
+		await waitForApiIdle();
 		await page.goto(`/rezepte/${uncachedId}?cold-offline=1`);
 		await expect(page.locator('[data-offline-fallback]')).toBeVisible();
 		await page.getByRole('button', { name: 'EN', exact: true }).click();
@@ -139,6 +146,7 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		}
 		await page.getByRole('link', { name: en.offline_home, exact: true }).click();
 		await expect(page.getByText('Familie 🥦', { exact: true }).first()).toBeVisible();
+		await waitForApiIdle();
 		await page.goto(`/rezepte/${uncachedId}?cold-offline=2`);
 		await expect(page.locator('[data-offline-fallback]')).toBeVisible();
 		await page.getByRole('button', { name: 'EN', exact: true }).click();

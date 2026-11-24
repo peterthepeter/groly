@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { seedUpgradeFixture } from '../../scripts/docker-fixtures.mjs';
+import { trackApiReads } from './api-idle';
 import { resolveLatestImage } from '../../scripts/upgrade-baselines.mjs';
 import de from '../../messages/de.json' with { type: 'json' };
 import en from '../../messages/en.json' with { type: 'json' };
@@ -16,18 +17,11 @@ test('the published latest PWA upgrades directly with its session and unsynced c
 	const volume = `${id}-data`;
 	let container = '';
 	const errors: string[] = [];
-	const activeRequests = new Set<object>();
-	let lastApiActivity = Date.now();
-	page.on('request', req => { if (req.url().startsWith('http://127.0.0.1:3100/api/') && !/\/api\/(events|ping|auth\/login)(?:[?]|$)/.test(req.url())) { activeRequests.add(req); lastApiActivity = Date.now(); } });
-	page.on('response', response => { if (activeRequests.delete(response.request())) lastApiActivity = Date.now(); });
-	page.on('requestfailed', req => { if (activeRequests.delete(req)) lastApiActivity = Date.now(); });
+	const waitForApiIdle = trackApiReads(page);
 	page.on('pageerror', error => errors.push(error.message));
 	const settled = async () => {
 		await expect(page.locator('.animate-spin')).toHaveCount(0);
-		// Full-page navigation must wait for deferred IndexedDB/settings loads too.
-		// Ignore long-lived SSE and wait for a brief quiet period between API bursts.
-		const started = Date.now();
-		await expect.poll(() => activeRequests.size === 0 && Date.now() - Math.max(started, lastApiActivity) >= 250).toBe(true);
+		await waitForApiIdle();
 	};
 	const start = (target: string, suffix: string) => {
 		container = `${id}-${suffix}`;
@@ -67,6 +61,9 @@ test('the published latest PWA upgrades directly with its session and unsynced c
 		await page.getByRole('button', { name: de.add, exact: true }).click();
 		const input = page.locator('[data-add-item-name]');
 		await expect(input).toBeVisible();
+		// Register on the old document before the candidate can trigger a reload.
+		// The queued change should be replayed by the upgraded app.
+		await page.evaluate(() => window.addEventListener('online', event => event.stopImmediatePropagation(), { capture: true, once: true }));
 		await context.setOffline(true);
 		await input.fill('Upgrade offline item');
 		await input.press('Enter');
@@ -83,9 +80,6 @@ test('the published latest PWA upgrades directly with its session and unsynced c
 		docker('rm', '-f', container); container = '';
 		start(image!, 'new');
 		await wait(true);
-		// Let the new document replay the queued write. Reconnecting the old one
-		// first can drain it before the updated worker gets a chance to reload.
-		await page.evaluate(() => window.addEventListener('online', event => event.stopImmediatePropagation(), { capture: true, once: true }));
 		await context.setOffline(false);
 		await page.evaluate(async () => { const registration = await navigator.serviceWorker.ready; await registration.update(); }).catch(error => {
 			if (!/Execution context was destroyed|navigation/i.test(String(error))) throw error;
