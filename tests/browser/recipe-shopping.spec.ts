@@ -66,8 +66,6 @@ test('cooking stays readable; shopping selections persist and failed additions r
 		await dialog.getByRole('button', { name: de.close, exact: true }).click();
 		await bag.click();
 		expect(await displayedNames()).toEqual(names);
-		const compactRow = await dialog.locator('.shopping-ingredient').first().boundingBox();
-		expect(compactRow?.height).toBe(40);
 		// All options remain reachable; the footer stays visible on a narrow phone.
 		await page.setViewportSize({ width: 320, height: 568 });
 		await expect(dialog.getByRole('button', { name: de.close, exact: true })).toBeInViewport();

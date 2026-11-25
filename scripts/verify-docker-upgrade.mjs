@@ -180,7 +180,7 @@ async function verifyUpgrade(baseline, dataCopy) {
 	compare(before, evaluate(container, snapshotUpgradeData), 'Restore with original image');
 	assert.equal(request(container, '/api/auth/me', { headers: { cookie } }).status, 200);
 	remove(container);
-	if (baseline === '0.9.10' && !dataCopy) {
+	if (baseline === latestImage && !dataCopy) {
 		container = start(image, restored, 'full-backup-disk', ['--mount', 'type=tmpfs,destination=/app/data/backups,tmpfs-size=1048576,tmpfs-mode=0700']);
 		await expectBlocked(container, before, 'Full backup disk');
 		remove(container);

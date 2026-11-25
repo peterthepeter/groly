@@ -78,6 +78,10 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await desktopPage.goto('http://127.0.0.1:3100/listen/upgrade-list');
 		await expect(desktopPage.getByText('Hafermilch', { exact: true })).toBeVisible();
 		await waitForApiIdle();
+		await expect.poll(() => page.evaluate(async () => {
+			const response = await caches.match('/uploads/upgrade-test.png');
+			return response?.status;
+		})).toBe(200);
 		await context.setOffline(true);
 		await page.getByRole('button', { name: de.add, exact: true }).click();
 		await page.locator('[data-add-item-name]').fill('Offline checked item');
@@ -116,6 +120,7 @@ test('offline checks and favorites survive reload; cached and uncached recipes h
 		await page.getByRole('button', { name: de.nav_recipes, exact: true }).click();
 		await page.getByText('Gemüsepfanne 🥦', { exact: true }).click();
 		await expect(page.getByText('Gemüse', { exact: true })).toBeVisible();
+		await expect.poll(() => page.locator('img[src="/uploads/upgrade-test.png"]').first().evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
 		await page.getByRole('button', { name: `${de.recipe_instructions} (1)`, exact: true }).click();
 		await expect(page.getByText('Gemüse anbraten.', { exact: true })).toBeVisible();
 		await page.getByRole('button', { name: de.a11y_back, exact: true }).click();

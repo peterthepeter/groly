@@ -44,7 +44,7 @@ Issue #17 caused local-midnight dates east of UTC to be stored one day early. Ne
 
 ### Release verification
 
-In the selected full verification mode, the release workflow uploads an untagged candidate, pulls it by immutable digest and verifies fresh installation, direct upgrades from frozen `latest`, 0.9.10, 0.9.9, 0.9.8-hotfix.2, 1.0.0-beta.5 and 1.0.0-beta.8, restart, backup failures, restore and old-PWA/offline upgrades in Chromium and WebKit. Only the verified digest receives release tags. Manual workflow runs build and verify an image only in the CI runner’s local Docker store; they never push images to a registry. Release runs assign only the exact version tag and its matching `beta` or `latest` channel after verification. There are no extra candidate tags.
+Application and migration checks run on branch pushes. The release workflow requires a successful check for the intended commit, builds the image once, and verifies it locally on the CI runner. Full verification covers fresh installation, direct upgrade from the current stable image and from the current beta image for beta releases, restart, backup failures, recovery, security, and critical browser flows in Chromium and WebKit. The extended historical upgrade and browser suites remain available for targeted verification. The workflow publishes the tested image to its version tag and matching channel. The GitHub release is published after the workflow succeeds. Verification-only runs keep the image on the runner.
 
 `latest` and `beta` stay separate. A real installed iOS PWA must additionally be checked before stable 1.0 is approved; desktop WebKit is not an installed-iPhone test.
 
@@ -85,4 +85,4 @@ Durch Issue #17 wurden Kalendertage östlich von UTC teilweise einen Tag zu frü
 
 ### Freigabe
 
-Im gewählten vollständigen Prüfmodus prüft der Workflow das gebaute Image anhand seines unveränderlichen Digests, einschließlich Neuinstallation, direkten Upgrades aus eingefrorenem `latest`, 0.9.10, 0.9.9, 0.9.8-hotfix.2, Beta 5 und Beta 8, Sicherungsfehlern, Neustart, Wiederherstellung und PWA-/Offline-Wechsel in Chromium und WebKit. Erst danach werden Versions- und Kanal-Tags vergeben. Manuelle Workflow-Läufe bauen und prüfen das Image ausschließlich im lokalen Docker-Speicher des CI-Runners und pushen keine Images. Release-Läufe vergeben nach erfolgreicher Prüfung nur den exakten Versions-Tag und den zugehörigen Kanal `beta` oder `latest`. Zusätzliche Kandidaten-Tags gibt es nicht. Vor Stable 1.0 ist zusätzlich die Prüfung einer tatsächlich installierten iOS-PWA erforderlich.
+See [Release verification](#release-verification).

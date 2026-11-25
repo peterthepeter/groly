@@ -1,0 +1,36 @@
+name: Application checks
+
+on:
+  push:
+    branches: ['**']
+
+concurrency:
+  group: groly-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  check:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24.22.3'
+          cache: npm
+      - name: Check release policy and migrations
+        run: |
+          npm ci --ignore-scripts --no-audit
+          npm run test:release
+          npm run test:dependencies
+      - name: Check application
+        run: |
+          npm run prepare
+          npm run check
+          npm test

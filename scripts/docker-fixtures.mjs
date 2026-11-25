@@ -26,6 +26,10 @@ export async function seedUpgradeFixture(legacyRecipeFavorite = false) {
 		insert('category_preferences', { user_id: 'upgrade-owner', normalized_name: 'hafermilch', category_override: 'dairy', updated_at: ms });
 		insert('item_history', { user_id: 'upgrade-owner', name: 'Hafermilch', use_count: 5, last_used_at: seconds });
 		insert('recipes', { id: 'upgrade-recipe', user_id: 'upgrade-owner', title: 'Gemüsepfanne 🥦', image_url: '/uploads/upgrade-test.png', servings: 3, is_favorite: Number(legacyRecipeFavorite), created_at: ms, updated_at: ms });
+		// A fresh candidate has already run the migration when the test inserts this recipe.
+		if (db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'uploaded_image_access'").get()) {
+			insert('uploaded_image_access', { image_url: '/uploads/upgrade-test.png', user_id: 'upgrade-owner' });
+		}
 		insert('recipe_ingredients', { id: 'upgrade-ingredient', recipe_id: 'upgrade-recipe', amount: '1.5', unit: 'kg', name: 'Gemüse', sort_order: 0 });
 		insert('recipe_steps', { id: 'upgrade-step', recipe_id: 'upgrade-recipe', step_number: 1, text: 'Gemüse anbraten.' });
 		insert('recipe_tags', { recipe_id: 'upgrade-recipe', tag: 'Familie' });
