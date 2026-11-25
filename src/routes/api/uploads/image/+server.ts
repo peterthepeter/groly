@@ -1,23 +1,18 @@
 
 import type { RequestHandler } from './$types';
 import { authGuard } from '#lib/auth/middleware';
+import { db } from '#lib/db';
+import { uploadedImageAccess } from '#lib/db/schema';
+import { uploadsDirectory } from '#lib/server/uploadedImages';
 import { randomUUID } from 'crypto';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import path from 'path';
 
-const DB_PATH = process.env.DATABASE_URL ?? './data/groly.db';
-const UPLOADS_DIR = path.resolve(path.dirname(DB_PATH), 'uploads');
-
 export const POST: RequestHandler = async (event) => {
-	const { error } = authGuard(event);
+	const { error, user } = authGuard(event);
 	if (error) return error;
 
 	try {
-		if (!existsSync(UPLOADS_DIR)) {
-			await mkdir(UPLOADS_DIR, { recursive: true });
-		}
-
 		const formData = await event.request.formData();
 		const file = formData.get('image');
 		if (!file || !(file instanceof File)) {
@@ -32,12 +27,20 @@ export const POST: RequestHandler = async (event) => {
 		const mimeToExt: Record<string, string> = { 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
 		const ext = mimeToExt[file.type] ?? 'jpg';
 		const filename = `${randomUUID()}.${ext}`;
-		const filepath = path.join(UPLOADS_DIR, filename);
+		const filepath = path.join(uploadsDirectory, filename);
+		const imageUrl = `/uploads/${filename}`;
 
 		const buffer = Buffer.from(await file.arrayBuffer());
-		await writeFile(filepath, buffer);
+		await mkdir(uploadsDirectory, { recursive: true });
+		await writeFile(filepath, buffer, { flag: 'wx' });
+		try {
+			db.insert(uploadedImageAccess).values({ imageUrl, userId: user!.id }).run();
+		} catch (cause) {
+			await unlink(filepath).catch(cleanupError => console.error('Failed to remove unregistered upload', cleanupError));
+			throw cause;
+		}
 
-		return Response.json({ url: `/uploads/${filename}` }, { status: 201 });
+		return Response.json({ url: imageUrl }, { status: 201 });
 	} catch (e) {
 		console.error('POST /api/uploads/image error:', e);
 		return Response.json({ error: 'Upload failed', code: 'upload_failed' }, { status: 500 });

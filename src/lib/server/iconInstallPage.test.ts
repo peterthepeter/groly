@@ -13,6 +13,7 @@ import { GET } from '../../routes/install/[variant]/+server';
 function event(path: string, cookies = new Map<string, string>()) {
 	return {
 		url: new URL(path, 'http://localhost'), request: new Request(new URL(path, 'http://localhost')),
+		route: { id: path === '/login' ? '/login' : null },
 		params: { variant: path.split('/')[2]?.split('?')[0] }, locals: {},
 		cookies: { get: (key: string) => cookies.get(key), set: (key: string, value: string) => cookies.set(key, value) }
 	};

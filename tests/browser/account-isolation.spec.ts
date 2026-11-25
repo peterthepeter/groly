@@ -53,7 +53,7 @@ test('logout and account switching isolate cached data while preserving the orig
 		const listId = (await listResponse.json()).id;
 		// Page routing cannot intercept fetches handled by an active service worker.
 		// Reject in the page before the request reaches the worker, across navigations.
-		await page.addInitScript(({ listId }) => {
+		await page.context().addInitScript(({ listId }) => {
 			const originalFetch = window.fetch.bind(window);
 			window.fetch = (input, init) => {
 				const url = new URL(input instanceof Request ? input.url : String(input), location.href);
@@ -80,10 +80,17 @@ test('logout and account switching isolate cached data while preserving the orig
 		await page.locator('[data-add-item-name]').press('Enter');
 		await expect.poll(async () => (await queued()).some(row => row.userId === 'upgrade-owner')).toBe(true);
 		await page.getByRole('button', { name: de.close, exact: true }).click();
+		const otherTab = await page.context().newPage();
+		await otherTab.goto('/rezepte');
+		await expect(otherTab.getByText('Alice private recipe', { exact: true })).toBeVisible();
+		await page.bringToFront();
 		await page.getByRole('button', { name: de.menu_open, exact: true }).click();
 		await waitForApiIdle();
 		await page.getByRole('button', { name: de.nav_logout, exact: true }).click();
 		await expect(page).toHaveURL('http://127.0.0.1:3100/login');
+		await expect(otherTab).toHaveURL('http://127.0.0.1:3100/login');
+		await expect(otherTab.getByText('Alice private recipe', { exact: true })).toHaveCount(0);
+		await otherTab.close();
 		await login('upgrade-member');
 		await expect(page.getByText('Alice private list', { exact: true })).toHaveCount(0);
 		await page.evaluate(() => localStorage.setItem('groly_test_block_recipes', '1'));

@@ -32,23 +32,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.user = user ?? undefined;
 
 	const path = event.url.pathname;
-	const isAuthRoute = path.startsWith('/login');
-	const isInviteRoute = path.startsWith('/invite/');
-	const isApiRoute = path.startsWith('/api');
+	const isLoginRoute = event.route.id === '/login';
+	const isInviteRoute = event.route.id === '/invite/[token]';
+	const isApiRoute = path === '/api' || path.startsWith('/api/');
 	const expectedUser = event.request.headers.get('x-groly-user');
 	if (isApiRoute && path !== '/api/auth/login' && expectedUser && expectedUser !== user?.id && !(path === '/api/auth/logout' && !user)) {
 		return Response.json({ error: 'Account changed; sign in again' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
 	}
 
-	if (!isApiRoute && !isAuthRoute && !isInviteRoute && !isIconInstallPage(path) && !user) {
+	if (!isApiRoute && !isLoginRoute && !isInviteRoute && !isIconInstallPage(path) && !user) {
 		redirect(302, '/login');
 	}
 
-	if (isAuthRoute && user) {
+	if (isLoginRoute && user) {
 		redirect(302, '/');
 	}
 
-	const anonymousLang = !user && (isAuthRoute || isInviteRoute)
+	const anonymousLang = !user && (isLoginRoute || isInviteRoute)
 		? languageFromAcceptLanguage(event.request.headers.get('accept-language'))
 		: null;
 	let locale = anonymousLang ?? 'de';
@@ -68,5 +68,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Standby aus dem eigenen HTTP-Cache statt neu zu laden → frisch geloggte Einträge
 	// erscheinen nicht (überlebt sogar App-Neustart). no-store erzwingt echten Abgleich.
 	if (isApiRoute) response.headers.set('Cache-Control', 'no-store');
+	else if ((user || isLoginRoute || isInviteRoute) &&
+		(event.isDataRequest || response.headers.get('Content-Type')?.startsWith('text/html'))) {
+		// The service worker may keep its own account-scoped offline copy.
+		response.headers.set('Cache-Control', 'private, no-store');
+		response.headers.delete('ETag');
+	}
 	return response;
 };

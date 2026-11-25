@@ -8,7 +8,7 @@
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { untrack, tick } from 'svelte';
 	import type { CaffeineDrink } from '#lib/db/schema';
-	import { todayKey as todayStr } from '#lib/dates';
+	import { todayKey, toLocalDateKey, toLocalTimeKey } from '#lib/dates';
 	import SupplementQuickLogTile from './SupplementQuickLogTile.svelte';
 	import TrackerTileShell from './TrackerTileShell.svelte';
 	import CaffeineDrinkPickerContent from './CaffeineDrinkPickerContent.svelte';
@@ -47,7 +47,8 @@
 		nutritionTotalKcal = 0,
 		nutritionGoalKcal = null as number | null,
 		onaddmeal = null as (() => void) | null,
-		logDate = null as string | null,
+		selectedHistoryDate,
+		now,
 		initialTab = null as 'tracker' | 'supplements' | null
 	}: {
 		open: boolean;
@@ -72,7 +73,8 @@
 		nutritionTotalKcal?: number;
 		nutritionGoalKcal?: number | null;
 		onaddmeal?: (() => void) | null;
-		logDate?: string | null;
+		selectedHistoryDate: string | null;
+		now: Date;
 		initialTab?: 'tracker' | 'supplements' | null;
 	} = $props();
 
@@ -87,7 +89,10 @@
 		return displayDate(new Date(dateStr + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' });
 	}
 
-	const isRetro = $derived(!!logDate && logDate !== todayStr());
+	const todayDate = $derived(toLocalDateKey(now));
+	const displayedLogDate = $derived(selectedHistoryDate ?? todayDate);
+	const currentTime = $derived(toLocalTimeKey(now));
+	const isRetro = $derived(displayedLogDate !== todayDate);
 	const moodLevel = $derived(moodValue === null ? null : getMoodLevel(moodValue));
 	const moodStatus = $derived(
 		moodHasEntry && moodLevel
@@ -259,23 +264,18 @@
 	// Reihenfolge wichtig: muss NACH dem Reset-Effekt oben stehen (Svelte 5 garantiert Source-Order).
 	$effect(() => {
 		if (!open) return;
-		const now = new Date().toTimeString().slice(0, 5);
 		let changedAmounts = false;
-		let changedTimes = false;
 		const a = { ...amounts };
-		const ti = { ...times };
 		for (const s of supplements) {
 			if (a[s.id] === undefined) { a[s.id] = s.defaultAmount ?? 1; changedAmounts = true; }
-			if (ti[s.id] === undefined) { ti[s.id] = now; changedTimes = true; }
 		}
 		if (changedAmounts) amounts = a;
-		if (changedTimes) times = ti;
 	});
 
 	async function logWaterRetro() {
 		const ml = Math.round(Number(waterRetroMl));
 		if (!ml || ml <= 0) return;
-		if (await logWater(ml, makeTimestamp(logDate ?? todayStr(), waterRetroTime))) {
+		if (await logWater(ml, makeTimestamp(selectedHistoryDate ?? todayKey(), waterRetroTime))) {
 			waterRetroMl = '';
 			waterRetroOpen = false;
 		}
@@ -285,7 +285,7 @@
 		if (!meditationRetroDuration || meditationRetroSaving) return;
 		meditationRetroSaving = true;
 		try {
-			const loggedAt = makeTimestamp(logDate ?? todayStr(), meditationRetroStartTime);
+			const loggedAt = makeTimestamp(selectedHistoryDate ?? todayKey(), meditationRetroStartTime);
 			const durationSeconds = meditationRetroDuration * 60;
 			const clientLogId = generateClientId();
 			// Erst dauerhaft sichern, dann synchronisieren (siehe logCaffeine).
@@ -359,8 +359,9 @@
 	async function logOne(supplementId: string) {
 		saving = { ...saving, [supplementId]: true };
 		const amount = amounts[supplementId] ?? 1;
-		const time = times[supplementId] ?? new Date().toTimeString().slice(0, 5);
-		const loggedAt = makeTimestamp(logDate ?? todayStr(), time);
+		const tappedAt = new Date();
+		const time = times[supplementId] ?? toLocalTimeKey(tappedAt);
+		const loggedAt = makeTimestamp(selectedHistoryDate ?? toLocalDateKey(tappedAt), time);
 		const note = notes[supplementId]?.trim() || null;
 		const clientLogId = generateClientId();
 
@@ -461,7 +462,7 @@
 				<div class="flex flex-col gap-0.5">
 					<p class="font-semibold text-base" style="color: var(--color-on-surface)">{t.supplement_log_save}</p>
 					<p class="text-xs font-semibold" style="color: {isRetro ? 'var(--color-primary)' : 'var(--color-on-surface-variant)'}">
-						{formatLogDate(logDate ?? todayStr())}
+						{formatLogDate(displayedLogDate)}
 					</p>
 				</div>
 				<div class="flex items-center gap-2">
@@ -534,7 +535,7 @@
 								{#snippet details()}
 									{#if trackerDrillIn === 'caffeine'}
 										<div class="tracker-drill-in">
-											<CaffeineDrinkPickerContent drinks={caffeineDrinks} {logDate} onlogged={handleCaffeineLogged} integrated />
+											<CaffeineDrinkPickerContent drinks={caffeineDrinks} logDate={selectedHistoryDate} onlogged={handleCaffeineLogged} integrated />
 										</div>
 									{/if}
 								{/snippet}
@@ -718,7 +719,7 @@
 									{supplement}
 									amount={amounts[supplement.id] ?? supplement.defaultAmount ?? 1}
 									unitLabel={abbreviateUnit(supplement.unit)}
-									time={times[supplement.id] ?? ''}
+									time={times[supplement.id] ?? currentTime}
 									hasNote={!!notes[supplement.id]?.trim()}
 									saving={saving[supplement.id] ?? false}
 									done={done[supplement.id] ?? false}

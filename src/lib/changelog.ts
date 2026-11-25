@@ -3,6 +3,19 @@
 export type ChangelogEntry = { version: string; intro?: { de: string; en: string }; de: string[]; en: string[] };
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: '1.1.0-beta.2',
+		de: [
+			'Supplement-Einträge aus „Heute“ landen auch nach Mitternacht am richtigen Tag.',
+			'Hochgeladene Bilder sind nur für berechtigte Konten sichtbar. Geteilte Rezepte behalten ihre Bildvorschau.',
+			'Beim Abmelden werden offene Groly-Tabs desselben Kontos im Browser ebenfalls abgemeldet.'
+		],
+		en: [
+			'Supplement entries logged from Today use the correct date after midnight.',
+			'Uploaded images are visible only to authorized accounts. Shared recipes retain their image previews.',
+			'Signing out also signs out other open Groly tabs for the same account in the browser.'
+		]
+	},
+	{
 		version: '1.1.0-beta.1',
 		de: [
 			'Erstelle gemeinsame Checklisten mit Abschnitten, Notizen und einmaligen Erinnerungen. Du kannst sie duplizieren oder alle Einträge wieder öffnen.',

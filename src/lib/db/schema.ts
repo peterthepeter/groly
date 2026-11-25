@@ -23,6 +23,14 @@ export const sessions = sqliteTable('sessions', {
 	createdAt: integer('created_at').notNull()
 });
 
+export const uploadedImageAccess = sqliteTable('uploaded_image_access', {
+	imageUrl: text('image_url').notNull(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' })
+}, (table) => [
+	primaryKey({ columns: [table.imageUrl, table.userId] }),
+	index('uploaded_image_access_user_id_idx').on(table.userId)
+]);
+
 export const lists = sqliteTable('lists', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),

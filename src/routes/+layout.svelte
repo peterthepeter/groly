@@ -14,7 +14,7 @@
 	import { userSettings } from '#lib/userSettings.svelte';
 	import { installApiFetchTimeout } from '#lib/apiTimeout';
 	import { initSync } from '#lib/sync/manager';
-	import { setServiceWorkerAccount, syncDevicePush } from '#lib/deviceSession';
+	import { setServiceWorkerAccount, syncDevicePush, watchDeviceLogout } from '#lib/deviceSession';
 
 	// Früh genug, dass es vor den ersten Seiten-Loadern greift (Layout-Script läuft
 	// vor dem Mounten der Seiten). Schützt alle Lese-Anfragen gegen tote Verbindungen
@@ -22,16 +22,17 @@
 	if (browser) installApiFetchTimeout();
 
 	let whatsNewOpen = $state(false);
+	let signedOutInOtherTab = $state(false);
 
 	let { data, children } = $props();
+	const activeUserId = $derived(signedOutInOtherTab ? null : data.user?.id ?? null);
 
-	if (browser) untrack(() => initSync(data.user?.id ?? null));
+	if (browser) untrack(() => initSync(activeUserId));
 
 	$effect.pre(() => {
-		if (!browser) return;
-		const userId = data.user?.id ?? null;
-		initSync(userId);
-		void initLanguage(userId, data.settings ?? {}, data.settingsRevision ?? 0, data.anonymousLang);
+		if (!browser || signedOutInOtherTab) return;
+		initSync(activeUserId);
+		void initLanguage(activeUserId, data.settings ?? {}, data.settingsRevision ?? 0, data.anonymousLang);
 	});
 
 	afterNavigate(() => {
@@ -67,10 +68,18 @@
 	$effect(() => { applyTheme(userSettings.theme); });
 	$effect(() => { applyColorScheme(userSettings.colorScheme); });
 	$effect(() => {
-		if (!browser) return;
-		const userId = data.user?.id ?? null;
-		void setServiceWorkerAccount(userId);
-		if (userId) void syncDevicePush(userId);
+		if (!browser || signedOutInOtherTab) return;
+		void setServiceWorkerAccount(activeUserId);
+		if (activeUserId) void syncDevicePush(activeUserId);
+	});
+
+	$effect(() => {
+		if (!browser || !activeUserId) return;
+		return watchDeviceLogout(activeUserId, () => {
+			signedOutInOtherTab = true;
+			initSync(null);
+			window.location.replace('/login');
+		});
 	});
 
 	onMount(() => {
@@ -93,7 +102,7 @@
 	});
 
 	$effect(() => {
-		const userId = data.user?.id ?? '';
+		const userId = activeUserId ?? '';
 		if (!browser || !userId) return;
 
 		let sse: EventSource | null = null;
@@ -157,40 +166,41 @@
 	<title>Groly</title>
 </svelte:head>
 
+{#if !signedOutInOtherTab}
+	<div class="max-w-[430px] mx-auto relative">
+		{#key activeUserId}
+			{@render children()}
+		{/key}
+	</div>
 
-<div class="max-w-[430px] mx-auto relative">
-	{#key data.user?.id}
-		{@render children()}
-	{/key}
-</div>
-
-<!--
-	iOS keyboard bridge: focused synchronously in the shortcut gesture handler
-	before goto() so that iOS keeps the keyboard context alive across navigation.
-	Focus then transfers to the real input when AddItemBar mounts.
--->
-<input
-	id="ios-keyboard-bridge"
-	type="text"
-	aria-hidden="true"
-	readonly
-	tabindex="-1"
-	style="position:fixed; left:-9999px; top:0; opacity:0; pointer-events:none; width:1px; height:1px;"
-/>
-
-{#if whatsNewOpen}
-	<WhatsNewModal
-		version={LATEST_CHANGES.version}
-		items={currentLang() === 'en' ? LATEST_CHANGES.en : LATEST_CHANGES.de}
-		intro={LATEST_CHANGES.intro?.[currentLang()]}
-		onClose={() => {
-			whatsNewOpen = false;
-			localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
-		}}
+	<!--
+		iOS keyboard bridge: focused synchronously in the shortcut gesture handler
+		before goto() so that iOS keeps the keyboard context alive across navigation.
+		Focus then transfers to the real input when AddItemBar mounts.
+	-->
+	<input
+		id="ios-keyboard-bridge"
+		type="text"
+		aria-hidden="true"
+		readonly
+		tabindex="-1"
+		style="position:fixed; left:-9999px; top:0; opacity:0; pointer-events:none; width:1px; height:1px;"
 	/>
-{/if}
 
-<!-- ShortcutMenu at root level — avoids BottomNav's z-30 stacking context -->
-{#if shortcutMenu.open}
-	<ShortcutMenu shortcuts={shortcuts.list} onClose={shortcutMenu.hide} />
+	{#if whatsNewOpen}
+		<WhatsNewModal
+			version={LATEST_CHANGES.version}
+			items={currentLang() === 'en' ? LATEST_CHANGES.en : LATEST_CHANGES.de}
+			intro={LATEST_CHANGES.intro?.[currentLang()]}
+			onClose={() => {
+				whatsNewOpen = false;
+				localStorage.setItem('groly_last_version', LATEST_CHANGES.version);
+			}}
+		/>
+	{/if}
+
+	<!-- ShortcutMenu at root level — avoids BottomNav's z-30 stacking context -->
+	{#if shortcutMenu.open}
+		<ShortcutMenu shortcuts={shortcuts.list} onClose={shortcutMenu.hide} />
+	{/if}
 {/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { displayDate, displayTime } from '#lib/dateDisplay';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import TrackerHeader from '#lib/components/supplements/TrackerHeader.svelte';
@@ -212,13 +212,26 @@
 	}
 
 	let now = $state(new Date());
+	const selectedHistoryDate = $derived(activeTab === 'history' && historyPeriod === 'day' ? historyDate : null);
+
+	function refreshTrackerClock(): boolean {
+		const current = new Date();
+		const currentDate = toLocalDateStr(current);
+		const dayChanged = currentDate !== toLocalDateStr(now);
+		now = current;
+		if (dayChanged) {
+			todayLogs = todayLogs.filter(log => toLocalDateStr(new Date(log.loggedAt)) === currentDate);
+		}
+		return dayChanged;
+	}
 
 	// Quick-log sheet (opened from FAB)
 	let quickLogOpen = $state(false);
 	let quickLogInitialTab = $state<'tracker' | 'supplements' | null>(null);
 
-	function openQuickLog() {
-		quickLogInitialTab = null;
+	function openQuickLog(initialTab: 'tracker' | 'supplements' | null = null) {
+		if (refreshTrackerClock()) void loadTodayLogs();
+		quickLogInitialTab = initialTab;
 		quickLogOpen = true;
 	}
 
@@ -237,15 +250,13 @@
 
 		switch (action) {
 			case 'log-supplement':
-				quickLogInitialTab = 'supplements';
-				quickLogOpen = true;
+				openQuickLog('supplements');
 				consume();
 				break;
 			case 'log-tracker':
 			case 'log-water':
 			case 'log-meditation':
-				quickLogInitialTab = 'tracker';
-				quickLogOpen = true;
+				openQuickLog('tracker');
 				consume();
 				break;
 			case 'log-mood':
@@ -288,8 +299,8 @@
 		return d.getTime();
 	}
 
-	function todayEnd(): number {
-		const next = new Date(todayStart());
+	function todayEnd(from = todayStart()): number {
+		const next = new Date(from);
 		next.setDate(next.getDate() + 1);
 		return next.getTime() - 1;
 	}
@@ -340,19 +351,20 @@
 		const requestId = ++todayLogsRequestId;
 		const requestStartedAt = Date.now();
 		const from = todayStart();
-		const to = todayEnd();
+		const to = todayEnd(from);
+		const isCurrentRead = () => requestId === todayLogsRequestId && from === todayStart();
 		try {
 			const res = await fetch(`/api/supplement-logs?from=${from}&to=${to}`);
 			if (!res.ok) throw new Error();
 			const data = await res.json();
 			const serverLogs = data.logs as Log[];
-			if (requestId !== todayLogsRequestId) return;
+			if (!isCurrentRead()) return;
 			const merged = await cacheTodayLogs(serverLogs, requestStartedAt, cacheUserId);
-			if (requestId !== todayLogsRequestId) return;
-			todayLogs = merged;
+			if (isCurrentRead()) todayLogs = merged;
 		} catch {
-			if (requestId !== todayLogsRequestId) return;
-			todayLogs = await getOfflineTodayLogs();
+			if (!isCurrentRead()) return;
+			const cached = await getOfflineTodayLogs();
+			if (isCurrentRead()) todayLogs = cached;
 		}
 	}
 
@@ -1033,23 +1045,35 @@
 		});
 		Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineDrinks(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadMoodWeeklyReview(), loadTodayNutrition()]).then(() => { loading = false; });
 		handleActionParam();
-		const clockInterval = setInterval(() => { now = new Date(); }, 60_000);
+		let clockTimeout: ReturnType<typeof setTimeout>;
+		function scheduleClockUpdate() {
+			clockTimeout = setTimeout(() => {
+				if (refreshTrackerClock()) void loadTodayLogs();
+				scheduleClockUpdate();
+			}, 60_000 - Date.now() % 60_000);
+		}
+		scheduleClockUpdate();
 
 		function onVisibilityChange() {
 			if (document.visibilityState === 'visible') {
-				now = new Date();
+				refreshTrackerClock();
 				Promise.all([loadSupplements(), loadTodayLogs(), loadWaterReminders(), loadWaterLogs(), loadCaffeineLogs(), loadMeditationLogs(), loadTodayMoodEntry(), loadMoodWeeklyReview()]);
 			}
 		}
+		function onPageShow(event: PageTransitionEvent) {
+			if (event.persisted) onVisibilityChange();
+		}
 		document.addEventListener('visibilitychange', onVisibilityChange);
+		window.addEventListener('pageshow', onPageShow);
 
 		const onResize = () => updateGreetingOpacity();
 		window.addEventListener('resize', onResize);
 
 		return () => {
 			unsubscribeSupplementSync();
-			clearInterval(clockInterval);
+			clearTimeout(clockTimeout);
 			document.removeEventListener('visibilitychange', onVisibilityChange);
+			window.removeEventListener('pageshow', onPageShow);
 			window.removeEventListener('resize', onResize);
 		};
 	});
@@ -1066,7 +1090,7 @@
 	// (SW navigates the existing client → action param appears → open the sheet).
 	$effect(() => {
 		void page.url.searchParams.get('action');
-		handleActionParam();
+		untrack(handleActionParam);
 	});
 
 	function navigateHistory(dir: -1 | 1) {
@@ -1507,7 +1531,8 @@
 		}
 		if (activeTab === 'history') loadHistory();
 	}}
-	logDate={activeTab === 'history' && historyPeriod === 'day' ? historyDate : toLocalDateStr(new Date())}
+	{selectedHistoryDate}
+	{now}
 	initialTab={quickLogInitialTab}
 />
 
@@ -1534,7 +1559,7 @@
 
 <AppBottomNav
 	activeTab="tracker"
-	onFabTap={openQuickLog}
+	onFabTap={() => openQuickLog()}
 	fabLabel={t.add}
 />
 

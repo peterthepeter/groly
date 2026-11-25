@@ -38,7 +38,7 @@ import { handle } from '../../hooks.server';
 function event(session: string | null, url: string, body?: unknown, params: Record<string, string> = {}, cookies = new Map<string, string>(), ip = randomUUID()) {
 	if (session) cookies.set('session', session);
 	return {
-		params, url: new URL(url, 'http://localhost'),
+		params, url: new URL(url, 'http://localhost'), route: { id: null }, locals: {},
 		request: new Request(new URL(url, 'http://localhost'), body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
 		cookies: { get: (key: string) => cookies.get(key), set: (key: string, value: string) => cookies.set(key, value), delete: (key: string) => cookies.delete(key) },
 		getClientAddress: () => ip
@@ -49,6 +49,25 @@ beforeEach(() => { sqlite.exec('DELETE FROM users'); });
 afterEach(() => { vi.unstubAllEnvs(); });
 
 describe('account security', () => {
+	it.each(['/loginn', '/loginnn', '/logiin', '/invite/token/extra', '/apix'])('requires a session for %s', async path => {
+		const resolve = vi.fn();
+		await expect(handle({ event: event(null, path), resolve })).rejects.toMatchObject({ status: 302, location: '/login' });
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
+	it('preserves a 404 for signed-in users and prevents HTTP caching of personalized pages', async () => {
+		await createUser('alice', 'Password123');
+		const session = (await login('alice', 'Password123'))!.sessionId;
+		const html = (status: number) => new Response('<html></html>', {
+			status, headers: { 'Content-Type': 'text/html; charset=utf-8', ETag: '"page"' }
+		});
+		const missing = await handle({ event: event(session, '/loginn'), resolve: async () => html(404) });
+		expect(missing.status).toBe(404);
+		const page = await handle({ event: event(session, '/rezepte'), resolve: async () => html(200) });
+		expect(page.headers.get('Cache-Control')).toBe('private, no-store');
+		expect(page.headers.has('ETag')).toBe(false);
+	});
+
 	it('initializes formats once for an existing account and shares later choices across sessions', async () => {
 		await createUser('alice', 'Password123');
 		const first = (await login('alice', 'Password123'))!.sessionId;

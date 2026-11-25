@@ -21,7 +21,7 @@ registerRoute(
 
 // StaleWhileRevalidate for icons and other static files
 registerRoute(
-	({ url }) => url.pathname.startsWith('/icons/') || url.pathname.endsWith('.png') || url.pathname.endsWith('.svg'),
+	({ url }) => !isUploadedImage(url) && (url.pathname.startsWith('/icons/') || url.pathname.endsWith('.png') || url.pathname.endsWith('.svg')),
 	new StaleWhileRevalidate({ cacheName: 'static-assets' })
 );
 
@@ -29,14 +29,14 @@ registerRoute(
 // available offline. StaleWhileRevalidate serves from cache instantly and
 // refreshes in the background when online.
 registerRoute(
-	({ request }) => request.destination === 'image',
+	({ request, url }) => request.destination === 'image' && !isUploadedImage(url),
 	new StaleWhileRevalidate({
 		cacheName: 'images',
 		plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })]
 	})
 );
 
-// Authenticated documents and loader responses are partitioned by account.
+// Authenticated documents, loader responses and uploads are partitioned by account.
 // Static assets remain shared; pending mutations live independently in IndexedDB.
 const ACCOUNT_STATE = 'groly-account-state';
 const ACCOUNT_KEY = new URL('/__groly_account__', self.location.origin).href;
@@ -48,6 +48,50 @@ let account: Promise<string | null> = caches.open(ACCOUNT_STATE)
 
 function pageCache(userId: string) { return `${__GROLY_PAGE_CACHE__}-user-${encodeURIComponent(userId)}`; }
 function dataCache(userId: string) { return `account-data-${encodeURIComponent(userId)}`; }
+function imageCache(userId: string) { return `account-images-${encodeURIComponent(userId)}`; }
+
+function isUploadedImage(url: URL) {
+	return url.origin === self.location.origin && url.pathname.startsWith('/uploads/');
+}
+
+registerRoute(({ url }) => isUploadedImage(url), async options => {
+	const generation = accountGeneration;
+	const userId = await account;
+	if (!userId) {
+		const response = await fetch(options.request, { cache: 'no-store' });
+		const currentUser = await account;
+		// The first authenticated page may load its images before SET_ACCOUNT arrives.
+		if ((currentUser || generation !== accountGeneration) && response.headers.get('X-Groly-User') !== currentUser) {
+			return Response.error();
+		}
+		return response;
+	}
+
+	const cacheName = imageCache(userId);
+	const matchesAccount = (response: Response) =>
+		response.status === 200 && !response.redirected && response.headers.get('X-Groly-User') === userId;
+	const response = await new NetworkFirst({
+		cacheName,
+		plugins: [
+			{
+				// Bypass older HTTP cache entries that were written with a public lifetime.
+				requestWillFetch: async ({ request }) => new Request(request, { cache: 'no-store' }),
+				cacheWillUpdate: async ({ response }) =>
+					matchesAccount(response) && response.headers.get('X-Groly-Image-Cache') === 'account' ? response : null,
+				fetchDidSucceed: async ({ request, response }) => {
+					if (matchesAccount(response)) return response;
+					if (response.redirected || response.ok || [401, 403, 404].includes(response.status)) {
+						await caches.open(cacheName).then(cache => cache.delete(request)).catch(() => {});
+						return new Response(null, { status: 404 });
+					}
+					return response;
+				}
+			},
+			new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })
+		]
+	}).handle(options);
+	return (await account) === userId ? response : Response.error();
+});
 
 async function saveAccount(userId: string | null) {
 	accountGeneration++;
@@ -126,6 +170,12 @@ self.addEventListener('activate', event => event.waitUntil((async () => {
 		// Legacy caches have no trustworthy account label. These are server-read
 		// responses only; IndexedDB and every pending write are preserved.
 		if (name === 'pages' || (name.startsWith('pages-') && !name.startsWith(`${__GROLY_PAGE_CACHE__}-user-`))) await caches.delete(name);
+		if (name === 'static-assets' || name === 'images') {
+			const cache = await caches.open(name);
+			for (const request of await cache.keys()) {
+				if (isUploadedImage(new URL(request.url))) await cache.delete(request);
+			}
+		}
 	}
 	await self.clients.claim();
 })()));
