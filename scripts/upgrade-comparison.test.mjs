@@ -81,7 +81,7 @@ test('requires an explicit contract for destructive or non-null schema changes',
 	}
 }));
 
-test('verifies checklist defaults and the exact recipe favorite migration from the stable schema', async () => {
+test('verifies checklist defaults, recipe favorite categories, and image access from the stable schema', async () => {
 	const directory = mkdtempSync(join(tmpdir(), 'groly-stable-upgrade-'));
 	const path = join(directory, 'groly.db');
 	const db = new Database(path);
@@ -100,19 +100,45 @@ test('verifies checklist defaults and the exact recipe favorite migration from t
 			INSERT INTO users (id,username,password_hash,settings,created_at,updated_at) VALUES
 				('de','german','hash','{"lang":"de"}',1,1), ('en','english','hash','invalid-json',1,1);
 			INSERT INTO lists (id,owner_id,name,created_at,updated_at) VALUES ('list','de','Groceries',1,1);
-			INSERT INTO recipes (id,user_id,title,is_favorite,created_at,updated_at) VALUES
-				('a','de','Soup',1,1,1), ('b','en','Pasta',1,1,1), ('c','de','Bread',0,1,1);
+			INSERT INTO recipes (id,user_id,title,is_favorite,image_url,created_at,updated_at) VALUES
+				('a','de','Soup',1,' /uploads/soup.png ',1,1),
+				('b','en','Pasta',1,'https://example.invalid/pasta.png',1,1),
+				('c','en','Bread',0,'/uploads/soup.png',1,1),
+				('d','de','Stew',0,'/uploads/soup.png',1,1);
+			INSERT INTO meals (id,user_id,name,date,time,image_url,created_at,updated_at) VALUES
+				('meal','de','Lunch','2026-11-25','12:00','/uploads/meal.png',1,1);
+			INSERT INTO meal_components (id,meal_id,display_name,image_url,amount,unit) VALUES
+				('meal-part','meal','Grains','/uploads/grains.png',100,'g');
+			INSERT INTO nutrition_favorites (id,user_id,display_name,image_url,created_at) VALUES
+				('food','en','Oats','/uploads/oats.png',1);
+			INSERT INTO nutrition_meal_favorites (id,user_id,display_name,image_url,created_at) VALUES
+				('lunch','en','Lunch','/uploads/lunch.png',1);
+			INSERT INTO nutrition_meal_favorite_components (id,meal_favorite_id,display_name,image_url,amount,unit) VALUES
+				('lunch-part','lunch','Beans','/uploads/beans.png',100,'g');
+			INSERT INTO recipe_nutrition_components (id,recipe_id,display_name,image_url,unit) VALUES
+				('recipe-part','a','Stock','/uploads/stock.png','g');
 		`);
 		const before = await snapshot();
 		const columns = Object.fromEntries(Object.entries(before.tables).map(([name, table]) => [name, table.columns.map(column => column.name)]));
 		const expected = expectedUpgrade(before, migrations);
 		for (const migration of migrations.slice(firstBeta)) apply(migration);
 		compareUpgradeData(before, await snapshot(columns), 'Beta upgrade', expected);
+		assert.deepEqual(db.prepare('SELECT * FROM uploaded_image_access ORDER BY image_url, user_id').all(), [
+			{ image_url: '/uploads/beans.png', user_id: 'en' },
+			{ image_url: '/uploads/grains.png', user_id: 'de' },
+			{ image_url: '/uploads/lunch.png', user_id: 'en' },
+			{ image_url: '/uploads/meal.png', user_id: 'de' },
+			{ image_url: '/uploads/oats.png', user_id: 'en' },
+			{ image_url: '/uploads/soup.png', user_id: 'de' },
+			{ image_url: '/uploads/soup.png', user_id: 'en' },
+			{ image_url: '/uploads/stock.png', user_id: 'de' }
+		]);
 		for (const [sql, undo, message] of [
 			["UPDATE lists SET kind='checklist'", "UPDATE lists SET kind='shopping'", /new columns contain unexpected data in lists/],
 			["INSERT INTO checklist_favorites VALUES ('de','Bread',1)", 'DELETE FROM checklist_favorites', /unexpected row count in checklist_favorites/],
 			["UPDATE recipe_categories SET name='Wrong' WHERE user_id='de'", "UPDATE recipe_categories SET name='Favoriten' WHERE user_id='de'", /unexpected contents in new table recipe_categories/],
-			["UPDATE recipes SET category_id='legacy-favorites:en' WHERE id='a'", "UPDATE recipes SET category_id='legacy-favorites:de' WHERE id='a'", /unexpected migrated recipe category assignments/]
+			["UPDATE recipes SET category_id='legacy-favorites:en' WHERE id='a'", "UPDATE recipes SET category_id='legacy-favorites:de' WHERE id='a'", /unexpected migrated recipe category assignments/],
+			["UPDATE uploaded_image_access SET user_id='en' WHERE image_url='/uploads/grains.png'", "UPDATE uploaded_image_access SET user_id='de' WHERE image_url='/uploads/grains.png'", /unexpected contents in new table uploaded_image_access/]
 		]) {
 			db.exec(sql);
 			const after = await snapshot(columns);

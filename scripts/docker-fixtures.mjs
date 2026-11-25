@@ -96,6 +96,18 @@ export async function snapshotUpgradeData(originalColumns = {}, databasePath = '
 	const legacyRecipeFavorites = !tables.recipe_categories && recipeColumns.includes('is_favorite')
 		? db.prepare('SELECT r.id, r.user_id, u.settings FROM recipes r JOIN users u ON u.id = r.user_id WHERE r.is_favorite = 1 ORDER BY r.id').all()
 		: [];
+	const imageTables = ['recipes', 'meals', 'nutrition_favorites', 'nutrition_meal_favorites'];
+	const componentTables = [
+		['meal_components', 'meals', 'meal_id'],
+		['nutrition_meal_favorite_components', 'nutrition_meal_favorites', 'meal_favorite_id'],
+		['recipe_nutrition_components', 'recipes', 'recipe_id']
+	];
+	const hasImageColumn = (/** @type {string} */ table) => tables[table]?.columns.some(column => column.name === 'image_url');
+	const legacyUploadedImageReferences = tables.uploaded_image_access ? [] : [
+		...imageTables.filter(hasImageColumn).flatMap(table => db.prepare(`SELECT image_url, user_id FROM ${table}`).all()),
+		...componentTables.filter(([table, parent]) => hasImageColumn(table) && tables[parent])
+			.flatMap(([table, parent, key]) => db.prepare(`SELECT component.image_url, owner.user_id FROM ${table} component JOIN ${parent} owner ON owner.id = component.${key}`).all())
+	];
 	/** @type {Record<string, string>} */
 	const images = {};
 	/** @param {string} directory @param {string} [prefix] */
@@ -111,5 +123,5 @@ export async function snapshotUpgradeData(originalColumns = {}, databasePath = '
 	const integrity = db.pragma('integrity_check', { simple: true });
 	const migrations = db.prepare('SELECT * FROM __drizzle_migrations ORDER BY id').all();
 	db.close();
-	return { tables, images, foreignKeys, integrity, migrations, recipeCategoryAssignments, legacyRecipeFavorites };
+	return { tables, images, foreignKeys, integrity, migrations, recipeCategoryAssignments, legacyRecipeFavorites, legacyUploadedImageReferences };
 }

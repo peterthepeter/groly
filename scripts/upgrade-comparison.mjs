@@ -30,7 +30,21 @@ export function expectedUpgrade(before, migrations = readMigrationFiles({ migrat
 				recipeCategoryAssignments.push({ id, category_id: categoryId });
 			}
 		}
-		const newTableRows = { checklist_favorites: [], checklist_reminders: [], recipe_categories: [...favoriteCategories.values()] };
+		const uploadedImageAccess = new Map();
+		if (!before.tables.uploaded_image_access && tables.uploaded_image_access) {
+			for (const { image_url, user_id } of before.legacyUploadedImageReferences) {
+				if (typeof image_url !== 'string') continue;
+				// SQLite trim() removes spaces from both ends by default.
+				const url = image_url.replace(/^ +| +$/g, '');
+				if (!url.startsWith('/uploads/') || url === '/uploads/') continue;
+				const row = { image_url: url, user_id };
+				uploadedImageAccess.set(JSON.stringify(row), row);
+			}
+		}
+		const newTableRows = {
+			checklist_favorites: [], checklist_reminders: [], recipe_categories: [...favoriteCategories.values()],
+			uploaded_image_access: [...uploadedImageAccess.values()]
+		};
 		for (const [name, table] of Object.entries(tables)) {
 			const original = before.tables[name]?.columns;
 			if (!original) {
