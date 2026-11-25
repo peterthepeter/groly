@@ -1,10 +1,15 @@
 name: Build & Publish Docker Image
+run-name: ${{ inputs.release_tag && format('{0} image · {1}', contains(inputs.release_tag, '-') && 'Beta' || 'Stable', inputs.release_tag) || format('Verify image · {0}', github.ref_name) }}
 
 on:
   workflow_dispatch:
     inputs:
       release_id:
         description: 'GitHub draft release ID. Leave empty to verify without publishing.'
+        type: string
+        required: false
+      release_tag:
+        description: 'Tag from the GitHub draft, for example v1.1.0-beta.2.'
         type: string
         required: false
       verification:
@@ -54,6 +59,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GROLY_RELEASE_ID: ${{ inputs.release_id }}
+          GROLY_RELEASE_TAG: ${{ inputs.release_tag }}
           GROLY_VERIFICATION_INPUT: ${{ inputs.verification }}
         run: |
           set -eu
@@ -186,11 +192,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GROLY_RELEASE_ID: ${{ inputs.release_id }}
+          GROLY_RELEASE_TAG: ${{ inputs.release_tag }}
           GIT_TAG: ${{ steps.policy.outputs.gitTag }}
           RELEASE_BRANCH: ${{ steps.policy.outputs.branch }}
           VERSION_TAG: ${{ steps.policy.outputs.versionTag }}
           CHANNEL_TAG: ${{ steps.policy.outputs.channelTag }}
-          IMAGE_REPOSITORY: ${{ steps.policy.outputs.repository }}
         run: |
           set -eu
           export GROLY_RELEASE_DRAFT="$RUNNER_TEMP/groly-release.json"
@@ -216,7 +222,17 @@ jobs:
           docker buildx imagetools inspect "$VERSION_TAG" --raw | jq -e --arg id "$GROLY_TEST_IMAGE" '.config.digest == $id' > /dev/null
           digest=$(docker buildx imagetools inspect "$VERSION_TAG" --format '{{.Manifest.Digest}}')
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          docker buildx imagetools create --prefer-index=false --tag "$CHANNEL_TAG" "${IMAGE_REPOSITORY}@${digest}"
-          test "$(docker buildx imagetools inspect "$CHANNEL_TAG" --format '{{.Manifest.Digest}}')" = "$digest"
-          printf 'Published tested image as `%s` and `%s` (%s). GitHub draft `%s` is ready to publish.\n' \
-            "$VERSION_TAG" "$CHANNEL_TAG" "$digest" "$GIT_TAG" >> "$GITHUB_STEP_SUMMARY"
+          # Reuse the local image so promotion does not depend on a new registry digest lookup.
+          docker tag "$GROLY_TEST_IMAGE" "$CHANNEL_TAG"
+          docker push "$CHANNEL_TAG"
+          for attempt in {1..10}; do
+            published=$(docker buildx imagetools inspect "$CHANNEL_TAG" --format '{{.Manifest.Digest}}' || true)
+            if [[ "$published" == "$digest" ]]; then
+              printf 'Published tested image as `%s` and `%s` (%s). GitHub draft `%s` is ready to publish.\n' \
+                "$VERSION_TAG" "$CHANNEL_TAG" "$digest" "$GIT_TAG" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo '::error::The registry did not confirm the expected channel digest.'
+          exit 1

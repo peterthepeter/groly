@@ -46,7 +46,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
 	const config = JSON.parse(readFileSync('.github/release.json', 'utf8'));
 	const draft = process.env.GROLY_RELEASE_DRAFT ? JSON.parse(readFileSync(process.env.GROLY_RELEASE_DRAFT, 'utf8')) : null;
-	if (process.env.GROLY_RELEASE_ID) assert(draft && String(draft.id) === process.env.GROLY_RELEASE_ID, 'Release draft does not match the requested ID');
+	if (process.env.GROLY_RELEASE_ID) {
+		assert(draft && String(draft.id) === process.env.GROLY_RELEASE_ID, 'Release draft does not match the requested ID');
+		assert.equal(draft.tag_name, process.env.GROLY_RELEASE_TAG, 'Release draft does not match the requested tag');
+	} else {
+		assert(!process.env.GROLY_RELEASE_TAG, 'A release tag requires a draft release ID');
+	}
 	const verification = releaseVerification(config, draft ? undefined : process.env.GROLY_VERIFICATION_INPUT);
 	const policy = releasePolicy(version, process.env.GITHUB_REPOSITORY, draft, process.env.GITHUB_REF, process.env.GITHUB_SHA);
 	for (const [key, value] of Object.entries({ ...policy, verification })) process.stdout.write(`${key}=${value}\n`);
