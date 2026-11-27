@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 /** Select the explicitly configured verification level, never from the version. */
@@ -11,11 +12,13 @@ export function releaseVerification(config, override) {
 	return override;
 }
 
-/** Bind a draft release to the exact commit being checked. A verification-only run cannot publish. */
-export function releasePolicy(version, repository, draft = null, ref = '', sha = '') {
+function imageRepository(repository) {
 	assert(typeof repository === 'string' && repository.trim() === repository && /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/i.test(repository), 'Invalid GitHub repository');
-	const image = `ghcr.io/${repository.toLowerCase()}`;
-	if (!draft) return { mode: 'local', repository: image, localImage: 'groly:verify' };
+	return `ghcr.io/${repository.toLowerCase()}`;
+}
+
+function releaseTarget(version, repository, ref, sha) {
+	const image = imageRepository(repository);
 
 	// Docker tags cannot contain SemVer build metadata (+...). Reject malformed
 	// prerelease identifiers rather than silently publishing a different name.
@@ -29,12 +32,8 @@ export function releasePolicy(version, repository, draft = null, ref = '', sha =
 	const gitTag = `v${version}`;
 	const branch = prerelease ? 'codex/groly-1.0' : 'main';
 	const channel = prerelease ? 'beta' : 'latest';
-	assert.equal(draft.draft, true, 'Release must be a draft until verification succeeds');
-	assert.equal(draft.tag_name, gitTag, 'Release tag must match package.json');
-	assert.equal(draft.prerelease, prerelease, 'Release channel must match SemVer');
 	assert.equal(ref, `refs/heads/${branch}`, 'Release must be run from its channel branch');
 	assert(/^[0-9a-f]{40}$/.test(sha), 'Invalid commit SHA');
-	assert.equal(draft.target_commitish, sha, 'Draft release must target the exact commit being verified');
 	return {
 		mode: 'release', repository: image, localImage: 'groly:verify', version, gitTag, branch, channel,
 		versionTag: `${image}:${version}`,
@@ -42,17 +41,31 @@ export function releasePolicy(version, repository, draft = null, ref = '', sha =
 	};
 }
 
+export function releasePolicy(version, repository, draft, ref, sha) {
+	if (!draft) {
+		return { mode: 'local', repository: imageRepository(repository), localImage: 'groly:verify', version };
+	}
+	assert.equal(draft.draft, true, 'Release must be a draft until verification succeeds');
+	assert.equal(draft.tag_name, 'v' + version, 'Release tag must match package.json');
+	assert.equal(draft.prerelease, version.includes('-'), 'Release channel must match SemVer');
+	assert.equal(draft.target_commitish, sha, 'Draft release must target the exact commit being verified');
+	return releaseTarget(version, repository, ref, sha);
+}
+
+export function releaseCommit(version, repository, ref, sha) {
+	const subject = execFileSync('git', ['show', '-s', '--format=%s', sha], { encoding: 'utf8' }).trimEnd();
+	assert.equal(subject, 'release: v' + version, 'Release subject must match the package version');
+	const notes = execFileSync('git', ['show', '-s', '--format=%b', sha], { encoding: 'utf8' }).trimEnd();
+	assert(notes.trim(), 'Approved GitHub release notes are missing from the commit body');
+	return { target: releaseTarget(version, repository, ref, sha), notes };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
 	const config = JSON.parse(readFileSync('.github/release.json', 'utf8'));
-	const draft = process.env.GROLY_RELEASE_DRAFT ? JSON.parse(readFileSync(process.env.GROLY_RELEASE_DRAFT, 'utf8')) : null;
-	if (process.env.GROLY_RELEASE_ID) {
-		assert(draft && String(draft.id) === process.env.GROLY_RELEASE_ID, 'Release draft does not match the requested ID');
-		assert.equal(draft.tag_name, process.env.GROLY_RELEASE_TAG, 'Release draft does not match the requested tag');
-	} else {
-		assert(!process.env.GROLY_RELEASE_TAG, 'A release tag requires a draft release ID');
-	}
-	const verification = releaseVerification(config, draft ? undefined : process.env.GROLY_VERIFICATION_INPUT);
-	const policy = releasePolicy(version, process.env.GITHUB_REPOSITORY, draft, process.env.GITHUB_REF, process.env.GITHUB_SHA);
+	const { GITHUB_EVENT_NAME: event, GITHUB_REPOSITORY: repo, GITHUB_REF: ref, GITHUB_SHA: sha } = process.env;
+	assert(['push', 'workflow_dispatch'].includes(event));
+	const policy = event === 'push' ? releaseCommit(version, repo, ref, sha).target : releasePolicy(version, repo);
+	const verification = releaseVerification(config, event === 'workflow_dispatch' ? process.env.GROLY_VERIFICATION_INPUT : undefined);
 	for (const [key, value] of Object.entries({ ...policy, verification })) process.stdout.write(`${key}=${value}\n`);
 }

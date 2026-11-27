@@ -44,7 +44,7 @@ Issue #17 caused local-midnight dates east of UTC to be stored one day early. Ne
 
 ### Release verification
 
-Application and migration checks run on branch pushes. The release workflow requires a successful check for the intended commit, builds the image once, and verifies it locally on the CI runner. Full verification covers fresh installation, direct upgrade from the current stable image and from the current beta image for beta releases, restart, backup failures, recovery, security, and critical browser flows in Chromium and WebKit. The extended historical upgrade and browser suites remain available for targeted verification. The workflow publishes the tested image to its version tag and matching channel. The GitHub release is published after the workflow succeeds. Verification-only runs keep the image on the runner.
+Application and migration checks run on branch pushes. A release push runs these checks, builds one image, and tests it on the CI runner in the same workflow. Full verification covers fresh installation, direct upgrade from the current stable image and from the current beta image for beta releases, restart, backup failures, recovery, security, and critical browser flows in Chromium and WebKit. The extended historical upgrade and browser suites remain available for targeted verification. A separate job in that run publishes the tested archive to its version tag and matching channel. It verifies both manifest digests before publishing the GitHub release. A publication retry can resume from the verified archive. Verification-only runs keep the image on the runner.
 
 `latest` and `beta` stay separate. A real installed iOS PWA must additionally be checked before stable 1.0 is approved; desktop WebKit is not an installed-iPhone test.
 

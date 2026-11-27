@@ -1,47 +1,61 @@
-name: Build & Publish Docker Image
-run-name: ${{ inputs.release_tag && format('{0} image · {1}', contains(inputs.release_tag, '-') && 'Beta' || 'Stable', inputs.release_tag) || format('Verify image · {0}', github.ref_name) }}
+name: Groly CI
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && format('Verify image · {0}', github.ref_name)
+      || startsWith(github.event.head_commit.message, 'release: v') && (github.ref_name == 'main' && 'Stable release' || 'Beta release')
+      || format('Application checks · {0}', github.ref_name) }}
 
 on:
+  push:
+    branches: ['**']
   workflow_dispatch:
     inputs:
-      release_id:
-        description: 'GitHub draft release ID. Leave empty to verify without publishing.'
-        type: string
-        required: false
-      release_tag:
-        description: 'Tag from the GitHub draft, for example v1.1.0-beta.2.'
-        type: string
-        required: false
       verification:
-        description: 'Verification-only runs. Releases use .github/release.json.'
+        description: 'Image verification only'
         type: choice
-        required: false
         default: standard
-        options:
-          - standard
-          - full
+        options: [standard, full]
 
-concurrency:
-  group: groly-docker-${{ github.ref }}
-  cancel-in-progress: false
-
+permissions:
+  contents: read
 env:
-  REGISTRY: ghcr.io
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 defaults:
   run:
     shell: bash
 
 jobs:
-  verify-and-publish:
+  check:
+    name: Application checks
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24.22.3'
+          cache: npm
+      - name: Check release policy and migrations
+        run: |
+          npm ci --ignore-scripts --no-audit
+          npm run test:release
+          npm run test:dependencies
+      - name: Check application
+        run: |
+          npm run prepare
+          npm run check
+          npm test
+
+  image:
+    name: Build and verify image
+    needs: check
+    if: >-
+      github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'release: v')
     runs-on: ubuntu-26.04
     timeout-minutes: 25
-    permissions:
-      actions: read
-      # GitHub exposes unpublished release drafts only to callers with write access.
-      contents: write
-      packages: write
+    outputs:
+      digest: ${{ steps.candidate.outputs.digest }}
+      artifact: ${{ steps.archive.outputs.artifact-id }}
+      version: ${{ steps.policy.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
@@ -57,33 +71,8 @@ jobs:
       - name: Resolve release policy
         id: policy
         env:
-          GH_TOKEN: ${{ github.token }}
-          GROLY_RELEASE_ID: ${{ inputs.release_id }}
-          GROLY_RELEASE_TAG: ${{ inputs.release_tag }}
           GROLY_VERIFICATION_INPUT: ${{ inputs.verification }}
-        run: |
-          set -eu
-          if [[ -n "$GROLY_RELEASE_ID" ]]; then
-            [[ "$GROLY_RELEASE_ID" =~ ^[1-9][0-9]*$ ]]
-            export GROLY_RELEASE_DRAFT="$RUNNER_TEMP/groly-release.json"
-            gh api "repos/$GITHUB_REPOSITORY/releases/$GROLY_RELEASE_ID" > "$GROLY_RELEASE_DRAFT"
-          fi
-          node scripts/release-policy.mjs >> "$GITHUB_OUTPUT"
-
-      - name: Require successful application checks for this commit
-        if: steps.policy.outputs.mode == 'release'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -eu
-          check=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/checks.yml/runs" \
-            -f event=push -f branch="$GITHUB_REF_NAME" -f head_sha="$GITHUB_SHA" -f status=success \
-            --jq '.workflow_runs[0].html_url // empty')
-          if [[ -z "$check" ]]; then
-            echo '::error::Application checks must pass for this commit before a release can start.'
-            exit 1
-          fi
-          echo "Application checks passed: $check"
+        run: node scripts/release-policy.mjs >> "$GITHUB_OUTPUT"
 
       - name: Install full verification tools and audit dependencies
         if: steps.policy.outputs.verification == 'full'
@@ -99,8 +88,9 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
-          load: true
-          push: false
+          outputs: type=oci,dest=${{ runner.temp }}/candidate.tar
+          provenance: false
+          sbom: false
           tags: ${{ steps.policy.outputs.localImage }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
@@ -109,11 +99,16 @@ jobs:
           cache-from: type=gha,scope=groly-amd64
           cache-to: type=gha,scope=groly-amd64,mode=min
 
-      - name: Record the candidate image ID
+      - name: Load the candidate for verification
+        id: candidate
         env:
           LOCAL_IMAGE: ${{ steps.policy.outputs.localImage }}
         run: |
-          set -eu
+          command -v skopeo || { sudo apt-get update && sudo apt-get install -y skopeo; }
+          archive="oci-archive:$RUNNER_TEMP/candidate.tar"
+          digest=$(skopeo inspect --raw "$archive" | sha256sum | cut -d' ' -f1)
+          echo "digest=sha256:$digest" >> "$GITHUB_OUTPUT"
+          skopeo copy "$archive" "docker-daemon:$LOCAL_IMAGE"
           image=$(docker image inspect "$LOCAL_IMAGE" --format '{{.Id}}')
           [[ "$image" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "GROLY_TEST_IMAGE=$image" >> "$GITHUB_ENV"
@@ -172,67 +167,58 @@ jobs:
         if: always() && steps.policy.outputs.verification == 'full'
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: docker-release-verification
+          name: docker-release-verification-${{ github.run_attempt }}
           path: |
             image-security.json
             docker-upgrade-report.json
             playwright-report/
             test-results/
 
-      - name: Log in to GitHub Container Registry
-        if: steps.policy.outputs.mode == 'release'
-        uses: docker/login-action@v4.1.0
+      - name: Preserve the verified image for publication
+        if: github.event_name == 'push'
+        id: archive
+        uses: actions/upload-artifact@v7.0.2
         with:
-          registry: ${{ env.REGISTRY }}
+          name: tested-image-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/candidate.tar
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    name: Publish v${{ needs.image.outputs.version }}
+    needs: image
+    if: github.event_name == 'push'
+    concurrency:
+      group: groly-publish-${{ github.ref }}
+      cancel-in-progress: false
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24.22.3'
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          artifact-ids: ${{ needs.image.outputs.artifact }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/verified
+      - uses: docker/login-action@v4.1.0
+        with:
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish the tested image
-        if: steps.policy.outputs.mode == 'release'
+      - name: Publish verified image and GitHub release
         env:
-          GH_TOKEN: ${{ github.token }}
-          GROLY_RELEASE_ID: ${{ inputs.release_id }}
-          GROLY_RELEASE_TAG: ${{ inputs.release_tag }}
-          GIT_TAG: ${{ steps.policy.outputs.gitTag }}
-          RELEASE_BRANCH: ${{ steps.policy.outputs.branch }}
-          VERSION_TAG: ${{ steps.policy.outputs.versionTag }}
-          CHANNEL_TAG: ${{ steps.policy.outputs.channelTag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIGEST: ${{ needs.image.outputs.digest }}
+          OCI_ARCHIVE: ${{ runner.temp }}/verified/candidate.tar
         run: |
-          set -eu
-          export GROLY_RELEASE_DRAFT="$RUNNER_TEMP/groly-release.json"
-          gh api "repos/$GITHUB_REPOSITORY/releases/$GROLY_RELEASE_ID" > "$GROLY_RELEASE_DRAFT"
-          node scripts/release-policy.mjs > /dev/null
-          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$RELEASE_BRANCH" --jq .object.sha)
-          if [[ "$head" != "$GITHUB_SHA" ]]; then
-            echo '::error::The release branch moved during verification. Start a release for the intended commit.'
-            exit 1
-          fi
-          git_tag=$(git ls-remote --tags origin "refs/tags/$GIT_TAG")
-          if [[ -n "$git_tag" && "$git_tag" != "$GITHUB_SHA"$'\t'"refs/tags/$GIT_TAG" ]]; then
-            echo '::error::The Git tag already points to another commit.'
-            exit 1
-          fi
-          if docker buildx imagetools inspect "$VERSION_TAG" --raw > "$RUNNER_TEMP/groly-manifest.json" 2> "$RUNNER_TEMP/groly-registry-error"; then
-            jq -e --arg id "$GROLY_TEST_IMAGE" '.config.digest == $id' "$RUNNER_TEMP/groly-manifest.json" > /dev/null
-          else
-            grep -Eqi 'manifest unknown|:[[:space:]]+not found' "$RUNNER_TEMP/groly-registry-error" || { cat "$RUNNER_TEMP/groly-registry-error" >&2; exit 1; }
-            docker tag "$GROLY_TEST_IMAGE" "$VERSION_TAG"
-            docker push "$VERSION_TAG"
-          fi
-          docker buildx imagetools inspect "$VERSION_TAG" --raw | jq -e --arg id "$GROLY_TEST_IMAGE" '.config.digest == $id' > /dev/null
-          digest=$(docker buildx imagetools inspect "$VERSION_TAG" --format '{{.Manifest.Digest}}')
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          # Reuse the local image so promotion does not depend on a new registry digest lookup.
-          docker tag "$GROLY_TEST_IMAGE" "$CHANNEL_TAG"
-          docker push "$CHANNEL_TAG"
-          for attempt in {1..10}; do
-            published=$(docker buildx imagetools inspect "$CHANNEL_TAG" --format '{{.Manifest.Digest}}' || true)
-            if [[ "$published" == "$digest" ]]; then
-              printf 'Published tested image as `%s` and `%s` (%s). GitHub draft `%s` is ready to publish.\n' \
-                "$VERSION_TAG" "$CHANNEL_TAG" "$digest" "$GIT_TAG" >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo '::error::The registry did not confirm the expected channel digest.'
-          exit 1
+          command -v skopeo || { sudo apt-get update && sudo apt-get install -y skopeo; }
+          node scripts/publish-image.mjs
