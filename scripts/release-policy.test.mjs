@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { manifestDigest, publishImage } from './publish-image.mjs';
 import { releasePolicy, releaseVerification } from './release-policy.mjs';
 
 const repository = 'peterthepeter/groly';
@@ -78,4 +79,37 @@ test('normalizes the repository and rejects unsafe image names', () => {
 	for (const name of ['groly', '../groly', 'owner/groly:latest', 'owner/groly\nextra=value', 'owner/groly\n']) {
 		assert.throws(() => releasePolicy('1.0.0', name), /Invalid GitHub repository/);
 	}
+});
+
+test('retries the interrupted publication using the tested manifest, then leaves both tags in place', async () => {
+	const configDigest = 'sha256:' + 'b'.repeat(64);
+	const manifest = { bytes: Buffer.from(JSON.stringify({ config: { digest: configDigest } })) };
+	const digest = manifestDigest(manifest.bytes);
+	assert.notEqual(digest, configDigest);
+	const tags = new Map();
+	const writes = [];
+	let failChannel = true;
+	const client = {
+		async read(id) { assert.equal(id, digest); return manifest; },
+		async digest(tag) { return tags.get(tag) ?? null; },
+		async put(tag, payload) {
+			assert.equal(payload, manifest);
+			if (tag === 'latest' && failChannel) throw Error('Channel write interrupted');
+			tags.set(tag, digest);
+			writes.push(tag);
+		}
+	};
+	const publish = (check = () => {}) => publishImage(client, digest, '1.1.0', 'latest', check);
+	await assert.rejects(publish(), /interrupted/);
+	assert.deepEqual([...tags.keys()], ['1.1.0']);
+	failChannel = false;
+	await assert.rejects(publish(() => { throw Error('Release branch advanced'); }), /advanced/);
+	assert.equal(tags.has('latest'), false);
+	await publish();
+	await publish();
+	assert.deepEqual(writes, ['1.1.0', 'latest']);
+	assert.equal(tags.get('latest'), digest);
+	tags.set('1.1.0', configDigest);
+	await assert.rejects(publish(), /different image/);
+	assert.deepEqual(writes, ['1.1.0', 'latest']);
 });
