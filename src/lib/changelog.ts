@@ -3,33 +3,22 @@
 export type ChangelogEntry = { version: string; intro?: { de: string; en: string }; de: string[]; en: string[] };
 export const CHANGELOG: ChangelogEntry[] = [
 	{
-		version: '1.1.0-beta.2',
+		version: '1.1.0',
 		de: [
-			'Supplement-Einträge aus „Heute“ landen auch nach Mitternacht am richtigen Tag.',
-			'Hochgeladene Bilder sind nur für berechtigte Konten sichtbar. Geteilte Rezepte behalten ihre Bildvorschau.',
-			'Beim Abmelden werden offene Groly-Tabs desselben Kontos im Browser ebenfalls abgemeldet.'
+			'Neu sind gemeinsame Checklisten mit Abschnitten, Notizen und Erinnerungen.',
+			'Offene Einkaufsartikel lassen sich jetzt auch nach Name sortieren, von A bis Z oder von Z bis A.',
+			'Rezepte in eigenen Kategorien organisieren.',
+			'Wähle aus verschiedenen Datums- und Uhrzeitformaten.',
+			'Supplement-Schnellerfassung und Kontodatenschutz verbessert.',
+			'Die automatische Löschung abgehakter Einkaufsartikel nach 60 Tagen lässt sich deaktivieren.'
 		],
 		en: [
-			'Supplement entries logged from Today use the correct date after midnight.',
-			'Uploaded images are visible only to authorized accounts. Shared recipes retain their image previews.',
-			'Signing out also signs out other open Groly tabs for the same account in the browser.'
-		]
-	},
-	{
-		version: '1.1.0-beta.1',
-		de: [
-			'Erstelle gemeinsame Checklisten mit Abschnitten, Notizen und einmaligen Erinnerungen. Du kannst sie duplizieren oder alle Einträge wieder öffnen.',
-			'Organisiere deine Rezepte in eigenen Kategorien. Bestehende Favoriten findest du in der Kategorie „Favoriten“.',
-			'Sortiere offene Einkaufsartikel nach Kategorie, von A–Z oder Z–A, oder schalte die Sortierung aus. Die Einstellung gilt global oder pro Liste.',
-			'Wähle dein Datums- und Uhrzeitformat einmal für dein Konto. Die Auswahl gilt auch auf deinen anderen Geräten.',
-			'Nach Häufigkeit sortierte Supplement-Kacheln behalten beim schnellen Loggen ihre Position. Die Reihenfolge aktualisiert sich beim nächsten Öffnen.'
-		],
-		en: [
-			'Create shared checklists with sections, notes, and one-time reminders. Duplicate a checklist or reopen all its entries.',
-			'Organize recipes into your own categories. Existing favorites appear in the Favorites category.',
-			'Sort open shopping items by category, A–Z, or Z–A, or turn sorting off. Set a default or choose a different order for each list.',
-			'Choose your date and time formats once for your account. Your choices apply across devices.',
-			'Supplement tiles sorted by frequency stay in place while you log. The order updates the next time you open Quick Log.'
+			'New shared checklists with sections, notes, and reminders.',
+			'Open shopping items can now also be sorted by name, A–Z or Z–A.',
+			'Organize recipes into custom categories.',
+			'Choose from different date and time formats.',
+			'Improved supplement quick logging and account privacy.',
+			'The automatic removal of checked shopping items after 60 days can now be turned off.'
 		]
 	},
 {

@@ -30,20 +30,25 @@ See the [deployment guides](#deployment) for Docker Compose, Unraid, Synology, T
   </thead>
   <tbody>
     <tr>
-      <td align="center"><img src="docs/screenshots/Shopping List overview.png" width="180" alt="Overview of all shared shopping lists" /></td>
+      <td align="center"><img src="docs/screenshots/Shopping List overview.png" width="180" alt="Shopping lists and a packing checklist with its completion progress" /></td>
       <td align="center"><img src="docs/screenshots/Shopping List.png" width="180" alt="Shopping list with categorized items" /></td>
       <td align="center"><img src="docs/screenshots/Shopping List Favorites.png" width="180" alt="Favourite items ready to add to a shopping list" /></td>
     </tr>
   </tbody>
 </table>
 
-Shared, offline-first shopping lists with real-time sync, smart suggestions, barcode scanning, and automatic categorization.
+Shared, offline-first shopping lists with real-time sync, smart suggestions, barcode scanning, and automatic categorization. Use checklists to organize and track tasks together.
 
 <details>
 <summary><strong>Show all shopping-list features</strong></summary>
 
+<p align="center">
+  <img src="docs/screenshots/Checklist.png" width="180" alt="Weekend packing checklist with sections, notes, and completed tasks" />
+</p>
+
 #### Features
 
+- **Checklists** – Create shared checklists with sections, entry notes, and one-time reminders. See your progress as you check off tasks.
 - **Shared lists** – Share lists with other users; changes sync in real time via Server-Sent Events.
 - **Offline-first** – Add, check off, edit, and delete items without internet. Changes sync automatically when back online.
 - **Barcode scan** – Scan product barcodes with your camera to add items directly to your list (iOS and Android). Uses the native [BarcodeDetector API](https://developer.mozilla.org/en-US/docs/Web/API/BarcodeDetector) where available (Chrome/Android) with [ZBar WASM](https://github.com/undecaf/zbar-wasm) as a fallback for iOS and Firefox. Product names are looked up via [Open Food Facts](https://world.openfoodfacts.org/), [Open Products Facts](https://world.openproductsfacts.org/), and [Open Beauty Facts](https://world.openbeautyfacts.org/) — open, community-maintained product databases covering food, household, and personal care items. No API key required. Lookups are routed through your server (user IPs are not exposed) and cached persistently in SQLite. An offline indicator is shown in the scanner when there is no internet connection.
@@ -193,7 +198,7 @@ A full food diary with calorie and macro tracking, built on the same [Open Food 
   </thead>
   <tbody>
     <tr>
-      <td align="center"><img src="docs/screenshots/Recipes.png" width="180" alt="Overview of saved recipes" /></td>
+      <td align="center"><img src="docs/screenshots/Recipes.png" width="180" alt="Saved recipes grouped into Favorites, Weeknight dinners, and Breakfast" /></td>
       <td align="center"><img src="docs/screenshots/Recipes_detail.png" width="180" alt="Recipe details with ingredients and serving controls" /></td>
       <td align="center"><img src="docs/screenshots/Meal Planner.png" width="180" alt="Weekly meal planner with scheduled recipes" /></td>
     </tr>
@@ -208,6 +213,7 @@ Create and organize recipes, scale servings, plan the week, and send ingredients
 #### Features
 
 - **Recipes** – Create and manage recipes, scale servings, and add ingredients directly to a shopping list. Import recipes from popular recipe websites by URL.
+- **Recipe categories** – Group saved recipes into your own categories, such as weeknight dinners or breakfast.
 - **Weekly meal planner** – Plan meals for every day of the week. Assign recipes or free-text entries per day, adjust servings, and add ingredients from individual days or the entire week directly to a shopping list. Navigate forwards and backwards by week. Configurable as a quick access shortcut.
 
 </details>
